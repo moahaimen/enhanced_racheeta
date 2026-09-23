@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "Racheeta",
+    "tagline": "Medical services platform"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Retry",
+    "error": "Something went wrong",
+    "language": "Language"
+  },
+  "home": {
+    "title": "Platform status",
+    "apiStatus": "API status",
+    "ok": "Operational",
+    "checkAgain": "Check again",
+    "checking": "Checking…",
+    "lastChecked": "Last checked"
+  },
+  "errors": {
+    "network": "Could not reach the server.",
+    "unknown": "An unexpected error occurred."
+  }
+}
