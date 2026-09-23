@@ -129,3 +129,29 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-23
 **Decision:** `ApiActionButton` with `type="submit"` owns form submission (prevents native submit, works with Enter through implicit submission). Client validation failures throw `ClientValidationError`, which handlers ignore, so a failed validation never calls the backend and never shows a spinner.
 **Consequences:** One loading pattern for forms and plain buttons; no `onSubmit` handlers that call the API.
+
+## ADR-023 — One provider table, two kinds, controlled types
+**Date:** 2026-09-23
+**Context:** Legacy Racheeta had separate identities/tables per healthcare type. Master plan §7 asks for shared abstractions.
+**Decision:** `ProviderProfile` is one table for all provider types; `ProviderType` (enum) is grouped into PRACTITIONER and FACILITY kinds. Type-specific attributes will be optional one-to-one extension tables added only when a business rule needs them. No new provider type may be added without touching the enum, migration and docs.
+**Consequences:** Discovery, verification, memberships and services are written once. Extension tables must never carry authentication data.
+
+## ADR-024 — Public discovery shows VERIFIED + visible providers only
+**Date:** 2026-09-23
+**Decision:** `ProviderProfile.objects.discoverable()` is the single gate for public list/detail/related lookups. Verification is admin-only; providers can request review.
+**Consequences:** A fresh deployment lists nobody until administrators verify; that is the intended trust model. Ratings are absent until Phase 4 rather than faked.
+
+## ADR-025 — Membership workflow with partial unique index
+**Date:** 2026-09-23
+**Decision:** `ProviderMembership` carries a status (PENDING/ACTIVE/REJECTED/ENDED) and `initiated_by`; both sides may initiate; a PostgreSQL partial unique index keeps one live row per pair while history rows remain. Full invitation UX (notifications, search-by-name) is deferred; the API foundation is complete.
+**Consequences:** Phase 9 notifications can hook the transitions without schema changes.
+
+## ADR-026 — Geography and specialties are database reference data seeded by migrations
+**Date:** 2026-09-23
+**Decision:** Country → Governorate → City and Specialty live in the database with stable UUIDs, bilingual names and slugs, seeded through data migrations from `seed_*.py` files. Clients fetch them from unpaginated public endpoints and never hard-code names. No PostGIS; coordinates are plain decimals.
+**Consequences:** Adding a country or specialty is a migration (reviewable, reproducible). Geo search by distance is a later decision (PostGIS or bounding boxes) when the feature is scheduled.
+
+## ADR-027 — Service prices carry a currency from an allow-list
+**Date:** 2026-09-23
+**Decision:** `ServiceOffering.price` (decimal ≥ 0) + `currency` (default IQD; allowed list `settings.RACHEETA["CURRENCIES"]`). No FX, no formatting on the server.
+**Consequences:** Pricing for reservations (Phase 3) and payments (Phase 8) reference offerings rather than free text.

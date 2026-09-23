@@ -34,6 +34,21 @@
 | Firebase account takeover | Unverified Firebase email can never link to an existing account (403); phone numbers already in use are not copied. | covered |
 | Throttling | `auth` 10/min, `password_reset` 5/min, `email_verification` 3/min; local-memory cache (per process). | covered |
 
+## Phase 2 security review (2026-09-23)
+
+| Topic | Finding | Status |
+| --- | --- | --- |
+| Cross-account edits | Only `/providers/me` writes; querysets scoped to `request.user.provider_profile`; foreign ids → 404. | covered by tests |
+| Verification fields | `ForbidAdminFieldsMixin` rejects admin fields with 400; admin endpoint requires `is_staff`. | covered |
+| Provider type after verification | Locked for the owner (`type_locked`); admin-only afterwards. | covered |
+| Unverified providers leaking | `discoverable()` filter on list and detail; non-discoverable detail → 404; related providers filtered the same way. | covered |
+| Membership abuse | Counterpart must be discoverable; kinds must differ; not-self and one-live-row DB constraints; third parties get 404; initiator cannot self-accept. | covered |
+| Fabricated data | No rating/statistics fields exist in provider responses. | covered |
+| Invalid filter input | django-filter returns 400 for unknown enum/UUID values; ordering restricted to `display_name`/`created_at`. | covered |
+| Image URL | https only. Uploads (media module) will replace free URLs. | covered |
+| Query amplification | list ≤ 4 queries, detail ≤ 6 regardless of rows (asserted). | covered |
+| Refresh after account deletion | Found in the browser walkthrough: `/auth/refresh` with a token of a deleted account raised a 500. Now 401 `token_not_valid` (`RefreshSerializer`); deactivated accounts also 401. | fixed + tests |
+
 No weakening of earlier decisions was needed to make tests pass.
 
 ## HTTP hardening (`DEBUG=false`)

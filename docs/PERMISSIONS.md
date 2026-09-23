@@ -59,10 +59,44 @@ class OfferViewSet(...):
 Default for every endpoint is `IsAuthenticated` (`REST_FRAMEWORK` settings);
 public endpoints opt out explicitly with `AllowAny`.
 
+## Provider permissions (`apps/providers/permissions.py`)
+
+| Class | Grants |
+| --- | --- |
+| `AllowAny` (public views) | discovery list/detail, geography, specialties |
+| `IsProviderAccount` | authenticated account with `role == PROVIDER` — may create its profile |
+| `HasProviderProfile` | provider account that completed onboarding — services, memberships, verification request |
+| `IsAdminAccount` (`apps/accounts`) | verification decisions |
+
+Ownership never comes from a client id: every self-management view resolves
+`request.user.provider_profile` and scopes querysets to it, so a foreign
+service or membership id is a 404. Public provider ids accept no writes.
+
+Verification state machine:
+
+| Transition | Who |
+| --- | --- |
+| UNVERIFIED / REJECTED → PENDING | the provider (`/providers/me/verification/request`) |
+| any → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED | administrators only |
+| `provider_type` change | provider while not VERIFIED; afterwards administrators only (Django admin) |
+
+Membership state machine:
+
+| Transition | Who |
+| --- | --- |
+| create (PENDING) | a practitioner towards a discoverable facility, or a facility towards a discoverable practitioner |
+| PENDING → ACTIVE | the side that did **not** initiate |
+| PENDING → REJECTED | either side (initiator = withdraw) |
+| ACTIVE → ENDED | either side |
+| third parties | 404 on every action |
+
+Provider role is assigned at registration (or first Firebase sign-in) and is
+not client-changeable afterwards; a role change is an administrator action.
+
 ## Web route guards
 
 `web/src/app/guards.tsx`: `RequireAuth` wraps protected routes, `PublicOnly`
-wraps login/register. Pages contain no authentication checks. Guards improve
+wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`). Pages contain no authentication checks. Guards improve
 UX only; a protected page's data calls still fail with 401 without a valid
 token.
 

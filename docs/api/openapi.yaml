@@ -222,17 +222,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshRequest'
         required: true
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
+                $ref: '#/components/schemas/Refresh'
           description: ''
   /api/v1/auth/register:
     post:
@@ -1698,6 +1698,29 @@ components:
       - price
       - specialty
       - title
+    Refresh:
+      type: object
+      description: Rotation with a defined answer for a token whose account no longer
+        exists.
+      properties:
+        refresh:
+          type: string
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    RefreshRequest:
+      type: object
+      description: Rotation with a defined answer for a token whose account no longer
+        exists.
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
     RegisterRequest:
       type: object
       description: Reject, rather than silently ignore, any privilege field a client
@@ -1900,25 +1923,6 @@ components:
           readOnly: true
       required:
       - access
-      - refresh
-    TokenRefresh:
-      type: object
-      properties:
-        access:
-          type: string
-          readOnly: true
-        refresh:
-          type: string
-      required:
-      - access
-      - refresh
-    TokenRefreshRequest:
-      type: object
-      properties:
-        refresh:
-          type: string
-          minLength: 1
-      required:
       - refresh
     VerificationDecisionRequest:
       type: object

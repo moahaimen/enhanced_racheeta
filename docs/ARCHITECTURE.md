@@ -33,7 +33,10 @@ racheeta-platform/
 │   ├── config/         settings.py, urls.py, api_v1.py, asgi.py, wsgi.py
 │   ├── apps/
 │   │   ├── core/       shared base models, pagination, error envelope, /health/
-│   │   └── accounts/   Account model, roles, JWT auth, /me, reset, verification, Firebase adapter
+│   │   ├── accounts/   Account model, roles, JWT auth, /me, reset, verification, Firebase adapter
+│   │   ├── geography/  Country → Governorate → City reference data (Iraq seeded)
+│   │   ├── specialties/ bilingual Specialty list (seeded, optional parent)
+│   │   └── providers/  ProviderProfile, ProviderMembership, ServiceOffering, discovery + self-management
 │   ├── requirements/   base.txt (pinned runtime), dev.txt, production.txt
 │   ├── tests/          cross-cutting tests (health, smoke)
 │   └── conftest.py     shared pytest fixtures
@@ -45,7 +48,7 @@ racheeta-platform/
 │       ├── components/ ApiActionButton, AsyncPage, LoadingOverlay, Spinner, forms/
 │       ├── hooks/      useAsyncAction, useAsyncData
 │       ├── i18n/       Arabic (default, RTL) + English
-│       └── pages/      home, login, register, profile, forgot/reset password, verify-email, 404
+│       └── pages/      home, auth pages, providers/ (search, public detail, self-management), 404
 ├── mobile/             Flutter (planned, Phase 11)
 ├── docs/               this documentation + docs/api/openapi.yaml (contract)
 ├── infrastructure/     deployment notes
@@ -95,6 +98,9 @@ avoid circular imports between business modules — put shared logic in `core`.
 | --- | --- |
 | `core` | done (foundation) |
 | `accounts` | Account model, roles, register/login/refresh/logout, `/me`, password reset, email verification, Firebase exchange adapter (disabled until configured) — done. |
+| `geography` | Country/Governorate/City with bilingual names; Iraq seeded by migration; public read endpoints — done. |
+| `specialties` | Bilingual specialties with optional parent; seeded; public read endpoint — done. |
+| `providers` | ProviderProfile (practitioner/facility types), admin-controlled verification, memberships, service offerings, public discovery, owner self-management — done. Availability/booking is Phase 3. |
 | everything in master plan §8 | **(planned)** |
 
 ## Accounts and roles
@@ -122,6 +128,39 @@ Account
 `GET /api/v1/me` is the canonical source of identity, role and capability
 codes for every client. Clients never store `doctor_id`-style identifiers.
 
+## Providers
+
+One `ProviderProfile` per PROVIDER account (`apps/providers`). Classification
+is the controlled enum `ProviderType` (DOCTOR, NURSE, THERAPIST | HOSPITAL,
+MEDICAL_CENTER, PHARMACY, LABORATORY, BEAUTY_CENTER) grouped into two kinds,
+PRACTITIONER and FACILITY (`apps/providers/types.py`). Type-specific data will
+be added as optional one-to-one extension tables when a rule needs it
+(ADR-023) — never as separate provider/user systems.
+
+```
+Account (role=PROVIDER)
+   └── ProviderProfile ── specialties (M2M Specialty)
+         ├── services   (ServiceOffering)
+         ├── facility_memberships     (as practitioner) ─┐
+         └── practitioner_memberships (as facility)    ─┴─ ProviderMembership
+```
+
+- **Verification** is a backend/admin state machine (UNVERIFIED → PENDING by
+  the provider; VERIFIED / REJECTED / SUSPENDED / UNVERIFIED by administrators
+  through `POST /api/v1/admin/providers/{id}/verification` or Django admin
+  actions). Timestamps: `verification_requested_at`, `verification_changed_at`,
+  `verified_at`. Ready for an audit-log table.
+- **Discoverable** = VERIFIED + `is_visible` + active account
+  (`ProviderProfile.objects.discoverable()`). Only these appear in public APIs.
+- **Memberships** link a practitioner and a facility. Either side initiates
+  (PENDING); the other side accepts (ACTIVE) or rejects; the initiator may
+  withdraw (also REJECTED); either side may end an ACTIVE membership (ENDED).
+  A partial unique index allows one PENDING/ACTIVE row per pair; history rows
+  accumulate.
+- **Registration vs onboarding**: account registration collects account
+  fields only; the professional profile is created afterwards through
+  `POST /api/v1/providers/me` (web: `/provider/profile`).
+
 ## Web
 
 - Vite + React 19 + TypeScript (strict). Lint: oxlint. Tests: Vitest + Testing Library.
@@ -134,6 +173,11 @@ codes for every client. Clients never store `doctor_id`-style identifiers.
 - `react-router` data router. Route table in `src/app/routes.tsx`; auth guards
   only in `src/app/guards.tsx`; session state only in `src/auth/AuthContext.tsx`.
 - Forms use `components/forms/*` and map the backend error envelope onto fields.
+- Reference data (governorates, cities, specialties) is always fetched from the
+  API; the web never hard-codes geography or specialty names. Bilingual names
+  are picked by `i18n/localized.ts`.
+- `RequireRole` (in `app/guards.tsx`) wraps role-specific pages such as
+  `/provider/profile`; it is UX only — the backend re-checks the role.
 
 ## Deployment
 
