@@ -1452,6 +1452,65 @@ paths:
           type: string
           format: uuid
         required: true
+      - in: query
+        name: job_seeker__degree
+        schema:
+          type: string
+          enum:
+          - BACHELOR
+          - BOARD
+          - DIPLOMA
+          - HIGHER_DIPLOMA
+          - MASTER
+          - OTHER
+          - PHD
+        description: |-
+          * `DIPLOMA` - Diploma
+          * `BACHELOR` - Bachelor
+          * `HIGHER_DIPLOMA` - Higher diploma
+          * `MASTER` - Master
+          * `PHD` - PhD
+          * `BOARD` - Board certification
+          * `OTHER` - Other
+      - in: query
+        name: job_seeker__governorate
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: job_seeker__profession
+        schema:
+          type: string
+          enum:
+          - ADMINISTRATIVE
+          - ANESTHESIA_TECHNICIAN
+          - DENTIST
+          - DOCTOR
+          - LAB_TECHNICIAN
+          - MEDICAL_ASSISTANT
+          - MIDWIFE
+          - NURSE
+          - NUTRITIONIST
+          - OTHER
+          - PHARMACIST
+          - PHYSIOTHERAPIST
+          - PSYCHOLOGIST
+          - RADIOLOGY_TECHNICIAN
+        description: |-
+          * `DOCTOR` - Physician
+          * `DENTIST` - Dentist
+          * `PHARMACIST` - Pharmacist
+          * `NURSE` - Nurse
+          * `MIDWIFE` - Midwife
+          * `LAB_TECHNICIAN` - Laboratory technician
+          * `RADIOLOGY_TECHNICIAN` - Radiology technician
+          * `ANESTHESIA_TECHNICIAN` - Anaesthesia technician
+          * `PHYSIOTHERAPIST` - Physiotherapist
+          * `NUTRITIONIST` - Nutritionist
+          * `PSYCHOLOGIST` - Psychologist
+          * `MEDICAL_ASSISTANT` - Medical assistant
+          * `ADMINISTRATIVE` - Administrative / reception
+          * `OTHER` - Other healthcare profession
       - name: page
         required: false
         in: query
@@ -4022,7 +4081,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/EmployerVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -4152,7 +4211,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/EmployerVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -4246,27 +4305,13 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/Status134Enum'
+          $ref: '#/components/schemas/VerificationDecisionEnum'
         note:
           type: string
           default: ''
           maxLength: 2000
       required:
       - status
-    EmployerVerificationStatusEnum:
-      enum:
-      - UNVERIFIED
-      - PENDING
-      - VERIFIED
-      - REJECTED
-      - SUSPENDED
-      type: string
-      description: |-
-        * `UNVERIFIED` - Unverified
-        * `PENDING` - Pending review
-        * `VERIFIED` - Verified
-        * `REJECTED` - Rejected
-        * `SUSPENDED` - Suspended
     EmployerWriteRequest:
       type: object
       properties:
@@ -6819,7 +6864,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/EmployerVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -7411,18 +7456,6 @@ components:
       - name_en
       - parent
       - slug
-    Status134Enum:
-      enum:
-      - VERIFIED
-      - REJECTED
-      - SUSPENDED
-      - UNVERIFIED
-      type: string
-      description: |-
-        * `VERIFIED` - Verified
-        * `REJECTED` - Rejected
-        * `SUSPENDED` - Suspended
-        * `UNVERIFIED` - Unverified
     Subscription:
       type: object
       properties:
@@ -7722,17 +7755,43 @@ components:
       required:
       - access
       - refresh
+    VerificationDecisionEnum:
+      enum:
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      type: string
+      description: |-
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
+        * `UNVERIFIED` - Unverified
     VerificationDecisionRequest:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/Status134Enum'
+          $ref: '#/components/schemas/VerificationDecisionEnum'
         note:
           type: string
           default: ''
           maxLength: 2000
       required:
       - status
+    VerificationStatusEnum:
+      enum:
+      - UNVERIFIED
+      - PENDING
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      type: string
+      description: |-
+        * `UNVERIFIED` - Unverified
+        * `PENDING` - Pending review
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
     WorkExperience:
       type: object
       properties:

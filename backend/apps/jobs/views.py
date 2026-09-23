@@ -48,6 +48,7 @@ from .serializers import (
     CredentialSerializer,
     EducationSerializer,
     EmployerAdminSerializer,
+    EmployerMemberSerializer,
     EmployerOwnerSerializer,
     EmployerPublicSerializer,
     EmployerVerificationDecisionSerializer,
@@ -69,7 +70,6 @@ from .serializers import (
     JobWriteSerializer,
     LanguageSkillSerializer,
     MemberAddSerializer,
-    EmployerMemberSerializer,
     MessageCreateSerializer,
     MessageSerializer,
     RecruitmentReasonSerializer,
@@ -872,6 +872,7 @@ def _employer_applications(request):
 class EmployerJobApplicationsView(generics.ListAPIView):
     permission_classes = [IsEmployerMember]
     serializer_class = ApplicationEmployerSerializer
+    queryset = JobApplication.objects.none()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         "status": ["exact"],
@@ -881,6 +882,8 @@ class EmployerJobApplicationsView(generics.ListAPIView):
     }
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return JobApplication.objects.none()
         job = get_object_or_404(
             JobPost.objects.filter(employer=self.request.employer), pk=self.kwargs["pk"]
         )

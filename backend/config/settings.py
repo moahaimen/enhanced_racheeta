@@ -218,9 +218,9 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
-        "ProviderVerificationStatusEnum": "apps.providers.types.VerificationStatus.choices",
         "ProviderMembershipStatusEnum": "apps.providers.types.MembershipStatus.choices",
-        "EmployerVerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
+        "VerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
+        "VerificationDecisionEnum": "apps.jobs.serializers.VERIFICATION_DECISION_CHOICES",
         "JobStatusEnum": "apps.jobs.types.JobStatus.choices",
         "ApplicationStatusEnum": "apps.jobs.types.ApplicationStatus.choices",
         "InvitationStatusEnum": "apps.jobs.types.InvitationStatus.choices",

@@ -211,15 +211,16 @@ class EmployerAdminSerializer(EmployerOwnerSerializer):
         read_only_fields = fields
 
 
+VERIFICATION_DECISION_CHOICES = [
+    ("VERIFIED", "Verified"),
+    ("REJECTED", "Rejected"),
+    ("SUSPENDED", "Suspended"),
+    ("UNVERIFIED", "Unverified"),
+]
+
+
 class EmployerVerificationDecisionSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(
-        choices=[
-            ("VERIFIED", "Verified"),
-            ("REJECTED", "Rejected"),
-            ("SUSPENDED", "Suspended"),
-            ("UNVERIFIED", "Unverified"),
-        ]
-    )
+    status = serializers.ChoiceField(choices=VERIFICATION_DECISION_CHOICES)
     note = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
 
 
