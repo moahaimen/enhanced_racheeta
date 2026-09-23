@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Icon } from '../../icons'
 import styles from './Form.module.css'
@@ -22,6 +23,7 @@ export interface FormFieldProps {
 
 /** Label + control + hint + error with the correct associations. */
 export function FormField({ label, optional, hint, error, className = '', children }: FormFieldProps) {
+  const { t } = useTranslation()
   const id = useId()
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
@@ -30,7 +32,7 @@ export function FormField({ label, optional, hint, error, className = '', childr
     <div className={`${styles.field} ${error ? styles.invalid : ''} ${className}`.trim()}>
       <label className={styles.label} htmlFor={id}>
         {label}
-        {optional ? <span className={styles.optional}> · optional</span> : null}
+        {optional ? <span className={styles.optional}> · {t('common.optional')}</span> : null}
       </label>
       {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy })}
       {hint ? (
