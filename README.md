@@ -43,11 +43,12 @@ Full instructions: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision log |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Milestone progress |
 | [docs/HANDOFF.md](docs/HANDOFF.md) | **Start here** for every new working session |
+| [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) | The owner's master build plan (requirements and rules) |
 
 ## Working rules
 
 The repository is the memory. Every coding session — human or AI — starts by
 reading `docs/HANDOFF.md`, `docs/PROGRESS.md`, `docs/DECISIONS.md` and
 `docs/ARCHITECTURE.md`, and ends by updating `docs/HANDOFF.md` and
-`docs/PROGRESS.md`. Secrets never enter git. See the master plan for the full
-rule set.
+`docs/PROGRESS.md`. Secrets never enter git. The full rule set is
+[docs/MASTER_PLAN.md](docs/MASTER_PLAN.md).
