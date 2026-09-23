@@ -1,0 +1,85 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding-block: var(--space-10);
+  padding-inline: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-tertiary);
+  color: var(--text-muted);
+}
+
+.iconError {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+
+.title {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.body {
+  max-inline-size: 36rem;
+  font-size: var(--text-body-sm);
+}
+
+.skeleton {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--skeleton-height, 1rem);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--surface-tertiary) 0%,
+    var(--color-neutral-200) 50%,
+    var(--surface-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonCircle {
+  border-radius: 50%;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.overlayHost {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--surface-primary) 72%, transparent);
+  border-radius: inherit;
+  z-index: 1;
+}

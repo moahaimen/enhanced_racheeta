@@ -1,0 +1,144 @@
+/*
+ * Racheeta design tokens as CSS custom properties.
+ * Values mirror src/design-system/tokens/*.ts (enforced by tokens.test.ts).
+ */
+:root {
+  /* ---- colour: brand teal scale ---- */
+  --color-primary-50: #eef8f7;
+  --color-primary-100: #d5efec;
+  --color-primary-200: #abdfd9;
+  --color-primary-300: #7ccac2;
+  --color-primary-400: #4db1a8;
+  --color-primary-500: #2a9a90;
+  --color-primary-600: #1f7f77;
+  --color-primary-700: #196660;
+  --color-primary-800: #154f4b;
+  --color-primary-900: #103c39;
+
+  /* ---- colour: neutrals ---- */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f7f9f9;
+  --color-neutral-100: #eef1f2;
+  --color-neutral-200: #e2e7e9;
+  --color-neutral-300: #cbd3d6;
+  --color-neutral-400: #9aa6ab;
+  --color-neutral-500: #6b7a80;
+  --color-neutral-600: #4a575c;
+  --color-neutral-700: #34403f;
+  --color-neutral-800: #22302f;
+  --color-neutral-900: #15201f;
+
+  /* ---- colour: semantic ---- */
+  --color-success: #1e8e5a;
+  --color-success-soft: #e8f6ef;
+  --color-warning: #b7791f;
+  --color-warning-soft: #fbf3e4;
+  --color-error: #c4383b;
+  --color-error-soft: #fbeaea;
+  --color-info: #2f6fb7;
+  --color-info-soft: #e9f1fb;
+
+  /* ---- colour roles ---- */
+  --surface-primary: var(--color-neutral-0);
+  --surface-secondary: var(--color-neutral-50);
+  --surface-tertiary: var(--color-neutral-100);
+  --surface-brand: var(--color-primary-50);
+  --surface-brand-strong: var(--color-primary-600);
+  --text-primary: var(--color-neutral-800);
+  --text-secondary: var(--color-neutral-600);
+  --text-muted: var(--color-neutral-500);
+  --text-on-brand: var(--color-neutral-0);
+  --text-brand: var(--color-primary-700);
+  --border-subtle: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+  --border-brand: var(--color-primary-300);
+  --focus-ring: var(--color-primary-400);
+
+  /* ---- spacing (4px base) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-section: 2.5rem;
+  --space-gutter: 1rem;
+
+  /* ---- content widths ---- */
+  --width-sm: 40rem;
+  --width-md: 55rem;
+  --width-lg: 70rem;
+  --width-xl: 80rem;
+
+  /* ---- typography ---- */
+  --font-sans: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --text-display: 2rem;
+  --text-h1: 1.75rem;
+  --text-h2: 1.5rem;
+  --text-h3: 1.25rem;
+  --text-section: 1.125rem;
+  --text-body: 1rem;
+  --text-body-sm: 0.9375rem;
+  --text-label: 0.875rem;
+  --text-caption: 0.8125rem;
+  --text-button: 0.9375rem;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-body: 1.6;
+
+  /* ---- radius ---- */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 999px;
+  --radius-control: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-hero: var(--radius-xl);
+
+  /* ---- shadows & borders ---- */
+  --shadow-xs: 0 1px 2px rgba(21, 32, 31, 0.05);
+  --shadow-sm: 0 2px 8px rgba(21, 32, 31, 0.06);
+  --shadow-md: 0 8px 24px rgba(21, 32, 31, 0.08);
+  --shadow-lg: 0 16px 48px rgba(21, 32, 31, 0.12);
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: var(--shadow-md);
+  --border-width: 1px;
+
+  /* ---- motion ---- */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+
+  /* ---- shell ---- */
+  --header-height: 4rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-section: 4rem;
+    --space-gutter: 2rem;
+    --text-display: 2.5rem;
+    --text-h1: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

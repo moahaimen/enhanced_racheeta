@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { AsyncPage } from './AsyncPage'
-import { initI18n } from '../i18n'
+import { initI18n } from '../../../i18n'
 
 initI18n()
 

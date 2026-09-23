@@ -1,10 +1,10 @@
-import { useCallback, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
+import { useCallback, type MouseEvent, type ReactNode } from 'react'
 
-import { useAsyncAction } from '../hooks/useAsync'
-import { Spinner } from './Spinner'
+import { useAsyncAction } from '../../../hooks/useAsync'
+import { Button, type ButtonProps } from './Button'
 
 export interface ApiActionButtonProps<Result>
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'onError'> {
+  extends Omit<ButtonProps, 'onClick' | 'onError' | 'loading' | 'loadingLabel'> {
   /** The backend call. The button is disabled and shows a spinner until it settles. */
   action: () => Promise<Result>
   onSuccess?: (result: Result) => void
@@ -16,8 +16,10 @@ export interface ApiActionButtonProps<Result>
 
 /**
  * The mandatory pattern for every button that talks to the backend:
- * disabled while running, circular progress shown, duplicate clicks ignored,
- * state restored on success or error.
+ * disabled while running, circular progress shown, stable dimensions,
+ * duplicate clicks ignored, state restored on success or error.
+ * As `type="submit"` it owns the form submission (Enter key works, native
+ * submission is suppressed).
  */
 export function ApiActionButton<Result>({
   action,
@@ -25,8 +27,6 @@ export function ApiActionButton<Result>({
   onError,
   pendingLabel,
   children,
-  disabled,
-  className = '',
   type = 'button',
   ...rest
 }: ApiActionButtonProps<Result>) {
@@ -34,7 +34,6 @@ export function ApiActionButton<Result>({
 
   const handleClick = useCallback(
     async (event: MouseEvent<HTMLButtonElement>) => {
-      // As a submit button we own the submission: never let the browser post the form.
       if (type === 'submit') event.preventDefault()
       let result: Result | undefined
       try {
@@ -49,22 +48,8 @@ export function ApiActionButton<Result>({
   )
 
   return (
-    <button
-      {...rest}
-      type={type}
-      className={`btn ${className}`.trim()}
-      disabled={disabled || pending}
-      aria-busy={pending}
-      onClick={handleClick}
-    >
-      {pending ? (
-        <>
-          <Spinner size="sm" />
-          <span className="btn__label btn__label--pending">{pendingLabel ?? children}</span>
-        </>
-      ) : (
-        <span className="btn__label">{children}</span>
-      )}
-    </button>
+    <Button {...rest} type={type} loading={pending} loadingLabel={pendingLabel} onClick={handleClick}>
+      {children}
+    </Button>
   )
 }

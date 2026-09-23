@@ -1,0 +1,84 @@
+/* Small, intentional utility set. Prefer component modules for everything else. */
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-caption {
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.text-label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
+}
+
+.prewrap {
+  white-space: pre-wrap;
+}
+
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap, var(--space-4));
+}
+
+.stack-sm {
+  --stack-gap: var(--space-2);
+}
+
+.stack-lg {
+  --stack-gap: var(--space-6);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cluster-gap, var(--space-3));
+}
+
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--grid-min, 16rem), 1fr));
+  gap: var(--grid-gap, var(--space-4));
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+[dir='rtl'] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+.card-block {
+  background: var(--surface-primary);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+
+@media (min-width: 768px) {
+  .card-block {
+    padding: var(--space-6);
+  }
+}

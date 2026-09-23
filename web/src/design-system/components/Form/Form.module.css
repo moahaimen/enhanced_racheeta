@@ -1,0 +1,191 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+}
+
+.label {
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.optional {
+  font-weight: var(--weight-regular);
+  color: var(--text-muted);
+}
+
+.control {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  padding-inline: var(--space-3);
+  padding-block: var(--space-2);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-size: var(--text-body);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--color-neutral-400);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 20%, transparent);
+}
+
+.input:disabled {
+  background: var(--surface-tertiary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.invalid .input {
+  border-color: var(--color-error);
+}
+
+.invalid .input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 20%, transparent);
+}
+
+.withLeading .input {
+  padding-inline-start: 2.5rem;
+}
+
+.leading {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.trailingButton {
+  flex: none;
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  font-size: var(--text-label);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.trailingButton:hover {
+  background: var(--surface-tertiary);
+}
+
+select.input {
+  appearance: none;
+  padding-inline-end: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7a80' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 1.125rem;
+}
+
+[dir='rtl'] select.input {
+  background-position: left var(--space-3) center;
+}
+
+textarea.input {
+  resize: vertical;
+  min-block-size: 6rem;
+  line-height: var(--leading-body);
+}
+
+.hint {
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caption);
+  color: var(--color-error);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2rem;
+  cursor: pointer;
+  font-size: var(--text-body-sm);
+}
+
+.check input {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  accent-color: var(--color-primary-600);
+  margin: 0;
+}
+
+.checkGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-start: var(--space-5);
+  margin-block-start: var(--space-5);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+.section:first-child {
+  padding-block-start: 0;
+  margin-block-start: 0;
+  border-block-start: 0;
+}
+
+.sectionTitle {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+}
+
+.sectionDescription {
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+  margin-block-end: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+}

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { ApiError } from '../../api'
+import { ApiError } from '../../../api'
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>
 
