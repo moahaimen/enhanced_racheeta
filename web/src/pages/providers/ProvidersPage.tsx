@@ -1,12 +1,26 @@
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 
 import { providers as providersApi, reference, PROVIDER_TYPES } from '../../api'
-import type { City, Governorate, ProviderCard, ProviderKind, ProviderType, Specialty } from '../../api'
-import { AsyncPage, Spinner } from '../../components'
+import type { City, Governorate, ProviderKind, ProviderType, Specialty } from '../../api'
+import {
+  AsyncPage,
+  Button,
+  Container,
+  EmptyState,
+  Icon,
+  PageStack,
+  Pagination,
+  ProviderCard,
+  ProviderCardSkeleton,
+  SearchField,
+  Select,
+  Spinner,
+} from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
-import { ProviderTypeBadge } from './ProviderBadges'
+import styles from './ProvidersPage.module.css'
 
 const PAGE_SIZE = 12
 
@@ -51,84 +65,99 @@ export function ProvidersPage() {
   }
 
   return (
-    <>
-      <section className="card">
-        <h2>{t('providers.title')}</h2>
-        <p className="muted">{t('providers.intro')}</p>
-        <AsyncPage
-          load={(signal) =>
-            Promise.all([reference.listGovernorates(undefined, signal), reference.listSpecialties(signal)])
-          }
-          loadingLabel={t('providers.loadingFilters')}
-        >
-          {([governorates, specialties]) => (
-            <FilterBar
-              filters={filters}
-              governorates={governorates}
-              specialties={specialties}
-              onChange={update}
-            />
-          )}
-        </AsyncPage>
-      </section>
-      <section className="card">
-        <AsyncPage
-          load={(signal) =>
-            providersApi.listProviders(
-              {
-                type: filters.type,
-                kind: filters.kind,
-                specialty: filters.specialty,
-                governorate: filters.governorate,
-                city: filters.city,
-                search: filters.search,
-                page: filters.page,
-                page_size: PAGE_SIZE,
-              },
-              signal,
-            )
-          }
-          deps={[
-            filters.type,
-            filters.kind,
-            filters.specialty,
-            filters.governorate,
-            filters.city,
-            filters.search,
-            filters.page,
-          ]}
-          loadingLabel={t('providers.loading')}
-        >
-          {(page) => (
-            <>
-              <p className="muted" data-testid="results-count">
-                {t('providers.results', { count: page.count })}
-              </p>
-              {page.results.length === 0 ? (
-                <p className="async-state" data-testid="providers-empty">
-                  {t('providers.empty')}
-                </p>
-              ) : (
-                <ul className="provider-grid" aria-label={t('providers.title')}>
-                  {page.results.map((provider) => (
-                    <li key={provider.id}>
-                      <ProviderCardView provider={provider} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <Pagination
-                page={filters.page}
-                total={Math.max(1, Math.ceil(page.count / PAGE_SIZE))}
-                hasNext={page.next !== null}
-                hasPrevious={page.previous !== null}
-                onChange={(next) => update({ page: next })}
-              />
-            </>
-          )}
-        </AsyncPage>
-      </section>
-    </>
+    <Container width="xl">
+      <PageStack>
+        <section className={styles.hero} aria-labelledby="providers-title">
+          <h1 id="providers-title">{t('providers.title')}</h1>
+          <p>{t('providers.intro')}</p>
+        </section>
+
+        <section className="card-block" aria-labelledby="filters-title">
+          <h2 id="filters-title" className="visually-hidden">
+            {t('providers.filters')}
+          </h2>
+          <AsyncPage
+            load={(signal) => Promise.all([reference.listGovernorates(undefined, signal), reference.listSpecialties(signal)])}
+            skeleton={
+              <div className="cluster">
+                <Spinner size="sm" /> <span className="text-muted">{t('providers.loadingFilters')}</span>
+              </div>
+            }
+          >
+            {([governorates, specialties]) => (
+              <FilterBar filters={filters} governorates={governorates} specialties={specialties} onChange={update} />
+            )}
+          </AsyncPage>
+        </section>
+
+        <section aria-labelledby="results-title">
+          <h2 id="results-title" className="visually-hidden">
+            {t('providers.results_other', { count: 0 })}
+          </h2>
+          <AsyncPage
+            load={(signal) =>
+              providersApi.listProviders(
+                {
+                  type: filters.type,
+                  kind: filters.kind,
+                  specialty: filters.specialty,
+                  governorate: filters.governorate,
+                  city: filters.city,
+                  search: filters.search,
+                  page: filters.page,
+                  page_size: PAGE_SIZE,
+                },
+                signal,
+              )
+            }
+            deps={[filters.type, filters.kind, filters.specialty, filters.governorate, filters.city, filters.search, filters.page]}
+            loadingLabel={t('providers.loading')}
+            skeleton={
+              <div className={styles.grid}>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <ProviderCardSkeleton key={i} />
+                ))}
+              </div>
+            }
+          >
+            {(page) => (
+              <>
+                <ActiveFilters filters={filters} count={page.count} onChange={update} />
+                {page.results.length === 0 ? (
+                  <div className="card-block">
+                    <EmptyState
+                      icon="search"
+                      title={t('providers.empty')}
+                      testId="providers-empty"
+                      action={
+                        <Button variant="secondary" onClick={() => update({ type: '', kind: '', specialty: '', governorate: '', city: '', search: '' })}>
+                          {t('common.clear')}
+                        </Button>
+                      }
+                    />
+                  </div>
+                ) : (
+                  <ul className={styles.grid} aria-label={t('providers.title')} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {page.results.map((provider) => (
+                      <li key={provider.id}>
+                        <ProviderCard provider={provider} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Pagination
+                  page={filters.page}
+                  total={Math.max(1, Math.ceil(page.count / PAGE_SIZE))}
+                  hasNext={page.next !== null}
+                  hasPrevious={page.previous !== null}
+                  onChange={(next) => update({ page: next })}
+                />
+              </>
+            )}
+          </AsyncPage>
+        </section>
+      </PageStack>
+    </Container>
   )
 }
 
@@ -145,51 +174,53 @@ function FilterBar({
 }) {
   const { t } = useTranslation()
   const name = useLocalizedName()
+  const [search, setSearch] = useState(filters.search)
   const cities = useAsyncData<City[]>(
     (signal) => (filters.governorate ? reference.listCities(filters.governorate, signal) : Promise.resolve([])),
     [filters.governorate],
   )
 
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault()
+    onChange({ search: search.trim() })
+  }
+
   return (
-    <form className="filters" onSubmit={(e) => e.preventDefault()} aria-label={t('providers.filters')}>
-      <label className="filters__item">
-        <span>{t('providers.type')}</span>
-        <select value={filters.type} onChange={(e) => onChange({ type: e.target.value as ProviderType | '' })}>
+    <form onSubmit={submitSearch} aria-label={t('providers.filters')}>
+      <div className={styles.searchRow}>
+        <SearchField label={t('common.search')} placeholder={t('providers.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Button type="submit" leading={<Icon name="search" size={18} />}>
+          {t('common.search')}
+        </Button>
+      </div>
+      <div className={styles.filters}>
+        <Select label={t('providers.type')} value={filters.type} onChange={(e) => onChange({ type: e.target.value as ProviderType | '' })}>
           <option value="">{t('common.all')}</option>
           {PROVIDER_TYPES.map((code) => (
             <option key={code} value={code}>
               {t(`providerTypes.${code}`)}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="filters__item">
-        <span>{t('providers.specialty')}</span>
-        <select value={filters.specialty} onChange={(e) => onChange({ specialty: e.target.value })}>
+        </Select>
+        <Select label={t('providers.specialty')} value={filters.specialty} onChange={(e) => onChange({ specialty: e.target.value })}>
           <option value="">{t('common.all')}</option>
           {specialties.map((s) => (
             <option key={s.id} value={s.slug}>
               {name(s)}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="filters__item">
-        <span>{t('providers.governorate')}</span>
-        <select value={filters.governorate} onChange={(e) => onChange({ governorate: e.target.value })}>
+        </Select>
+        <Select label={t('providers.governorate')} value={filters.governorate} onChange={(e) => onChange({ governorate: e.target.value })}>
           <option value="">{t('common.all')}</option>
           {governorates.map((g) => (
             <option key={g.id} value={g.id}>
               {name(g)}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="filters__item">
-        <span>
-          {t('providers.city')} {cities.loading && filters.governorate ? <Spinner size="sm" /> : null}
-        </span>
-        <select
+        </Select>
+        <Select
+          label={t('providers.city')}
+          adornment={cities.loading && filters.governorate ? <Spinner size="sm" /> : null}
           value={filters.city}
           disabled={!filters.governorate || cities.loading}
           onChange={(e) => onChange({ city: e.target.value })}
@@ -200,93 +231,40 @@ function FilterBar({
               {name(c)}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="filters__item filters__item--grow">
-        <span>{t('common.search')}</span>
-        <input
-          type="search"
-          placeholder={t('providers.searchPlaceholder')}
-          defaultValue={filters.search}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onChange({ search: (e.target as HTMLInputElement).value.trim() })
+        </Select>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setSearch('')
+            onChange({ type: '', kind: '', specialty: '', governorate: '', city: '', search: '' })
           }}
-          onBlur={(e) => {
-            if (e.target.value.trim() !== filters.search) onChange({ search: e.target.value.trim() })
-          }}
-        />
-      </label>
-      <button
-        type="button"
-        className="btn btn--ghost"
-        onClick={() => onChange({ type: '', kind: '', specialty: '', governorate: '', city: '', search: '' })}
-      >
-        {t('common.clear')}
-      </button>
+        >
+          {t('common.clear')}
+        </Button>
+      </div>
     </form>
   )
 }
 
-export function ProviderCardView({ provider }: { provider: ProviderCard }) {
+function ActiveFilters({ filters, count, onChange }: { filters: Filters; count: number; onChange: (patch: Partial<Filters>) => void }) {
   const { t } = useTranslation()
-  const name = useLocalizedName()
+  const chips: { key: keyof Filters; label: string }[] = []
+  if (filters.type) chips.push({ key: 'type', label: t(`providerTypes.${filters.type}`) })
+  if (filters.kind) chips.push({ key: 'kind', label: t(`providerKinds.${filters.kind}`) })
+  if (filters.specialty) chips.push({ key: 'specialty', label: `${t('providers.specialty')}: ${filters.specialty}` })
+  if (filters.search) chips.push({ key: 'search', label: `“${filters.search}”` })
+  if (filters.governorate) chips.push({ key: 'governorate', label: t('providers.governorate') })
+  if (filters.city) chips.push({ key: 'city', label: t('providers.city') })
   return (
-    <article className="provider-card">
-      {provider.image_url ? (
-        <img className="provider-card__image" src={provider.image_url} alt="" loading="lazy" />
-      ) : (
-        <div className="provider-card__image provider-card__image--placeholder" aria-hidden="true" />
-      )}
-      <div className="provider-card__body">
-        <h3 className="provider-card__title">
-          <Link to={`/providers/${provider.id}`}>{provider.display_name}</Link>
-        </h3>
-        <ProviderTypeBadge type={provider.provider_type} />
-        <p className="muted">
-          {name(provider.governorate)}
-          {provider.city ? ` — ${name(provider.city)}` : ''}
-        </p>
-        {provider.specialties.length > 0 ? (
-          <ul className="chips" aria-label={t('providers.specialty')}>
-            {provider.specialties.map((s) => (
-              <li key={s.id} className="chip">
-                {name(s)}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <Link to={`/providers/${provider.id}`} className="link">
-          {t('providers.viewProfile')}
-        </Link>
-      </div>
-    </article>
-  )
-}
-
-function Pagination({
-  page,
-  total,
-  hasNext,
-  hasPrevious,
-  onChange,
-}: {
-  page: number
-  total: number
-  hasNext: boolean
-  hasPrevious: boolean
-  onChange: (page: number) => void
-}) {
-  const { t } = useTranslation()
-  if (total <= 1) return null
-  return (
-    <nav className="pagination" aria-label="pagination">
-      <button type="button" className="btn btn--ghost" disabled={!hasPrevious} onClick={() => onChange(page - 1)}>
-        {t('common.previous')}
-      </button>
-      <span>{t('common.page', { page, total })}</span>
-      <button type="button" className="btn btn--ghost" disabled={!hasNext} onClick={() => onChange(page + 1)}>
-        {t('common.next')}
-      </button>
-    </nav>
+    <div className={styles.summary} data-testid="results-count">
+      <span className={styles.summaryCount}>{t('providers.results', { count })}</span>
+      {chips.map((chip) => (
+        <button key={chip.key} type="button" className={styles.chipButton} onClick={() => onChange({ [chip.key]: '' } as Partial<Filters>)}>
+          {chip.label}
+          <Icon name="x" size={14} label={t('common.clear')} />
+        </button>
+      ))}
+    </div>
   )
 }

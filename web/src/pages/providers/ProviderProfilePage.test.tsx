@@ -112,7 +112,7 @@ describe('ProviderProfilePage', () => {
     await userEvent.click(button)
     expect(providersApi.requestVerification).toHaveBeenCalledTimes(1)
     pending.resolve(makeOwner({ verification_status: 'PENDING' }))
-    expect(await screen.findByText(/قيد المراجعة|pending review/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/قيد المراجعة|pending review/i)).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: /طلب التوثيق|request verification/i })).toBeNull()
   })
 
