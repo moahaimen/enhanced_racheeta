@@ -23,8 +23,12 @@ export function AppLayout() {
         </div>
         <nav className="app__nav" aria-label="main">
           <NavLink to="/">{t('nav.home')}</NavLink>
+          <NavLink to="/providers">{t('nav.providers')}</NavLink>
           {status === 'authenticated' ? (
             <>
+              {account?.role === 'PROVIDER' ? (
+                <NavLink to="/provider/profile">{t('nav.providerProfile')}</NavLink>
+              ) : null}
               <NavLink to="/profile">{t('nav.profile')}</NavLink>
               <ApiActionButton
                 className="btn--ghost"

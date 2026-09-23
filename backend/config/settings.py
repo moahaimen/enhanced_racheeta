@@ -78,6 +78,9 @@ INSTALLED_APPS = [
     # Racheeta modules (modular monolith — see docs/ARCHITECTURE.md)
     "apps.core",
     "apps.accounts",
+    "apps.geography",
+    "apps.specialties",
+    "apps.providers",
 ]
 
 MIDDLEWARE = [
@@ -191,6 +194,7 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "sub",
     "TOKEN_OBTAIN_SERIALIZER": "apps.accounts.serializers.LoginSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "apps.accounts.serializers.RefreshSerializer",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -318,4 +322,6 @@ RACHEETA = {
     # Dotted path to a FirebaseVerifier implementation (apps.accounts.firebase).
     "FIREBASE_VERIFIER": env("FIREBASE_VERIFIER"),
     "FIREBASE_CREDENTIALS_FILE": env("FIREBASE_CREDENTIALS_FILE"),
+    # Currencies accepted for service prices (ISO 4217). IQD first.
+    "CURRENCIES": ("IQD", "USD"),
 }

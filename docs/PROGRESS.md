@@ -6,8 +6,8 @@ Phases from `MASTER_PLAN.md` §28. Status: `done` · `partial` · `not started`.
 | --- | --- | --- |
 | 0 — Foundation | **done** | Monorepo, git hygiene, docs, docker-compose, Django, React, CI, env config, `/health/`, OpenAPI, tests. Dockerfile not yet built locally (no Docker on the dev machine). |
 | 1 — Accounts & Authentication | **done** | Custom `Account`, email login, register/login/refresh/logout, `/me` (GET/PATCH), roles + capability registry, permission classes, password reset, email verification (timestamp state, no gating), Firebase exchange behind an adapter (disabled until the owner provides credentials — activation is configuration only), web routing + session layer + login/register/profile/forgot/reset/verify pages, full test coverage, docs. Deferred to later phases by design: admin account-management endpoints (Phase 10 admin dashboard), phone-only Firebase sign-in (ADR-018), password change for logged-in users. |
-| 2 — Providers & Medical Services | not started | Next. |
-| 3 — Reservations | not started | |
+| 2 — Providers & Medical Services | **done** | Geography (Iraq seeded) and specialties reference data, ProviderProfile with controlled types and admin-only verification, memberships workflow, service offerings, public discovery with filters/pagination, owner self-management API, web search/detail/self-management pages, permissions and query-count tests. Deferred by design: distance search (needs PostGIS decision), media uploads for logos (media module), notifications on membership events (Phase 9), invitation UX by name search, admin dashboard UI (Phase 10). |
+| 3 — Reservations | not started | Next. |
 | 4 — Reviews & Offers | not started | |
 | 5 — Jobs | not started | |
 | 6 — Medical Marketplace | not started | |
@@ -22,3 +22,4 @@ Phases from `MASTER_PLAN.md` §28. Status: `done` · `partial` · `not started`.
 
 - **2026-09-23** — Phase 0 complete; Phase 1 foundation (Account, JWT auth, `/me`) complete. 57 backend tests, 12 web tests. Pushed to https://github.com/moahaimen/enhanced_racheeta; CI green on `30f23ab`.
 - **2026-09-23** — Phase 1 complete on branch `feat/phase1-auth-completion`: password reset, email verification, Firebase adapter, web routing/session/auth pages. 104 backend tests, 49 web tests. Browser walkthrough against the local backend: register → verify email → edit profile → logout → login → reset password → login with new password.
+- **2026-09-23** — Phase 2 complete on branch `feat/phase2-providers` (stacked on the unmerged Phase 1 PR #1). 175 backend tests, 66 web tests. Browser check of discovery, detail and provider onboarding against the local backend.

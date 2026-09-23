@@ -2,8 +2,8 @@
 
 Date: 2026-09-23
 AI/Engineer: Claude (Fable 5.1) via Claude Code
-Branch: `feat/phase1-auth-completion` (pushed; PR into `main` to be opened/merged by the owner)
-Last Commit SHA: `4c04c6a` (the commit adding this handoff follows it; see `git log -1`)
+Branch: `feat/phase2-providers` (pushed) — **stacked on `feat/phase1-auth-completion`** because PR #1 (Phase 1 → `main`) was still open when this session started
+Last Commit SHA: `1445821` (the commit adding this handoff follows; see `git log -1`)
 Remote: `git@github.com:moahaimen/enhanced_racheeta.git` (https://github.com/moahaimen/enhanced_racheeta)
 
 > New session? Read `ARCHITECTURE.md`, `DECISIONS.md`, `PROGRESS.md`, then this
@@ -11,171 +11,149 @@ Remote: `git@github.com:moahaimen/enhanced_racheeta.git` (https://github.com/moa
 
 ## Goal of This Work Session
 
-Finish Phase 1 — Accounts & Authentication — completely enough to begin
-Phase 2 safely. Do not start Phase 2.
+Phase 2 — Providers and Medical Services: shared provider architecture,
+verification, memberships, specialties, services, geography, public
+discovery, provider self-management (API + web). No reservations.
 
 ## Completed
 
-- Backend: `email_verified_at` timestamp + `firebase_uid` (migration
-  `accounts.0002`), stateless HMAC tokens for reset/verification, endpoints
-  `POST /auth/password-reset/{request,confirm}`,
-  `POST /auth/email-verification/{request,confirm}`,
-  `POST /auth/firebase/exchange` (adapter; disabled → 503), `/me` now exposes
-  `email_verified_at` and `has_password`; email via `EMAIL_URL` with a
-  production check refusing console backends; `LocaleMiddleware`; throttle
-  scopes `password_reset`, `email_verification`; OpenAPI regenerated.
-- Web: `react-router`; `AuthProvider` single session layer; guards
-  (`RequireAuth`, `PublicOnly`, restoration loading); pages `/`, `/login`,
-  `/register`, `/profile`, `/forgot-password`, `/reset-password`,
-  `/verify-email`, 404; shared form components; `ApiActionButton` as submit
-  button; `Accept-Language` header.
-- Security review of Phase 1 documented in `SECURITY.md` with regression tests.
-- Browser walkthrough against the local backend (Django + Vite, console
-  email): register (client validation caught mismatch) → profile from `/me`
-  → send verification → open link → verified → edit + save (language switch
-  to English applied) → logout → wrong password rejected → login via Enter →
-  forgot password → weak password rejected by backend → reset → login with
-  new password. All API calls logged as expected; no server errors.
-- CI now runs on every branch push.
+- **Precondition note:** `main` still lacks Phase 1 (PR #1 open). Phase 2 was
+  branched from the Phase 1 branch so it contains everything; merge PR #1
+  first, then this branch's PR merges cleanly (or retarget it to `main`
+  after #1 lands — GitHub does this automatically).
+- Backend apps `geography`, `specialties`, `providers` with migrations,
+  seeds (Iraq: 19 governorates, 46 cities; 29 specialties), constraints,
+  indexes, permissions, query-count tests. See `ARCHITECTURE.md`,
+  `DATABASE.md`, `API.md`, `PERMISSIONS.md`.
+- Public discovery (`GET /providers`, `GET /providers/{id}`) limited to
+  verified + visible + active providers; filters and ordering; no ratings.
+- Owner self-management under `/providers/me` (profile, verification
+  request, services, memberships) and an administrator verification endpoint;
+  Django admin actions for verification.
+- Web: `/providers` (filters in URL, cards, pagination, empty/error states),
+  `/providers/:id`, `/provider/profile` (onboarding, edit, verification
+  request, services, memberships) — all through `AsyncPage`/`ApiActionButton`;
+  `RequireRole` guard; bilingual reference data from the API.
+- Browser check against the local backend: discovery list with real seeded
+  filters, type filter, public detail, provider login → onboarding → create
+  profile → add service.
+- Docs updated; ADR-023 … ADR-027 appended; OpenAPI regenerated
+  (32 operations) and CI-checked.
+- Bug found in the walkthrough and fixed: `/auth/refresh` for a deleted
+  account returned 500; now 401 (`RefreshSerializer`, regression tests).
 
 ## Files Added
 
-Backend: `apps/accounts/{tokens,emails,firebase,services}.py`,
-`apps/accounts/migrations/0002_email_verification_and_firebase.py`,
-`apps/core/checks.py`, tests `test_password_reset.py`,
-`test_email_verification.py`, `test_firebase_exchange.py`, `tests/test_checks.py`.
-Web: `src/app/{routes,guards,AppLayout}.tsx`, `src/auth/{AuthContext.tsx,context.ts,useAuth.ts,roles.ts}`,
-`src/components/forms/*`, `src/pages/{LoginPage,RegisterPage,ProfilePage,ForgotPasswordPage,ResetPasswordPage,VerifyEmailPage,NotFoundPage}.tsx`,
-`src/pages/validation.ts`, `src/test/renderApp.tsx`, tests for guards, auth
-context, login, register, profile, password reset/verify pages.
+Backend: `apps/geography/*` (+ `seed_iraq.py`, migrations 0001–0002),
+`apps/specialties/*` (+ `seed.py`, migrations 0001–0002),
+`apps/providers/{types,models,permissions,services,serializers,filters,views,urls,admin}.py`,
+`apps/providers/migrations/0001_initial.py`, tests under each app's `tests/`.
+Web: `src/api/providers.types.ts`, `src/api/endpoints/{providers,reference}.ts`,
+`src/i18n/localized.ts`, `src/pages/providers/{ProvidersPage,ProviderDetailPage,ProviderProfilePage,ProviderForm,ProviderBadges}.tsx`
+and tests, `src/test/providerFixtures.ts`.
 
 ## Files Modified
 
-`backend/config/{settings,test_settings}.py`, `apps/accounts/{models,roles,serializers,views,urls,admin}.py`,
-`apps/core/apps.py`, existing account tests, `web/src/api/{client,types}.ts`,
-`web/src/api/endpoints/auth.ts`, `web/src/components/ApiActionButton.tsx`,
-`web/src/{App,main}.tsx`, `web/src/pages/HomePage.tsx`, `web/src/i18n/locales/*`,
-`web/src/styles/index.css`, `web/package.json`, `.env.example`,
-`.github/workflows/ci.yml`, `docs/*`.
+`backend/config/{settings,api_v1}.py`, `web/src/app/{routes,guards,AppLayout}.tsx`,
+`web/src/api/index.ts`, `web/src/i18n/locales/*`, `web/src/styles/index.css`,
+`docs/*`.
 
 ## Database Migrations
 
-`accounts.0002_email_verification_and_firebase`: adds `email_verified_at`
-(carries over the old boolean), removes `email_verified`, adds `firebase_uid`
-+ unique-when-set constraint. Applied locally; runs automatically on deploy.
+`geography.0001_initial`, `geography.0002_seed_iraq`,
+`specialties.0001_initial`, `specialties.0002_seed_specialties`,
+`providers.0001_initial` (tables `providers_profile`, `providers_membership`,
+`providers_service`, M2M `providers_profile_specialties`). Applied locally;
+run automatically on deploy.
 
 ## API Endpoints Added/Changed
 
-Added: `POST /api/v1/auth/password-reset/request`, `POST /api/v1/auth/password-reset/confirm`,
-`POST /api/v1/auth/email-verification/request`, `POST /api/v1/auth/email-verification/confirm`,
-`POST /api/v1/auth/firebase/exchange`.
-Changed: `GET /api/v1/me` adds `email_verified_at`, `has_password`.
-Contract: `docs/api/openapi.yaml` (11 operations).
+Geography (3), specialties (1), providers public (2), self-management (10),
+admin (1) — listed in `API.md`. No Phase 1 endpoint changed.
 
 ## Architecture Decisions
 
-ADR-015 … ADR-022 in `DECISIONS.md` (stateless tokens; verification
-timestamp without gating; Firebase adapter disabled by default; email
-required / phone-only deferred; `EMAIL_URL` + production check; per-request
-localisation; web session layer and guards; submit buttons are
-`ApiActionButton`).
+ADR-023 one provider table with two kinds; ADR-024 discovery = verified +
+visible; ADR-025 membership workflow with partial unique index; ADR-026
+reference data seeded by migrations, no PostGIS; ADR-027 price + currency.
 
 ## Security Decisions
 
-See the Phase 1 review table in `SECURITY.md`. Notable: enumeration-safe
-reset (same 202 always), single-use tokens by hash design, reset revokes all
-refresh tokens, unverified Firebase emails can never link to an existing
-account, console email refused in production, access-token-as-refresh
-rejected, client cannot set `email_verified_at`/`firebase_uid`.
+Phase 2 review table in `SECURITY.md`: writes only via `/providers/me`,
+admin fields rejected (400), type locked after verification, non-discoverable
+profiles 404 everywhere, membership counterpart must be discoverable and of
+the other kind, third parties 404, no fabricated statistics, https-only image
+URLs, bounded query counts.
 
 ## Tests Run
 
 ```
-make check
-  ruff check / ruff format --check / manage.py check / makemigrations --check
-  pytest                       (backend)
-  tsc -b / oxlint / vitest run / vite build   (web)
-./scripts/export_openapi.sh   (docs/api/openapi.yaml up to date)
+make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest, vite build
+./scripts/export_openapi.sh && git diff --exit-code docs/api/openapi.yaml
 ```
 
 ## Test Results
 
-- Backend: **104 passed**, ruff clean, checks clean, no migration drift.
-- Web: **49 passed**, tsc clean, oxlint clean, production build OK
-  (≈397 kB JS, 124 kB gzip — react-router and i18next included).
-- CI: see the Actions tab for the branch push and the PR.
+- Backend: **175 passed** (was 104), ruff clean, checks clean, no migration drift.
+- Web: **66 passed** (was 49), tsc clean, oxlint clean, build OK (≈435 kB JS, 132 kB gzip).
+- CI: see the Actions run for the branch push (link in the final report).
 
 ## Known Problems
 
-- Firebase is **not activated**: `FirebaseAdminVerifier` is untested against
-  real Firebase (no credentials). Activation steps in `AUTHENTICATION.md`.
-- Phone-only Firebase sign-in is rejected (`email_required`) until ADR-018 is
-  revisited.
-- Password-reset request timing could differ for existing vs unknown emails
-  once a slow SMTP provider is used (synchronous send). Move sending to a
-  background task when a worker exists.
-- Throttle counters are per process (local-memory cache).
-- Dev only: React StrictMode double-invokes effects, so `/me` is fetched
-  twice on start-up in development. Not in production builds.
-- `Dockerfile` still not built locally (no Docker on the dev machine).
-- Production email provider not chosen; `manage.py check` will fail on
-  Railway until `EMAIL_URL` points at a real backend (intentional).
+- PR #1 (Phase 1) is not merged; this branch's PR must land after it.
+- Membership requests take the counterpart's public id (copied from its
+  profile page); a name search/invitation UX is deferred.
+- Provider logos are https URLs until the media module exists.
+- No distance-based search; coordinates are stored only.
+- Verification is done through the API/Django admin; the admin dashboard UI
+  is Phase 10.
+- Throttling and email notes from Phase 1 still apply.
 
 ## Incomplete Work
 
-Nothing required by Phase 1 is left. Deliberately deferred: admin
-account-management endpoints (Phase 10), password change for logged-in
-users (small, can ride with Phase 2), phone-only Firebase sign-in (ADR-018),
-Firebase activation (owner configuration).
+None required by Phase 2. Deferred: see PROGRESS.md (distance search, media
+uploads, membership notifications, invitation UX, admin dashboard).
 
 ## Required Manual Actions
 
-1. Open a pull request `feat/phase1-auth-completion` → `main` and merge when
-   CI is green:
-   https://github.com/moahaimen/enhanced_racheeta/compare/main...feat/phase1-auth-completion?expand=1
-   (GitHub CLI is not authenticated on the dev machine, so the PR could not be
-   opened automatically.)
-2. Decide the production email provider and set `EMAIL_URL`,
-   `DEFAULT_FROM_EMAIL`, `FRONTEND_URL` on Railway before the first deploy.
-3. Optional: provide Firebase credentials to activate the exchange endpoint.
+1. Merge PR #1 (Phase 1), then open/merge the PR for `feat/phase2-providers`:
+   https://github.com/moahaimen/enhanced_racheeta/compare/main...feat/phase2-providers?expand=1
+2. Verify providers through Django admin (`/admin/`) or
+   `POST /api/v1/admin/providers/{id}/verification` — nothing is public until then.
 
 ## Environment Variables Added/Changed
 
-Added (all documented in `.env.example`): `EMAIL_URL`, `DEFAULT_FROM_EMAIL`,
-`FRONTEND_URL`, `PASSWORD_RESET_TIMEOUT_MINUTES`,
-`EMAIL_VERIFICATION_TIMEOUT_HOURS`, `FIREBASE_VERIFIER`,
-`FIREBASE_CREDENTIALS_FILE`. CI sets placeholder `EMAIL_URL` and `FRONTEND_URL`.
+None. (`settings.RACHEETA["CURRENCIES"]` is code, not env.)
 
 ## Railway/Infrastructure Impact
 
-No new services. New required variables at deploy time: `EMAIL_URL`,
-`FRONTEND_URL` (see `RAILWAY.md`). Migration `accounts.0002` runs at container
-start.
+Five migrations run at container start (seed data included). No new services.
 
 ## Exact Next Step
 
-After the PR is merged: start **Phase 2 — Providers and Medical Services** on
-a new branch from `main`:
+After both PRs merge, start **Phase 3 — Reservations** on `feat/phase3-reservations`:
 
-1. `apps/providers`: `ProviderProfile` (practitioner vs facility), provider
-   types, verification status (admin-controlled), relation to `Account`;
-   `ProviderMembership` for practitioners at facilities.
-2. `apps/specialties`, `apps/services`, governorate/city reference data.
-3. Public discovery endpoints with filters (type, specialty, governorate,
-   city, rating placeholder) and pagination.
-4. Provider self-management endpoints (own profile only).
-5. Web: provider search page + provider profile management page under
-   `RequireAuth`, using `AsyncPage`/`ApiActionButton`.
-6. Tests, OpenAPI, docs, HANDOFF.
+1. `apps/availability`: provider weekly schedules + exceptions, slot
+   generation on the server (no client-side slot math).
+2. `apps/reservations`: Reservation with the master-plan state machine
+   (PENDING → CONFIRMED → COMPLETED/CANCELLED/NO_SHOW; PENDING → REJECTED/
+   CANCELLED), transition log (who/from/to/when/reason), patient booking of a
+   ServiceOffering slot, provider management, notification hooks (no-op until
+   Phase 9).
+3. Web: patient booking flow from the provider detail page; provider
+   reservation list under `/provider/profile`; patient reservations under
+   `/profile`. All through `AsyncPage`/`ApiActionButton`.
+4. Tests, OpenAPI, docs, HANDOFF.
 
 ## Recommended Next Prompt
 
 > Read docs/HANDOFF.md, docs/PROGRESS.md, docs/DECISIONS.md and
-> docs/ARCHITECTURE.md in racheeta-platform. Confirm `main` contains the
-> merged Phase 1 branch and `make check` is green. Then start Phase 2 on
-> `feat/phase2-providers`: design and implement the providers, specialties and
-> services modules (ProviderProfile with practitioner/facility subtypes,
-> ProviderMembership, admin-controlled verification, public discovery with
-> filters and pagination, provider self-management), with tests, regenerated
-> docs/api/openapi.yaml, updated docs, small commits, and a final
-> docs/HANDOFF.md + docs/PROGRESS.md update. Do not add PostGIS yet.
+> docs/ARCHITECTURE.md in racheeta-platform. Confirm PR #1 and the Phase 2 PR
+> are merged into `main` and `make check` is green. Then start Phase 3 on
+> `feat/phase3-reservations`: availability schedules with server-side slot
+> generation, the Reservation model with the controlled state machine and a
+> transition log, patient booking and provider management APIs, web booking
+> and reservation pages using AsyncPage/ApiActionButton, comprehensive tests,
+> regenerated docs/api/openapi.yaml, updated docs (new ADRs), small commits,
+> and a final docs/HANDOFF.md + docs/PROGRESS.md update. Do not add payments
+> or notifications beyond no-op hooks.

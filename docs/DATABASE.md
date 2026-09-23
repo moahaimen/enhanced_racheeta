@@ -40,6 +40,53 @@ Django's `auth` tables (`auth_group`, `auth_permission`, M2M tables) exist
 because of `PermissionsMixin`; they are reserved for admin-site permissions,
 not for API authorization.
 
+### `geography_country`, `geography_governorate`, `geography_city`
+
+Bilingual reference data (`name_ar`, `name_en`), `slug`, `sort_order`,
+`is_active`, UUID ids. Unique: `(country, slug)`, `(governorate, slug)`.
+FKs are `PROTECT`. Iraq is seeded by `geography.0002_seed_iraq` from
+`apps/geography/seed_iraq.py`; add data only through a new migration.
+
+### `specialties_specialty`
+
+`slug` (unique), `name_ar`, `name_en`, nullable self-FK `parent` (PROTECT),
+`sort_order`, `is_active`. Seeded by `specialties.0002_seed_specialties`.
+
+### `providers_profile`
+
+| Column | Notes |
+| --- | --- |
+| `account_id` | OneToOne → `accounts_account` (CASCADE) |
+| `provider_type` | enum in code (`ProviderType`) |
+| `display_name`, `about`, `phone`, `public_email`, `website`, `address`, `image_url` | text |
+| `governorate_id` (PROTECT, required), `city_id` (PROTECT, nullable) | city must belong to governorate (validated in serializer) |
+| `latitude`, `longitude` | decimal(9,6); check `providers_profile_coordinates_valid` (ranges) and `providers_profile_coordinates_both_or_none` |
+| `verification_status`, `verification_note`, `verification_requested_at`, `verification_changed_at`, `verified_at` | admin-controlled |
+| `is_visible` | provider-controlled |
+| M2M `providers_profile_specialties` | |
+
+Indexes: `providers_profile_discover_idx (verification_status, is_visible,
+provider_type)` — matches the discovery filter prefix; `providers_profile_geo_idx
+(governorate, city)`.
+
+### `providers_membership`
+
+`practitioner_id`, `facility_id` (both → `providers_profile`, CASCADE),
+`status` (PENDING/ACTIVE/REJECTED/ENDED), `initiated_by`, `role_title`,
+`responded_at`, `joined_at`, `ended_at`. Constraints: not-self
+(`providers_membership_not_self`), partial unique
+`providers_membership_one_live_per_pair` on `(practitioner, facility)` where
+status ∈ {PENDING, ACTIVE}. Indexes on `(facility, status)` and
+`(practitioner, status)`.
+
+### `providers_service`
+
+`provider_id` (CASCADE), `title`, `description`, `specialty_id` (PROTECT,
+nullable), `price` decimal(12,2) ≥ 0 (`providers_service_price_nonneg`),
+`currency` (IQD default; allowed list in `settings.RACHEETA["CURRENCIES"]`),
+`duration_minutes` > 0 or null (`providers_service_duration_positive`),
+`is_active`. Unique `(provider, title)`; index `(provider, is_active)`.
+
 ### SimpleJWT
 
 `token_blacklist_outstandingtoken`, `token_blacklist_blacklistedtoken` — one

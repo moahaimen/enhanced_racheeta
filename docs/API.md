@@ -97,8 +97,52 @@ Sending `is_staff`, `is_superuser`, `is_active`, `permissions`, `groups`,
 body returns a 400 with the offending field in `details` — the request is
 rejected wholesale, never partially applied.
 
+### Geography and specialties (public, unpaginated, no auth)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/geo/countries` | Active countries |
+| GET | `/api/v1/geo/governorates?country=` | Active governorates |
+| GET | `/api/v1/geo/cities?governorate=` | Active cities |
+| GET | `/api/v1/specialties` | Active specialties (`parent` for hierarchy) |
+
+### Providers — public discovery (no auth)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/providers` | Paginated cards of **verified, visible** providers. Filters: `type`, `kind` (PRACTITIONER/FACILITY), `specialty` (slug), `governorate`, `city` (ids), `search` (name); `ordering` = `display_name`, `-display_name`, `created_at`, `-created_at`. |
+| GET | `/api/v1/providers/{id}` | Public profile: contact, location, specialties, active `services`, `related_providers` (active memberships that are themselves public). 404 when not discoverable. |
+
+Ratings and statistics are **not** part of these responses. Reviews arrive
+in Phase 4 and will add fields then; nothing is fabricated meanwhile.
+
+### Providers — self-management (bearer, role PROVIDER)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/providers/me` | Own profile incl. verification fields (404 until created) |
+| POST | `/api/v1/providers/me` | Create profile (onboarding) → 201 |
+| PATCH | `/api/v1/providers/me` | Update `display_name`, `about`, `phone`, `public_email`, `website`, `governorate`, `city`, `address`, `latitude`, `longitude`, `image_url`, `specialty_ids`, `is_visible`; `provider_type` only while not VERIFIED |
+| POST | `/api/v1/providers/me/verification/request` | UNVERIFIED/REJECTED → PENDING |
+| GET/POST | `/api/v1/providers/me/services` | List / add service offerings |
+| GET/PATCH/DELETE | `/api/v1/providers/me/services/{id}` | Own services only (foreign ids → 404) |
+| GET/POST | `/api/v1/providers/me/memberships` | List both sides / request-or-invite (`counterpart` = other provider's public id) |
+| POST | `/api/v1/providers/me/memberships/{id}/accept` | Counterpart of the initiator, PENDING → ACTIVE |
+| POST | `/api/v1/providers/me/memberships/{id}/reject` | Either party, PENDING → REJECTED (initiator = withdraw) |
+| POST | `/api/v1/providers/me/memberships/{id}/end` | Either party, ACTIVE → ENDED |
+
+Sending `verification_status`, `verification_note`, `verified_at`,
+`verification_requested_at`, `verification_changed_at`, `account` or `id` to
+`/providers/me` returns 400 `field_not_allowed`.
+
+### Administrators (bearer, `is_staff`)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/admin/providers/{id}/verification` | `{status: VERIFIED|REJECTED|SUSPENDED|UNVERIFIED, note?}` |
+
 ## Planned (not implemented)
 
-Every business module listed in the master plan (providers, reservations,
-…). Password change for logged-in users and admin account-management
+Reservations/availability (Phase 3), reviews and offers (Phase 4) and the
+remaining modules of the master plan. Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.
