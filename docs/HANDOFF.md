@@ -3,7 +3,7 @@
 Date: 2026-09-23
 AI/Engineer: Claude (Fable 5.1) via Claude Code
 Branch: `main`
-Last Commit SHA: `30f23ab` (see `git log` for the docs commit that follows)
+Last Commit SHA: `336e999`
 Remote: `git@github.com:moahaimen/enhanced_racheeta.git` (https://github.com/moahaimen/enhanced_racheeta)
 
 > New session? Read `ARCHITECTURE.md`, `DECISIONS.md`, `PROGRESS.md`, then this
