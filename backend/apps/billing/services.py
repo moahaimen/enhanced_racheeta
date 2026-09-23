@@ -199,17 +199,53 @@ class EntitlementService:
     @transaction.atomic
     def consume(self, key: str, amount: int = 1, reference: str = "") -> Entitlement:
         """Consume usage atomically. Credits cover usage beyond the plan limit.
-        A repeated `reference` is a no-op (idempotent retries)."""
+        A repeated `reference` is a no-op (idempotent retries, concurrent
+        identical requests): the usage event is inserted first as the claim,
+        and a unique-constraint failure means another transaction already
+        consumed this reference."""
         ent = self.require(key)
         if ent.kind != EntitlementKind.LIMIT:
             return ent
-        if (
-            reference
-            and UsageEvent.objects.filter(
-                billing_account=self.billing_account, key=key, reference=reference
-            ).exists()
-        ):
+        try:
+            with transaction.atomic():
+                event = UsageEvent.objects.create(
+                    billing_account=self.billing_account,
+                    key=key,
+                    amount=amount,
+                    reference=reference,
+                )
+        except IntegrityError:
             return self.get(key)
+        if ent.unlimited:
+            return ent
+        start = period_start_for(ent.period, self.subscription)
+        counter, _ = UsageCounter.objects.select_for_update().get_or_create(
+            billing_account=self.billing_account, key=key, period_start=start
+        )
+        if counter.used + amount > (ent.limit or 0):
+            # Only the part of *this* consumption above the limit needs credit.
+            overflow = min(amount, counter.used + amount - (ent.limit or 0))
+            credit = (
+                CreditBalance.objects.select_for_update()
+                .filter(billing_account=self.billing_account, key=key)
+                .first()
+            )
+            if credit is None or credit.balance < overflow:
+                raise UsageLimitReached(key=key, limit=ent.limit, used=counter.used)
+            credit.balance = F("balance") - overflow
+            credit.save(update_fields=["balance", "updated_at"])
+            CreditTransaction.objects.create(
+                billing_account=self.billing_account,
+                key=key,
+                delta=-overflow,
+                reason=CreditReason.CONSUME,
+                reference=reference,
+            )
+            event.covered_by_credit = True
+            event.save(update_fields=["covered_by_credit"])
+        counter.used = F("used") + amount
+        counter.save(update_fields=["used", "updated_at"])
+        return self.get(key)
         if ent.unlimited:
             UsageEvent.objects.create(
                 billing_account=self.billing_account, key=key, amount=amount, reference=reference

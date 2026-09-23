@@ -547,12 +547,14 @@ def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
     ent.require(Keys.TALENT_SEARCH)
     signature = search_signature(params)
     day = timezone.localdate()
-    if TalentSearchQuery.objects.filter(employer=employer, signature=signature, day=day).exists():
+    # get_or_create is race-safe (savepoint + re-read), so two identical
+    # concurrent requests charge exactly once.
+    _, created = TalentSearchQuery.objects.get_or_create(
+        employer=employer, signature=signature, day=day, defaults={"executed_by": actor}
+    )
+    if not created:
         return False
     ent.consume(Keys.TALENT_SEARCH_LIMIT, reference=f"talent:{employer.pk}:{day}:{signature}")
-    TalentSearchQuery.objects.create(
-        employer=employer, signature=signature, day=day, executed_by=actor
-    )
     return True
 
 

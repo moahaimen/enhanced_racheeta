@@ -174,3 +174,16 @@ def test_subscription_lifecycle_and_audit(employer_billing, plan, admin, account
     )
     assert sub.events.count() >= 5
     assert Subscription.objects.filter(billing_account=employer_billing).count() == 1
+
+
+def test_consume_claim_race_does_not_double_count(active_basic, employer_billing):
+    """A usage event that already exists for the reference (another request won the
+    race) means this consume must neither raise nor increment the counter."""
+    svc = services.entitlements_for("organization", employer_billing.subject_id, "EMPLOYER")
+    svc.consume(Keys.TALENT_SEARCH_LIMIT, reference="race:1")
+    assert svc.get(Keys.TALENT_SEARCH_LIMIT).used == 1
+    UsageEvent.objects.create(
+        billing_account=employer_billing, key=Keys.TALENT_SEARCH_LIMIT, amount=1, reference="race:2"
+    )
+    svc.consume(Keys.TALENT_SEARCH_LIMIT, reference="race:2")
+    assert svc.get(Keys.TALENT_SEARCH_LIMIT).used == 1
