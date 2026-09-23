@@ -211,3 +211,18 @@ def test_logout_with_already_revoked_token_is_400_without_leaking(api_client, ac
     assert again.status_code == 400
     assert again.json()["error"]["code"] == "validation_error"
     assert account.email not in again.content.decode()
+
+
+def test_refresh_for_deleted_account_is_401_not_500(api_client, account):
+    tokens = _login(api_client, account)
+    account.delete()
+    response = api_client.post(REFRESH, {"refresh": tokens["refresh"]})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "token_not_valid"
+
+
+def test_refresh_for_deactivated_account_is_401(api_client, account):
+    tokens = _login(api_client, account)
+    Account.objects.filter(pk=account.pk).update(is_active=False)
+    response = api_client.post(REFRESH, {"refresh": tokens["refresh"]})
+    assert response.status_code == 401

@@ -3,7 +3,8 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Account
@@ -165,6 +166,18 @@ class FirebaseExchangeResponseSerializer(serializers.Serializer):
 
 class LoginSerializer(TokenObtainPairSerializer):
     """Email + password -> access/refresh pair. Registered via SIMPLE_JWT."""
+
+
+class RefreshSerializer(TokenRefreshSerializer):
+    """Rotation with a defined answer for a token whose account no longer exists."""
+
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except Account.DoesNotExist as exc:
+            # SimpleJWT looks the user up for rotation; a deleted account must
+            # be an ordinary 401, never a 500.
+            raise InvalidToken("Token is not valid for any account.") from exc
 
 
 class LogoutSerializer(serializers.Serializer):

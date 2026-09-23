@@ -194,6 +194,7 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "sub",
     "TOKEN_OBTAIN_SERIALIZER": "apps.accounts.serializers.LoginSerializer",
+    "TOKEN_REFRESH_SERIALIZER": "apps.accounts.serializers.RefreshSerializer",
 }
 
 SPECTACULAR_SETTINGS = {
