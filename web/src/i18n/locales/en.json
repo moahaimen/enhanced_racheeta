@@ -26,7 +26,10 @@
     "edit": "Edit",
     "none": "None",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "soon": "Coming soon",
+    "learnMore": "Learn more",
+    "browse": "Browse"
   },
   "nav": {
     "home": "Home",
@@ -36,18 +39,51 @@
     "logout": "Log out",
     "loggingOut": "Logging out…",
     "providers": "Providers",
-    "providerProfile": "Provider profile"
+    "providerProfile": "Provider profile",
+    "main": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "home": {
-    "title": "Platform status",
-    "apiStatus": "API status",
-    "ok": "Operational",
-    "checkAgain": "Check again",
-    "checking": "Checking…",
-    "lastChecked": "Last checked",
-    "welcome": "Welcome, {{name}}",
-    "goToProfile": "Go to my account",
-    "intro": "Log in or create an account to continue."
+    "heroEyebrow": "Iraq's medical platform",
+    "heroTitle": "All your medical needs in one place",
+    "heroBody": "Find verified doctors, hospitals, centers, pharmacies and laboratories, see their services and how to reach them.",
+    "heroPrimary": "Browse providers",
+    "heroSecondary": "Create your account",
+    "heroProvider": "My provider profile",
+    "heroTrust1": "Verified providers",
+    "heroTrust2": "One account for every service",
+    "heroTrust3": "Arabic-first",
+    "searchTitle": "Find a provider",
+    "searchBody": "Pick a type and governorate, or search by name.",
+    "searchSubmit": "Search",
+    "servicesTitle": "Racheeta services",
+    "servicesBody": "The platform grows phase by phase. What is available works end to end; what is next is clearly marked.",
+    "services": {
+      "providers": "Discover verified doctors and medical facilities by type, specialty and governorate.",
+      "reservations": "Book appointments directly with providers.",
+      "offers": "Medical offers from verified providers.",
+      "jobs": "Medical jobs and a specialised job market.",
+      "marketplace": "A marketplace for medical equipment and supplies between companies and providers.",
+      "realEstate": "Clinics and properties suited for medical use."
+    },
+    "featuredTitle": "Latest verified providers",
+    "featuredBody": "Real profiles verified by Racheeta administrators.",
+    "featuredAll": "View all",
+    "featuredEmpty": "No verified providers yet.",
+    "featuredEmptyBody": "The first verified provider will appear here.",
+    "whyTitle": "Why Racheeta?",
+    "why": {
+      "verifiedTitle": "Real verification",
+      "verifiedBody": "No provider is public before Racheeta administrators review and verify the profile.",
+      "accountTitle": "One account",
+      "accountBody": "One account for patients, providers and companies, with permissions decided by the server, never the app.",
+      "arabicTitle": "Arabic-first",
+      "arabicBody": "An interface designed for Arabic from day one, and ready for English."
+    },
+    "ctaTitle": "Are you a doctor or do you run a medical facility?",
+    "ctaBody": "Create a provider account, complete your professional profile and request verification so patients can find you.",
+    "ctaButton": "Start as a provider"
   },
   "fields": {
     "email": "Email address",
@@ -91,7 +127,8 @@
     "noAccount": "No account yet?",
     "register": "Create one",
     "forgot": "Forgot your password?",
-    "failed": "Could not log in. Check your email and password."
+    "failed": "Could not log in. Check your email and password.",
+    "intro": "Enter your email address and password."
   },
   "register": {
     "title": "Create account",
@@ -99,7 +136,11 @@
     "submitting": "Creating…",
     "haveAccount": "Already have an account?",
     "login": "Log in",
-    "emailTaken": "An account with this email already exists."
+    "emailTaken": "An account with this email already exists.",
+    "intro": "Create your account in a minute. Your professional profile can follow later.",
+    "sectionIdentity": "Your details",
+    "sectionSecurity": "Security",
+    "roleHint": "The account type decides what you can do later. It cannot be changed by yourself after registration."
   },
   "profile": {
     "title": "My account",
@@ -114,7 +155,16 @@
     "capabilities": "Capabilities (informational — the server is authoritative)",
     "saved": "Changes saved.",
     "edit": "Edit details",
-    "memberSince": "Member since"
+    "memberSince": "Member since",
+    "overviewTitle": "Overview",
+    "contactTitle": "Contact information",
+    "contactBody": "The fields you can edit yourself.",
+    "accountTitle": "Account information",
+    "securityTitle": "Security & verification",
+    "capabilitiesBody": "Informational codes only; the server decides permissions.",
+    "lastLogin": "Last login",
+    "passwordLabel": "Password",
+    "passwordSet": "Set"
   },
   "forgot": {
     "title": "Reset your password",
@@ -130,7 +180,8 @@
     "submitting": "Saving…",
     "invalidLink": "This link is invalid or has expired.",
     "requestNew": "Request a new link",
-    "success": "Your password was changed. Log in with the new password."
+    "success": "Your password was changed. Log in with the new password.",
+    "intro": "Choose a new, strong password."
   },
   "verifyEmail": {
     "title": "Email verification",
@@ -207,7 +258,8 @@
     "verifiedSince": "Verified since",
     "duration": "{{minutes}} min",
     "notFound": "This provider does not exist or is not available.",
-    "backToList": "Back to the list"
+    "backToList": "Back to the list",
+    "bookingSoon": "Online appointment booking arrives in a later phase."
   },
   "providerProfile": {
     "title": "My provider profile",
@@ -253,6 +305,49 @@
     "withdraw": "Withdraw",
     "end": "End",
     "noMemberships": "No memberships yet.",
-    "notProvider": "This page is only for provider accounts."
+    "notProvider": "This page is only for provider accounts.",
+    "workspaceIntro": "Your provider workspace: professional profile, services, memberships and verification status.",
+    "sections": "Workspace sections",
+    "nav": {
+      "overview": "Overview",
+      "verification": "Verification",
+      "details": "Professional profile",
+      "services": "Services",
+      "memberships": "Memberships"
+    },
+    "detailsIntro": "What patients see on your public profile once verified.",
+    "servicesIntro": "The services you offer and their prices. Inactive services are not public.",
+    "sectionIdentity": "Identity",
+    "sectionContact": "Contact",
+    "sectionLocation": "Location",
+    "sectionVisibility": "Visibility",
+    "hidden": "Hidden from search",
+    "activeMemberships": "Active memberships",
+    "pendingMemberships_one": "1 request awaiting a response",
+    "pendingMemberships_other": "{{count}} requests awaiting a response",
+    "pendingHint": "Administrators are reviewing your request.",
+    "activeYes": "Active",
+    "activeNo": "Inactive",
+    "requestTitlePractitioner": "Request to join a facility",
+    "requestTitleFacility": "Invite a practitioner",
+    "counterpartHint": "Copy the id from the other party's public profile link (/providers/…)."
+  },
+  "modules": {
+    "providers": "Medical providers",
+    "reservations": "Reservations",
+    "offers": "Offers",
+    "jobs": "Medical jobs",
+    "marketplace": "Medical marketplace",
+    "realEstate": "Medical real estate"
+  },
+  "footer": {
+    "tagline": "Racheeta brings verified medical providers in Iraq together in one place, Arabic-first.",
+    "platform": "Platform",
+    "upcoming": "Coming next",
+    "rights": "© {{year}} Racheeta. All rights reserved."
+  },
+  "auth": {
+    "sideTitle": "A trusted medical platform, one account.",
+    "sideBody": "Log in to reach your account, or create a new one as a patient or provider."
   }
 }

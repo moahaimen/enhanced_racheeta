@@ -1,0 +1,14 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.main {
+  flex: 1;
+  padding-block: var(--space-8) var(--space-12);
+}
+
+.mainFlush {
+  padding-block: 0 var(--space-12);
+}

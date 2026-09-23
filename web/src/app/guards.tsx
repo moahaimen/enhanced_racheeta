@@ -6,18 +6,13 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 
 import type { AccountRole } from '../api'
 import { useAuth } from '../auth/useAuth'
-import { Spinner } from '../components/Spinner'
+import { ErrorState, LoadingState } from '../design-system'
 
 export const DEFAULT_AUTHENTICATED_PATH = '/profile'
 
 export function SessionRestoring() {
   const { t } = useTranslation()
-  return (
-    <div className="async-state" data-testid="session-restoring">
-      <Spinner size="lg" label={t('common.restoringSession')} />
-      <p>{t('common.restoringSession')}</p>
-    </div>
-  )
+  return <LoadingState label={t('common.restoringSession')} testId="session-restoring" />
 }
 
 /** Children render only for authenticated users; others go to /login. */
@@ -49,9 +44,9 @@ export function RequireRole({ roles }: { roles: AccountRole[] }) {
   const { t } = useTranslation()
   if (!account || !roles.includes(account.role)) {
     return (
-      <section className="card" role="alert" data-testid="role-denied">
-        <p>{t('providerProfile.notProvider')}</p>
-      </section>
+      <div role="alert" data-testid="role-denied">
+        <ErrorState title={t('providerProfile.notProvider')} error={null} />
+      </div>
     )
   }
   return <Outlet />
