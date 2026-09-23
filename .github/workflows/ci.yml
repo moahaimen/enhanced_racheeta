@@ -2,11 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -40,6 +39,9 @@ jobs:
       DATABASE_URL: postgres://racheeta:racheeta@localhost:5432/racheeta
       CORS_ALLOWED_ORIGINS: http://localhost:5173
       CSRF_TRUSTED_ORIGINS: http://localhost:5173
+      # Placeholder so the production email check passes; nothing is sent in CI.
+      EMAIL_URL: smtp://localhost:25
+      FRONTEND_URL: https://ci.invalid
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

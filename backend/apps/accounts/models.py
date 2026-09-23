@@ -29,7 +29,9 @@ class Account(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     preferred_language = models.CharField(
         max_length=2, choices=Language.choices, default=Language.ARABIC
     )
-    email_verified = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    # Firebase Authentication subject (`uid`). Empty until the account is linked.
+    firebase_uid = models.CharField(max_length=128, blank=True, default="")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(
         default=False, help_text="Grants access to the Django admin site."
@@ -53,6 +55,11 @@ class Account(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
                 condition=~Q(phone_number=""),
                 name="accounts_account_phone_unique_when_set",
             ),
+            models.UniqueConstraint(
+                fields=["firebase_uid"],
+                condition=~Q(firebase_uid=""),
+                name="accounts_account_firebase_uid_unique_when_set",
+            ),
             models.CheckConstraint(
                 condition=~Q(role=AccountRole.ADMIN) | Q(is_staff=True),
                 name="accounts_account_admin_role_requires_staff",
@@ -66,6 +73,10 @@ class Account(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     def clean(self) -> None:
         super().clean()
         self.email = AccountManager.normalize_email(self.email)
+
+    @property
+    def email_verified(self) -> bool:
+        return self.email_verified_at is not None
 
     @property
     def capabilities(self) -> list[str]:

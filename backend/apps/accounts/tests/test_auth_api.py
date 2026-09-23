@@ -187,3 +187,11 @@ def test_role_choice_labels_exclude_admin():
 
     choices = dict(RegisterSerializer().fields["role"].choices)
     assert AccountRole.ADMIN not in choices
+
+
+def test_self_registration_choices_match_settings(settings):
+    from apps.accounts.roles import SELF_REGISTRATION_ROLE_CHOICES
+
+    assert [c[0] for c in SELF_REGISTRATION_ROLE_CHOICES] == list(
+        settings.RACHEETA["SELF_REGISTRATION_ROLES"]
+    )

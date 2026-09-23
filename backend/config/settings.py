@@ -31,6 +31,13 @@ env = environ.Env(
     SPA_DIST_DIR=(str, ""),
     LOG_LEVEL=(str, "INFO"),
     SECURE_PROXY_SSL=(bool, False),
+    EMAIL_URL=(str, "consolemail://"),
+    DEFAULT_FROM_EMAIL=(str, "Racheeta <no-reply@racheeta.local>"),
+    FRONTEND_URL=(str, "http://localhost:5173"),
+    PASSWORD_RESET_TIMEOUT_MINUTES=(int, 60),
+    EMAIL_VERIFICATION_TIMEOUT_HOURS=(int, 24),
+    FIREBASE_VERIFIER=(str, "apps.accounts.firebase.DisabledVerifier"),
+    FIREBASE_CREDENTIALS_FILE=(str, ""),
 )
 
 # Load repo-root .env if present (developer machines only; harmless elsewhere).
@@ -78,6 +85,8 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Localises validation messages per request (Accept-Language); default "ar".
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -159,6 +168,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": (),
     "DEFAULT_THROTTLE_RATES": {
         "auth": "10/min",
+        "password_reset": "5/min",
+        "email_verification": "3/min",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -191,7 +202,22 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": True,
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "ENUM_NAME_OVERRIDES": {
+        "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
+        "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
+    },
 }
+
+# Django's stateless password-reset tokens (HMAC over user state + timestamp).
+PASSWORD_RESET_TIMEOUT = env("PASSWORD_RESET_TIMEOUT_MINUTES") * 60
+
+# ---------------------------------------------------------------------------
+# Email — EMAIL_URL, e.g. consolemail:// (dev), smtp://user:pass@host:587?tls=True
+# A production deployment must not use the console backend (see apps.core.checks).
+# ---------------------------------------------------------------------------
+vars().update(env.email_url("EMAIL_URL"))
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ---------------------------------------------------------------------------
 # CORS / CSRF
@@ -286,4 +312,10 @@ RACHEETA = {
     # Roles a client is allowed to choose at registration. ADMIN is never
     # client-assignable (see apps.accounts.roles).
     "SELF_REGISTRATION_ROLES": ("PATIENT", "PROVIDER", "MEDICAL_COMPANY", "REAL_ESTATE_SELLER"),
+    # Public origin of the web app; used to build links in emails.
+    "FRONTEND_URL": env("FRONTEND_URL").rstrip("/"),
+    "EMAIL_VERIFICATION_TIMEOUT": timedelta(hours=env("EMAIL_VERIFICATION_TIMEOUT_HOURS")),
+    # Dotted path to a FirebaseVerifier implementation (apps.accounts.firebase).
+    "FIREBASE_VERIFIER": env("FIREBASE_VERIFIER"),
+    "FIREBASE_CREDENTIALS_FILE": env("FIREBASE_CREDENTIALS_FILE"),
 }

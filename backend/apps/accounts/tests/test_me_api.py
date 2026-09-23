@@ -25,6 +25,8 @@ def test_me_returns_identity_role_and_permissions(auth_client, account):
         "role",
         "preferred_language",
         "email_verified",
+        "email_verified_at",
+        "has_password",
         "is_staff",
         "permissions",
         "created_at",
@@ -33,6 +35,9 @@ def test_me_returns_identity_role_and_permissions(auth_client, account):
     assert body["id"] == str(account.id)
     assert body["role"] == "PATIENT"
     assert body["preferred_language"] == "ar"
+    assert body["email_verified"] is False
+    assert body["email_verified_at"] is None
+    assert body["has_password"] is True
     assert "accounts.edit_self" in body["permissions"]
 
 
@@ -57,6 +62,8 @@ def test_me_patch_updates_allowed_fields(auth_client, account):
         {"email": "hijack@example.com"},
         {"password": "new-password-123"},
         {"email_verified": True},
+        {"email_verified_at": "2026-01-01T00:00:00Z"},
+        {"firebase_uid": "attacker"},
     ],
 )
 def test_me_patch_rejects_privilege_and_identity_fields(auth_client, account, payload):

@@ -22,6 +22,18 @@ class AccountRole(models.TextChoices):
     ADMIN = "ADMIN", "Racheeta administrator"
 
 
+# Roles a client may pick for itself (registration, Firebase first sign-in).
+# Mirrors settings.RACHEETA["SELF_REGISTRATION_ROLES"]; ADMIN is never here.
+SELF_REGISTRATION_ROLE_CHOICES = [
+    (r, r.label)
+    for r in (
+        AccountRole.PATIENT,
+        AccountRole.PROVIDER,
+        AccountRole.MEDICAL_COMPANY,
+        AccountRole.REAL_ESTATE_SELLER,
+    )
+]
+
 # Capability codes per role. Format: "<module>.<action>".
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     AccountRole.PATIENT: frozenset(
@@ -81,6 +93,8 @@ CLIENT_FORBIDDEN_FIELDS: frozenset[str] = frozenset(
         "groups",
         "user_permissions",
         "email_verified",
+        "email_verified_at",
+        "firebase_uid",
         "last_login",
     }
 )

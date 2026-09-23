@@ -1,6 +1,5 @@
 """Read and write serializers are deliberately separate (docs/SECURITY.md)."""
 
-from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
@@ -8,7 +7,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Account
-from .roles import CLIENT_FORBIDDEN_FIELDS, AccountRole
+from .roles import CLIENT_FORBIDDEN_FIELDS, SELF_REGISTRATION_ROLE_CHOICES, AccountRole
 
 
 class ForbidPrivilegeFieldsMixin:
@@ -34,6 +33,8 @@ class AccountSerializer(serializers.ModelSerializer):
     permissions = serializers.ListField(
         child=serializers.CharField(), source="capabilities", read_only=True
     )
+    email_verified = serializers.BooleanField(read_only=True)
+    has_password = serializers.BooleanField(source="has_usable_password", read_only=True)
 
     class Meta:
         model = Account
@@ -45,6 +46,8 @@ class AccountSerializer(serializers.ModelSerializer):
             "role",
             "preferred_language",
             "email_verified",
+            "email_verified_at",
+            "has_password",
             "is_staff",
             "permissions",
             "created_at",
@@ -78,8 +81,7 @@ class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer
         write_only=True, min_length=8, max_length=128, trim_whitespace=False
     )
     role = serializers.ChoiceField(
-        choices=[(r, AccountRole(r).label) for r in settings.RACHEETA["SELF_REGISTRATION_ROLES"]],
-        default=AccountRole.PATIENT,
+        choices=SELF_REGISTRATION_ROLE_CHOICES, default=AccountRole.PATIENT
     )
 
     class Meta:
@@ -115,6 +117,50 @@ class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer
 class RegisterResponseSerializer(serializers.Serializer):
     account = AccountSerializer(read_only=True)
     tokens = TokenPairSerializer(read_only=True)
+
+
+class DetailSerializer(serializers.Serializer):
+    detail = serializers.CharField(read_only=True)
+
+
+def _validate_new_password(password: str, account: Account | None) -> str:
+    try:
+        validate_password(password, user=account)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError(exc.messages) from exc
+    return password
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=64)
+    new_password = serializers.CharField(
+        write_only=True, min_length=8, max_length=128, trim_whitespace=False
+    )
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=64)
+
+
+class FirebaseExchangeSerializer(serializers.Serializer):
+    id_token = serializers.CharField(write_only=True, max_length=4096, trim_whitespace=True)
+    role = serializers.ChoiceField(
+        choices=SELF_REGISTRATION_ROLE_CHOICES,
+        required=False,
+        help_text="Role for a newly created account. Ignored for existing accounts.",
+    )
+
+
+class FirebaseExchangeResponseSerializer(serializers.Serializer):
+    account = AccountSerializer(read_only=True)
+    tokens = TokenPairSerializer(read_only=True)
+    created = serializers.BooleanField(read_only=True)
 
 
 class LoginSerializer(TokenObtainPairSerializer):
