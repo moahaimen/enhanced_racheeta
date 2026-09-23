@@ -86,3 +86,46 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-23
 **Decision:** `LICENSE` states all rights reserved by Moahaimen Talib; contributions are assigned to the owner.
 **Consequences:** No open-source obligations; change only by owner decision.
+
+## ADR-015 — Stateless HMAC tokens for password reset and email verification
+**Date:** 2026-09-23
+**Context:** Reset/verification links need expiring, single-use, unguessable tokens. Options: a token table with hashed values, or Django's stateless generator design.
+**Decision:** Use `PasswordResetTokenGenerator` subclasses with per-purpose salts (`apps/accounts/tokens.py`). The HMAC covers a timestamp and account state (password hash / `email_verified_at` / email), so a token dies when the flow completes or the state changes. No token table.
+**Consequences:** Zero storage and no cleanup job. A password reset invalidates every earlier reset link at once. Multiple verification links stay valid until one is used (accepted). Rotating `SECRET_KEY` invalidates all links (expected).
+
+## ADR-016 — `email_verified_at` timestamp; verification does not gate features yet
+**Date:** 2026-09-23
+**Decision:** Replace the boolean with a nullable timestamp (data-preserving migration `accounts.0002`). Expose `email_verified` and `email_verified_at` on `/me`. No endpoint requires verification.
+**Consequences:** Auditable state. Gating rules are a later, documented business decision (`PERMISSIONS.md`).
+
+## ADR-017 — Firebase behind a verifier adapter, disabled by default
+**Date:** 2026-09-23
+**Context:** Owner has no Firebase credentials configured; development must not block on them.
+**Decision:** `FirebaseVerifier` protocol + `DisabledVerifier` (503) + `FirebaseAdminVerifier` (lazy `firebase-admin` import, credentials file from env). Endpoint logic is fully tested with a fake verifier. Linking requires a Firebase-verified email; new accounts get an unusable password; `firebase_uid` is stored on the account.
+**Consequences:** Activation is configuration only (see `AUTHENTICATION.md`). The `firebase-admin` dependency is added only when activated. A separate `SocialIdentity` table can replace `firebase_uid` if a second identity provider ever appears.
+
+## ADR-018 — Email remains required; phone-only Firebase sign-in deferred
+**Date:** 2026-09-23
+**Context:** Firebase phone auth yields identities without an email, but `Account.email` is the canonical identifier.
+**Decision:** The exchange rejects identities without an email (`email_required`). Supporting phone-only accounts needs a nullable email plus login/reset adjustments; decide when phone auth is actually enabled.
+**Consequences:** Google sign-in works once activated; phone sign-in needs a follow-up ADR.
+
+## ADR-019 — Email via `EMAIL_URL`; production refuses console backends
+**Date:** 2026-09-23
+**Decision:** Django email backend from `EMAIL_URL` (console in dev). System check `racheeta.E001` fails `manage.py check` when a console/locmem backend is configured with `DEBUG=false`. Provider choice deferred to the owner; the integration point is one variable.
+**Consequences:** Tokens cannot end up in production logs by misconfiguration. CI sets a placeholder SMTP URL.
+
+## ADR-020 — Per-request localisation of API messages
+**Date:** 2026-09-23
+**Decision:** `LocaleMiddleware`; clients send `Accept-Language`; the web client sends the UI language. Default `ar`.
+**Consequences:** Validation messages match the UI language without client-side translation tables for backend errors.
+
+## ADR-021 — Web session layer and route guards
+**Date:** 2026-09-23
+**Decision:** `react-router` (data router). One `AuthProvider` owns session state and talks to `/me`; guards (`RequireAuth`, `PublicOnly`) are the only places that check authentication; pages never read tokens. Restoration keeps tokens on non-401 failures.
+**Consequences:** New protected pages are added under the `RequireAuth` group only. Feature code is reviewed against this rule.
+
+## ADR-022 — Submit buttons are `ApiActionButton`
+**Date:** 2026-09-23
+**Decision:** `ApiActionButton` with `type="submit"` owns form submission (prevents native submit, works with Enter through implicit submission). Client validation failures throw `ClientValidationError`, which handlers ignore, so a failed validation never calls the backend and never shows a spinner.
+**Consequences:** One loading pattern for forms and plain buttons; no `onSubmit` handlers that call the API.

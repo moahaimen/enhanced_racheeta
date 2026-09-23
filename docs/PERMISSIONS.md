@@ -3,14 +3,19 @@
 ## Model
 
 - **Primary role** — `Account.role`, one of `PATIENT`, `PROVIDER`,
-  `MEDICAL_COMPANY`, `REAL_ESTATE_SELLER`, `ADMIN`. Set at registration
-  (never `ADMIN`) or by an administrator.
+  `MEDICAL_COMPANY`, `REAL_ESTATE_SELLER`, `ADMIN`. Set at registration or
+  first Firebase sign-in (never `ADMIN`) or by an administrator.
 - **Staff flags** — `is_staff` (Django admin access), `is_superuser`. Only
   `create_superuser` or an existing administrator can set them.
 - **Capability codes** — strings like `reservations.create_own`, derived from
   role + flags by `apps.accounts.roles.capabilities_for`. Returned in
   `GET /api/v1/me` as `permissions`. They let clients show/hide UI; the backend
-  re-checks every action regardless.
+  re-checks every action regardless. The web profile page renders them with
+  an explicit "informational" label.
+- **Verification state** — `email_verified_at`. No feature is gated on it
+  yet. When a rule such as "providers must verify their email before
+  publishing" is introduced, document it here and enforce it with a
+  permission class.
 - **Object ownership** — checked in each module's views/permissions (e.g. a
   provider may edit only its own offers). **(planned per module)**
 
@@ -32,6 +37,14 @@ These codes are forward-looking labels for modules that do not exist yet. They
 are not enforced anywhere until the module ships. Keep this table, the
 `ROLE_CAPABILITIES` dict, and the module's permission classes in sync.
 
+## Self-registration roles
+
+`apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES` is the single list used
+by registration, the Firebase exchange, and the OpenAPI enum
+`SelfRegistrationRoleEnum`. A test asserts it matches
+`settings.RACHEETA["SELF_REGISTRATION_ROLES"]`. The web app mirrors it in
+`web/src/auth/roles.ts`; the backend remains authoritative.
+
 ## Enforcing in views
 
 ```python
@@ -46,9 +59,18 @@ class OfferViewSet(...):
 Default for every endpoint is `IsAuthenticated` (`REST_FRAMEWORK` settings);
 public endpoints opt out explicitly with `AllowAny`.
 
+## Web route guards
+
+`web/src/app/guards.tsx`: `RequireAuth` wraps protected routes, `PublicOnly`
+wraps login/register. Pages contain no authentication checks. Guards improve
+UX only; a protected page's data calls still fail with 401 without a valid
+token.
+
 ## Adding a role
 
 1. Add to `AccountRole` and `ROLE_CAPABILITIES` in `apps/accounts/roles.py`.
-2. Decide whether it is self-registrable (`settings.RACHEETA["SELF_REGISTRATION_ROLES"]`).
+2. Decide whether it is self-registrable (`SELF_REGISTRATION_ROLE_CHOICES`
+   and `settings.RACHEETA["SELF_REGISTRATION_ROLES"]`; web `auth/roles.ts`
+   and `roles.*` translations).
 3. Migration (choices change → `makemigrations`).
 4. Update this file and `docs/api/openapi.yaml` (`make openapi`).
