@@ -218,6 +218,19 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
+        "ProviderVerificationStatusEnum": "apps.providers.types.VerificationStatus.choices",
+        "ProviderMembershipStatusEnum": "apps.providers.types.MembershipStatus.choices",
+        "EmployerVerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
+        "JobStatusEnum": "apps.jobs.types.JobStatus.choices",
+        "ApplicationStatusEnum": "apps.jobs.types.ApplicationStatus.choices",
+        "InvitationStatusEnum": "apps.jobs.types.InvitationStatus.choices",
+        "InterviewStatusEnum": "apps.jobs.types.InterviewStatus.choices",
+        "MemberStatusEnum": "apps.jobs.types.MemberStatus.choices",
+        "RecruitmentStatusEnum": "apps.jobs.types.RecruitmentStatus.choices",
+        "DegreeEnum": "apps.jobs.types.Degree.choices",
+        "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
+        "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
+        "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",
     },
 }
 
