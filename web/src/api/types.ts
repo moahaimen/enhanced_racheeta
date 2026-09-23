@@ -17,6 +17,8 @@ export interface Account {
   role: AccountRole
   preferred_language: PreferredLanguage
   email_verified: boolean
+  email_verified_at: string | null
+  has_password: boolean
   is_staff: boolean
   permissions: string[]
   created_at: string
@@ -51,6 +53,25 @@ export interface UpdateMeRequest {
   full_name?: string
   phone_number?: string
   preferred_language?: PreferredLanguage
+}
+
+export interface PasswordResetRequest {
+  email: string
+}
+
+export interface PasswordResetConfirmRequest {
+  uid: string
+  token: string
+  new_password: string
+}
+
+export interface EmailVerificationConfirmRequest {
+  uid: string
+  token: string
+}
+
+export interface DetailResponse {
+  detail: string
 }
 
 export interface HealthResponse {

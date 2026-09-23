@@ -32,7 +32,7 @@ class AccountAdmin(DjangoUserAdmin):
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
         ("Profile", {"fields": ("full_name", "phone_number", "preferred_language")}),
-        ("Role & status", {"fields": ("role", "email_verified", "is_active")}),
+        ("Role & status", {"fields": ("role", "email_verified_at", "firebase_uid", "is_active")}),
         (
             "Privileges",
             {"fields": ("is_staff", "is_superuser", "groups", "user_permissions")},

@@ -1,22 +1,14 @@
-import { useTranslation } from 'react-i18next'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 
-import { LanguageSwitcher } from './components'
-import { HomePage } from './pages/HomePage'
+import { routes } from './app/routes'
+import { AuthProvider } from './auth/AuthContext'
+
+const router = createBrowserRouter(routes)
 
 export default function App() {
-  const { t } = useTranslation()
   return (
-    <div className="app">
-      <header className="app__header">
-        <div>
-          <h1 className="app__title">{t('app.name')}</h1>
-          <p className="app__tagline">{t('app.tagline')}</p>
-        </div>
-        <LanguageSwitcher />
-      </header>
-      <main className="app__main">
-        <HomePage />
-      </main>
-    </div>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   )
 }

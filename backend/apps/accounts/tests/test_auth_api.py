@@ -187,3 +187,27 @@ def test_role_choice_labels_exclude_admin():
 
     choices = dict(RegisterSerializer().fields["role"].choices)
     assert AccountRole.ADMIN not in choices
+
+
+def test_self_registration_choices_match_settings(settings):
+    from apps.accounts.roles import SELF_REGISTRATION_ROLE_CHOICES
+
+    assert [c[0] for c in SELF_REGISTRATION_ROLE_CHOICES] == list(
+        settings.RACHEETA["SELF_REGISTRATION_ROLES"]
+    )
+
+
+def test_access_token_is_not_accepted_as_refresh_token(api_client, account):
+    tokens = _login(api_client, account)
+    response = api_client.post(REFRESH, {"refresh": tokens["access"]})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "token_not_valid"
+
+
+def test_logout_with_already_revoked_token_is_400_without_leaking(api_client, account):
+    tokens = _login(api_client, account)
+    assert api_client.post(LOGOUT, {"refresh": tokens["refresh"]}).status_code == 204
+    again = api_client.post(LOGOUT, {"refresh": tokens["refresh"]})
+    assert again.status_code == 400
+    assert again.json()["error"]["code"] == "validation_error"
+    assert account.email not in again.content.decode()

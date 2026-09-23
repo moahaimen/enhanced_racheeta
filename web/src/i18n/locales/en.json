@@ -7,7 +7,20 @@
     "loading": "Loading…",
     "retry": "Retry",
     "error": "Something went wrong",
-    "language": "Language"
+    "language": "Language",
+    "save": "Save",
+    "saving": "Saving…",
+    "back": "Back",
+    "optional": "optional",
+    "restoringSession": "Restoring your session…"
+  },
+  "nav": {
+    "home": "Home",
+    "login": "Log in",
+    "register": "Create account",
+    "profile": "My account",
+    "logout": "Log out",
+    "loggingOut": "Logging out…"
   },
   "home": {
     "title": "Platform status",
@@ -15,10 +28,106 @@
     "ok": "Operational",
     "checkAgain": "Check again",
     "checking": "Checking…",
-    "lastChecked": "Last checked"
+    "lastChecked": "Last checked",
+    "welcome": "Welcome, {{name}}",
+    "goToProfile": "Go to my account",
+    "intro": "Log in or create an account to continue."
+  },
+  "fields": {
+    "email": "Email address",
+    "password": "Password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "fullName": "Full name",
+    "phone": "Phone number",
+    "role": "Account type",
+    "preferredLanguage": "Preferred language",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "roles": {
+    "PATIENT": "Patient",
+    "PROVIDER": "Healthcare provider",
+    "MEDICAL_COMPANY": "Medical company / supplier",
+    "REAL_ESTATE_SELLER": "Medical real-estate owner or agent",
+    "ADMIN": "Racheeta administrator"
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email address.",
+    "passwordMin": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "phone": "Enter a valid phone number (digits, optional country code)."
+  },
+  "passwordRules": {
+    "title": "Password rules",
+    "min": "At least 8 characters",
+    "notCommon": "Not a common password",
+    "notNumeric": "Not only numbers",
+    "notSimilar": "Not similar to your email or name"
+  },
+  "login": {
+    "title": "Log in",
+    "submit": "Log in",
+    "submitting": "Logging in…",
+    "noAccount": "No account yet?",
+    "register": "Create one",
+    "forgot": "Forgot your password?",
+    "failed": "Could not log in. Check your email and password."
+  },
+  "register": {
+    "title": "Create account",
+    "submit": "Create account",
+    "submitting": "Creating…",
+    "haveAccount": "Already have an account?",
+    "login": "Log in",
+    "emailTaken": "An account with this email already exists."
+  },
+  "profile": {
+    "title": "My account",
+    "identity": "Identity",
+    "role": "Role",
+    "emailVerified": "Email verified",
+    "emailNotVerified": "Email not verified",
+    "sendVerification": "Send verification email",
+    "sendingVerification": "Sending…",
+    "verificationSent": "Verification email sent. Check your inbox.",
+    "noPassword": "This account signs in through an external provider and has no password.",
+    "capabilities": "Capabilities (informational — the server is authoritative)",
+    "saved": "Changes saved.",
+    "edit": "Edit details",
+    "memberSince": "Member since"
+  },
+  "forgot": {
+    "title": "Reset your password",
+    "intro": "Enter your email address. If an account exists, we will send a reset link.",
+    "submit": "Send reset link",
+    "submitting": "Sending…",
+    "sent": "If an account exists for this email, a reset link has been sent. Check your inbox.",
+    "backToLogin": "Back to log in"
+  },
+  "reset": {
+    "title": "Choose a new password",
+    "submit": "Save password",
+    "submitting": "Saving…",
+    "invalidLink": "This link is invalid or has expired.",
+    "requestNew": "Request a new link",
+    "success": "Your password was changed. Log in with the new password."
+  },
+  "verifyEmail": {
+    "title": "Email verification",
+    "verifying": "Verifying your email…",
+    "success": "Your email address is verified.",
+    "invalidLink": "This verification link is invalid or has expired. Request a new one from your account page."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The address you requested does not exist.",
+    "home": "Back to home"
   },
   "errors": {
     "network": "Could not reach the server.",
-    "unknown": "An unexpected error occurred."
+    "unknown": "An unexpected error occurred.",
+    "throttled": "Too many attempts. Try again in a moment."
   }
 }

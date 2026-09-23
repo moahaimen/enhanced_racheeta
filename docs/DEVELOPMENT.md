@@ -79,6 +79,12 @@ variables reach the browser).
 - Commits: conventional style (`feat(accounts): …`, `docs: …`, `chore: …`).
 - Every session ends by updating `docs/HANDOFF.md` and `docs/PROGRESS.md`.
 
+## Emails in development
+
+`EMAIL_URL=consolemail://` prints every email (including reset and
+verification links) to the Django server's stdout. Copy the link from the
+terminal into the browser to complete the flow.
+
 ## Serving the web build from Django locally
 
 ```bash

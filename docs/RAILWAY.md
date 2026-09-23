@@ -27,6 +27,11 @@ demonstrably needs it.
 | `ADMIN_URL_PATH` | Optional non-default path for the admin. |
 | `WEB_CONCURRENCY` | gunicorn workers; `2` is fine for the smallest plan. |
 | `LOG_LEVEL` | `INFO` |
+| `EMAIL_URL` | Production email provider, e.g. `smtp://user:pass@host:587?tls=True`. **Required:** `manage.py check` (and therefore the container start) refuses console/locmem backends with `DEBUG=false`. Provider not chosen yet — owner decision. |
+| `DEFAULT_FROM_EMAIL` | e.g. `Racheeta <no-reply@racheeta.com>` |
+| `FRONTEND_URL` | `https://<domain>` — used in email links. |
+| `PASSWORD_RESET_TIMEOUT_MINUTES` / `EMAIL_VERIFICATION_TIMEOUT_HOURS` | Optional; defaults 60 / 24. |
+| `FIREBASE_VERIFIER` / `FIREBASE_CREDENTIALS_FILE` | Leave unset until Firebase is activated (`AUTHENTICATION.md`). |
 
 `SPA_DIST_DIR` and `PORT` are set by the Dockerfile / Railway; do not override.
 

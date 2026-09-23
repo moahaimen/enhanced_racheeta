@@ -8,6 +8,8 @@
  *   the session is cleared.
  * - Converts the backend error envelope into a typed ApiError.
  */
+import i18next from 'i18next'
+
 import { tokenStore } from './tokens'
 import type { ApiErrorBody, TokenPair } from './types'
 
@@ -93,6 +95,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const { method = 'GET', body, auth = true, signal, _retried = false } = options
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // Backend validation messages come back in the UI language.
+  if (i18next.language) headers['Accept-Language'] = i18next.language
   const access = auth ? tokenStore.getAccess() : null
   if (access) headers.Authorization = `Bearer ${access}`
 
