@@ -1,0 +1,24 @@
+# Local development infrastructure only. Not used in production.
+# Usage: docker compose up -d
+# Credentials here are development-only and match .env.example.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: racheeta-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: racheeta
+      POSTGRES_PASSWORD: racheeta
+      POSTGRES_DB: racheeta
+    ports:
+      - "5432:5432"
+    volumes:
+      - racheeta_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U racheeta -d racheeta"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  racheeta_pgdata:

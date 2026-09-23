@@ -1,0 +1,71 @@
+# ---- Secrets / environment (never commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+firebase-*.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# ---- Python / Django ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+backend/staticfiles/
+backend/media/
+backend/webapp_dist/
+db.sqlite3
+*.sqlite3
+
+# ---- Node / Vite ----
+node_modules/
+web/dist/
+web/dist-ssr/
+*.local
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Flutter (mobile/, future) ----
+mobile/.dart_tool/
+mobile/.packages
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/ios/Pods/
+mobile/android/local.properties
+
+# ---- IDE / OS ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Logs / temp ----
+logs/
+*.log
+tmp/
+.tmp/
