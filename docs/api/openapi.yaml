@@ -4,6 +4,37 @@ info:
   version: 1.0.0
   description: Racheeta 2.0 — canonical API consumed by web, mobile and dashboards.
 paths:
+  /api/v1/admin/providers/{id}/verification:
+    post:
+      operationId: admin_providers_verification_create
+      summary: Set a provider's verification status (administrators)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerificationDecisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderOwner'
+          description: ''
   /api/v1/auth/email-verification/confirm:
     post:
       operationId: auth_email_verification_confirm_create
@@ -228,6 +259,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegisterResponse'
           description: ''
+  /api/v1/geo/cities:
+    get:
+      operationId: geo_cities_list
+      summary: Active cities (filter by governorate)
+      parameters:
+      - in: query
+        name: governorate
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - geography
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+          description: ''
+  /api/v1/geo/countries:
+    get:
+      operationId: geo_countries_list
+      summary: Active countries
+      tags:
+      - geography
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+          description: ''
+  /api/v1/geo/governorates:
+    get:
+      operationId: geo_governorates_list
+      summary: Active governorates (filter by country)
+      parameters:
+      - in: query
+        name: country
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - geography
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Governorate'
+          description: ''
   /api/v1/me:
     get:
       operationId: me_retrieve
@@ -266,6 +360,436 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Account'
+          description: ''
+  /api/v1/providers:
+    get:
+      operationId: providers_list
+      summary: Discover providers (verified and visible only)
+      parameters:
+      - in: query
+        name: city
+        schema:
+          type: string
+        description: City id
+      - in: query
+        name: governorate
+        schema:
+          type: string
+        description: Governorate id
+      - in: query
+        name: kind
+        schema:
+          type: string
+        description: PRACTITIONER or FACILITY
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: display_name | -display_name | created_at | -created_at
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Matches display name
+      - in: query
+        name: specialty
+        schema:
+          type: string
+        description: Specialty slug
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Provider type code, e.g. DOCTOR
+      tags:
+      - providers
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProviderCardList'
+          description: ''
+  /api/v1/providers/{id}:
+    get:
+      operationId: providers_retrieve
+      summary: Public provider profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - providers
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderPublic'
+          description: ''
+  /api/v1/providers/me:
+    get:
+      operationId: providers_me_retrieve
+      description: Create, read and update the caller's own provider profile.
+      summary: My provider profile
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderOwner'
+          description: ''
+    post:
+      operationId: providers_me_create
+      description: Create, read and update the caller's own provider profile.
+      summary: Create my provider profile (onboarding)
+      tags:
+      - provider-self
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProviderWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderOwner'
+          description: ''
+    patch:
+      operationId: providers_me_partial_update
+      description: Create, read and update the caller's own provider profile.
+      summary: Update my provider profile
+      tags:
+      - provider-self
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProviderWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProviderWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderOwner'
+          description: ''
+  /api/v1/providers/me/memberships:
+    get:
+      operationId: providers_me_memberships_list
+      summary: My memberships (both sides)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membership'
+          description: ''
+    post:
+      operationId: providers_me_memberships_create
+      summary: Request to join a facility / invite a practitioner
+      tags:
+      - provider-self
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembershipCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MembershipCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/providers/me/memberships/{id}/accept:
+    post:
+      operationId: providers_me_memberships_accept_create
+      summary: Accept a pending membership (counterpart only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/providers/me/memberships/{id}/end:
+    post:
+      operationId: providers_me_memberships_end_create
+      summary: End an active membership
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/providers/me/memberships/{id}/reject:
+    post:
+      operationId: providers_me_memberships_reject_create
+      summary: Reject or withdraw a pending membership
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/providers/me/services:
+    get:
+      operationId: providers_me_services_list
+      summary: My service offerings
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceOffering'
+          description: ''
+    post:
+      operationId: providers_me_services_create
+      summary: Add a service offering
+      tags:
+      - provider-self
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceOfferingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ServiceOfferingRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOffering'
+          description: ''
+  /api/v1/providers/me/services/{id}:
+    get:
+      operationId: providers_me_services_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOffering'
+          description: ''
+    patch:
+      operationId: providers_me_services_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceOfferingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceOfferingRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceOffering'
+          description: ''
+    delete:
+      operationId: providers_me_services_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/providers/me/verification/request:
+    post:
+      operationId: providers_me_verification_request_create
+      summary: Request verification of my profile
+      tags:
+      - provider-self
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderOwner'
+          description: ''
+  /api/v1/specialties:
+    get:
+      operationId: specialties_list
+      summary: Active specialties (unpaginated)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - specialties
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Specialty'
           description: ''
 components:
   schemas:
@@ -355,6 +879,55 @@ components:
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
         * `ADMIN` - Racheeta administrator
+    City:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        governorate:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+      required:
+      - governorate
+      - id
+      - name_ar
+      - name_en
+      - slug
+    Country:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          description: ISO 3166-1 alpha-2
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+      required:
+      - code
+      - id
+      - name_ar
+      - name_en
     Detail:
       type: object
       properties:
@@ -415,6 +988,41 @@ components:
       - account
       - created
       - tokens
+    Governorate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        country:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+      required:
+      - country
+      - id
+      - name_ar
+      - name_en
+      - slug
+    InitiatedByEnum:
+      enum:
+      - PRACTITIONER
+      - FACILITY
+      type: string
+      description: |-
+        * `PRACTITIONER` - Practitioner
+        * `FACILITY` - Facility
     LoginRequest:
       type: object
       description: Email + password -> access/refresh pair. Registered via SIMPLE_JWT.
@@ -439,6 +1047,122 @@ components:
           minLength: 1
       required:
       - refresh
+    Membership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        practitioner:
+          allOf:
+          - $ref: '#/components/schemas/RelatedProvider'
+          readOnly: true
+        facility:
+          allOf:
+          - $ref: '#/components/schemas/RelatedProvider'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MembershipStatusEnum'
+          readOnly: true
+          default: PENDING
+        initiated_by:
+          allOf:
+          - $ref: '#/components/schemas/InitiatedByEnum'
+          readOnly: true
+        role_title:
+          type: string
+          readOnly: true
+        my_side:
+          type: string
+          nullable: true
+          readOnly: true
+        can_accept:
+          type: boolean
+          readOnly: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - can_accept
+      - created_at
+      - ended_at
+      - facility
+      - id
+      - initiated_by
+      - joined_at
+      - my_side
+      - practitioner
+      - responded_at
+      - role_title
+      - status
+    MembershipCreateRequest:
+      type: object
+      description: |-
+        `counterpart` is the other provider's public id: a facility when the
+        caller is a practitioner, a practitioner when the caller is a facility.
+      properties:
+        counterpart:
+          type: string
+          format: uuid
+        role_title:
+          type: string
+          default: ''
+          maxLength: 100
+      required:
+      - counterpart
+    MembershipStatusEnum:
+      enum:
+      - PENDING
+      - ACTIVE
+      - REJECTED
+      - ENDED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `ACTIVE` - Active
+        * `REJECTED` - Rejected
+        * `ENDED` - Ended
+    PaginatedProviderCardList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderCard'
     PasswordResetConfirmRequest:
       type: object
       properties:
@@ -481,6 +1205,98 @@ components:
           maxLength: 32
         preferred_language:
           $ref: '#/components/schemas/PreferredLanguageEnum'
+    PatchedProviderWriteRequest:
+      type: object
+      description: Create (POST) and partial update (PATCH) by the owner.
+      properties:
+        provider_type:
+          $ref: '#/components/schemas/ProviderTypeEnum'
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        about:
+          type: string
+        phone:
+          type: string
+          maxLength: 32
+        public_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        website:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        address:
+          type: string
+          maxLength: 255
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        specialty_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_visible:
+          type: boolean
+    PatchedServiceOfferingRequest:
+      type: object
+      description: Owner view of a service (read + write).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+        specialty:
+          type: string
+          format: uuid
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        duration_minutes:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
     PreferredLanguageEnum:
       enum:
       - ar
@@ -489,6 +1305,399 @@ components:
       description: |-
         * `ar` - Arabic
         * `en` - English
+    ProviderCard:
+      type: object
+      description: 'List item for discovery. No ratings: reviews arrive in Phase 4.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_type:
+          allOf:
+          - $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+      required:
+      - city
+      - display_name
+      - governorate
+      - id
+      - image_url
+      - kind
+      - provider_type
+      - specialties
+    ProviderOwner:
+      type: object
+      description: 'What the owner sees: everything, admin fields read-only.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_type:
+          allOf:
+          - $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        can_change_type:
+          type: boolean
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        about:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        public_email:
+          type: string
+          format: email
+          readOnly: true
+        website:
+          type: string
+          format: uri
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        address:
+          type: string
+          readOnly: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        is_visible:
+          type: boolean
+          readOnly: true
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          readOnly: true
+        verification_note:
+          type: string
+          readOnly: true
+        verification_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        verification_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - about
+      - address
+      - can_change_type
+      - city
+      - created_at
+      - display_name
+      - governorate
+      - id
+      - image_url
+      - is_visible
+      - kind
+      - latitude
+      - longitude
+      - phone
+      - provider_type
+      - public_email
+      - specialties
+      - updated_at
+      - verification_changed_at
+      - verification_note
+      - verification_requested_at
+      - verification_status
+      - verified_at
+      - website
+    ProviderPublic:
+      type: object
+      description: |-
+        Full public detail. `related_providers` are active memberships whose
+        counterpart is itself discoverable.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_type:
+          allOf:
+          - $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+        about:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        public_email:
+          type: string
+          format: email
+          readOnly: true
+        website:
+          type: string
+          format: uri
+          readOnly: true
+        address:
+          type: string
+          readOnly: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicService'
+          readOnly: true
+        related_providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedProvider'
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - about
+      - address
+      - city
+      - display_name
+      - governorate
+      - id
+      - image_url
+      - kind
+      - latitude
+      - longitude
+      - phone
+      - provider_type
+      - public_email
+      - related_providers
+      - services
+      - specialties
+      - verified_at
+      - website
+    ProviderTypeEnum:
+      enum:
+      - DOCTOR
+      - NURSE
+      - THERAPIST
+      - HOSPITAL
+      - MEDICAL_CENTER
+      - PHARMACY
+      - LABORATORY
+      - BEAUTY_CENTER
+      type: string
+      description: |-
+        * `DOCTOR` - Doctor
+        * `NURSE` - Nurse
+        * `THERAPIST` - Therapist
+        * `HOSPITAL` - Hospital
+        * `MEDICAL_CENTER` - Medical center
+        * `PHARMACY` - Pharmacy
+        * `LABORATORY` - Laboratory
+        * `BEAUTY_CENTER` - Beauty center
+    ProviderWriteRequest:
+      type: object
+      description: Create (POST) and partial update (PATCH) by the owner.
+      properties:
+        provider_type:
+          $ref: '#/components/schemas/ProviderTypeEnum'
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        about:
+          type: string
+        phone:
+          type: string
+          maxLength: 32
+        public_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        website:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        address:
+          type: string
+          maxLength: 255
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        specialty_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_visible:
+          type: boolean
+      required:
+      - display_name
+      - governorate
+      - provider_type
+    PublicService:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        duration_minutes:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - currency
+      - description
+      - duration_minutes
+      - id
+      - price
+      - specialty
+      - title
     RegisterRequest:
       type: object
       description: Reject, rather than silently ignore, any privilege field a client
@@ -536,6 +1745,33 @@ components:
       required:
       - account
       - tokens
+    RelatedProvider:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_type:
+          allOf:
+          - $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        kind:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - image_url
+      - kind
+      - provider_type
     SelfRegistrationRoleEnum:
       enum:
       - PATIENT
@@ -548,6 +1784,111 @@ components:
         * `PROVIDER` - Healthcare provider
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    ServiceOffering:
+      type: object
+      description: Owner view of a service (read + write).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+        specialty:
+          type: string
+          format: uuid
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          maxLength: 3
+        duration_minutes:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - price
+      - title
+      - updated_at
+    ServiceOfferingRequest:
+      type: object
+      description: Owner view of a service (read + write).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+        specialty:
+          type: string
+          format: uuid
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        duration_minutes:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - price
+      - title
+    Specialty:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        parent:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+      required:
+      - id
+      - name_ar
+      - name_en
+      - parent
+      - slug
     TokenPair:
       type: object
       properties:
@@ -579,6 +1920,43 @@ components:
           minLength: 1
       required:
       - refresh
+    VerificationDecisionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/VerificationDecisionStatusEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - status
+    VerificationDecisionStatusEnum:
+      enum:
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      type: string
+      description: |-
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
+        * `UNVERIFIED` - Unverified
+    VerificationStatusEnum:
+      enum:
+      - UNVERIFIED
+      - PENDING
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      type: string
+      description: |-
+        * `UNVERIFIED` - Unverified
+        * `PENDING` - Pending review
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
   securitySchemes:
     jwtAuth:
       type: http
