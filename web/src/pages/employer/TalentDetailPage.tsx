@@ -59,8 +59,7 @@ function Detail({ candidate: c, jobs, reload }: { candidate: TalentDetail; jobs:
           </div>
         }
       />
-      <div className={styles.layout} style={{ gridTemplateColumns: undefined }}>
-        <PageStack>
+      <PageStack>
           <div className="grid-2">
             <PageStack>
               <SectionCard title={t('talent.summary')} headingLevel={2}>
@@ -208,8 +207,7 @@ function Detail({ candidate: c, jobs, reload }: { candidate: TalentDetail; jobs:
               </SectionCard>
             </PageStack>
           </div>
-        </PageStack>
-      </div>
+      </PageStack>
     </>
   )
 }

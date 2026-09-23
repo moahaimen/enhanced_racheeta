@@ -58,7 +58,7 @@ function JobDetail({ job }: { job: JobPublic }) {
           {job.shift_type ? <Badge tone="outline">{t(`shiftTypes.${job.shift_type}`)}</Badge> : null}
           {job.is_featured ? <Badge tone="brand" leading={<Icon name="sparkle" size={12} />}>{t('jobs.featured')}</Badge> : null}
         </div>
-        <p className="text-muted" style={{ marginBlockStart: 'var(--space-3)' }}>
+        <p className="text-muted cluster" style={{ marginBlockStart: 'var(--space-3)' }}>
           <Icon name="mapPin" size={14} /> {name(job.governorate)}
           {job.city ? ` — ${name(job.city)}` : ''}
           {job.published_at ? ` · ${new Date(job.published_at).toLocaleDateString(i18n.language)}` : ''}
