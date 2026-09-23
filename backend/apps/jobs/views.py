@@ -147,8 +147,11 @@ class JobListView(generics.ListAPIView):
     filterset_class = JobFilter
     ordering_fields = ["published_at", "application_deadline"]
     ordering = ["-is_featured", "-published_at"]
+    queryset = JobPost.objects.none()
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return JobPost.objects.none()
         services.expire_overdue_jobs()
         return JobPost.objects.public().with_public_relations()
 
