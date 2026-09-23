@@ -181,3 +181,38 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-23
 **Decision:** A single line-icon set drawn on a 24px grid lives in `design-system/icons/`; directional icons mirror in RTL. No emoji, no mixed libraries.
 **Consequences:** Small bundle, consistent weight; new icons are added to `paths.tsx`.
+
+## ADR-033 — Medical Jobs moves ahead of Reservations; Reservations stay free
+**Date:** 2026-09-23
+**Decision:** Phase 3 is Billing & Entitlements + Medical Jobs & Talent Marketplace; Reservations become Phase 4 and will not be gated by subscriptions.
+**Consequences:** Revenue comes from employers/commercial users first. The master plan roadmap was corrected rather than rewritten.
+
+## ADR-034 — Reusable entitlement layer keyed by capability strings
+**Date:** 2026-09-23
+**Decision:** `apps/billing` exposes `require / check_concurrent / consume` over capability keys for any `(subject_type, subject_id)`. Feature modules never read plans directly. Usage is consumed atomically with `select_for_update` and optional idempotency references; credits are consumed only after the plan limit.
+**Consequences:** Marketplace/advertising can reuse billing unchanged. Limits are data (admin-editable), not code.
+
+## ADR-035 — Manual subscription activation, no gateway, no seeded prices
+**Date:** 2026-09-23
+**Decision:** Subscriptions are requested by the owner, paid off-platform, and activated by a Super Admin with an optional minimal payment record. `Plan.price_amount` is null until the owner sets IQD prices; the web shows "price on request". Expiry is evaluated at read time (no scheduler).
+**Consequences:** No PCI surface, no new infrastructure. A gateway (Phase 8) plugs into `activate_subscription`.
+
+## ADR-036 — The structured profile is the résumé; no uploads anywhere in recruitment
+**Date:** 2026-09-23
+**Decision:** Job seekers describe themselves with structured children (experience, education, skills, languages, credentials). No CV files, no job attachments, no receipt uploads.
+**Consequences:** No storage, no file-scanning attack surface, searchable data for talent search, snapshots are plain JSON.
+
+## ADR-037 — Recruitment communication stays inside Racheeta
+**Date:** 2026-09-23
+**Decision:** Every recruitment text field is validated by `ContactLeakDetector`; jobs are re-scanned at submit and flagged for the admin; messages are text-only, immutable and scoped to an application; talent responses never contain contact or account identity.
+**Consequences:** The platform keeps the recruitment value; employers reach candidates through applications, invitations and interviews.
+
+## ADR-038 — Super Admin gates activation, verification and publication, not daily work
+**Date:** 2026-09-23
+**Decision:** Admin approval is required for organisation verification, subscription activation and job publication (`PENDING_ADMIN_REVIEW → PUBLISHED`). Applications, transitions, interviews, messages, invitations and talent search need no admin action. Every admin decision is audited.
+**Consequences:** Trust is controlled at the entry points while the ordinary workflow stays fast.
+
+## ADR-039 — One billable talent search = one (employer, filter signature, day)
+**Date:** 2026-09-23
+**Decision:** Talent search consumption is keyed by a normalised filter signature per employer per calendar day; pagination and re-ordering of the same filters are free.
+**Consequences:** Employers are not punished for browsing results; the rule is documented on the page and in `JOBS.md`.

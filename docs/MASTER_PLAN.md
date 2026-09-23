@@ -1031,7 +1031,23 @@ Avoid architecture that prevents moving from Railway later.
 - Filters.
 - Availability.
 
-## Phase 3 — Reservations
+## Phase 3 — Billing & Entitlements Foundation + Medical Jobs & Talent Marketplace (CURRENT — done)
+
+> Roadmap correction (owner decision, 2026-09-23): Medical Jobs is Racheeta's
+> highest-priority competitive service and must generate revenue, so it moved
+> ahead of Reservations together with the reusable billing foundation.
+> Reservations follow in Phase 4 and remain free.
+
+- Billing foundation (`apps/billing`): plans, entitlements (capability keys), subscriptions with manual Super Admin activation, credits, atomic usage accounting. No gateway, no prices seeded. See `BILLING.md`.
+- Employer organisations, verification, memberships with seats.
+- Structured job-seeker résumé (no file uploads).
+- Job posts with admin-reviewed publication and entitlement gating.
+- Public job search, applications with snapshots and transition history.
+- Entitlement-gated talent search ("one billable search" rule), saved candidates, invitations, interview requests, text-only in-app messaging.
+- Contact-leak detection on all recruitment text (`MODERATION.md`).
+- Super Admin control plane and audit log.
+
+## Phase 4 — Reservations (LATER, FREE)
 
 - Reservation model.
 - Reservation state machine.
@@ -1039,22 +1055,15 @@ Avoid architecture that prevents moving from Railway later.
 - Patient reservations.
 - Provider reservation management.
 - Notification hooks.
+- Free for patients and providers (owner decision); no entitlement gating.
 
-## Phase 4 — Reviews and Offers
+## Phase 5 — Reviews and Offers
 
 - Reviews.
 - Ratings.
 - Offers.
 - Expiry.
 - Provider management.
-
-## Phase 5 — Jobs
-
-- Jobs.
-- Job seeker profiles.
-- Applications.
-- Application workflow.
-- Recruiter dashboard.
 
 ## Phase 6 — Medical Marketplace
 

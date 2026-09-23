@@ -93,10 +93,24 @@ Membership state machine:
 Provider role is assigned at registration (or first Firebase sign-in) and is
 not client-changeable afterwards; a role change is an administrator action.
 
+## Recruitment permissions (`apps/jobs/permissions.py`)
+
+| Class | Rule |
+| --- | --- |
+| `IsEmployerMember` | caller has an ACTIVE `EmployerMembership`; sets `request.employer`/`request.membership`. Used by every `/jobs/employer/*` and `/talent/*` route. |
+| `IsEmployerOwner` | membership role is OWNER (organisation edits, verification request, members, plan requests). |
+| `CanRecruit` | OWNER or RECRUITER (job writes, applicant transitions, interviews, invitations, messages); VIEWER is read-only. |
+| `IsAdminAccount` (accounts) | `is_staff` for every `/admin/*` route. |
+
+Job seekers act only on their own profile/applications (`request.user`);
+message threads accept the candidate of the application or an active member of
+the employer, nobody else (404 for third parties). Commercial capability is a
+separate axis enforced by the billing service, not by permission classes.
+
 ## Web route guards
 
 `web/src/app/guards.tsx`: `RequireAuth` wraps protected routes, `PublicOnly`
-wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`). Pages contain no authentication checks. Guards improve
+wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`), `RequireStaff` wraps `/admin-console` (`account.is_staff`). Pages contain no authentication checks. Guards improve
 UX only; a protected page's data calls still fail with 401 without a valid
 token.
 

@@ -123,7 +123,9 @@ Directional icons pass `flipInRtl`. No emoji, no mixed libraries.
 | Forms | `FormField`, `TextField`, `PasswordField`, `SearchField`, `Select`, `Textarea`, `Checkbox`, `CheckboxGroup`, `FormSection`, `FormActions`, `useFormErrors` |
 | Navigation | `Tabs` (+ `tabPanelProps`), `Pagination`, `SiteHeader` (with mobile panel), `SiteFooter` |
 | Layout | `Container`, `PageStack`, `PageHeader`, `SectionHeader` |
-| Domain | `ProviderCard`, `ProviderCardSkeleton`, `Avatar` |
+| Domain | `ProviderCard`, `ProviderCardSkeleton`, `Avatar`, `JobCard`(+`Skeleton`, `formatSalary`), `TalentCard`, `UsageMeter`, `JobStatusBadge`/`ApplicationStatusBadge`/`InvitationStatusBadge` |
+
+`LinkButton` accepts router `state` (used to return to `/employer` after login).
 
 Not built yet (no page needs them): `Modal/Dialog`, `Drawer`, `Dropdown`,
 `Tooltip`, `Toast`, `Breadcrumb`, `Radio`, `QuickActionCard`, `ActivityCard`.
