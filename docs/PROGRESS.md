@@ -20,4 +20,4 @@ Phases from `MASTER_PLAN.md` §28. Status: `done` · `partial` · `not started`.
 
 ## Milestone log
 
-- **2026-09-23** — Phase 0 complete; Phase 1 foundation (Account, JWT auth, `/me`) complete. 57 backend tests, 12 web tests, CI defined. Commits `d9d2d79` … `d37dddc` + this docs commit.
+- **2026-09-23** — Phase 0 complete; Phase 1 foundation (Account, JWT auth, `/me`) complete. 57 backend tests, 12 web tests. Pushed to https://github.com/moahaimen/enhanced_racheeta; CI green on `30f23ab`.

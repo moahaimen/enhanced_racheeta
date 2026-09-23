@@ -3,7 +3,8 @@
 Date: 2026-09-23
 AI/Engineer: Claude (Fable 5.1) via Claude Code
 Branch: `main`
-Last Commit SHA: `d37dddc` (code + docs) — the commit adding this file follows it
+Last Commit SHA: `30f23ab` (see `git log` for the docs commit that follows)
+Remote: `git@github.com:moahaimen/enhanced_racheeta.git` (https://github.com/moahaimen/enhanced_racheeta)
 
 > New session? Read `ARCHITECTURE.md`, `DECISIONS.md`, `PROGRESS.md`, then this
 > file. Then run `make check`. Continue from **Exact Next Step**.
@@ -92,7 +93,7 @@ cd web && npm run typecheck && npm run lint && npm test && npm run build
 
 - Backend: **57 passed**, ruff clean, no missing migrations (PostgreSQL 16 local).
 - Web: **12 passed**, tsc clean, oxlint clean, production build OK (≈277 kB JS, 87 kB gzip).
-- GitHub Actions: not yet executed (no remote configured).
+- GitHub Actions: run on `30f23ab` **green** (Backend and Web jobs) — https://github.com/moahaimen/enhanced_racheeta/actions
 
 ## Known Problems
 
@@ -113,10 +114,8 @@ using the auth API, `react-router`.
 
 ## Required Manual Actions
 
-1. Create the GitHub repository and push `main` (`git remote add origin …`,
-   `git push -u origin main`) so CI runs.
-2. Optional: install Docker locally to use `docker compose` and to build the image.
-3. No Railway deployment yet (master plan: do not deploy to production yet).
+1. Optional: install Docker locally to use `docker compose` and to build the image.
+2. No Railway deployment yet (master plan: do not deploy to production yet).
 
 ## Environment Variables Added/Changed
 
