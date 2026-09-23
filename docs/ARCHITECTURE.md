@@ -42,13 +42,14 @@ racheeta-platform/
 │   └── conftest.py     shared pytest fixtures
 ├── web/                React + TypeScript + Vite SPA
 │   └── src/
-│       ├── api/        the only HTTP layer (client, tokens, endpoints, types)
-│       ├── app/        routes.tsx, guards.tsx (all auth checks), AppLayout
-│       ├── auth/       AuthProvider (single session layer), useAuth
-│       ├── components/ ApiActionButton, AsyncPage, LoadingOverlay, Spinner, forms/
-│       ├── hooks/      useAsyncAction, useAsyncData
-│       ├── i18n/       Arabic (default, RTL) + English
-│       └── pages/      home, auth pages, providers/ (search, public detail, self-management), 404
+│       ├── api/            the only HTTP layer (client, tokens, endpoints, types)
+│       ├── app/            routes.tsx, guards.tsx (all auth checks), AppLayout (shell)
+│       ├── auth/           AuthProvider (single session layer), useAuth
+│       ├── design-system/  tokens/, styles/, icons/, components/, layouts/, index.ts (docs/DESIGN_SYSTEM.md)
+│       ├── components/     compatibility re-exports only
+│       ├── hooks/          useAsyncAction, useAsyncData
+│       ├── i18n/           Arabic (default, RTL) + English, bilingual-name helper
+│       └── pages/          home, auth/ (AuthShell) + auth pages, profile, providers/ (search, detail, workspace), 404
 ├── mobile/             Flutter (planned, Phase 11)
 ├── docs/               this documentation + docs/api/openapi.yaml (contract)
 ├── infrastructure/     deployment notes
@@ -164,12 +165,20 @@ Account (role=PROVIDER)
 ## Web
 
 - Vite + React 19 + TypeScript (strict). Lint: oxlint. Tests: Vitest + Testing Library.
+- **Design system** (`src/design-system`, `docs/DESIGN_SYSTEM.md`): tokens as
+  TypeScript + CSS custom properties, CSS Modules per component, an owned
+  line-icon set, IBM Plex Sans Arabic. Pages compose `Container`, `SectionCard`,
+  `PageHeader`, form fields and states from the design system; no page-local
+  styling of primitives.
 - `src/api/client.ts` is the only place `fetch` is called. It attaches the
   bearer token, refreshes once on 401, and converts the error envelope to `ApiError`.
 - Mandatory loading rule (master plan §19) is implemented by
-  `ApiActionButton`, `AsyncPage`, `LoadingOverlay` and the `useAsync*` hooks.
+  `ApiActionButton` (stable dimensions, `aria-busy`), `AsyncPage` (spinner or
+  skeleton, error with retry), `LoadingOverlay` and the `useAsync*` hooks —
+  all in the design system.
 - RTL: `<html dir>` is set from the active language; CSS uses logical
-  properties only, so one stylesheet serves both directions.
+  properties only; directional icons mirror via `flipInRtl`; Latin values
+  (emails, phones, ids) are isolated with `.ltr`.
 - `react-router` data router. Route table in `src/app/routes.tsx`; auth guards
   only in `src/app/guards.tsx`; session state only in `src/auth/AuthContext.tsx`.
 - Forms use `components/forms/*` and map the backend error envelope onto fields.
