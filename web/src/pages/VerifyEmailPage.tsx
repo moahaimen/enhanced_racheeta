@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 
 import { ApiError, auth as authApi } from '../api'
 import { useAuth } from '../auth/useAuth'
-import { FormAlert } from '../components/forms'
-import { AsyncPage } from '../components'
+import { Alert, AsyncPage, LinkButton } from '../design-system'
+import { AuthShell, AuthSuccess } from './auth/AuthShell'
 
 /** Landing page for the link in the verification email. Confirms on load. */
 export function VerifyEmailPage() {
@@ -29,20 +29,19 @@ export function VerifyEmailPage() {
   }
 
   return (
-    <section className="card card--form">
-      <h2>{t('verifyEmail.title')}</h2>
+    <AuthShell title={t('verifyEmail.title')}>
       <AsyncPage load={confirm} loadingLabel={t('verifyEmail.verifying')}>
         {() => (
-          <>
-            <FormAlert kind="success">{t('verifyEmail.success')}</FormAlert>
-            <p className="form__footer">
-              <Link to={status === 'authenticated' ? '/profile' : '/login'} className="btn">
+          <AuthSuccess>
+            <Alert kind="success">{t('verifyEmail.success')}</Alert>
+            <div>
+              <LinkButton to={status === 'authenticated' ? '/profile' : '/login'}>
                 {status === 'authenticated' ? t('nav.profile') : t('nav.login')}
-              </Link>
-            </p>
-          </>
+              </LinkButton>
+            </div>
+          </AuthSuccess>
         )}
       </AsyncPage>
-    </section>
+    </AuthShell>
   )
 }

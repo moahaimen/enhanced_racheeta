@@ -5,8 +5,8 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { ApiError } from '../api'
 import { DEFAULT_AUTHENTICATED_PATH } from '../app/guards'
 import { useAuth } from '../auth/useAuth'
-import { ApiActionButton } from '../components'
-import { FormAlert, PasswordField, TextField, useFormErrors } from '../components/forms'
+import { Alert, ApiActionButton, FormActions, Icon, PasswordField, TextField, useFormErrors } from '../design-system'
+import { AuthShell } from './auth/AuthShell'
 import { ClientValidationError, isEmail } from './validation'
 
 const FIELDS = ['email', 'password'] as const
@@ -47,10 +47,17 @@ export function LoginPage() {
   }
 
   return (
-    <section className="card card--form">
-      <h2>{t('login.title')}</h2>
+    <AuthShell
+      title={t('login.title')}
+      description={t('login.intro')}
+      footer={
+        <>
+          {t('login.noAccount')} <Link to="/register">{t('login.register')}</Link>
+        </>
+      }
+    >
       <form noValidate onSubmit={(event: FormEvent) => event.preventDefault()}>
-        {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
+        {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
         <TextField
           label={t('fields.email')}
           type="email"
@@ -58,6 +65,7 @@ export function LoginPage() {
           autoComplete="email"
           inputMode="email"
           dir="ltr"
+          leading={<Icon name="mail" size={18} />}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={errors.fieldErrors.email}
@@ -73,24 +81,13 @@ export function LoginPage() {
           error={errors.fieldErrors.password}
           required
         />
-        <div className="form__actions">
-          <ApiActionButton
-            type="submit"
-            action={submit}
-            onSuccess={onSuccess}
-            onError={onError}
-            pendingLabel={t('login.submitting')}
-          >
+        <FormActions>
+          <ApiActionButton type="submit" action={submit} onSuccess={onSuccess} onError={onError} pendingLabel={t('login.submitting')} size="lg">
             {t('login.submit')}
           </ApiActionButton>
-          <Link to="/forgot-password" className="link">
-            {t('login.forgot')}
-          </Link>
-        </div>
+          <Link to="/forgot-password">{t('login.forgot')}</Link>
+        </FormActions>
       </form>
-      <p className="form__footer">
-        {t('login.noAccount')} <Link to="/register">{t('login.register')}</Link>
-      </p>
-    </section>
+    </AuthShell>
   )
 }

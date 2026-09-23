@@ -6,9 +6,9 @@ import type { AccountRole, PreferredLanguage } from '../api'
 import { DEFAULT_AUTHENTICATED_PATH } from '../app/guards'
 import { SELF_REGISTRATION_ROLES } from '../auth/roles'
 import { useAuth } from '../auth/useAuth'
-import { ApiActionButton } from '../components'
-import { FormAlert, PasswordField, TextField, useFormErrors } from '../components/forms'
-import { ClientValidationError, PASSWORD_MIN_LENGTH, isEmail, isPhone } from './validation'
+import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, Select, TextField, useFormErrors } from '../design-system'
+import { AuthShell } from './auth/AuthShell'
+import { ClientValidationError, isEmail, isPhone, PASSWORD_MIN_LENGTH } from './validation'
 
 const FIELDS = ['full_name', 'email', 'phone_number', 'password', 'confirm_password', 'role'] as const
 
@@ -56,95 +56,96 @@ export function RegisterPage() {
   }
 
   return (
-    <section className="card card--form">
-      <h2>{t('register.title')}</h2>
+    <AuthShell
+      title={t('register.title')}
+      description={t('register.intro')}
+      footer={
+        <>
+          {t('register.haveAccount')} <Link to="/login">{t('register.login')}</Link>
+        </>
+      }
+    >
       <form noValidate onSubmit={(event: FormEvent) => event.preventDefault()}>
-        {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
-        <TextField
-          label={t('fields.fullName')}
-          name="full_name"
-          autoComplete="name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          error={errors.fieldErrors.full_name}
-          required
-        />
-        <TextField
-          label={t('fields.email')}
-          type="email"
-          name="email"
-          autoComplete="email"
-          inputMode="email"
-          dir="ltr"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={errors.fieldErrors.email}
-          required
-        />
-        <TextField
-          label={
-            <>
-              {t('fields.phone')} <span className="muted">({t('common.optional')})</span>
-            </>
-          }
-          type="tel"
-          name="phone_number"
-          autoComplete="tel"
-          inputMode="tel"
-          dir="ltr"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          error={errors.fieldErrors.phone_number}
-        />
-        <div className="field">
-          <label className="field__label" htmlFor="register-role">
-            {t('fields.role')}
-          </label>
-          <div className="field__control">
-            <select
-              id="register-role"
-              name="role"
-              className="field__input"
-              value={role}
-              onChange={(e) => setRole(e.target.value as Exclude<AccountRole, 'ADMIN'>)}
-            >
-              {SELF_REGISTRATION_ROLES.map((code) => (
-                <option key={code} value={code}>
-                  {t(`roles.${code}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {errors.fieldErrors.role ? (
-            <p className="field__error" role="alert">
-              {errors.fieldErrors.role}
-            </p>
-          ) : null}
-        </div>
-        <PasswordField
-          label={t('fields.password')}
-          name="password"
-          autoComplete="new-password"
-          dir="ltr"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={errors.fieldErrors.password}
-          hint={<PasswordRules />}
-          required
-        />
-        <PasswordField
-          label={t('fields.confirmPassword')}
-          name="confirm_password"
-          autoComplete="new-password"
-          dir="ltr"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          error={errors.fieldErrors.confirm_password}
-          required
-        />
-        <div className="form__actions">
+        {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
+        <FormSection title={t('register.sectionIdentity')}>
+          <TextField
+            label={t('fields.fullName')}
+            name="full_name"
+            autoComplete="name"
+            leading={<Icon name="user" size={18} />}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            error={errors.fieldErrors.full_name}
+            required
+          />
+          <TextField
+            label={t('fields.email')}
+            type="email"
+            name="email"
+            autoComplete="email"
+            inputMode="email"
+            dir="ltr"
+            leading={<Icon name="mail" size={18} />}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={errors.fieldErrors.email}
+            required
+          />
+          <TextField
+            label={t('fields.phone')}
+            optional
+            type="tel"
+            name="phone_number"
+            autoComplete="tel"
+            inputMode="tel"
+            dir="ltr"
+            leading={<Icon name="phone" size={18} />}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            error={errors.fieldErrors.phone_number}
+          />
+          <Select
+            label={t('fields.role')}
+            name="role"
+            hint={t('register.roleHint')}
+            value={role}
+            onChange={(e) => setRole(e.target.value as Exclude<AccountRole, 'ADMIN'>)}
+            error={errors.fieldErrors.role}
+          >
+            {SELF_REGISTRATION_ROLES.map((code) => (
+              <option key={code} value={code}>
+                {t(`roles.${code}`)}
+              </option>
+            ))}
+          </Select>
+        </FormSection>
+        <FormSection title={t('register.sectionSecurity')}>
+          <PasswordField
+            label={t('fields.password')}
+            name="password"
+            autoComplete="new-password"
+            dir="ltr"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={errors.fieldErrors.password}
+            hint={<PasswordRules />}
+            required
+          />
+          <PasswordField
+            label={t('fields.confirmPassword')}
+            name="confirm_password"
+            autoComplete="new-password"
+            dir="ltr"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            error={errors.fieldErrors.confirm_password}
+            required
+          />
+        </FormSection>
+        <FormActions>
           <ApiActionButton
             type="submit"
+            size="lg"
             action={submit}
             onSuccess={() => navigate(DEFAULT_AUTHENTICATED_PATH, { replace: true })}
             onError={onError}
@@ -152,19 +153,16 @@ export function RegisterPage() {
           >
             {t('register.submit')}
           </ApiActionButton>
-        </div>
+        </FormActions>
       </form>
-      <p className="form__footer">
-        {t('register.haveAccount')} <Link to="/login">{t('register.login')}</Link>
-      </p>
-    </section>
+    </AuthShell>
   )
 }
 
 export function PasswordRules() {
   const { t } = useTranslation()
   return (
-    <details className="rules">
+    <details>
       <summary>{t('passwordRules.title')}</summary>
       <ul>
         <li>{t('passwordRules.min')}</li>

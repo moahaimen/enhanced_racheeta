@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
 import { auth as authApi } from '../api'
-import { ApiActionButton } from '../components'
-import { FormAlert, PasswordField, useFormErrors } from '../components/forms'
+import { Alert, ApiActionButton, FormActions, LinkButton, PasswordField, useFormErrors } from '../design-system'
+import { AuthShell, AuthSuccess } from './auth/AuthShell'
 import { PasswordRules } from './RegisterPage'
 import { ClientValidationError, PASSWORD_MIN_LENGTH } from './validation'
 
@@ -35,35 +35,34 @@ export function ResetPasswordPage() {
 
   if (done) {
     return (
-      <section className="card card--form">
-        <h2>{t('reset.title')}</h2>
-        <FormAlert kind="success">{t('reset.success')}</FormAlert>
-        <p className="form__footer">
-          <Link to="/login" className="btn">
-            {t('nav.login')}
-          </Link>
-        </p>
-      </section>
+      <AuthShell title={t('reset.title')}>
+        <AuthSuccess>
+          <Alert kind="success">{t('reset.success')}</Alert>
+          <div>
+            <LinkButton to="/login">{t('nav.login')}</LinkButton>
+          </div>
+        </AuthSuccess>
+      </AuthShell>
     )
   }
 
   if (linkInvalid) {
     return (
-      <section className="card card--form">
-        <h2>{t('reset.title')}</h2>
-        <FormAlert kind="error">{errors.fieldErrors.token ?? t('reset.invalidLink')}</FormAlert>
-        <p className="form__footer">
-          <Link to="/forgot-password">{t('reset.requestNew')}</Link>
-        </p>
-      </section>
+      <AuthShell title={t('reset.title')}>
+        <AuthSuccess>
+          <Alert kind="error">{errors.fieldErrors.token ?? t('reset.invalidLink')}</Alert>
+          <div>
+            <Link to="/forgot-password">{t('reset.requestNew')}</Link>
+          </div>
+        </AuthSuccess>
+      </AuthShell>
     )
   }
 
   return (
-    <section className="card card--form">
-      <h2>{t('reset.title')}</h2>
+    <AuthShell title={t('reset.title')} description={t('reset.intro')}>
       <form noValidate onSubmit={(event) => event.preventDefault()}>
-        {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
+        {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
         <PasswordField
           label={t('fields.newPassword')}
           name="new_password"
@@ -85,9 +84,10 @@ export function ResetPasswordPage() {
           error={errors.fieldErrors.confirm_password}
           required
         />
-        <div className="form__actions">
+        <FormActions>
           <ApiActionButton
             type="submit"
+            size="lg"
             action={submit}
             onSuccess={() => setDone(true)}
             onError={(error) => {
@@ -97,8 +97,8 @@ export function ResetPasswordPage() {
           >
             {t('reset.submit')}
           </ApiActionButton>
-        </div>
+        </FormActions>
       </form>
-    </section>
+    </AuthShell>
   )
 }

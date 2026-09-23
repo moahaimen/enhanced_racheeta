@@ -3,9 +3,25 @@ import { useTranslation } from 'react-i18next'
 
 import { auth as authApi, type Account, type PreferredLanguage } from '../api'
 import { useAuth } from '../auth/useAuth'
-import { ApiActionButton, AsyncPage } from '../components'
-import { FormAlert, TextField, useFormErrors } from '../components/forms'
+import {
+  Alert,
+  ApiActionButton,
+  AsyncPage,
+  Avatar,
+  Badge,
+  Button,
+  Container,
+  FormActions,
+  Icon,
+  PageHeader,
+  PageStack,
+  SectionCard,
+  Select,
+  TextField,
+  useFormErrors,
+} from '../design-system'
 import { changeLanguage, isLanguage } from '../i18n'
+import styles from './ProfilePage.module.css'
 import { ClientValidationError, isPhone } from './validation'
 
 /**
@@ -14,11 +30,15 @@ import { ClientValidationError, isPhone } from './validation'
  * Role and capabilities are displayed as hints; the backend enforces them.
  */
 export function ProfilePage() {
+  const { t } = useTranslation()
   const { refreshAccount } = useAuth()
   return (
-    <AsyncPage load={() => refreshAccount()}>
-      {(account, reload) => <ProfileView account={account} reload={reload} />}
-    </AsyncPage>
+    <Container>
+      <PageHeader eyebrow={<><Icon name="user" size={16} />{t('nav.profile')}</>} title={t('profile.title')} />
+      <AsyncPage load={() => refreshAccount()}>
+        {(account, reload) => <ProfileView account={account} reload={reload} />}
+      </AsyncPage>
+    </Container>
   )
 }
 
@@ -57,117 +77,145 @@ function ProfileView({ account, reload }: { account: Account; reload: () => void
   }
 
   return (
-    <>
-      <section className="card">
-        <h2>{t('profile.title')}</h2>
-        <dl className="status">
-          <dt>{t('fields.email')}</dt>
-          <dd dir="ltr">{account.email}</dd>
-          <dt>{t('profile.role')}</dt>
-          <dd>
-            <span className="badge">{t(`roles.${account.role}`)}</span>
-          </dd>
-          <dt>{t('profile.memberSince')}</dt>
-          <dd>{new Date(account.created_at).toLocaleDateString(i18n.language)}</dd>
-          <dt>{t('profile.identity')}</dt>
-          <dd>
-            {account.email_verified ? (
-              <span className="badge badge--ok">{t('profile.emailVerified')}</span>
-            ) : (
-              <span className="badge badge--warn">{t('profile.emailNotVerified')}</span>
-            )}
-          </dd>
-        </dl>
-        {!account.email_verified ? (
-          <div className="actions">
-            {verificationSent ? (
-              <FormAlert kind="success">{t('profile.verificationSent')}</FormAlert>
-            ) : (
-              <ApiActionButton
-                className="btn--ghost"
-                action={() => authApi.requestEmailVerification()}
-                onSuccess={() => setVerificationSent(true)}
-                onError={(error) => errors.applyApiError(error)}
-                pendingLabel={t('profile.sendingVerification')}
-              >
-                {t('profile.sendVerification')}
-              </ApiActionButton>
-            )}
+    <PageStack>
+      <SectionCard title={t('profile.overviewTitle')} headingLevel={2} actions={<Button variant="ghost" size="sm" onClick={reload} leading={<Icon name="refresh" size={16} />}>{t('common.retry')}</Button>}>
+        <div className={styles.overview}>
+          <Avatar name={account.full_name} size="xl" />
+          <div className={styles.overviewText}>
+            <p className={styles.overviewName}>{account.full_name}</p>
+            <p className="text-secondary ltr">{account.email}</p>
+            <div className={styles.overviewMeta}>
+              <Badge tone="brand">{t(`roles.${account.role}`)}</Badge>
+              {account.email_verified ? (
+                <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
+                  {t('profile.emailVerified')}
+                </Badge>
+              ) : (
+                <Badge tone="warning">{t('profile.emailNotVerified')}</Badge>
+              )}
+            </div>
           </div>
-        ) : null}
-        {!account.has_password ? <p className="muted">{t('profile.noPassword')}</p> : null}
-      </section>
+        </div>
+      </SectionCard>
 
-      <section className="card card--form">
-        <h3>{t('profile.edit')}</h3>
-        <form noValidate onSubmit={(event) => event.preventDefault()}>
-          {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
-          {saved ? <FormAlert kind="success">{t('profile.saved')}</FormAlert> : null}
-          <TextField
-            label={t('fields.fullName')}
-            name="full_name"
-            autoComplete="name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            error={errors.fieldErrors.full_name}
-            required
-          />
-          <TextField
-            label={t('fields.phone')}
-            type="tel"
-            name="phone_number"
-            autoComplete="tel"
-            dir="ltr"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            error={errors.fieldErrors.phone_number}
-          />
-          <div className="field">
-            <label className="field__label" htmlFor="profile-language">
-              {t('fields.preferredLanguage')}
-            </label>
-            <div className="field__control">
-              <select
-                id="profile-language"
+      <div className={styles.grid}>
+        <PageStack>
+          <SectionCard title={t('profile.contactTitle')} description={t('profile.contactBody')} headingLevel={2}>
+            <form noValidate onSubmit={(event) => event.preventDefault()}>
+              {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
+              {saved ? <Alert kind="success">{t('profile.saved')}</Alert> : null}
+              <TextField
+                label={t('fields.fullName')}
+                name="full_name"
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                error={errors.fieldErrors.full_name}
+                required
+              />
+              <TextField
+                label={t('fields.phone')}
+                type="tel"
+                name="phone_number"
+                autoComplete="tel"
+                dir="ltr"
+                leading={<Icon name="phone" size={18} />}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={errors.fieldErrors.phone_number}
+              />
+              <Select
+                label={t('fields.preferredLanguage')}
                 name="preferred_language"
-                className="field__input"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as PreferredLanguage)}
               >
                 <option value="ar">العربية</option>
                 <option value="en">English</option>
-              </select>
-            </div>
-          </div>
-          <div className="form__actions">
-            <ApiActionButton
-              type="submit"
-              action={save}
-              onSuccess={onSaved}
-              onError={(error) => {
-                if (!(error instanceof ClientValidationError)) errors.applyApiError(error)
-              }}
-              pendingLabel={t('common.saving')}
-            >
-              {t('common.save')}
-            </ApiActionButton>
-            <button type="button" className="btn btn--ghost" onClick={reload}>
-              {t('common.retry')}
-            </button>
-          </div>
-        </form>
-      </section>
+              </Select>
+              <FormActions>
+                <ApiActionButton
+                  type="submit"
+                  action={save}
+                  onSuccess={onSaved}
+                  onError={(error) => {
+                    if (!(error instanceof ClientValidationError)) errors.applyApiError(error)
+                  }}
+                  pendingLabel={t('common.saving')}
+                >
+                  {t('common.save')}
+                </ApiActionButton>
+              </FormActions>
+            </form>
+          </SectionCard>
 
-      <section className="card">
-        <h3>{t('profile.capabilities')}</h3>
-        <ul className="chips" aria-label={t('profile.capabilities')}>
-          {account.permissions.map((code) => (
-            <li key={code} className="chip" dir="ltr">
-              {code}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
+          <SectionCard title={t('profile.capabilities')} description={t('profile.capabilitiesBody')} headingLevel={2}>
+            <ul className={styles.chips} aria-label={t('profile.capabilities')}>
+              {account.permissions.map((code) => (
+                <li key={code}>
+                  <Badge tone="outline" className={styles.mono}>
+                    <span className="ltr">{code}</span>
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        </PageStack>
+
+        <PageStack>
+          <SectionCard title={t('profile.accountTitle')} headingLevel={2}>
+            <dl className={styles.facts}>
+              <dt>{t('fields.email')}</dt>
+              <dd className="ltr">{account.email}</dd>
+              <dt>{t('profile.role')}</dt>
+              <dd>{t(`roles.${account.role}`)}</dd>
+              <dt>{t('profile.memberSince')}</dt>
+              <dd>{new Date(account.created_at).toLocaleDateString(i18n.language)}</dd>
+              {account.last_login ? (
+                <>
+                  <dt>{t('profile.lastLogin')}</dt>
+                  <dd>{new Date(account.last_login).toLocaleString(i18n.language)}</dd>
+                </>
+              ) : null}
+            </dl>
+          </SectionCard>
+
+          <SectionCard title={t('profile.securityTitle')} headingLevel={2}>
+            <dl className={styles.facts}>
+              <dt>{t('profile.identity')}</dt>
+              <dd>
+                {account.email_verified ? (
+                  <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
+                    {t('profile.emailVerified')}
+                  </Badge>
+                ) : (
+                  <Badge tone="warning">{t('profile.emailNotVerified')}</Badge>
+                )}
+              </dd>
+              <dt>{t('profile.passwordLabel')}</dt>
+              <dd>{account.has_password ? t('profile.passwordSet') : t('profile.noPassword')}</dd>
+            </dl>
+            {!account.email_verified ? (
+              <FormActions>
+                {verificationSent ? (
+                  <Alert kind="success">{t('profile.verificationSent')}</Alert>
+                ) : (
+                  <ApiActionButton
+                    variant="secondary"
+                    action={() => authApi.requestEmailVerification()}
+                    onSuccess={() => setVerificationSent(true)}
+                    onError={(error) => errors.applyApiError(error)}
+                    pendingLabel={t('profile.sendingVerification')}
+                    leading={<Icon name="mail" size={18} />}
+                  >
+                    {t('profile.sendVerification')}
+                  </ApiActionButton>
+                )}
+              </FormActions>
+            ) : null}
+          </SectionCard>
+        </PageStack>
+      </div>
+    </PageStack>
   )
 }
