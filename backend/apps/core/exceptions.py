@@ -6,7 +6,9 @@ Every error response has the shape:
       "error": {
         "code": "validation_error",
         "message": "Human readable summary.",
-        "details": {...}            # optional; field errors for validation
+        "details": {...},           # optional; field errors for validation
+        "codes": {...},             # optional; field -> [error codes] for validation
+        "meta": {...}               # optional; entitlement key/limit/used
       }
     }
 
@@ -63,6 +65,19 @@ def api_exception_handler(exc: Exception, context: dict) -> Response | None:
         if isinstance(details, list):
             details = {"non_field_errors": details}
         payload["details"] = details
+        codes = exc.get_codes()
+        if isinstance(codes, list):
+            codes = {"non_field_errors": codes}
+        if isinstance(codes, dict):
+            payload["codes"] = {
+                field: (value if isinstance(value, list) else [value])
+                for field, value in codes.items()
+                if isinstance(value, str | list)
+            }
+    for attr in ("key", "limit", "used"):
+        value = getattr(exc, attr, None)
+        if value is not None:
+            payload.setdefault("meta", {})[attr] = value
 
     response.data = {"error": payload}
     return response

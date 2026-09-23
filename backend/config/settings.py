@@ -81,6 +81,10 @@ INSTALLED_APPS = [
     "apps.geography",
     "apps.specialties",
     "apps.providers",
+    "apps.audit",
+    "apps.billing",
+    "apps.moderation",
+    "apps.jobs",
 ]
 
 MIDDLEWARE = [
@@ -173,6 +177,11 @@ REST_FRAMEWORK = {
         "auth": "10/min",
         "password_reset": "5/min",
         "email_verification": "3/min",
+        "jobs_create": "30/hour",
+        "jobs_apply": "20/hour",
+        "talent_search": "60/min",
+        "talent_invite": "30/hour",
+        "recruitment_messages": "60/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
