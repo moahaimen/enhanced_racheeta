@@ -1,4 +1,4 @@
-import { useCallback, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { useCallback, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from 'react'
 
 import { useAsyncAction } from '../hooks/useAsync'
 import { Spinner } from './Spinner'
@@ -32,14 +32,21 @@ export function ApiActionButton<Result>({
 }: ApiActionButtonProps<Result>) {
   const { run, pending } = useAsyncAction(action)
 
-  const handleClick = useCallback(async () => {
-    try {
-      const result = await run()
-      if (result !== undefined || !pending) onSuccess?.(result as Result)
-    } catch (error) {
-      onError?.(error)
-    }
-  }, [run, pending, onSuccess, onError])
+  const handleClick = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>) => {
+      // As a submit button we own the submission: never let the browser post the form.
+      if (type === 'submit') event.preventDefault()
+      let result: Result | undefined
+      try {
+        result = await run()
+      } catch (error) {
+        onError?.(error)
+        return
+      }
+      if (result !== undefined) onSuccess?.(result)
+    },
+    [run, type, onSuccess, onError],
+  )
 
   return (
     <button

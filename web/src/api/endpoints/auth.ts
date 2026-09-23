@@ -2,7 +2,11 @@ import { apiRequest } from '../client'
 import { tokenStore } from '../tokens'
 import type {
   Account,
+  DetailResponse,
+  EmailVerificationConfirmRequest,
   LoginRequest,
+  PasswordResetConfirmRequest,
+  PasswordResetRequest,
   RegisterRequest,
   RegisterResponse,
   TokenPair,
@@ -46,4 +50,34 @@ export function getMe(signal?: AbortSignal): Promise<Account> {
 
 export function updateMe(payload: UpdateMeRequest): Promise<Account> {
   return apiRequest<Account>('/api/v1/me', { method: 'PATCH', body: payload })
+}
+
+export function requestPasswordReset(payload: PasswordResetRequest): Promise<DetailResponse> {
+  return apiRequest<DetailResponse>('/api/v1/auth/password-reset/request', {
+    method: 'POST',
+    body: payload,
+    auth: false,
+  })
+}
+
+export function confirmPasswordReset(payload: PasswordResetConfirmRequest): Promise<DetailResponse> {
+  return apiRequest<DetailResponse>('/api/v1/auth/password-reset/confirm', {
+    method: 'POST',
+    body: payload,
+    auth: false,
+  })
+}
+
+export function requestEmailVerification(): Promise<DetailResponse> {
+  return apiRequest<DetailResponse>('/api/v1/auth/email-verification/request', { method: 'POST' })
+}
+
+export function confirmEmailVerification(
+  payload: EmailVerificationConfirmRequest,
+): Promise<DetailResponse> {
+  return apiRequest<DetailResponse>('/api/v1/auth/email-verification/confirm', {
+    method: 'POST',
+    body: payload,
+    auth: false,
+  })
 }
