@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+
+import { Container, EmptyState, LinkButton } from '../design-system'
 
 export function NotFoundPage() {
   const { t } = useTranslation()
   return (
-    <section className="card" role="alert">
-      <h2>{t('notFound.title')}</h2>
-      <p>{t('notFound.body')}</p>
-      <Link to="/" className="btn">
-        {t('notFound.home')}
-      </Link>
-    </section>
+    <Container width="md">
+      <div className="card-block" role="alert">
+        <EmptyState icon="alertCircle" title={t('notFound.title')} action={<LinkButton to="/">{t('notFound.home')}</LinkButton>}>
+          {t('notFound.body')}
+        </EmptyState>
+      </div>
+    </Container>
   )
 }

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { auth as authApi } from '../api'
-import { ApiActionButton } from '../components'
-import { FormAlert, TextField, useFormErrors } from '../components/forms'
+import { Alert, ApiActionButton, FormActions, Icon, LinkButton, TextField, useFormErrors } from '../design-system'
+import { AuthShell, AuthSuccess } from './auth/AuthShell'
 import { ClientValidationError, isEmail } from './validation'
 
 export function ForgotPasswordPage() {
@@ -27,19 +27,19 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <section className="card card--form">
-      <h2>{t('forgot.title')}</h2>
+    <AuthShell title={t('forgot.title')} description={sent ? undefined : t('forgot.intro')}>
       {sent ? (
-        <>
-          <FormAlert kind="success">{t('forgot.sent')}</FormAlert>
-          <p className="form__footer">
-            <Link to="/login">{t('forgot.backToLogin')}</Link>
-          </p>
-        </>
+        <AuthSuccess>
+          <Alert kind="success">{t('forgot.sent')}</Alert>
+          <div>
+            <LinkButton to="/login" variant="secondary">
+              {t('forgot.backToLogin')}
+            </LinkButton>
+          </div>
+        </AuthSuccess>
       ) : (
         <form noValidate onSubmit={(event) => event.preventDefault()}>
-          <p>{t('forgot.intro')}</p>
-          {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
+          {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
           <TextField
             label={t('fields.email')}
             type="email"
@@ -47,14 +47,16 @@ export function ForgotPasswordPage() {
             autoComplete="email"
             inputMode="email"
             dir="ltr"
+            leading={<Icon name="mail" size={18} />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={errors.fieldErrors.email}
             required
           />
-          <div className="form__actions">
+          <FormActions>
             <ApiActionButton
               type="submit"
+              size="lg"
               action={submit}
               onSuccess={() => setSent(true)}
               onError={(error) => {
@@ -64,12 +66,10 @@ export function ForgotPasswordPage() {
             >
               {t('forgot.submit')}
             </ApiActionButton>
-            <Link to="/login" className="link">
-              {t('forgot.backToLogin')}
-            </Link>
-          </div>
+            <Link to="/login">{t('forgot.backToLogin')}</Link>
+          </FormActions>
         </form>
       )}
-    </section>
+    </AuthShell>
   )
 }

@@ -1,5 +1,2 @@
-export { ApiActionButton } from './ApiActionButton'
-export { AsyncPage } from './AsyncPage'
-export { LanguageSwitcher } from './LanguageSwitcher'
-export { LoadingOverlay } from './LoadingOverlay'
-export { Spinner } from './Spinner'
+// Compatibility re-exports: the implementation lives in src/design-system.
+export { ApiActionButton, AsyncPage, LoadingOverlay, Spinner } from '../design-system'

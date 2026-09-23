@@ -1,0 +1,120 @@
+.card {
+  background: var(--surface-primary);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: var(--space-6);
+  }
+}
+
+.flush {
+  padding: 0;
+}
+
+.interactive {
+  transition:
+    box-shadow var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+}
+
+.interactive:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--border-brand);
+  transform: translateY(-2px);
+}
+
+.brand {
+  background: var(--surface-brand);
+  border-color: var(--color-primary-100);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.headerText {
+  min-inline-size: 0;
+}
+
+.title {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+}
+
+.description {
+  margin-block-start: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+}
+
+.footer {
+  margin-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
+  border-block-start: var(--border-width) solid var(--border-subtle);
+}
+
+/* Feature card */
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  block-size: 100%;
+}
+
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-brand);
+  color: var(--text-brand);
+}
+
+.featureTitle {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+}
+
+.featureBody {
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  flex: 1;
+}
+
+/* Stat card */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.statLabel {
+  color: var(--text-muted);
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+}
+
+.statValue {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+.statHint {
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+}

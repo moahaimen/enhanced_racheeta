@@ -1,0 +1,219 @@
+.hero {
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, var(--color-primary-100), transparent 60%),
+    linear-gradient(180deg, var(--surface-brand), var(--surface-secondary));
+  border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+.heroInner {
+  display: grid;
+  gap: var(--space-8);
+  align-items: center;
+  padding-block: var(--space-12);
+}
+
+@media (min-width: 1024px) {
+  .heroInner {
+    grid-template-columns: 1.15fr 0.85fr;
+    padding-block: var(--space-16);
+  }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  padding-block: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--surface-primary);
+  border: var(--border-width) solid var(--color-primary-200);
+  color: var(--text-brand);
+  font-size: var(--text-label);
+  font-weight: var(--weight-semibold);
+  margin-block-end: var(--space-5);
+}
+
+.title {
+  font-size: var(--text-display);
+  line-height: 1.15;
+  max-inline-size: 16ch;
+}
+
+.body {
+  margin-block-start: var(--space-4);
+  max-inline-size: 40rem;
+  color: var(--text-secondary);
+  font-size: 1.0625rem;
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-block-start: var(--space-6);
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+}
+
+.trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trust svg {
+  color: var(--color-primary-600);
+}
+
+/* Abstract brand composition: icon tiles on a soft grid. No data, no stock imagery. */
+.art {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-hero);
+  background: var(--surface-primary);
+  border: var(--border-width) solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  max-inline-size: 26rem;
+  margin-inline: auto;
+}
+
+.tile {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface-brand);
+  color: var(--color-primary-700);
+}
+
+.tileStrong {
+  background: var(--surface-brand-strong);
+  color: var(--text-on-brand);
+}
+
+.tileSoft {
+  background: var(--surface-tertiary);
+  color: var(--text-muted);
+}
+
+.artCaption {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+}
+
+.pulse {
+  inline-size: 100%;
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-primary-200), var(--color-primary-500), var(--color-primary-200));
+}
+
+.searchForm {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+  align-items: end;
+}
+
+@media (min-width: 768px) {
+  .searchForm {
+    grid-template-columns: 1fr 1fr 1.4fr auto;
+  }
+}
+
+.searchForm > * {
+  margin-block-end: 0;
+}
+
+.services {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .services {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .services {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.providers {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+.why {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .why {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  border-radius: var(--radius-hero);
+  background: var(--surface-brand-strong);
+  color: var(--text-on-brand);
+}
+
+.cta h2 {
+  color: inherit;
+  max-inline-size: 30ch;
+}
+
+.cta p {
+  margin-block-start: var(--space-2);
+  max-inline-size: 48rem;
+  color: color-mix(in srgb, var(--text-on-brand) 85%, transparent);
+}
+
+.ctaButton {
+  --btn-bg: var(--surface-primary);
+  --btn-fg: var(--text-brand);
+  --btn-bg-hover: var(--surface-brand);
+}
+
+.ctaNote {
+  background: color-mix(in srgb, var(--text-on-brand) 14%, transparent);
+  border-color: color-mix(in srgb, var(--text-on-brand) 40%, transparent);
+  color: var(--text-on-brand);
+  font-size: var(--text-label);
+  padding-inline: var(--space-3);
+  padding-block: var(--space-1);
+}

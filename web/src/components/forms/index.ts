@@ -1,4 +1,2 @@
-export { FormAlert } from './FormAlert'
-export { PasswordField } from './PasswordField'
-export { TextField } from './TextField'
-export { useFormErrors } from './useFormErrors'
+// Compatibility re-exports: the implementation lives in src/design-system/components/Form.
+export { FormAlert, PasswordField, TextField, useFormErrors } from '../../design-system'

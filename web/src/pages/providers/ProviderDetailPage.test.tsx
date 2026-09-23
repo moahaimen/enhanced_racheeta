@@ -27,7 +27,7 @@ describe('ProviderDetailPage', () => {
     expect(providersApi.getProvider).toHaveBeenCalledWith('p-1', expect.anything())
     expect(screen.getByText('About text')).toBeInTheDocument()
     expect(screen.getByText('Consultation')).toBeInTheDocument()
-    expect(screen.getByText('+9647700000000')).toBeInTheDocument()
+    expect(screen.getAllByText(/\+9647700000000/).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'City Hospital' })).toHaveAttribute('href', '/providers/p-h')
     expect(screen.queryByText(/rating|تقييم/i)).toBeNull()
   })

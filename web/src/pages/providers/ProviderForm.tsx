@@ -3,8 +3,20 @@ import { useTranslation } from 'react-i18next'
 
 import { PROVIDER_TYPES, reference } from '../../api'
 import type { City, Governorate, ProviderOwner, ProviderType, ProviderWrite, Specialty } from '../../api'
-import { ApiActionButton, Spinner } from '../../components'
-import { FormAlert, TextField, useFormErrors } from '../../components/forms'
+import {
+  Alert,
+  ApiActionButton,
+  Checkbox,
+  CheckboxGroup,
+  FormActions,
+  FormSection,
+  Icon,
+  Select,
+  Spinner,
+  Textarea,
+  TextField,
+  useFormErrors,
+} from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError, isEmail, isPhone } from '../validation'
@@ -62,7 +74,7 @@ function fromProfile(profile: ProviderOwner | null): FormState {
   }
 }
 
-interface ProviderFormProps {
+export interface ProviderFormProps {
   profile: ProviderOwner | null
   governorates: Governorate[]
   specialties: Specialty[]
@@ -72,16 +84,8 @@ interface ProviderFormProps {
   pendingLabel: string
 }
 
-/** Shared by onboarding (create) and editing (update). */
-export function ProviderForm({
-  profile,
-  governorates,
-  specialties,
-  submit,
-  onSaved,
-  submitLabel,
-  pendingLabel,
-}: ProviderFormProps) {
+/** Shared by onboarding (create) and editing (update). Grouped into form sections. */
+export function ProviderForm({ profile, governorates, specialties, submit, onSaved, submitLabel, pendingLabel }: ProviderFormProps) {
   const { t } = useTranslation()
   const name = useLocalizedName()
   const [form, setForm] = useState<FormState>(() => fromProfile(profile))
@@ -94,8 +98,7 @@ export function ProviderForm({
     [form.governorate],
   )
 
-  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }))
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((prev) => ({ ...prev, [key]: value }))
 
   const validate = (): boolean => {
     const next: Partial<Record<(typeof FIELDS)[number], string>> = {}
@@ -138,223 +141,164 @@ export function ProviderForm({
   }
 
   return (
-    <form noValidate onSubmit={(e) => e.preventDefault()} className="provider-form">
-      {errors.formError ? <FormAlert kind="error">{errors.formError}</FormAlert> : null}
-      {saved ? <FormAlert kind="success">{t('providerProfile.saved')}</FormAlert> : null}
+    <form noValidate onSubmit={(e) => e.preventDefault()}>
+      {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
+      {saved ? <Alert kind="success">{t('providerProfile.saved')}</Alert> : null}
 
-      <div className="field">
-        <label className="field__label" htmlFor="pf-type">
-          {t('providers.type')}
-        </label>
-        <div className="field__control">
-          <select
-            id="pf-type"
-            className="field__input"
-            value={form.provider_type}
-            disabled={typeLocked}
-            onChange={(e) => set('provider_type', e.target.value as ProviderType)}
-          >
-            {PROVIDER_TYPES.map((code) => (
-              <option key={code} value={code}>
-                {t(`providerTypes.${code}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        {typeLocked ? <div className="field__hint">{t('providerProfile.typeLocked')}</div> : null}
-        {errors.fieldErrors.provider_type ? (
-          <p className="field__error" role="alert">
-            {errors.fieldErrors.provider_type}
-          </p>
-        ) : null}
-      </div>
+      <FormSection title={t('providerProfile.sectionIdentity')}>
+        <Select
+          label={t('providers.type')}
+          value={form.provider_type}
+          disabled={typeLocked}
+          hint={typeLocked ? t('providerProfile.typeLocked') : undefined}
+          error={errors.fieldErrors.provider_type}
+          onChange={(e) => set('provider_type', e.target.value as ProviderType)}
+        >
+          {PROVIDER_TYPES.map((code) => (
+            <option key={code} value={code}>
+              {t(`providerTypes.${code}`)}
+            </option>
+          ))}
+        </Select>
+        <TextField
+          label={t('providerProfile.displayName')}
+          name="display_name"
+          value={form.display_name}
+          onChange={(e) => set('display_name', e.target.value)}
+          error={errors.fieldErrors.display_name}
+          required
+        />
+        <Textarea label={t('providerProfile.about')} name="about" value={form.about} onChange={(e) => set('about', e.target.value)} />
+        <TextField
+          label={t('providerProfile.imageUrl')}
+          optional
+          type="url"
+          name="image_url"
+          dir="ltr"
+          value={form.image_url}
+          onChange={(e) => set('image_url', e.target.value)}
+          error={errors.fieldErrors.image_url}
+        />
+      </FormSection>
 
-      <TextField
-        label={t('providerProfile.displayName')}
-        name="display_name"
-        value={form.display_name}
-        onChange={(e) => set('display_name', e.target.value)}
-        error={errors.fieldErrors.display_name}
-        required
-      />
-
-      <div className="field">
-        <label className="field__label" htmlFor="pf-about">
-          {t('providerProfile.about')}
-        </label>
-        <div className="field__control">
-          <textarea
-            id="pf-about"
-            className="field__input"
-            rows={4}
-            value={form.about}
-            onChange={(e) => set('about', e.target.value)}
+      <FormSection title={t('providerProfile.sectionContact')}>
+        <div className="grid-2">
+          <TextField
+            label={t('fields.phone')}
+            type="tel"
+            name="phone"
+            dir="ltr"
+            leading={<Icon name="phone" size={18} />}
+            value={form.phone}
+            onChange={(e) => set('phone', e.target.value)}
+            error={errors.fieldErrors.phone}
+          />
+          <TextField
+            label={t('providerProfile.publicEmail')}
+            type="email"
+            name="public_email"
+            dir="ltr"
+            leading={<Icon name="mail" size={18} />}
+            value={form.public_email}
+            onChange={(e) => set('public_email', e.target.value)}
+            error={errors.fieldErrors.public_email}
           />
         </div>
-      </div>
-
-      <div className="grid-2">
         <TextField
-          label={t('fields.phone')}
-          type="tel"
-          name="phone"
+          label={t('providerProfile.website')}
+          type="url"
+          name="website"
           dir="ltr"
-          value={form.phone}
-          onChange={(e) => set('phone', e.target.value)}
-          error={errors.fieldErrors.phone}
+          leading={<Icon name="link" size={18} />}
+          value={form.website}
+          onChange={(e) => set('website', e.target.value)}
+          error={errors.fieldErrors.website}
         />
-        <TextField
-          label={t('providerProfile.publicEmail')}
-          type="email"
-          name="public_email"
-          dir="ltr"
-          value={form.public_email}
-          onChange={(e) => set('public_email', e.target.value)}
-          error={errors.fieldErrors.public_email}
-        />
-      </div>
-      <TextField
-        label={t('providerProfile.website')}
-        type="url"
-        name="website"
-        dir="ltr"
-        value={form.website}
-        onChange={(e) => set('website', e.target.value)}
-        error={errors.fieldErrors.website}
-      />
+      </FormSection>
 
-      <div className="grid-2">
-        <div className={`field ${errors.fieldErrors.governorate ? 'field--invalid' : ''}`}>
-          <label className="field__label" htmlFor="pf-governorate">
-            {t('providers.governorate')}
-          </label>
-          <div className="field__control">
-            <select
-              id="pf-governorate"
-              className="field__input"
-              value={form.governorate}
-              onChange={(e) => {
-                set('governorate', e.target.value)
-                set('city', '')
-              }}
-              required
-            >
-              <option value="">—</option>
-              {governorates.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {name(g)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {errors.fieldErrors.governorate ? (
-            <p className="field__error" role="alert">
-              {errors.fieldErrors.governorate}
-            </p>
-          ) : null}
+      <FormSection title={t('providerProfile.sectionLocation')}>
+        <div className="grid-2">
+          <Select
+            label={t('providers.governorate')}
+            value={form.governorate}
+            error={errors.fieldErrors.governorate}
+            onChange={(e) => {
+              set('governorate', e.target.value)
+              set('city', '')
+            }}
+            required
+          >
+            <option value="">—</option>
+            {governorates.map((g) => (
+              <option key={g.id} value={g.id}>
+                {name(g)}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label={t('providers.city')}
+            adornment={cities.loading && form.governorate ? <Spinner size="sm" /> : null}
+            value={form.city}
+            disabled={!form.governorate || cities.loading}
+            error={errors.fieldErrors.city}
+            onChange={(e) => set('city', e.target.value)}
+          >
+            <option value="">—</option>
+            {(cities.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {name(c)}
+              </option>
+            ))}
+          </Select>
         </div>
-        <div className={`field ${errors.fieldErrors.city ? 'field--invalid' : ''}`}>
-          <label className="field__label" htmlFor="pf-city">
-            {t('providers.city')} {cities.loading && form.governorate ? <Spinner size="sm" /> : null}
-          </label>
-          <div className="field__control">
-            <select
-              id="pf-city"
-              className="field__input"
-              value={form.city}
-              disabled={!form.governorate || cities.loading}
-              onChange={(e) => set('city', e.target.value)}
-            >
-              <option value="">—</option>
-              {(cities.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {name(c)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {errors.fieldErrors.city ? (
-            <p className="field__error" role="alert">
-              {errors.fieldErrors.city}
-            </p>
-          ) : null}
+        <TextField label={t('providerProfile.address')} name="address" value={form.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} />
+        <div className="grid-2">
+          <TextField
+            label={t('providerProfile.latitude')}
+            name="latitude"
+            dir="ltr"
+            inputMode="decimal"
+            value={form.latitude}
+            onChange={(e) => set('latitude', e.target.value)}
+            error={errors.fieldErrors.latitude}
+          />
+          <TextField
+            label={t('providerProfile.longitude')}
+            name="longitude"
+            dir="ltr"
+            inputMode="decimal"
+            value={form.longitude}
+            onChange={(e) => set('longitude', e.target.value)}
+            error={errors.fieldErrors.longitude}
+          />
         </div>
-      </div>
-      <TextField
-        label={t('providerProfile.address')}
-        name="address"
-        value={form.address}
-        onChange={(e) => set('address', e.target.value)}
-        error={errors.fieldErrors.address}
-      />
-      <div className="grid-2">
-        <TextField
-          label={t('providerProfile.latitude')}
-          name="latitude"
-          dir="ltr"
-          inputMode="decimal"
-          value={form.latitude}
-          onChange={(e) => set('latitude', e.target.value)}
-          error={errors.fieldErrors.latitude}
-        />
-        <TextField
-          label={t('providerProfile.longitude')}
-          name="longitude"
-          dir="ltr"
-          inputMode="decimal"
-          value={form.longitude}
-          onChange={(e) => set('longitude', e.target.value)}
-          error={errors.fieldErrors.longitude}
-        />
-      </div>
-      <TextField
-        label={t('providerProfile.imageUrl')}
-        type="url"
-        name="image_url"
-        dir="ltr"
-        value={form.image_url}
-        onChange={(e) => set('image_url', e.target.value)}
-        error={errors.fieldErrors.image_url}
-      />
+      </FormSection>
 
-      <fieldset className="field">
-        <legend className="field__label">{t('providerProfile.specialties')}</legend>
-        <div className="checks">
+      <FormSection title={t('providerProfile.specialties')}>
+        <CheckboxGroup legend={t('providerProfile.specialties')} error={errors.fieldErrors.specialty_ids}>
           {specialties.map((s) => (
-            <label key={s.id} className="check">
-              <input
-                type="checkbox"
-                checked={form.specialty_ids.includes(s.id)}
-                onChange={(e) =>
-                  set(
-                    'specialty_ids',
-                    e.target.checked
-                      ? [...form.specialty_ids, s.id]
-                      : form.specialty_ids.filter((id) => id !== s.id),
-                  )
-                }
-              />
-              {name(s)}
-            </label>
+            <Checkbox
+              key={s.id}
+              label={name(s)}
+              checked={form.specialty_ids.includes(s.id)}
+              onChange={(e) =>
+                set('specialty_ids', e.target.checked ? [...form.specialty_ids, s.id] : form.specialty_ids.filter((id) => id !== s.id))
+              }
+            />
           ))}
-        </div>
-        {errors.fieldErrors.specialty_ids ? (
-          <p className="field__error" role="alert">
-            {errors.fieldErrors.specialty_ids}
-          </p>
-        ) : null}
-      </fieldset>
+        </CheckboxGroup>
+      </FormSection>
 
       {profile ? (
-        <label className="check">
-          <input type="checkbox" checked={form.is_visible} onChange={(e) => set('is_visible', e.target.checked)} />
-          {t('providerProfile.visible')}
-        </label>
+        <FormSection title={t('providerProfile.sectionVisibility')}>
+          <Checkbox label={t('providerProfile.visible')} checked={form.is_visible} onChange={(e) => set('is_visible', e.target.checked)} />
+        </FormSection>
       ) : null}
 
-      <div className="form__actions">
+      <FormActions>
         <ApiActionButton
           type="submit"
+          size="lg"
           action={action}
           onSuccess={(result) => {
             setSaved(true)
@@ -367,7 +311,7 @@ export function ProviderForm({
         >
           {submitLabel}
         </ApiActionButton>
-      </div>
+      </FormActions>
     </form>
   )
 }

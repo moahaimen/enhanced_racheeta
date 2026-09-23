@@ -1,0 +1,34 @@
+.avatar {
+  --avatar-size: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar-size);
+  block-size: var(--avatar-size);
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--surface-brand);
+  color: var(--text-brand);
+  font-weight: var(--weight-semibold);
+  font-size: calc(var(--avatar-size) * 0.38);
+  overflow: hidden;
+}
+
+.sm {
+  --avatar-size: 2.25rem;
+}
+
+.lg {
+  --avatar-size: 4.5rem;
+}
+
+.xl {
+  --avatar-size: 6rem;
+  border-radius: var(--radius-lg);
+}
+
+.image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}

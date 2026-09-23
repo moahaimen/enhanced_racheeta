@@ -1,0 +1,13 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-block-start: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.info {
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+}

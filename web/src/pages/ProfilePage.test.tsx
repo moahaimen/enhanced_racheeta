@@ -20,10 +20,10 @@ describe('ProfilePage', () => {
   it('loads identity from GET /me and shows role and capabilities as hints', async () => {
     renderApp('/profile')
     expect(await screen.findByDisplayValue('Loaded From Me')).toBeInTheDocument()
-    expect(screen.getByText('person@example.com')).toBeInTheDocument()
-    expect(screen.getByText(/مقدّم خدمة صحية|healthcare provider/i)).toBeInTheDocument()
+    expect(screen.getAllByText('person@example.com').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/مقدّم خدمة صحية|healthcare provider/i).length).toBeGreaterThan(0)
     expect(screen.getByText('providers.manage_own_profile')).toBeInTheDocument()
-    expect(screen.getByText(/غير مؤكَّد|not verified/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/غير مؤكَّد|not verified/i).length).toBeGreaterThan(0)
   })
 
   it('saves editable fields through PATCH /me with loading state', async () => {

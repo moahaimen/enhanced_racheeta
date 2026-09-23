@@ -155,3 +155,29 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-23
 **Decision:** `ServiceOffering.price` (decimal ≥ 0) + `currency` (default IQD; allowed list `settings.RACHEETA["CURRENCIES"]`). No FX, no formatting on the server.
 **Consequences:** Pricing for reservations (Phase 3) and payments (Phase 8) reference offerings rather than free text.
+
+## ADR-028 — Owned design system with tokens in TypeScript and CSS custom properties
+**Date:** 2026-09-23
+**Context:** Phase 2.5 establishes Racheeta's permanent visual identity. Options: adopt a UI framework, or own a small system.
+**Decision:** Own it: `web/src/design-system/` with tokens (TypeScript source mirrored as CSS custom properties, equality enforced by a test), CSS Modules per component, and a fixed component vocabulary (`docs/DESIGN_SYSTEM.md`). No UI framework, no utility-class framework. The former single global stylesheet is removed.
+**Consequences:** Full control and no vendor churn; every new page must use design-system components, and new primitives are added to the system with a behaviour test rather than page-local variants.
+
+## ADR-029 — Brand palette and typography
+**Date:** 2026-09-23
+**Decision:** Medical teal scale (600 `#1f7f77` for primary actions, 700 for brand text), charcoal `#22302f` headings, off-white `#f7f9f9` page background, semantic success/warning/error/info tokens. Font IBM Plex Sans Arabic (Arabic and Latin in one family) from Google Fonts with system fallbacks; self-hosting deferred to production hardening. Light theme only for now; role tokens make a dark theme a later, additive change.
+**Consequences:** Contrast ≥ AA for text roles; no raw colours in feature CSS.
+
+## ADR-030 — Clean-room implementation and relationship to AKAD
+**Date:** 2026-09-23
+**Decision:** Racheeta 2.0 copies nothing from the legacy code base (`docs/PROVENANCE.md`). It shares the owner's block-oriented design philosophy with AKAD but has its own tokens, components and identity; no AKAD files are imported.
+**Consequences:** Reviews reject legacy-derived or AKAD-derived code; the design system is the reference for every future page.
+
+## ADR-031 — Unimplemented modules are shown only as clearly marked "coming soon"
+**Date:** 2026-09-23
+**Decision:** The home page and footer list future modules (reservations, offers, jobs, marketplace, real estate) as non-interactive feature cards/items with a "coming soon" badge. No page uses invented data; empty states are designed instead.
+**Consequences:** The product never pretends unfinished functionality exists; adding a module means replacing the badge with a real link.
+
+## ADR-032 — Icon set is owned, not imported
+**Date:** 2026-09-23
+**Decision:** A single line-icon set drawn on a 24px grid lives in `design-system/icons/`; directional icons mirror in RTL. No emoji, no mixed libraries.
+**Consequences:** Small bundle, consistent weight; new icons are added to `paths.tsx`.

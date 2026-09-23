@@ -36,7 +36,7 @@ describe('ProvidersPage', () => {
     pending.resolve(page([makeCard({ display_name: 'Dr Alpha' }), makeCard({ id: 'p-2', display_name: 'Dr Beta' })]))
     expect(await screen.findByText('Dr Alpha')).toBeInTheDocument()
     expect(screen.getByText('Dr Beta')).toBeInTheDocument()
-    expect(screen.getByTestId('results-count')).toHaveTextContent('2')
+    expect(screen.getByTestId('results-count')).toHaveTextContent(/نتيجتان|2 results/)
     expect(screen.getAllByText('أمراض القلب').length).toBeGreaterThan(0) // Arabic specialty name
     expect(screen.getByRole('link', { name: 'Dr Alpha' })).toHaveAttribute('href', '/providers/p-1')
   })
@@ -104,5 +104,57 @@ describe('ProvidersPage', () => {
     await waitFor(() =>
       expect(vi.mocked(providersApi.listProviders).mock.calls.at(-1)![0]).toMatchObject({ page: 2 }),
     )
+  })
+})
+
+describe('ProvidersPage search input stays in sync with the URL', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    tokenStore.clear()
+    vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad, basra])
+    vi.mocked(referenceApi.listSpecialties).mockResolvedValue([cardiology, dentistry])
+    vi.mocked(referenceApi.listCities).mockResolvedValue([])
+    vi.mocked(providersApi.listProviders).mockResolvedValue(page())
+  })
+
+  const searchBox = () => screen.getByRole('searchbox') as HTMLInputElement
+
+  it('initialises from the URL and clears when the search chip is removed', async () => {
+    renderApp('/providers?search=heart')
+    await screen.findByText('Dr Example')
+    expect(searchBox().value).toBe('heart')
+    const chip = screen.getByRole('button', { name: /“heart”/ })
+    await userEvent.click(chip)
+    await waitFor(() => expect(searchBox().value).toBe(''))
+    expect(vi.mocked(providersApi.listProviders).mock.calls.at(-1)![0]).toMatchObject({ search: '' })
+  })
+
+  it('clears from the empty-state Clear action', async () => {
+    vi.mocked(providersApi.listProviders).mockResolvedValue(page([], 0))
+    renderApp('/providers?search=nothing')
+    const empty = await screen.findByTestId('providers-empty')
+    expect(searchBox().value).toBe('nothing')
+    await userEvent.click(within(empty).getByRole('button'))
+    await waitFor(() => expect(searchBox().value).toBe(''))
+  })
+
+  it('follows Back/Forward navigation', async () => {
+    const { router } = renderApp('/providers?search=first')
+    await screen.findByText('Dr Example')
+    expect(searchBox().value).toBe('first')
+    await router.navigate('/providers?search=second')
+    await waitFor(() => expect(searchBox().value).toBe('second'))
+    await router.navigate(-1)
+    await waitFor(() => expect(searchBox().value).toBe('first'))
+  })
+
+  it('keeps what the user is typing until submitted', async () => {
+    renderApp('/providers')
+    await screen.findByText('Dr Example')
+    await userEvent.type(searchBox(), 'typing')
+    expect(searchBox().value).toBe('typing')
+    expect(vi.mocked(providersApi.listProviders).mock.calls.at(-1)![0]).toMatchObject({ search: '' })
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(vi.mocked(providersApi.listProviders).mock.calls.at(-1)![0]).toMatchObject({ search: 'typing' }))
   })
 })
