@@ -240,7 +240,11 @@
     "empty": "لا توجد نتائج مطابقة. جرّب تغيير عوامل التصفية.",
     "viewProfile": "عرض الملف",
     "loading": "جارٍ تحميل مقدّمي الخدمات…",
-    "loadingFilters": "جارٍ تحميل عوامل التصفية…"
+    "loadingFilters": "جارٍ تحميل عوامل التصفية…",
+    "results_zero": "لا توجد نتائج",
+    "results_two": "نتيجتان",
+    "results_few": "{{count}} نتائج",
+    "results_many": "{{count}} نتيجة"
   },
   "providerDetail": {
     "about": "نبذة",
@@ -324,13 +328,17 @@
     "hidden": "مخفي من البحث",
     "activeMemberships": "ارتباطات نشطة",
     "pendingMemberships_one": "طلب واحد بانتظار الرد",
-    "pendingMemberships_other": "{{count}} طلبات بانتظار الرد",
+    "pendingMemberships_other": "{{count}} طلب بانتظار الرد",
     "pendingHint": "تراجع الإدارة طلبك.",
     "activeYes": "نشطة",
     "activeNo": "غير نشطة",
     "requestTitlePractitioner": "طلب الانضمام إلى منشأة",
     "requestTitleFacility": "دعوة ممارس",
-    "counterpartHint": "انسخ المعرّف من رابط الملف العام للطرف الآخر (/providers/…)."
+    "counterpartHint": "انسخ المعرّف من رابط الملف العام للطرف الآخر (/providers/…).",
+    "pendingMemberships_zero": "لا طلبات بانتظار الرد",
+    "pendingMemberships_two": "طلبان بانتظار الرد",
+    "pendingMemberships_few": "{{count}} طلبات بانتظار الرد",
+    "pendingMemberships_many": "{{count}} طلباً بانتظار الرد"
   },
   "modules": {
     "providers": "مقدّمو الخدمات الطبية",
