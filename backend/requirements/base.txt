@@ -1,0 +1,11 @@
+# Runtime dependencies — pinned exactly. Upgrade deliberately and record in docs/DECISIONS.md.
+Django==5.2.17
+djangorestframework==3.18.1
+djangorestframework_simplejwt==5.5.1
+drf-spectacular==0.30.0
+django-cors-headers==4.9.0
+django-environ==0.14.0
+django-filter==26.1
+psycopg[binary]==3.3.6
+whitenoise==6.12.0
+gunicorn==26.2.0

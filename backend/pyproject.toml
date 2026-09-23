@@ -1,0 +1,42 @@
+[project]
+name = "racheeta-backend"
+version = "0.1.0"
+description = "Racheeta 2.0 backend — Django modular monolith"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/*", ".venv"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "DJ",  # flake8-django
+  "S",   # bandit (security)
+  "T20", # no print()
+]
+ignore = [
+  "S101", # assert is fine in tests (also see per-file-ignores)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]          # test passwords are not secrets
+"apps/**/tests/**" = ["S105", "S106"]
+"config/settings.py" = ["S105"]
+"conftest.py" = ["S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.test_settings"
+python_files = ["test_*.py"]
+testpaths = ["tests", "apps"]
+addopts = "-ra --strict-markers"
+filterwarnings = ["error::DeprecationWarning:apps", "error::DeprecationWarning:config"]

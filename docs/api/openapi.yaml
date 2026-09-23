@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: Racheeta API
+  version: 1.0.0
+  description: Racheeta 2.0 — canonical API consumed by web, mobile and dashboards.
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: auth_login_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      summary: Log in with email and password
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout_create
+      description: Blacklists the given refresh token. Access tokens expire naturally.
+      summary: Log out (revoke refresh token)
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '204':
+          description: Refresh token revoked.
+  /api/v1/auth/refresh:
+    post:
+      operationId: auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      summary: Rotate a refresh token
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/register:
+    post:
+      operationId: auth_register_create
+      summary: Register a new account
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+          description: ''
+  /api/v1/me:
+    get:
+      operationId: me_retrieve
+      description: Canonical source of the current user's identity, role and permissions.
+      summary: Current account
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    patch:
+      operationId: me_partial_update
+      description: Canonical source of the current user's identity, role and permissions.
+      summary: Update current account
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+components:
+  schemas:
+    Account:
+      type: object
+      description: Read-only representation. Never includes password or privilege
+        internals.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+        full_name:
+          type: string
+          readOnly: true
+        phone_number:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/AccountRoleEnum'
+          readOnly: true
+        preferred_language:
+          allOf:
+          - $ref: '#/components/schemas/PreferredLanguageEnum'
+          readOnly: true
+        email_verified:
+          type: boolean
+          readOnly: true
+        is_staff:
+          type: boolean
+          readOnly: true
+          description: Grants access to the Django admin site.
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: آخر دخول
+      required:
+      - created_at
+      - email
+      - email_verified
+      - full_name
+      - id
+      - is_staff
+      - last_login
+      - permissions
+      - phone_number
+      - preferred_language
+      - role
+    AccountRoleEnum:
+      enum:
+      - PATIENT
+      - PROVIDER
+      - MEDICAL_COMPANY
+      - REAL_ESTATE_SELLER
+      - ADMIN
+      type: string
+      description: |-
+        * `PATIENT` - Patient
+        * `PROVIDER` - Healthcare provider
+        * `MEDICAL_COMPANY` - Medical company / supplier
+        * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+        * `ADMIN` - Racheeta administrator
+    LoginRequest:
+      type: object
+      description: Email + password -> access/refresh pair. Registered via SIMPLE_JWT.
+      properties:
+        email:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    LogoutRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    PatchedAccountUpdateRequest:
+      type: object
+      description: Fields the account owner may change on PATCH /me.
+      properties:
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        phone_number:
+          type: string
+          maxLength: 32
+        preferred_language:
+          $ref: '#/components/schemas/PreferredLanguageEnum'
+    PreferredLanguageEnum:
+      enum:
+      - ar
+      - en
+      type: string
+      description: |-
+        * `ar` - Arabic
+        * `en` - English
+    RegisterRequest:
+      type: object
+      description: Reject, rather than silently ignore, any privilege field a client
+        sends.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+          maxLength: 128
+        full_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        phone_number:
+          type: string
+          maxLength: 32
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RegisterRoleEnum'
+          default: PATIENT
+        preferred_language:
+          $ref: '#/components/schemas/PreferredLanguageEnum'
+      required:
+      - email
+      - full_name
+      - password
+    RegisterResponse:
+      type: object
+      properties:
+        account:
+          allOf:
+          - $ref: '#/components/schemas/Account'
+          readOnly: true
+        tokens:
+          allOf:
+          - $ref: '#/components/schemas/TokenPair'
+          readOnly: true
+      required:
+      - account
+      - tokens
+    RegisterRoleEnum:
+      enum:
+      - PATIENT
+      - PROVIDER
+      - MEDICAL_COMPANY
+      - REAL_ESTATE_SELLER
+      type: string
+      description: |-
+        * `PATIENT` - Patient
+        * `PROVIDER` - Healthcare provider
+        * `MEDICAL_COMPANY` - Medical company / supplier
+        * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    TokenPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
