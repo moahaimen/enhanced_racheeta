@@ -68,10 +68,26 @@ export function SiteHeader() {
         <Icon name="search" size={18} />
         {t('nav.providers')}
       </NavLink>
+      <NavLink to="/jobs" className={styles.link}>
+        <Icon name="briefcase" size={18} />
+        {t('nav.jobs')}
+      </NavLink>
       {status === 'authenticated' && account?.role === 'PROVIDER' ? (
         <NavLink to="/provider/profile" className={styles.link}>
           <Icon name="briefcase" size={18} />
           {t('nav.providerProfile')}
+        </NavLink>
+      ) : null}
+      {status === 'authenticated' ? (
+        <NavLink to="/employer" className={styles.link}>
+          <Icon name="hospital" size={18} />
+          {t('nav.employer')}
+        </NavLink>
+      ) : null}
+      {status === 'authenticated' && account?.is_staff ? (
+        <NavLink to="/admin-console" className={styles.link}>
+          <Icon name="shieldCheck" size={18} />
+          {t('nav.adminConsole')}
         </NavLink>
       ) : null}
       {status === 'authenticated' ? (

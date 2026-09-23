@@ -1,9 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type DependencyList } from 'react'
 
+import i18next from 'i18next'
+
 import { ApiError } from '../api/client'
 
 export function toErrorMessage(error: unknown, fallback = 'An unexpected error occurred.'): string {
-  if (error instanceof ApiError) return error.message
+  if (error instanceof ApiError) {
+    const tr = (key: string) => (i18next.isInitialized ? i18next.t(`apiErrors.${key}`, { defaultValue: '' }) : '')
+    if (error.code === 'validation_error') {
+      // Field-level typed codes (e.g. contact_information_not_allowed) beat the generic message.
+      for (const codes of Object.values(error.codes ?? {})) {
+        const translated = codes[0] ? tr(codes[0]) : ''
+        if (translated) return translated
+      }
+      const first = Object.values(error.details ?? {})[0]?.[0]
+      return first || error.message
+    }
+    return tr(error.code) || error.message
+  }
   if (error instanceof Error && error.message) return error.message
   return fallback
 }

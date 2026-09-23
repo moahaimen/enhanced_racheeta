@@ -1,0 +1,47 @@
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-body-sm);
+}
+
+.label {
+  font-weight: var(--weight-medium);
+}
+
+.value {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.track {
+  block-size: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-tertiary);
+  overflow: hidden;
+}
+
+.fill {
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--color-primary-500);
+  transition: inline-size var(--duration-base) var(--ease-standard);
+}
+
+.fillWarn {
+  background: var(--color-warning);
+}
+
+.fillFull {
+  background: var(--color-error);
+}
+
+.disabled {
+  color: var(--text-muted);
+}
