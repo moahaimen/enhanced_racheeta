@@ -36,7 +36,7 @@ describe('ProvidersPage', () => {
     pending.resolve(page([makeCard({ display_name: 'Dr Alpha' }), makeCard({ id: 'p-2', display_name: 'Dr Beta' })]))
     expect(await screen.findByText('Dr Alpha')).toBeInTheDocument()
     expect(screen.getByText('Dr Beta')).toBeInTheDocument()
-    expect(screen.getByTestId('results-count')).toHaveTextContent('2')
+    expect(screen.getByTestId('results-count')).toHaveTextContent(/نتيجتان|2 results/)
     expect(screen.getAllByText('أمراض القلب').length).toBeGreaterThan(0) // Arabic specialty name
     expect(screen.getByRole('link', { name: 'Dr Alpha' })).toHaveAttribute('href', '/providers/p-1')
   })
