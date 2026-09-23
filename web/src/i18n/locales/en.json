@@ -734,7 +734,8 @@
       "CERTIFICATION": "Training / certification"
     },
     "delete": "Delete",
-    "noItems": "Nothing yet."
+    "noItems": "Nothing yet.",
+    "sectionEdit": "Résumé details"
   },
   "employer": {
     "title": "Employer workspace",

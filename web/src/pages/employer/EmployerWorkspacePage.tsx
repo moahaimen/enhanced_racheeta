@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 
 import { ApiError, jobs as jobsApi, reference } from '../../api'
 import type { BillingSummary, EmployerOwner, Governorate, JobEmployer, Member, Plan } from '../../api'
-import { Alert, ApiActionButton, AsyncPage, Badge, Button, Container, EmptyState, ErrorState, FormActions, Icon, JobStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, SectionCard, Select, StatCard, Textarea, TextField, UsageMeter, useFormErrors } from '../../design-system'
+import { Alert, ApiActionButton, AsyncPage, Badge, Container, EmptyState, ErrorState, FormActions, Icon, JobStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, SectionCard, Select, StatCard, Textarea, TextField, UsageMeter, useFormErrors } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { ClientValidationError } from '../validation'
 import { EmployerForm } from './EmployerForm'
@@ -326,9 +326,6 @@ function MembersBlock({ isOwner }: { isOwner: boolean }) {
           </FormActions>
         </form>
       ) : null}
-      <Button variant="ghost" size="sm" onClick={members.reload} style={{ marginBlockStart: 'var(--space-3)' }}>
-        {t('common.retry')}
-      </Button>
     </SectionCard>
   )
 }

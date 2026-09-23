@@ -758,7 +758,8 @@
       "CERTIFICATION": "دورة / شهادة"
     },
     "delete": "حذف",
-    "noItems": "لا يوجد بعد."
+    "noItems": "لا يوجد بعد.",
+    "sectionEdit": "بيانات السيرة"
   },
   "employer": {
     "title": "مساحة التوظيف",

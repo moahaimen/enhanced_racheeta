@@ -21,7 +21,7 @@ from .serializers import (
     PlanSerializer,
     ReasonSerializer,
 )
-from .types import Audience
+from .types import Audience, PaymentMethod, PaymentStatus
 
 
 def billing_summary(ent: services.EntitlementService) -> dict:
@@ -118,6 +118,16 @@ class AdminSubscriptionActivateView(_AdminSubscriptionAction):
         if data.get("payment"):
             PaymentRecord.objects.create(
                 subscription=sub, recorded_by=request.user, **data["payment"]
+            )
+        elif data.get("reference"):
+            # Minimal bookkeeping: the off-platform payment the administrator verified.
+            PaymentRecord.objects.create(
+                subscription=sub,
+                recorded_by=request.user,
+                reference=data["reference"],
+                method=PaymentMethod.OTHER,
+                status=PaymentStatus.VERIFIED,
+                note=data.get("note", ""),
             )
         return self._respond(sub)
 

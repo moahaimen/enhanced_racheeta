@@ -39,6 +39,19 @@ def test_admin_activates_pending_subscription_with_payment_record(
     assert admin_client.post(f"{SUBS}/{sub.id}/activate").status_code == 400  # already active
 
 
+def test_activation_with_reference_only_records_a_verified_payment(
+    admin_client, employer_billing, plan, account_factory
+):
+    sub = services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    body = admin_client.post(
+        f"{SUBS}/{sub.id}/activate", {"reference": "TRX-7", "term_days": 30}, format="json"
+    ).json()
+    assert body["status"] == "ACTIVE"
+    assert [(p["reference"], p["method"], p["status"]) for p in body["payments"]] == [
+        ("TRX-7", "OTHER", "VERIFIED")
+    ]
+
+
 def test_non_admin_cannot_touch_admin_billing(api_client, account_factory, employer_billing, plan):
     sub = services.request_subscription(employer_billing, plan, requested_by=account_factory())
     api_client.force_authenticate(user=account_factory())

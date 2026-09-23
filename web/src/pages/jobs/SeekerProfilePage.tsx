@@ -30,7 +30,7 @@ export function SeekerProfilePage() {
             <>
               <PageHeader eyebrow={<><Icon name="user" size={16} />{t('nav.jobs')}</>} title={t('seekerProfile.title')} description={t('seekerProfile.intro')} />
               <PageStack>
-                <SectionCard title={t('seekerProfile.sectionBasics')} headingLevel={2}>
+                <SectionCard title={t('seekerProfile.sectionEdit')} headingLevel={2}>
                   <ProfileForm profile={profile} governorates={governorates} specialties={specialties} onSaved={reload} />
                 </SectionCard>
                 <ExperienceSection profile={profile} governorates={governorates} reload={reload} />
