@@ -83,7 +83,8 @@
     },
     "ctaTitle": "Are you a doctor or do you run a medical facility?",
     "ctaBody": "Create a provider account, complete your professional profile and request verification so patients can find you.",
-    "ctaButton": "Start as a provider"
+    "ctaButton": "Start as a provider",
+    "ctaOtherRole": "Your current account is not a provider account. Provider accounts are created at registration; the account type cannot be changed by yourself."
   },
   "fields": {
     "email": "Email address",

@@ -42,6 +42,11 @@ No backend feature expansion, no Phase 3.
   paths (`src/components`, `src/components/forms`) kept as re-exports.
 - Bugs found and fixed during the walkthrough: Arabic plural categories
   (counts fell back to English), hard-coded "optional" marker.
+- PR #3 review fixes: the discovery search input is derived from the URL
+  filter state (chip removal, Clear, Back/Forward update it); the home
+  provider CTA links to `/register` only for anonymous visitors, to the
+  workspace for providers, and shows an explanatory note (no link) for
+  authenticated non-providers because there is no self-service role change.
 - Docs: `DESIGN_SYSTEM.md`, `PROVENANCE.md` (new); `ARCHITECTURE.md`,
   `DECISIONS.md` (ADR-028..032), `PROGRESS.md`, this file.
 
@@ -105,7 +110,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 ## Test Results
 
 - Backend: **175 passed** (unchanged), ruff/check/migrations clean.
-- Web: **80 passed** (was 66): tokens, Button, Tabs, form fields,
+- Web: **87 passed** (was 66): tokens, Button, Tabs, form fields,
   Arabic plurals, plus all existing page tests adjusted where content now
   appears in two blocks.
 - Build: OK (≈478 kB JS / 146 kB gzip; 37 kB CSS / 7 kB gzip).

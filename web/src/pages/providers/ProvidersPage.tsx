@@ -174,7 +174,15 @@ function FilterBar({
 }) {
   const { t } = useTranslation()
   const name = useLocalizedName()
-  const [search, setSearch] = useState(filters.search)
+  // The URL (filters.search) is the source of truth; `draft` only holds what
+  // the user is typing. Whenever the applied value changes (chip removed,
+  // Clear, Back/Forward, deep link) the draft is re-derived during render.
+  const [draft, setDraft] = useState(filters.search)
+  const [applied, setApplied] = useState(filters.search)
+  if (applied !== filters.search) {
+    setApplied(filters.search)
+    setDraft(filters.search)
+  }
   const cities = useAsyncData<City[]>(
     (signal) => (filters.governorate ? reference.listCities(filters.governorate, signal) : Promise.resolve([])),
     [filters.governorate],
@@ -182,13 +190,13 @@ function FilterBar({
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault()
-    onChange({ search: search.trim() })
+    onChange({ search: draft.trim() })
   }
 
   return (
     <form onSubmit={submitSearch} aria-label={t('providers.filters')}>
       <div className={styles.searchRow}>
-        <SearchField label={t('common.search')} placeholder={t('providers.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <SearchField label={t('common.search')} placeholder={t('providers.searchPlaceholder')} value={draft} onChange={(e) => setDraft(e.target.value)} />
         <Button type="submit" leading={<Icon name="search" size={18} />}>
           {t('common.search')}
         </Button>
@@ -235,10 +243,7 @@ function FilterBar({
         <Button
           type="button"
           variant="ghost"
-          onClick={() => {
-            setSearch('')
-            onChange({ type: '', kind: '', specialty: '', governorate: '', city: '', search: '' })
-          }}
+          onClick={() => onChange({ type: '', kind: '', specialty: '', governorate: '', city: '', search: '' })}
         >
           {t('common.clear')}
         </Button>

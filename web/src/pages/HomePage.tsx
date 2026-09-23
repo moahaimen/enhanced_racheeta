@@ -37,6 +37,9 @@ export function HomePage() {
   const { t } = useTranslation()
   const { status, account } = useAuth()
   const isProvider = status === 'authenticated' && account?.role === 'PROVIDER'
+  // An authenticated non-provider cannot register again (PublicOnly would
+  // bounce them to /profile) and there is no self-service role change.
+  const isOtherRole = status === 'authenticated' && !isProvider
 
   return (
     <>
@@ -169,14 +172,20 @@ export function HomePage() {
       </Container>
 
       <Container width="xl" section="tight">
-        <div className={styles.cta}>
+        <div className={styles.cta} data-testid="provider-cta">
           <div>
             <h2>{t('home.ctaTitle')}</h2>
-            <p>{t('home.ctaBody')}</p>
+            <p>{isOtherRole ? t('home.ctaOtherRole') : t('home.ctaBody')}</p>
           </div>
-          <LinkButton to={isProvider ? '/provider/profile' : '/register'} size="lg" className={styles.ctaButton}>
-            {isProvider ? t('home.heroProvider') : t('home.ctaButton')}
-          </LinkButton>
+          {status === 'restoring' ? null : isOtherRole ? (
+            <Badge tone="outline" className={styles.ctaNote}>
+              {t(`roles.${account?.role ?? 'PATIENT'}`)}
+            </Badge>
+          ) : (
+            <LinkButton to={isProvider ? '/provider/profile' : '/register'} size="lg" className={styles.ctaButton}>
+              {isProvider ? t('home.heroProvider') : t('home.ctaButton')}
+            </LinkButton>
+          )}
         </div>
       </Container>
     </>
