@@ -359,10 +359,14 @@ def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
 
 @transaction.atomic
 def _submit_job(job: JobPost, *, actor) -> JobPost:
-    employer = _lock_employer(job.employer)
+    employer = _lock_employer(job.employer)  # fresh row under lock
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be submitted.")
+    if not employer.can_recruit:  # re-checked on the locked row, not the view's instance
+        raise OrganizationNotVerified(
+            "The organisation must be verified and active before publishing jobs."
+        )
     _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
@@ -483,6 +487,8 @@ def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobP
         _lock_job(job)
         if job.status != JobStatus.PUBLISHED:
             raise JobsError("Only published jobs can be featured.")
+        if not employer.can_recruit:
+            raise OrganizationNotVerified("The organisation must be verified and active.")
         expire_featured_jobs()
         ent = employer_entitlements(employer)
         ent.require(Keys.JOBS_FEATURED)
@@ -536,6 +542,11 @@ def build_snapshot(profile: JobSeekerProfile) -> dict:
 def apply_to_job(
     job: JobPost, profile: JobSeekerProfile, *, cover_text: str = ""
 ) -> JobApplication:
+    # Validate against LOCKED state (employer row, then job row): a close or
+    # suspension that commits first makes this attempt fail before anything is
+    # created or charged; nothing here uses the view's stale instance.
+    job.employer = _lock_employer(job.employer)
+    _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
     if JobApplication.objects.filter(
@@ -769,6 +780,8 @@ def invite_candidate(
 ) -> JobInvitation:
     if job.employer_id != employer.pk:
         raise JobsError("Job does not belong to this organisation.", code="not_found")
+    job.employer = _lock_employer(employer)  # same lock order as applying: employer, then job
+    _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
     if not profile.discoverable_by_employers:

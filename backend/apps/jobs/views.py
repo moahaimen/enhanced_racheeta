@@ -485,6 +485,7 @@ def _application_for_party(request) -> tuple[JobApplication, str]:
         and membership.role in ("OWNER", "RECRUITER")
     ):
         # Employer-side messaging is part of applicant review: same gate.
+        _require_recruiting(membership.employer)
         services.employer_entitlements(membership.employer).require(Keys.JOBS_APPLICATION_REVIEW)
         return application, MessageSide.EMPLOYER
     raise NotFound
@@ -881,10 +882,19 @@ EmployerJobFeatureView = _job_action(
 # ---- employer: applicants ----------------------------------------------------
 
 
+def _require_recruiting(employer) -> None:
+    """A suspended organisation (verification or recruitment) keeps its data but
+    cannot run recruitment workflows. Typed 403, never a silent pass."""
+    if not employer.can_recruit:
+        raise_api(services.OrganizationNotVerified("The organisation must be verified and active."))
+
+
 def _require_application_review(request) -> None:
-    """One commercial gate for every employer-side endpoint that exposes or
-    changes applicant data (list, detail, transitions, interviews, employer
-    messages). Ownership scoping is separate and always applied as well."""
+    """One gate for every employer-side endpoint that exposes or changes
+    applicant data (list, detail, transitions, interviews, employer messages):
+    the organisation must still be allowed to recruit AND the plan must carry
+    jobs.application_review. Ownership scoping is separate and always applied."""
+    _require_recruiting(request.employer)
     services.employer_entitlements(request.employer).require(Keys.JOBS_APPLICATION_REVIEW)
 
 
