@@ -169,9 +169,32 @@ def set_employer_recruitment_status(
 
 
 @transaction.atomic
+def _lock_employer(employer: Employer) -> Employer:
+    """Serialises every check-then-commit on a shared commercial resource of the
+    organisation (active-job slots, featured slots, recruiter seats). Row lock
+    only; no process-local locks, no Redis."""
+    return Employer.objects.select_for_update().get(pk=employer.pk)
+
+
+def _active_job_count(employer: Employer, *, exclude: JobPost | None = None) -> int:
+    qs = JobPost.objects.filter(employer=employer, status__in=ACTIVE_JOB_STATUSES)
+    if exclude is not None:
+        qs = qs.exclude(pk=exclude.pk)
+    return qs.count()
+
+
+def _require_active_job_slot(employer: Employer, job: JobPost) -> None:
+    """The single gate for entering an active status (submit and restore)."""
+    ent = employer_entitlements(employer)
+    ent.require(Keys.JOBS_POST)
+    ent.check_concurrent(Keys.JOBS_ACTIVE_LIMIT, current=_active_job_count(employer, exclude=job))
+
+
+@transaction.atomic
 def add_member(employer: Employer, account, role: str, *, actor) -> EmployerMembership:
     if role == MemberRole.OWNER:
         raise JobsError("Ownership cannot be granted through this action.", code="invalid_role")
+    _lock_employer(employer)
     if EmployerMembership.objects.filter(account=account, status=MemberStatus.ACTIVE).exists():
         raise JobsError("This account already belongs to an organisation.", code="already_member")
     seats = EmployerMembership.objects.filter(employer=employer, status=MemberStatus.ACTIVE).count()
@@ -252,15 +275,8 @@ def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
 
 @transaction.atomic
 def _submit_job(job: JobPost, *, actor) -> JobPost:
-    employer = job.employer
-    ent = employer_entitlements(employer)
-    ent.require(Keys.JOBS_POST)
-    active = (
-        JobPost.objects.filter(employer=employer, status__in=ACTIVE_JOB_STATUSES)
-        .exclude(pk=job.pk)
-        .count()
-    )
-    ent.check_concurrent(Keys.JOBS_ACTIVE_LIMIT, current=active)
+    employer = _lock_employer(job.employer)
+    _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
     job.moderation_flags = []
@@ -311,6 +327,10 @@ def suspend_job(job: JobPost, *, admin, reason: str) -> JobPost:
 def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
     if job.status != JobStatus.SUSPENDED:
         raise JobsError("Only suspended jobs can be restored.")
+    # A suspended job holds no active slot; the employer may have used it since,
+    # so restoring re-runs the same gate as submission.
+    employer = _lock_employer(job.employer)
+    _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PUBLISHED, actor=admin, reason=note)
     job.save(update_fields=["status", "updated_at"])
     audit.record(actor=admin, action="jobs.post.restored", target=job, summary=note[:255])
@@ -337,8 +357,18 @@ def archive_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
     return job
 
 
+def expire_featured_jobs() -> int:
+    """Read-time normalisation of the featured window: `is_featured` is only
+    authoritative together with `featured_until > now`. One indexed UPDATE."""
+    return JobPost.objects.filter(is_featured=True, featured_until__lte=timezone.now()).update(
+        is_featured=False, featured_until=None
+    )
+
+
 def expire_overdue_jobs() -> int:
-    """Read-time strategy (ADR-036): called by public/employer listings; cheap indexed update."""
+    """Read-time strategy (ADR-036): called by public/employer listings; cheap indexed update.
+    Also normalises expired featured windows so ordering and slot counts stay correct."""
+    expire_featured_jobs()
     today = timezone.localdate()
     overdue = JobPost.objects.filter(status=JobStatus.PUBLISHED, application_deadline__lt=today)
     count = 0
@@ -355,11 +385,16 @@ def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobP
     if featured:
         if job.status != JobStatus.PUBLISHED:
             raise JobsError("Only published jobs can be featured.")
-        ent = employer_entitlements(job.employer)
+        employer = _lock_employer(job.employer)
+        expire_featured_jobs()
+        ent = employer_entitlements(employer)
         ent.require(Keys.JOBS_FEATURED)
         current = (
             JobPost.objects.filter(
-                employer=job.employer, is_featured=True, status=JobStatus.PUBLISHED
+                employer=employer,
+                is_featured=True,
+                featured_until__gt=timezone.now(),
+                status=JobStatus.PUBLISHED,
             )
             .exclude(pk=job.pk)
             .count()
@@ -412,15 +447,23 @@ def apply_to_job(
         raise AlreadyApplied("You have already applied to this job.")
     if detector.categories(cover_text):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
-    seeker_entitlements(profile).consume(
-        Keys.APPLICATIONS_LIMIT, reference=f"apply:{job.pk}:{profile.pk}"
-    )
     try:
-        application = JobApplication.objects.create(
-            job=job, job_seeker=profile, cover_text=cover_text, snapshot=build_snapshot(profile)
-        )
-    except IntegrityError as exc:
+        with transaction.atomic():
+            application = JobApplication.objects.create(
+                job=job,
+                job_seeker=profile,
+                cover_text=cover_text,
+                snapshot=build_snapshot(profile),
+            )
+    except IntegrityError as exc:  # concurrent duplicate: one active application per job
         raise AlreadyApplied("You have already applied to this job.") from exc
+    # The usage reference is this application attempt, not (job, seeker): a new
+    # application after a withdrawal is a new attempt and consumes a new unit.
+    # An HTTP retry is stopped above by the active-application check and a
+    # concurrent duplicate by the unique constraint, so nothing double-charges.
+    seeker_entitlements(profile).consume(
+        Keys.APPLICATIONS_LIMIT, reference=f"apply:{application.pk}"
+    )
     JobApplicationTransition.objects.create(
         application=application,
         from_status="",
@@ -598,18 +641,21 @@ def invite_candidate(
         raise AlreadyApplied("This candidate already applied to this job.")
     ent = employer_entitlements(employer)
     ent.require(Keys.TALENT_INVITE)
-    ent.consume(Keys.TALENT_INVITE_LIMIT, reference=f"invite:{job.pk}:{profile.pk}")
     try:
-        invitation = JobInvitation.objects.create(
-            employer=employer,
-            job=job,
-            job_seeker=profile,
-            created_by=actor,
-            message=message,
-            expires_at=timezone.now() + INVITATION_TTL,
-        )
-    except IntegrityError as exc:
+        with transaction.atomic():
+            invitation = JobInvitation.objects.create(
+                employer=employer,
+                job=job,
+                job_seeker=profile,
+                created_by=actor,
+                message=message,
+                expires_at=timezone.now() + INVITATION_TTL,
+            )
+    except IntegrityError as exc:  # concurrent duplicate: one pending invitation per job
         raise AlreadyInvited("This candidate was already invited to this job.") from exc
+    # Same rule as applications: the reference is this invitation, so a new
+    # invitation after a declined/expired/cancelled one consumes a new unit.
+    ent.consume(Keys.TALENT_INVITE_LIMIT, reference=f"invite:{invitation.pk}")
     return invitation
 
 

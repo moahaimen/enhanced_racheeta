@@ -16,6 +16,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.core.models import BaseModel
 from apps.geography.models import City, Governorate
@@ -348,6 +349,13 @@ class JobPost(BaseModel):
 
     objects = JobPostQuerySet.as_manager()
 
+    @property
+    def is_actively_featured(self) -> bool:
+        """The one authoritative rule: featured only while the paid window is open."""
+        return bool(
+            self.is_featured and self.featured_until and self.featured_until > timezone.now()
+        )
+
     class Meta:
         db_table = "jobs_post"
         ordering = ["-is_featured", "-published_at", "-created_at"]
@@ -376,8 +384,6 @@ class JobPost(BaseModel):
 
     @property
     def is_open(self) -> bool:
-        from django.utils import timezone
-
         if self.status != JobStatus.PUBLISHED or not self.employer.can_recruit:
             return False
         return (

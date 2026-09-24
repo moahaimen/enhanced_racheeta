@@ -507,6 +507,7 @@ class JobCardSerializer(serializers.ModelSerializer):
     general_specialty = SpecialtySerializer(read_only=True)
     salary_min = serializers.SerializerMethodField()
     salary_max = serializers.SerializerMethodField()
+    is_featured = serializers.SerializerMethodField()
 
     class Meta:
         model = JobPost
@@ -535,6 +536,10 @@ class JobCardSerializer(serializers.ModelSerializer):
             "application_deadline",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_featured(self, obj) -> bool:
+        return obj.is_actively_featured
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_salary_min(self, obj):

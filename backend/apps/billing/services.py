@@ -98,7 +98,6 @@ class EntitlementService:
     @property
     def subscription(self) -> Subscription | None:
         if self._subscription is False:
-            now = timezone.now()
             sub = (
                 Subscription.objects.filter(
                     billing_account=self.billing_account, status=SubscriptionStatus.ACTIVE
@@ -106,7 +105,7 @@ class EntitlementService:
                 .select_related("plan")
                 .first()
             )
-            if sub and sub.ends_at and sub.ends_at < now:
+            if sub is not None and _has_elapsed(sub):
                 expire_subscription(sub)
                 sub = None
             self._subscription = sub
@@ -246,49 +245,6 @@ class EntitlementService:
         counter.used = F("used") + amount
         counter.save(update_fields=["used", "updated_at"])
         return self.get(key)
-        if ent.unlimited:
-            UsageEvent.objects.create(
-                billing_account=self.billing_account, key=key, amount=amount, reference=reference
-            )
-            return ent
-        start = period_start_for(ent.period, self.subscription)
-        counter, _ = UsageCounter.objects.select_for_update().get_or_create(
-            billing_account=self.billing_account, key=key, period_start=start
-        )
-        covered_by_credit = False
-        if counter.used + amount > (ent.limit or 0):
-            # Only the part of *this* consumption above the limit needs credit.
-            overflow = min(amount, counter.used + amount - (ent.limit or 0))
-            credit = (
-                CreditBalance.objects.select_for_update()
-                .filter(billing_account=self.billing_account, key=key)
-                .first()
-            )
-            if credit is None or credit.balance < overflow:
-                raise UsageLimitReached(key=key, limit=ent.limit, used=counter.used)
-            credit.balance = F("balance") - overflow
-            credit.save(update_fields=["balance", "updated_at"])
-            CreditTransaction.objects.create(
-                billing_account=self.billing_account,
-                key=key,
-                delta=-overflow,
-                reason=CreditReason.CONSUME,
-                reference=reference,
-            )
-            covered_by_credit = True
-        counter.used = F("used") + amount
-        counter.save(update_fields=["used", "updated_at"])
-        try:
-            UsageEvent.objects.create(
-                billing_account=self.billing_account,
-                key=key,
-                amount=amount,
-                reference=reference,
-                covered_by_credit=covered_by_credit,
-            )
-        except IntegrityError:  # pragma: no cover - concurrent identical retry
-            pass
-        return self.get(key)
 
 
 def entitlements_for(subject_type: str, subject_id, audience: str) -> EntitlementService:
@@ -313,19 +269,32 @@ def _event(sub: Subscription, from_status: str, to_status: str, actor, reason: s
 
 
 @transaction.atomic
+@transaction.atomic
 def request_subscription(
     billing_account: BillingAccount, plan: Plan, *, requested_by, note: str = ""
 ) -> Subscription:
     if not plan.is_active or not plan.is_public or plan.audience != billing_account.audience:
         raise SubscriptionError("This plan cannot be requested.")
+    # Serialise requests per account and normalise elapsed terms *before* the
+    # live-subscription check, so a renewal never depends on some other
+    # entitlement lookup having expired the old row first.
+    BillingAccount.objects.select_for_update().get(pk=billing_account.pk)
+    expire_elapsed_subscriptions(billing_account)
     if Subscription.objects.filter(
         billing_account=billing_account,
         status__in=[SubscriptionStatus.PENDING, SubscriptionStatus.ACTIVE],
     ).exists():
         raise SubscriptionError("A pending or active subscription already exists.")
-    sub = Subscription.objects.create(
-        billing_account=billing_account, plan=plan, requested_by=requested_by, requester_note=note
-    )
+    try:
+        with transaction.atomic():
+            sub = Subscription.objects.create(
+                billing_account=billing_account,
+                plan=plan,
+                requested_by=requested_by,
+                requester_note=note,
+            )
+    except IntegrityError as exc:  # one live subscription per account (DB constraint)
+        raise SubscriptionError("A pending or active subscription already exists.") from exc
     _event(sub, "", SubscriptionStatus.PENDING, requested_by, note)
     audit.record(
         actor=requested_by,
@@ -448,6 +417,24 @@ def expire_subscription(sub):
         sub.status = SubscriptionStatus.EXPIRED
         sub.save(update_fields=["status", "updated_at"])
         _event(sub, previous, SubscriptionStatus.EXPIRED, None, "term ended")
+
+
+def _has_elapsed(sub: Subscription) -> bool:
+    return bool(sub.ends_at and sub.ends_at < timezone.now())
+
+
+def expire_elapsed_subscriptions(billing_account: BillingAccount) -> int:
+    """Read-time normalisation: ACTIVE rows whose term ended become EXPIRED.
+    Called by every entitlement resolution and by subscription requests."""
+    count = 0
+    for sub in Subscription.objects.filter(
+        billing_account=billing_account,
+        status=SubscriptionStatus.ACTIVE,
+        ends_at__lt=timezone.now(),
+    ):
+        expire_subscription(sub)
+        count += 1
+    return count
 
 
 @transaction.atomic

@@ -187,3 +187,33 @@ def test_consume_claim_race_does_not_double_count(active_basic, employer_billing
     )
     svc.consume(Keys.TALENT_SEARCH_LIMIT, reference="race:2")
     assert svc.get(Keys.TALENT_SEARCH_LIMIT).used == 1
+
+
+def test_elapsed_active_subscription_expires_during_renewal_request(
+    employer_billing, plan, admin, account_factory
+):
+    """Finding 5: the renewal request itself normalises the elapsed row; it must
+    not depend on a previous entitlement lookup."""
+    old = services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    services.activate_subscription(
+        old, admin=admin, starts_at=timezone.now() - timedelta(days=40), term_days=30
+    )
+    old.refresh_from_db()
+    assert old.status == SubscriptionStatus.ACTIVE  # nobody has looked at entitlements yet
+    renewal = services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    assert renewal.status == SubscriptionStatus.PENDING and renewal.pk != old.pk
+    old.refresh_from_db()
+    assert old.status == SubscriptionStatus.EXPIRED
+    assert old.events.filter(to_status=SubscriptionStatus.EXPIRED).exists()
+
+
+def test_live_subscription_still_blocks_duplicate_request(
+    employer_billing, plan, admin, account_factory
+):
+    sub = services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    with pytest.raises(services.SubscriptionError):  # pending blocks
+        services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    services.activate_subscription(sub, admin=admin, term_days=30)
+    with pytest.raises(services.SubscriptionError):  # genuinely active blocks
+        services.request_subscription(employer_billing, plan, requested_by=account_factory())
+    assert Subscription.objects.filter(billing_account=employer_billing).count() == 1
