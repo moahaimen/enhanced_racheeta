@@ -72,7 +72,7 @@ describe('Talent search', () => {
       const select = await screen.findByLabelText(/الوظيفة|^Job$/i)
       expect(within(select).getAllByRole('option')).toHaveLength(20)
       expect(screen.getByText(/20 من 23|20 of 23/)).toBeInTheDocument()
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null }) // 23 options: skip user-event's per-action timers under CI load
       const more = screen.getByRole('button', { name: /عرض المزيد من الوظائف|Show more jobs/i })
       await user.click(more)
       expect(more).toBeDisabled()
