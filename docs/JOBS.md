@@ -39,8 +39,12 @@ DRAFT / CLOSED / EXPIRED / REJECTED ─archive─▶ ARCHIVED
 
 `submit` requires a VERIFIED organisation with ACTIVE recruitment, the
 `jobs.post` capability and a free `jobs.active_limit` slot; it re-scans text
-for contact data. Approval and restore re-check the active limit. Featuring
-requires `jobs.featured` and a `jobs.featured_limit` slot.
+for contact data. The slot check and the transition run under a row lock on
+the employer, so concurrent submissions cannot exceed the limit. `restore`
+(SUSPENDED → PUBLISHED) re-runs exactly the same gate and fails with
+`usage_limit_reached` when the employer used the freed slot meanwhile.
+Featuring requires `jobs.featured` and a `jobs.featured_limit` slot; a job is
+featured only while `featured_until > now` (see `BILLING.md`, Featured window).
 
 Application: `SUBMITTED → REVIEWING → SHORTLISTED → INTERVIEW → ACCEPTED`,
 `REJECTED` from any open state (employer), `WITHDRAWN` from any open state
@@ -48,7 +52,9 @@ Application: `SUBMITTED → REVIEWING → SHORTLISTED → INTERVIEW → ACCEPTED
 
 Invitation: `PENDING → ACCEPTED | DECLINED | CANCELLED`, `EXPIRED` at read
 time. Accepting an invitation does **not** create an application; the seeker
-applies from the job page.
+applies from the job page. Each invitation consumes one `talent.invite_limit`
+unit keyed by its own id; each application attempt consumes one
+`applications.limit` unit keyed by the application id.
 
 Interview: `PROPOSED → ACCEPTED | DECLINED | CANCELLED`; proposing one moves
 the application to `INTERVIEW`.

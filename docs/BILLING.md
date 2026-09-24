@@ -52,9 +52,41 @@ svc.consume(Keys.TALENT_SEARCH_LIMIT, reference=sig)  # periodic LIMIT: plan lim
 svc.summary()                                        # [{key, kind, enabled, limit, period, used, credits, remaining}]
 ```
 
-`consume` runs inside a transaction with a row lock on the counter, so parallel
-requests cannot exceed the limit. When the plan limit is exhausted and credits
-exist, only the overflow is charged to credits (`min(amount, used + amount - limit)`).
+`consume` runs inside a transaction: the `UsageEvent` for the reference is
+inserted first as the idempotency claim (a unique-constraint failure means
+another transaction already consumed it), then the counter row is locked and
+incremented. Parallel or retried requests therefore never exceed the limit or
+double-charge. When the plan limit is exhausted and credits exist, only the
+overflow is charged to credits (`min(amount, used + amount - limit)`).
+
+### Reference rules (what counts as "the same" consumption)
+
+| Key | Reference | Meaning |
+| --- | --- | --- |
+| `applications.limit` | `apply:<application id>` | one unit per application **attempt**: a new application after a withdrawal is a new attempt; an HTTP retry is stopped earlier by the one-active-application rule, so it never reaches `consume` |
+| `talent.invite_limit` | `invite:<invitation id>` | one unit per invitation; re-inviting after decline/expiry/cancel is a new unit |
+| `talent.search_limit` | `talent:<employer>:<day>:<filter signature>` | one unit per (employer, filters, day); pagination and re-ordering are free |
+
+References are never built from `(job, seeker)` alone: that would make a
+legitimate later attempt look like a retry of the first one.
+
+### Concurrent limits (`check_concurrent`)
+
+Active jobs, featured jobs and recruiter seats are check-then-commit
+decisions. The jobs service takes a row lock on the `jobs_employer` row
+(`SELECT … FOR UPDATE`) before counting and transitioning, so two submissions,
+two feature requests or two seat additions for the same organisation are
+serialised by the database. No process-local locks, no Redis. The same gate
+runs for `submit` and for an administrator `restore` of a suspended job, since
+a suspended job holds no slot.
+
+### Featured window
+
+A job is featured only while `is_featured` **and** `featured_until > now`.
+The public/employer listings normalise stale rows at read time (one indexed
+UPDATE in `expire_featured_jobs`, called from `expire_overdue_jobs`), the
+serializer applies the same rule, and `set_featured` counts only live windows,
+so expired windows stop occupying `jobs.featured_limit` slots.
 
 Exceptions map to the uniform error envelope with typed codes and `meta`:
 
@@ -69,7 +101,7 @@ Exceptions map to the uniform error envelope with typed codes and `meta`:
 1. Employer owner picks a public plan on the workspace page → `POST /jobs/employer/billing/request` → `Subscription(PENDING)`.
 2. Owner pays off-platform and tells Racheeta the reference.
 3. Super Admin verifies the payment in the console → `POST /admin/billing/subscriptions/{id}/activate` with optional `term_days`, `reference`, `note`, `payment{amount,currency,method,reference}` → ACTIVE with `ends_at = starts_at + term_days`.
-4. Read-time check: an ACTIVE subscription past `ends_at` is treated as expired (`expire_subscription`) and the default plan applies again.
+4. Read-time check: an ACTIVE subscription past `ends_at` is expired (`expire_subscription`) whenever entitlements are resolved **and** at the start of every `request_subscription`, under a row lock on the billing account, so a renewal is never rejected as "already active" because nobody had opened a billing page since the term ended. The default plan applies again after expiry.
 5. Admin can `reject` (PENDING), `suspend`/`cancel` (ACTIVE) and re-activate a SUSPENDED one; every step is audited.
 
 Credits: `POST /admin/billing/credits {billing_account, key, amount, note}`; negative amounts revoke.

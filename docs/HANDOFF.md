@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **269 passed** (was 175): billing entitlements/admin API,
+- Backend: **284 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -122,6 +122,21 @@ noted.
 Fixes made during the walkthrough: usage-consumption race (500), candidate
 page layout, stray retry button in the team block, duplicated heading on the
 résumé page, payment record when activating with a reference only.
+
+## PR #4 review fixes (2026-09-24, same branch)
+
+| Finding | Fix |
+| --- | --- |
+| P1 application quota reference `apply:{job}:{profile}` | Application row is created first (duplicates stopped by the active-application constraint), then usage is consumed with `apply:<application id>`. Withdraw + reapply consumes a new unit, retries do not. |
+| P1 concurrent active-job limit bypass | `_submit_job` locks the `jobs_employer` row (`select_for_update`) before counting and transitioning; threaded regression test with a barrier. |
+| P2 restore without limit re-check | `restore_job` runs the same `_require_active_job_slot` gate under the lock; typed `usage_limit_reached`; audit kept. |
+| P2 featured expiry | Rule `is_featured AND featured_until > now` (`JobPost.is_actively_featured`); read-time `expire_featured_jobs` normalisation, serializer rule, live-window slot counting. |
+| P2 elapsed subscription blocks renewal | `request_subscription` expires elapsed ACTIVE rows itself, under a billing-account row lock; duplicate live rows map to a typed error. |
+| Audit: invitations reused `invite:{job}:{profile}` | Same attempt-based rule with the invitation id. |
+| Audit: seats and plan requests unlocked | `add_member` locks the employer row; `request_subscription` is atomic with an IntegrityError guard. |
+| Cleanup | Dead duplicate block left in `consume` by the earlier race fix removed. |
+
+Backend tests 284, web tests 129, no new migration, OpenAPI unchanged.
 
 ## Known Problems
 

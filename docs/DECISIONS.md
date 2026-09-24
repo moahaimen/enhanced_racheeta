@@ -216,3 +216,8 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-23
 **Decision:** Talent search consumption is keyed by a normalised filter signature per employer per calendar day; pagination and re-ordering of the same filters are free.
 **Consequences:** Employers are not punished for browsing results; the rule is documented on the page and in `JOBS.md`.
+
+## ADR-040 — Usage references identify attempts; concurrent limits are serialised by the employer row
+**Date:** 2026-09-24
+**Decision:** Periodic usage (`applications.limit`, `talent.invite_limit`) is consumed with a reference that names the created record (`apply:<application id>`, `invite:<invitation id>`), never the `(job, seeker)` pair; duplicates are stopped before consumption by the one-active-record constraints. Concurrent limits (`jobs.active_limit`, `jobs.featured_limit`, `recruiter.seats`) are checked and committed under `SELECT … FOR UPDATE` on the `jobs_employer` row; `restore` uses the same gate as `submit`. Featured status is authoritative only while `featured_until > now`, normalised at read time. `request_subscription` expires elapsed ACTIVE rows itself under a billing-account row lock.
+**Consequences:** Withdraw-and-reapply and re-invite are billed as new attempts; retries and races cannot double-charge or exceed a limit; no scheduler or Redis is needed. Found by the PR #4 Codex review.
