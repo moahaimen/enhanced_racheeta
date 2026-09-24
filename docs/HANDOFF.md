@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **346 passed** (was 175): billing entitlements/admin API,
+- Backend: **360 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -193,6 +193,20 @@ now use the same lock-then-validate pattern; no other status message was
 conditioned on the wrong state.
 
 Backend tests 346, web tests 150, no migration, OpenAPI unchanged.
+
+## PR #4 review, round five (2026-09-24, review 5302630948 on `750ef64`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 job edits vs lifecycle | `services.edit_job`: job row lock, editability checked on the refreshed status, `update_fields` limited to the edited columns; the view's unlocked check is only an early exit. Tests: threaded PATCH vs submit, stale PATCH after submit (`job_locked`, no revert, `submitted_at` intact), sequential draft edits. |
+| P1 identity edits vs verification | `services.update_employer` locks the employer row and checks identity fields against it; `request_employer_verification`, `set_employer_verification` and `set_employer_recruitment_status` lock and refresh the row before writing (`update_fields`). Tests: threaded PATCH vs VERIFY (verify always applies to the identity it saw; the losing edit gets `identity_locked`), stale instance, admin decisions not clobbering. |
+| P2 saved candidates readable without entitlement | `_require_talent_access` (verified + active organisation, then the capability) on `GET /talent/saved` (`talent.save_candidate`), and analogously on `GET /talent/{id}` (`talent.search`) and `GET /talent/invitations` (`talent.invite`). Tests: entitled, expired, suspended subscription, recruitment suspended, TRIAL plan, POST unchanged, isolation, detail and invitations. |
+
+Targeted audit: candidate detail and the sent-invitations list were the
+analogous read bypasses and are gated now; no other verification-status
+write used a stale instance.
+
+Backend tests 360, web tests 150, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

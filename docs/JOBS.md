@@ -65,6 +65,16 @@ unit keyed by its own id; each application attempt consumes one
 Interview: `PROPOSED → ACCEPTED | DECLINED | CANCELLED`; proposing one moves
 the application to `INTERVIEW`.
 
+Employer job edits (`PATCH /jobs/employer/jobs/{id}`) go through
+`services.edit_job`: the job row is locked, editability (DRAFT/REJECTED) is
+checked on the refreshed status, and only the edited columns are written, so a
+stale edit can neither revert a submitted job nor change reviewed content
+(`job_locked`, 409). Owner organisation edits go through
+`services.update_employer` under the employer row lock, and administrator
+verification/recruitment decisions lock and refresh the same row first, so a
+decision always applies to the identity that was visible while it held the
+lock.
+
 Every state change on a job, application, interview or invitation takes a
 row lock (`SELECT … FOR UPDATE`) and re-reads the status before validating, so
 two actors acting at once (approve vs reject, close vs suspend, accept vs
@@ -74,6 +84,13 @@ employer row (when a commercial slot is involved), then the job row; and the
 application row before its interview row.
 
 ## Talent search and the "one billable search" rule
+
+Paid recruitment reads are gated like writes: talent search and candidate
+detail need `talent.search`, the saved-candidates list needs
+`talent.save_candidate`, the sent-invitations list needs `talent.invite`, and
+all of them need a VERIFIED organisation with ACTIVE recruitment
+(`organization_not_verified`, 403). Losing the plan or being suspended closes
+the lists, not only the actions.
 
 Talent search is available only with `talent.search` and consumes
 `talent.search_limit`. The filter set is validated first: a request with an

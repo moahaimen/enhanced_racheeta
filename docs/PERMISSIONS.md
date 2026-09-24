@@ -102,6 +102,11 @@ not client-changeable afterwards; a role change is an administrator action.
 | `CanRecruit` | OWNER or RECRUITER (job writes, applicant transitions, interviews, invitations, messages); VIEWER is read-only. |
 | `IsAdminAccount` (accounts) | `is_staff` for every `/admin/*` route. |
 
+Talent reads (`GET /talent`, `/talent/{id}`, `/talent/saved`, `/talent/invitations`)
+require a verified, active organisation plus the matching capability
+(`talent.search`, `talent.save_candidate`, `talent.invite`), enforced by
+`_require_talent_access` in `apps/jobs/views.py`.
+
 Employer-side applicant endpoints additionally require the plan capability
 `jobs.application_review` through one shared gate (`_require_application_review`
 in `apps/jobs/views.py`): list, detail, transition, interview request and the
