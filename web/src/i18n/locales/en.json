@@ -806,7 +806,13 @@
     "endMember": "End membership",
     "saved": "Saved.",
     "myRole": "My role",
-    "identityLocked": "Once verification is requested, the organisation's identity fields (name, type, governorate, linked facility, agency flag) are locked. Contact Racheeta administration to change them."
+    "identityLocked": "Once verification is requested, the organisation's identity fields (name, type, governorate, linked facility, agency flag) are locked. Contact Racheeta administration to change them.",
+    "pendingRequestPlan": "Your request for the “{{plan}}” plan is waiting for Racheeta administration. There is no need to send another one.",
+    "linkProviderHint": "If you have a medical facility profile on Racheeta you can link it to this organisation before requesting verification. The link is locked once review starts.",
+    "linkProviderNone": "No medical facility profile is attached to your account.",
+    "linkProviderNoneHint": "Create a facility provider profile first if you want to link it to this organisation.",
+    "noProviderLink": "Not linked",
+    "linkProviderLinked": "Linked facility profile"
   },
   "jobEditor": {
     "newTitle": "New job",
@@ -854,7 +860,8 @@
     "history": "Status history",
     "viewPublic": "View public page",
     "applicants": "Applicants",
-    "notFound": "Job not found."
+    "notFound": "Job not found.",
+    "retainedHiring": "This draft still carries hiring-on-behalf-of details, but your organisation is no longer a recruitment agency. Saving clears those two fields so the job becomes editable and submittable again."
   },
   "applicants": {
     "title": "Applicants",

@@ -416,7 +416,15 @@ export interface Subscription {
 }
 export interface BillingSummary {
   plan: Plan | null
+  /** The ACTIVE subscription the entitlements resolve through, or null. */
   subscription: Subscription | null
+  /**
+   * A plan request waiting for an administrator. Separate from `subscription`
+   * on purpose: it never grants an entitlement, it only tells the UI that a
+   * request is already in flight (so the request form stays hidden after a
+   * reload instead of letting the owner submit a duplicate).
+   */
+  pending_subscription: Subscription | null
   entitlements: Entitlement[]
   requestable_plans: Plan[]
 }

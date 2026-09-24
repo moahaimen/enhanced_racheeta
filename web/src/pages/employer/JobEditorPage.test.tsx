@@ -7,7 +7,7 @@ import * as authApi from '../../api/endpoints/auth'
 import * as jobsApi from '../../api/endpoints/jobs'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
-import { makeEmployerOwner, makeJobEmployer } from '../../test/jobFixtures'
+import { makeEmployerOwner, makeEmployerPublic, makeJobEmployer } from '../../test/jobFixtures'
 import { baghdad, cardiology } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
@@ -66,6 +66,90 @@ describe('JobEditorPage', () => {
     expect(await screen.findByText('يحتوي على رقم هاتف')).toBeInTheDocument()
     expect(screen.getByText(/PHONE/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /إرسال للمراجعة|Submit for review/i })).toBeInTheDocument()
+  })
+
+  describe('hiring fields retained by a former agency', () => {
+    const retained = () =>
+      makeJobEmployer({ hiring_employer: makeEmployerPublic({ id: 'e-2', name: 'مستشفى الكرادة' }), hiring_organization_name: 'عيادة الكرادة' })
+
+    it('warns about the retained values and clears them on save so the draft is repairable', async () => {
+      // The organisation is no longer an agency, so the editor cannot show the
+      // two hiring fields — and the backend refuses every save while the
+      // RESULTING job still carries them. The save must clear them explicitly.
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ is_recruitment_agency: false }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(retained())
+      vi.mocked(jobsApi.updateJob).mockResolvedValue(makeJobEmployer())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByTestId('retained-hiring-notice')).toBeInTheDocument()
+      const user = userEvent.setup()
+      const save = screen.getByRole('button', { name: /حفظ المسودة|Save draft/i })
+      await user.click(save)
+      await waitFor(() => expect(jobsApi.updateJob).toHaveBeenCalledTimes(1))
+      const [id, payload] = vi.mocked(jobsApi.updateJob).mock.calls[0]!
+      expect(id).toBe('j-1')
+      expect(payload.hiring_employer).toBeNull()
+      expect(payload.hiring_organization_name).toBe('')
+      // Nothing else is invented: the rest of the payload is the loaded job.
+      expect(payload.title).toBe('ممرض قسم الطوارئ')
+    })
+
+    it('keeps the save button disabled while the repair is in flight', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ is_recruitment_agency: false }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(retained())
+      const pending = deferred<ReturnType<typeof makeJobEmployer>>()
+      vi.mocked(jobsApi.updateJob).mockReturnValue(pending.promise)
+      renderApp('/employer/jobs/j-1')
+      const user = userEvent.setup()
+      const save = await screen.findByRole('button', { name: /حفظ المسودة|Save draft/i })
+      await user.click(save)
+      expect(save).toBeDisabled()
+      await user.click(save)
+      expect(jobsApi.updateJob).toHaveBeenCalledTimes(1)
+      pending.resolve(makeJobEmployer())
+      await waitFor(() => expect(save).toBeEnabled())
+    })
+
+    it('shows no warning and sends no clearing values for a clean non-agency job', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ is_recruitment_agency: false }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
+      vi.mocked(jobsApi.updateJob).mockResolvedValue(makeJobEmployer())
+      renderApp('/employer/jobs/j-1')
+      await screen.findByRole('button', { name: /حفظ المسودة|Save draft/i })
+      expect(screen.queryByTestId('retained-hiring-notice')).toBeNull()
+    })
+
+    it('never sends agency-only values when a non-agency creates a job', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ is_recruitment_agency: false }))
+      vi.mocked(jobsApi.createJob).mockResolvedValue(makeJobEmployer())
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
+      renderApp('/employer/jobs/new')
+      const user = userEvent.setup()
+      await user.type(await screen.findByLabelText(/المسمى الوظيفي|Job title/i), 'ممرض')
+      await user.type(screen.getByLabelText(/وصف الوظيفة|Job description/i), 'وصف.')
+      await user.click(screen.getByRole('button', { name: /إنشاء المسودة|Create draft/i }))
+      await waitFor(() => expect(jobsApi.createJob).toHaveBeenCalledTimes(1))
+      const payload = vi.mocked(jobsApi.createJob).mock.calls[0]![0]
+      expect(payload).not.toHaveProperty('hiring_employer')
+      expect(payload).not.toHaveProperty('hiring_organization_name')
+    })
+
+    it('still lets a real agency edit both hiring fields', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ is_recruitment_agency: true }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(retained())
+      vi.mocked(jobsApi.updateJob).mockResolvedValue(retained())
+      renderApp('/employer/jobs/j-1')
+      expect(screen.queryByTestId('retained-hiring-notice')).toBeNull()
+      const nameField = await screen.findByLabelText(/اسم المؤسسة الفعلية|actual organisation/i)
+      expect(nameField).toHaveValue('عيادة الكرادة')
+      const user = userEvent.setup()
+      await user.clear(nameField)
+      await user.type(nameField, 'عيادة المنصور')
+      await user.click(screen.getByRole('button', { name: /حفظ المسودة|Save draft/i }))
+      await waitFor(() => expect(jobsApi.updateJob).toHaveBeenCalledTimes(1))
+      const payload = vi.mocked(jobsApi.updateJob).mock.calls[0]![1]
+      expect(payload.hiring_organization_name).toBe('عيادة المنصور')
+      expect(payload.hiring_employer).toBe('e-2')
+    })
   })
 
   it('locks the form for a published job and offers close', async () => {

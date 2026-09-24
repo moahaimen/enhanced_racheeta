@@ -5,10 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/client'
 import * as authApi from '../../api/endpoints/auth'
 import * as jobsApi from '../../api/endpoints/jobs'
+import * as providersApi from '../../api/endpoints/providers'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
-import { makeBilling, makeEmployerOwner, makeJobEmployer, makePlan, paginated } from '../../test/jobFixtures'
-import { baghdad } from '../../test/providerFixtures'
+import { makeBilling, makeEmployerOwner, makeJobEmployer, makePlan, makeSubscription, paginated } from '../../test/jobFixtures'
+import { baghdad, makeOwner } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
@@ -26,6 +27,8 @@ describe('EmployerWorkspacePage', () => {
     vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(makeBilling())
     vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([]))
     vi.mocked(jobsApi.listMembers).mockResolvedValue([])
+    // Most accounts have no provider profile: /providers/me answers 404.
+    vi.mocked(providersApi.getMyProvider).mockRejectedValue(new ApiError(404, 'not_found', 'none'))
   })
 
   it('onboards an account without an organisation', async () => {
@@ -109,6 +112,114 @@ describe('EmployerWorkspacePage', () => {
       second.resolve({ ...jobsPage(2), next: null, previous: 'p' })
       expect(await screen.findByText('Job 2-0')).toBeInTheDocument()
       expect(jobsApi.listEmployerJobs).toHaveBeenLastCalledWith('', 2, expect.anything())
+    })
+  })
+
+  describe('pending subscription request', () => {
+    const requestButton = () => screen.queryByRole('button', { name: /إرسال طلب الاشتراك|Send subscription request/i })
+
+    it('keeps showing the pending state after a reload and never offers the form again', async () => {
+      // The reload bug: the summary used to return subscription:null for a
+      // PENDING request, so the workspace offered the form a second time and
+      // the duplicate submit failed with "a live subscription already exists".
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
+        makeBilling({ subscription: null, pending_subscription: makeSubscription({ status: 'PENDING' }) }),
+      )
+      renderApp('/employer')
+      expect(await screen.findByTestId('pending-request-notice')).toHaveTextContent(/احترافية|Professional/)
+      expect(requestButton()).toBeNull()
+      expect(screen.queryByRole('radio', { name: /احترافية|Professional/i })).toBeNull()
+      expect(screen.getByTestId('pending-subscription-badge')).toBeInTheDocument()
+      // Entitlements still come from the effective (default) plan.
+      const meters = await screen.findByTestId('usage-meters')
+      expect(within(meters).getByText(/الوظائف النشطة|Active jobs/i)).toBeInTheDocument()
+    })
+
+    it('keeps the ACTIVE subscription effective and shows no pending state beside it', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
+        makeBilling({ subscription: makeSubscription({ status: 'ACTIVE', starts_at: '2026-09-01T00:00:00Z' }), pending_subscription: null }),
+      )
+      renderApp('/employer')
+      expect((await screen.findAllByText(/^نشط$|^Active$/i)).length).toBeGreaterThan(0)
+      expect(screen.queryByTestId('pending-request-notice')).toBeNull()
+      expect(screen.queryByTestId('pending-subscription-badge')).toBeNull()
+      expect(requestButton()).toBeInTheDocument()
+    })
+
+    it('does not treat a suspended or cancelled subscription as a pending request', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
+        makeBilling({ subscription: makeSubscription({ status: 'SUSPENDED' }), pending_subscription: null }),
+      )
+      renderApp('/employer')
+      await screen.findByTestId('usage-meters')
+      expect(screen.queryByTestId('pending-request-notice')).toBeNull()
+      expect(screen.queryByTestId('pending-subscription-badge')).toBeNull()
+      expect(requestButton()).toBeInTheDocument()
+    })
+
+    it('offers the form again once the administrator has activated the plan', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
+        makeBilling({ subscription: makeSubscription({ status: 'ACTIVE' }), pending_subscription: null }),
+      )
+      renderApp('/employer')
+      await screen.findByTestId('usage-meters')
+      expect(screen.queryByTestId('pending-request-notice')).toBeNull()
+      expect(requestButton()).toBeInTheDocument()
+    })
+  })
+
+  describe('provider profile link', () => {
+    const facility = makeOwner({ id: 'pp-1', provider_type: 'HOSPITAL', kind: 'FACILITY', display_name: 'مستشفى الأمل — المنشأة' })
+
+    it('offers the account facility profile and sends it in the create payload', async () => {
+      vi.mocked(providersApi.getMyProvider).mockResolvedValue(facility)
+      vi.mocked(jobsApi.getMyEmployer).mockRejectedValueOnce(new ApiError(404, 'not_found', 'none')).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }))
+      vi.mocked(jobsApi.createMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false, provider_profile_id: 'pp-1' }))
+      renderApp('/employer')
+      const select = await screen.findByTestId('provider-profile-select')
+      const user = userEvent.setup()
+      await user.type(screen.getByLabelText(/اسم المؤسسة|Organisation name/i), 'مستشفى الأمل')
+      await user.selectOptions(screen.getByLabelText(/المحافظة$|^Governorate/i), 'g-baghdad')
+      await user.selectOptions(select, 'pp-1')
+      await user.click(screen.getByRole('button', { name: /تسجيل المؤسسة|Register organisation/i }))
+      await waitFor(() => expect(jobsApi.createMyEmployer).toHaveBeenCalledWith(expect.objectContaining({ provider_profile: 'pp-1' })))
+    })
+
+    it('never offers a practitioner profile, which the backend would refuse', async () => {
+      vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ id: 'pp-doc', kind: 'PRACTITIONER' }))
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }))
+      renderApp('/employer')
+      expect(await screen.findByTestId('provider-profile-none')).toBeInTheDocument()
+      expect(screen.queryByTestId('provider-profile-select')).toBeNull()
+    })
+
+    it('loads an existing link and locks it once verification has started', async () => {
+      vi.mocked(providersApi.getMyProvider).mockResolvedValue(facility)
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'PENDING', is_verified: false, provider_profile_id: 'pp-1' }))
+      renderApp('/employer')
+      const select = await screen.findByTestId('provider-profile-select')
+      await waitFor(() => expect(select).toBeDisabled())
+      expect(select).toHaveValue('pp-1')
+    })
+
+    it('explains that nothing is linkable when the account has no provider profile', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }))
+      renderApp('/employer')
+      expect(await screen.findByTestId('provider-profile-none')).toHaveTextContent(/لا يوجد ملف منشأة|No medical facility profile/i)
+    })
+
+    it('shows a loading indicator while the provider choices are fetched', async () => {
+      const pending = deferred<ReturnType<typeof makeOwner>>()
+      vi.mocked(providersApi.getMyProvider).mockReturnValue(pending.promise)
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }))
+      renderApp('/employer')
+      expect(await screen.findByTestId('provider-profile-loading')).toBeInTheDocument()
+      pending.resolve(facility)
+      expect(await screen.findByTestId('provider-profile-select')).toBeEnabled()
     })
   })
 

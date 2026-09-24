@@ -107,7 +107,7 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
             </div>
             <div className={styles.stats}>
               <StatCard label={t('entitlements.jobs.active_limit')} value={<span data-testid="active-jobs-stat">{activeJobs}</span>} />
-              <StatCard label={t('employer.plan')} value={billing.data?.plan ? billing.data.plan.code : <Icon name="clock" size={22} />} hint={billing.data?.subscription ? t(`subscriptionStatus.${billing.data.subscription.status}`) : undefined} />
+              <StatCard label={t('employer.plan')} value={billing.data?.plan ? billing.data.plan.code : <Icon name="clock" size={22} />} hint={billing.data?.subscription ? t(`subscriptionStatus.${billing.data.subscription.status}`) : billing.data?.pending_subscription ? t(`subscriptionStatus.${billing.data.pending_subscription.status}`) : undefined} />
               <StatCard label={t('employer.jobsTitle')} value={jobs.data ? jobs.data.count : <Icon name="clock" size={22} />} />
             </div>
           </SectionCard>
@@ -190,6 +190,10 @@ function BillingBlock({ billing, isOwner }: { billing: ReturnType<typeof useAsyn
   const [sent, setSent] = useState(false)
   const errors = useFormErrors(['plan', 'note'] as const)
   const planName = (p: Plan) => (i18n.language.startsWith('ar') ? p.name_ar : p.name_en)
+  // A request waiting for an administrator. It grants nothing (entitlements
+  // still come from `plan`/`subscription`); it exists so the pending state
+  // survives a reload instead of the owner being offered the form again.
+  const pending = billing.data?.pending_subscription ?? null
   return (
     <SectionCard id="billing" title={t('employer.nav.billing')} headingLevel={2}>
       {billing.loading ? (
@@ -211,6 +215,11 @@ function BillingBlock({ billing, isOwner }: { billing: ReturnType<typeof useAsyn
                 ) : null}
               </>
             ) : null}
+            {pending ? (
+              <Badge tone="warning" data-testid="pending-subscription-badge">
+                {planName(pending.plan)} · {t(`subscriptionStatus.${pending.status}`)}
+              </Badge>
+            ) : null}
           </div>
           <div className={styles.meters} data-testid="usage-meters">
             {billing.data.entitlements.map((e) => (
@@ -223,10 +232,12 @@ function BillingBlock({ billing, isOwner }: { billing: ReturnType<typeof useAsyn
               <p className="text-secondary" style={{ marginBlock: 'var(--space-2) var(--space-4)' }}>
                 {t('employer.requestPlanIntro')}
               </p>
-              {billing.data.subscription?.status === 'PENDING' ? (
-                <Alert kind="info">{t('employer.pendingRequest')}</Alert>
-              ) : sent ? (
+              {sent ? (
                 <Alert kind="success">{t('employer.requestSent')}</Alert>
+              ) : pending ? (
+                <Alert kind="info" testId="pending-request-notice">
+                  {t('employer.pendingRequestPlan', { plan: planName(pending.plan) })}
+                </Alert>
               ) : (
                 <form noValidate onSubmit={(e) => e.preventDefault()}>
                   {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}

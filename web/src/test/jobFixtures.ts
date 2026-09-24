@@ -1,5 +1,5 @@
 import type { AdminEmployer, AdminJob, AdminSubscription } from '../api'
-import type { ApplicationEmployer, ApplicationSeeker, BillingSummary, EmployerOwner, EmployerPublic, JobCard, JobEmployer, JobPublic, Plan, SeekerProfile, TalentCard, TalentDetail } from '../api'
+import type { ApplicationEmployer, ApplicationSeeker, BillingSummary, EmployerOwner, EmployerPublic, JobCard, JobEmployer, JobPublic, Plan, SeekerProfile, Subscription, TalentCard, TalentDetail } from '../api'
 import { baghdad, cardiology } from './providerFixtures'
 
 export function makeEmployerPublic(overrides: Partial<EmployerPublic> = {}): EmployerPublic {
@@ -207,10 +207,24 @@ export function makePlan(overrides: Partial<Plan> = {}): Plan {
   }
 }
 
+export function makeSubscription(overrides: Partial<Subscription> = {}): Subscription {
+  return {
+    id: 'sub-1',
+    plan: makePlan({ id: 'plan-2', code: 'PROFESSIONAL', name_ar: 'احترافية', name_en: 'Professional', is_default: false, term_days: 30 }),
+    status: 'PENDING',
+    requester_note: '',
+    starts_at: null,
+    ends_at: null,
+    created_at: '2026-09-22T00:00:00Z',
+    ...overrides,
+  }
+}
+
 export function makeBilling(overrides: Partial<BillingSummary> = {}): BillingSummary {
   return {
     plan: makePlan(),
     subscription: null,
+    pending_subscription: null,
     entitlements: [
       { key: 'jobs.active_limit', kind: 'LIMIT', enabled: true, limit: 1, period: 'NONE', used: 1, credits: 0, remaining: 0 },
       { key: 'talent.search', kind: 'BOOLEAN', enabled: false, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },

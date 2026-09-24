@@ -43,6 +43,8 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
   const navigate = useNavigate()
   const name = useLocalizedName()
   const editable = job === null || job.status === 'DRAFT' || job.status === 'REJECTED'
+  // Agency-only values kept by a job whose organisation is no longer an agency.
+  const retainedHiring = job !== null && (job.hiring_employer !== null || job.hiring_organization_name !== '')
   const [f, setF] = useState({
     title: job?.title ?? '',
     profession: (job?.profession ?? 'NURSE') as Profession,
@@ -112,7 +114,16 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
     if (employer.is_recruitment_agency) {
       payload.hiring_employer = f.hiring_employer || null
       payload.hiring_organization_name = f.hiring_organization_name.trim()
+    } else if (job) {
+      // The organisation is not (or is no longer) an agency. The backend
+      // validates the RESULTING job, so a draft created while it *was* one
+      // keeps values the form cannot show — and every later edit or submit is
+      // refused. Sending the clearing values explicitly repairs the draft;
+      // nothing else is touched, and `retainedHiring` tells the user first.
+      payload.hiring_employer = null
+      payload.hiring_organization_name = ''
     }
+    // A brand-new job of a non-agency never sends agency-only values at all.
     return job ? jobsApi.updateJob(job.id, payload) : jobsApi.createJob(payload)
   }
 
@@ -285,6 +296,11 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
                 <Checkbox label={t('jobEditor.salaryVisible')} checked={f.salary_visible} onChange={(e) => set('salary_visible', e.target.checked)} />
                 <TextField label={t('jobEditor.deadline')} optional type="date" dir="ltr" value={f.application_deadline} onChange={(e) => set('application_deadline', e.target.value)} error={errors.fieldErrors.application_deadline} />
               </FormSection>
+              {!employer.is_recruitment_agency && retainedHiring ? (
+                <FormSection title={t('jobEditor.sectionAgency')}>
+                  <Alert kind="warning" testId="retained-hiring-notice">{t('jobEditor.retainedHiring')}</Alert>
+                </FormSection>
+              ) : null}
               {employer.is_recruitment_agency ? (
                 <FormSection title={t('jobEditor.sectionAgency')}>
                   <TextField label={t('jobEditor.hiringEmployer')} optional dir="ltr" value={f.hiring_employer} onChange={(e) => set('hiring_employer', e.target.value)} error={errors.fieldErrors.hiring_employer} />
