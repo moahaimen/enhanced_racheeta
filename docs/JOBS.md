@@ -10,7 +10,7 @@ protection from `MODERATION.md`.
 | Actor | How they exist | What they do |
 | --- | --- | --- |
 | Job seeker | any `Account` that creates a `JobSeekerProfile` | maintains a structured résumé, searches and applies, answers interviews/invitations, messages inside applications |
-| Employer organisation | `Employer` created by an account (owner), optionally linked to a Phase 2 facility `ProviderProfile` | verified by Super Admin, then posts jobs, reviews applicants, searches talent within its plan |
+| Employer organisation | `Employer` created by an account (owner), optionally linked to a Phase 2 facility `ProviderProfile` | verified by Super Admin, then posts jobs, reviews applicants, searches talent within its plan. Once verification is requested (PENDING) or granted (VERIFIED), the identity fields the administrator reviewed — `name`, `organization_type`, `governorate`, `provider_profile`, `is_recruitment_agency` — are locked for owners (`identity_locked`, 400); description, city and discoverability stay editable. Changing identity needs an administrator. |
 | Employer members | `EmployerMembership(role OWNER|RECRUITER|VIEWER, status ACTIVE|ENDED)` | one live membership per account; seats limited by `recruiter.seats` |
 | Super Admin | `Account.is_staff` | verifies organisations, approves/rejects/suspends jobs, activates subscriptions, grants credits |
 
@@ -48,7 +48,11 @@ featured only while `featured_until > now` (see `BILLING.md`, Featured window).
 
 Application: `SUBMITTED → REVIEWING → SHORTLISTED → INTERVIEW → ACCEPTED`,
 `REJECTED` from any open state (employer), `WITHDRAWN` from any open state
-(seeker). Every change is a `JobApplicationTransition`.
+including `INTERVIEW` (seeker). Every change is a `JobApplicationTransition`.
+When an application reaches a terminal state (ACCEPTED, REJECTED, WITHDRAWN)
+every still-PROPOSED interview is cancelled in the same transaction, and the
+interview-response endpoint independently refuses answers on a terminal
+application (`application_closed`, 409).
 
 Invitation: `PENDING → ACCEPTED | DECLINED | CANCELLED`, `EXPIRED` at read
 time (`expire_overdue_invitations`, run by both invitation lists and before
@@ -61,10 +65,13 @@ unit keyed by its own id; each application attempt consumes one
 Interview: `PROPOSED → ACCEPTED | DECLINED | CANCELLED`; proposing one moves
 the application to `INTERVIEW`.
 
-Every state change on an application, interview or invitation takes a row
-lock (`SELECT … FOR UPDATE`) and re-reads the status before validating, so two
-recruiters acting at once cannot both win: the second gets the typed
-`invalid_transition` error and the history always matches the final status.
+Every state change on a job, application, interview or invitation takes a
+row lock (`SELECT … FOR UPDATE`) and re-reads the status before validating, so
+two actors acting at once (approve vs reject, close vs suspend, accept vs
+reject) cannot both win: the second gets the typed `invalid_transition` error
+and the history always matches the final status. Lock order is always the
+employer row (when a commercial slot is involved), then the job row; and the
+application row before its interview row.
 
 ## Talent search and the "one billable search" rule
 

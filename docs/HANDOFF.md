@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **327 passed** (was 175): billing entitlements/admin API,
+- Backend: **346 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **142 passed** (was 87).
+- Web: **150 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -175,6 +175,24 @@ featured windows, subscriptions and now invitations all normalise at read
 time; no other hard-coded first page remains in management pages.
 
 Backend tests 327, web tests 142, no migration, OpenAPI unchanged.
+
+## PR #4 review, round four (2026-09-24, review 5302331819 on `53698f6`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 verified identity mutable | `EmployerWriteSerializer` rejects changes to `name`, `organization_type`, `governorate`, `provider_profile`, `is_recruitment_agency` with `identity_locked` while PENDING or VERIFIED (same value allowed; description/city/discoverability free); web form disables those fields and sends only editable ones; tests for each field, provider unlink, presentation edits, review/rejected states, admin path and the job gate. |
+| P1 no withdrawal during INTERVIEW | `INTERVIEW` added to `SEEKER_WITHDRAWABLE`; withdrawal cancels PROPOSED interviews atomically; web shows Withdraw in INTERVIEW; tests for history, interview state, terminal states, loading contract. |
+| P2 interview answers after closure | Policy: terminal transitions (accept/reject/withdraw) cancel PROPOSED interviews; `respond_to_interview` locks the parent application first and refuses with `application_closed` (409); web hides answers on terminal applications; tests per closer. |
+| P2 stale job lifecycle validation | `_lock_job` (row lock + status refresh) in submit, approve, reject, suspend, restore, close, archive, expiry and featuring, always after the employer lock; threaded approve/reject and close/suspend tests, stale-instance and sequential tests. |
+| P2 invitation guidance on PENDING | Guidance rendered per ACCEPTED invitation only; PENDING shows accept/decline; other statuses show neither; tests for all five statuses and the accept flow. |
+
+Targeted audit: no other identity-defining employer field exists; messages
+already close on WITHDRAWN/REJECTED; invitations answered on apply; job
+state gates application actions through `is_open`; all five state machines
+now use the same lock-then-validate pattern; no other status message was
+conditioned on the wrong state.
+
+Backend tests 346, web tests 150, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

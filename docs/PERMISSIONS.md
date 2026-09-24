@@ -98,7 +98,7 @@ not client-changeable afterwards; a role change is an administrator action.
 | Class | Rule |
 | --- | --- |
 | `IsEmployerMember` | caller has an ACTIVE `EmployerMembership`; sets `request.employer`/`request.membership`. Used by every `/jobs/employer/*` and `/talent/*` route. |
-| `IsEmployerOwner` | membership role is OWNER (organisation edits, verification request, members, plan requests). |
+| `IsEmployerOwner` | membership role is OWNER (organisation edits, verification request, members, plan requests). Even the owner cannot change the verified identity fields (`name`, `organization_type`, `governorate`, `provider_profile`, `is_recruitment_agency`) once the organisation is PENDING or VERIFIED — the write serializer rejects them with `identity_locked`; only an administrator can. |
 | `CanRecruit` | OWNER or RECRUITER (job writes, applicant transitions, interviews, invitations, messages); VIEWER is read-only. |
 | `IsAdminAccount` (accounts) | `is_staff` for every `/admin/*` route. |
 
