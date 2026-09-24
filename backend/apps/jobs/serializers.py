@@ -727,18 +727,27 @@ class JobWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
                 {"salary_max": ["Maximum salary must be at least the minimum."]}
             )
         employer = self.context.get("employer")
-        if (
-            employer is not None
-            and not employer.is_recruitment_agency
-            and (attrs.get("hiring_employer") or attrs.get("hiring_organization_name"))
-        ):
-            raise serializers.ValidationError(
-                {
-                    "hiring_organization_name": [
-                        "Only recruitment agencies recruit on behalf of another organisation."
-                    ]
-                }
-            )
+        if employer is not None and not employer.is_recruitment_agency:
+            # Validate the RESULTING job, not only the fields in this request: a
+            # draft created while the organisation was an agency must clear its
+            # hiring fields once the organisation is no longer one.
+            resulting = {
+                f: attrs[f] if f in attrs else getattr(self.instance, f, None)
+                for f in ("hiring_employer", "hiring_organization_name")
+            }
+            errors = {
+                f: [
+                    serializers.ErrorDetail(
+                        "Only recruitment agencies can hire on behalf of another organisation; "
+                        "clear this field.",
+                        code="not_an_agency",
+                    )
+                ]
+                for f, v in resulting.items()
+                if v
+            }
+            if errors:
+                raise serializers.ValidationError(errors)
         return attrs
 
 

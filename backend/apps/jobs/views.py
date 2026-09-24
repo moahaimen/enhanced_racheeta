@@ -109,6 +109,8 @@ STATUS_FOR_CODE = {
     "invalid_transition": status.HTTP_400_BAD_REQUEST,
     "invalid_role": status.HTTP_400_BAD_REQUEST,
     "invitation_expired": status.HTTP_409_CONFLICT,
+    "invitation_unavailable": status.HTTP_409_CONFLICT,
+    "not_an_agency": status.HTTP_400_BAD_REQUEST,
     "application_closed": status.HTTP_409_CONFLICT,
     "not_found": status.HTTP_404_NOT_FOUND,
 }
@@ -1135,6 +1137,7 @@ class SavedCandidateListView(APIView):
         summary="Save a candidate (private note never shown to the candidate)",
     )
     def post(self, request):
+        _require_talent_access(request, Keys.TALENT_SAVE)  # same gate as GET
         serializer = SaveCandidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         profile = get_object_or_404(JobSeekerProfile, pk=serializer.validated_data["job_seeker"])

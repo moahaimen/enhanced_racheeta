@@ -526,7 +526,9 @@
     "job_locked": "The job cannot be edited in its current state.",
     "application_closed": "This application is closed.",
     "invitation_expired": "This invitation has expired.",
-    "identity_locked": "This field is locked after verification. Ask Racheeta administration to change it."
+    "identity_locked": "This field is locked after verification. Ask Racheeta administration to change it.",
+    "invitation_unavailable": "This job is no longer open, so the invitation cannot be accepted.",
+    "not_an_agency": "Only recruitment agencies can hire on behalf of another organisation; clear this field."
   },
   "jobs": {
     "featured": "Featured",

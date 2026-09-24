@@ -83,6 +83,14 @@ class IdentityLocked(JobsError):
         self.fields = fields
 
 
+class HiringFieldsNotAllowed(JobsError):
+    code = "not_an_agency"
+
+
+class InvitationUnavailable(JobsError):
+    code = "invitation_unavailable"
+
+
 class ContactLeak(JobsError):
     code = "contact_information_not_allowed"
 
@@ -322,12 +330,25 @@ def contact_flags(job: JobPost) -> list[dict]:
     return flags
 
 
+def _require_agency_invariant(employer: Employer, job: JobPost) -> None:
+    """A job may claim to hire for another organisation only while its employer
+    IS a recruitment agency — checked on the persisted/resulting state."""
+    if employer.is_recruitment_agency:
+        return
+    if job.hiring_employer_id or job.hiring_organization_name:
+        raise HiringFieldsNotAllowed(
+            "Only recruitment agencies can hire on behalf of another organisation; "
+            "clear hiring_employer and hiring_organization_name."
+        )
+
+
 @transaction.atomic
 def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
     """Employer edit of a DRAFT/REJECTED job. Editability is validated on the
-    LOCKED row (a concurrent submit wins or loses cleanly) and only the edited
-    fields are written, so lifecycle columns can never be overwritten by a
-    stale instance."""
+    LOCKED rows (employer first, then job — a concurrent submit wins or loses
+    cleanly) and only the edited fields are written, so lifecycle columns can
+    never be overwritten by a stale instance."""
+    employer = _lock_employer(job.employer)
     _lock_job(job)
     if job.status not in EDITABLE_JOB_STATUSES:
         raise JobsError(
@@ -336,6 +357,7 @@ def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
         )
     for key, value in fields.items():
         setattr(job, key, value)
+    _require_agency_invariant(employer, job)  # resulting state, fresh employer flag
     job.save(update_fields=[*fields, "updated_at"])
     return job
 
@@ -368,6 +390,7 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
         raise OrganizationNotVerified(
             "The organisation must be verified and active before publishing jobs."
         )
+    _require_agency_invariant(employer, job)
     _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
@@ -772,6 +795,9 @@ def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
 def save_candidate(
     employer: Employer, profile: JobSeekerProfile, *, actor, note: str = ""
 ) -> SavedCandidate:
+    _refresh_employer_status(employer)  # locked, fresh: a suspended organisation cannot save
+    if not employer.can_recruit:
+        raise OrganizationNotVerified("The organisation must be verified and active.")
     employer_entitlements(employer).require(Keys.TALENT_SAVE)
     if (
         not profile.discoverable_by_employers
@@ -850,15 +876,34 @@ def _lock_invitation(invitation: JobInvitation) -> None:
     )
 
 
-@transaction.atomic
 def respond_to_invitation(invitation: JobInvitation, *, accept: bool) -> JobInvitation:
+    """Seeker answers an invitation. Expiry is normalised first, outside the
+    response transaction, so the EXPIRED state persists even though the
+    response itself is then refused."""
+    if expire_overdue_invitations(pk=invitation.pk):
+        invitation.status = InvitationStatus.EXPIRED
+        raise JobsError("This invitation has expired.", code="invitation_expired")
+    return _respond_to_invitation(invitation, accept=accept)
+
+
+@transaction.atomic
+def _respond_to_invitation(invitation: JobInvitation, *, accept: bool) -> JobInvitation:
+    # Established lock order: employer row, job row, then the invitation row.
+    job = invitation.job
+    job.employer = _lock_employer(job.employer)
+    _lock_job(job)
     _lock_invitation(invitation)
     if invitation.status != InvitationStatus.PENDING:
         raise JobsError("This invitation was already answered.")
-    if invitation.expires_at < timezone.now():
-        invitation.status = InvitationStatus.EXPIRED
-        invitation.save(update_fields=["status", "updated_at"])
+    if invitation.expires_at < timezone.now():  # elapsed between the normalisation and the lock
         raise JobsError("This invitation has expired.", code="invitation_expired")
+    if accept and not job.is_open:
+        # Policy: the invitation stays PENDING while the job is closed/suspended
+        # or the organisation cannot recruit; it can be declined, but it cannot
+        # be accepted, because applying would be impossible right after.
+        raise InvitationUnavailable(
+            "This job is no longer open, so the invitation cannot be accepted."
+        )
     invitation.status = InvitationStatus.ACCEPTED if accept else InvitationStatus.DECLINED
     invitation.responded_at = timezone.now()
     invitation.save(update_fields=["status", "responded_at", "updated_at"])
