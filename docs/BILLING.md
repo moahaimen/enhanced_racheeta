@@ -65,7 +65,7 @@ overflow is charged to credits (`min(amount, used + amount - limit)`).
 | --- | --- | --- |
 | `applications.limit` | `apply:<application id>` | one unit per application **attempt**: a new application after a withdrawal is a new attempt; an HTTP retry is stopped earlier by the one-active-application rule, so it never reaches `consume` |
 | `talent.invite_limit` | `invite:<invitation id>` | one unit per invitation; re-inviting after decline/expiry/cancel is a new unit |
-| `talent.search_limit` | `talent:<employer>:<day>:<filter signature>` | one unit per (employer, filters, day); pagination and re-ordering are free |
+| `talent.search_limit` | `talent:<employer>:<day>:<filter signature>` | one unit per (employer, filters, day); pagination and re-ordering are free; nothing is consumed unless the filter set validates and the search can execute |
 
 References are never built from `(job, seeker)` alone: that would make a
 legitimate later attempt look like a retry of the first one.

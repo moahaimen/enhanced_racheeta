@@ -102,6 +102,12 @@ not client-changeable afterwards; a role change is an administrator action.
 | `CanRecruit` | OWNER or RECRUITER (job writes, applicant transitions, interviews, invitations, messages); VIEWER is read-only. |
 | `IsAdminAccount` (accounts) | `is_staff` for every `/admin/*` route. |
 
+Employer-side applicant endpoints additionally require the plan capability
+`jobs.application_review` through one shared gate (`_require_application_review`
+in `apps/jobs/views.py`): list, detail, transition, interview request and the
+employer side of message threads. The typed `entitlement_required` error (403)
+is returned even for a known application id.
+
 Job seekers act only on their own profile/applications (`request.user`);
 message threads accept the candidate of the application or an active member of
 the employer, nobody else (404 for third parties). Commercial capability is a

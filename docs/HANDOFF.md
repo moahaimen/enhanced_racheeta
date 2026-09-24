@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **284 passed** (was 175): billing entitlements/admin API,
+- Backend: **309 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **129 passed** (was 87).
+- Web: **137 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -138,6 +138,26 @@ résumé page, payment record when activating with a reference only.
 
 Backend tests 284, web tests 129, no new migration, OpenAPI unchanged.
 
+## PR #4 review, round two (2026-09-24, review 5301558683 on `267fca0`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 `detailed_specialty` leak | `validate_no_contact_info` on the job write serializer and the field added to `contact_flags`; parametrised tests for e-mail, Iraqi phone, `+964`, URL, WhatsApp, Telegram, and normal text. |
+| P1 message thread beyond 200 | Newest 200 messages queried, reversed to chronological order (`MESSAGE_THREAD_LIMIT`); test with 205 messages. |
+| P1 my-applications page 1 only | URL-backed pagination (`?page=`) with the design-system `Pagination`, count line, empty-final-page state; tests for page 1/2, next/previous, loading, withdrawal on page 2. |
+| P1 `jobs.application_review` bypass | One gate `_require_application_review` inside `_employer_applications` (list, detail, transition, interview) and in the employer branch of `_application_for_party` (messages); tests for every route with/without the capability, other organisations, VIEWER role. |
+| P2 quota before filter validation | `TalentSearchView.list` validates the filterset before `record_talent_search`; `language_level` and `availability` are strict (case-insensitive) choice filters; tests: invalid profession/level/availability → 400 and zero usage. |
+| P2 language + level on different rows | `TalentFilter` uses one EXISTS subquery over `LanguageSkill` for both parameters (also for `skill`), no `distinct()` needed; tests for mixed profiles and counts. |
+| P2 no admin controls for SUSPENDED | Reactivate (existing `activate` action) and Cancel with `ApiActionButton`; tests for rendering, calls, pending state. |
+| P2 employer workspace page 1 only | Paginated jobs (`?jobs_page=`) and a server-side `active_jobs` field on `GET /jobs/employer` (OpenAPI updated) used for the statistic; tests for paging, loading and the statistic staying authoritative. |
+| P2 language name leak | `validate_no_contact_info` on `LanguageSkillSerializer.language`; tests for leaks and legitimate names in Arabic, English, Kurdish, Persian. |
+
+Targeted audit: all other public free-text fields already carried the
+validator; saved-candidate and invitation lists remain capped at 200 without
+pagination (management screens, no data loss below that; noted below).
+
+Backend tests 309, web tests 137, no migration, OpenAPI changed (`active_jobs`).
+
 ## Known Problems
 
 - No notifications yet for recruitment events (Phase 9): parties must open
@@ -148,6 +168,8 @@ Backend tests 284, web tests 129, no new migration, OpenAPI unchanged.
   owner has not decided seeker pricing.
 - Agency "hiring employer" is entered by id in the job editor (no employer
   search UI yet).
+- Saved candidates and sent invitations are returned as arrays capped at 200
+  (no pagination yet); paginate when an employer approaches that volume.
 - Talent search language filter matches by free text; language names are
   not normalised across Arabic/English spellings.
 

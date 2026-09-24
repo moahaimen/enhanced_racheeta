@@ -25,8 +25,8 @@ categories:
 | Content | Fields |
 | --- | --- |
 | Employer | `description` |
-| Job post | `title`, `description`, `responsibilities`, `requirements`, `workplace_text`, `detailed_specialty` |
-| Seeker profile | `professional_title`, `professional_summary`, `detailed_specialty`; experience `description`; credential `name`/`issuer`; skill names |
+| Job post | `title`, `detailed_specialty`, `description`, `responsibilities`, `requirements`, `workplace_text`, `hiring_organization_name` (all also re-scanned by `contact_flags` at submit) |
+| Seeker profile | `professional_title`, `professional_summary`, `detailed_specialty`, `institution_name`; experience `title`/`organization_name`/`description`; education `field_of_study`/`institution_name`; credential `name`/`issuer`; skill names; language names (`العربية`, `English`, `Kurdish`, `فارسی` stay valid) |
 | Application | `cover_text` |
 | Interview request | `location_text`, `note` (ONLINE meeting details are exchanged only inside Racheeta) |
 | Invitation | `message` |
@@ -34,7 +34,9 @@ categories:
 | Saved candidate | `note` |
 
 Validation happens in the serializers (write time), so leaked contact data is
-never stored. As a second line, `submit_job_for_review` re-scans the job and
+never stored. Rule of thumb enforced by tests: every user-controlled string
+that reaches a public or employer-facing serializer is either constrained
+reference data (choices, foreign keys) or carries `validate_no_contact_info`. As a second line, `submit_job_for_review` re-scans the job and
 persists `moderation_flags` (field, category, excerpt) which the admin console
 shows as "possible contact details" before approval.
 

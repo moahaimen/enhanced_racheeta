@@ -62,7 +62,11 @@ the application to `INTERVIEW`.
 ## Talent search and the "one billable search" rule
 
 Talent search is available only with `talent.search` and consumes
-`talent.search_limit`. To be fair to employers, **one billable search is one
+`talent.search_limit`. The filter set is validated first: a request with an
+invalid `profession`, `language_level`, `availability`, degree, UUID or number
+is rejected with 400 and consumes nothing. `language` and `language_level`
+apply to the same language row (EXISTS subquery, no duplicate rows), so
+"English BASIC + Arabic ADVANCED" never matches "English ADVANCED". To be fair to employers, **one billable search is one
 (employer, normalised filter signature, calendar day)**: the same filters on the
 same day, including pagination and re-ordering, count once (`TalentSearchQuery`
 unique row, consumption `reference = signature:date`). Changing any filter is a
@@ -78,6 +82,11 @@ never with e-mail, phone or account identity.
   badge; the owner's account is never exposed.
 - IDs are never trusted from the client: every employer endpoint is scoped by
   the caller's membership; seeker endpoints by `request.user`.
+- Applicant data is a paid capability: every employer-side endpoint that lists,
+  reads or changes applications (list, detail, transition, interview request,
+  employer-side messages) runs the single `jobs.application_review` gate
+  (`_require_application_review`) in addition to ownership scoping, so a
+  direct object URL cannot bypass the plan.
 
 ## Endpoints (all under `/api/v1`)
 
@@ -89,7 +98,9 @@ Seeker (bearer): `GET|POST|PATCH /jobs/me/profile`, child collections
 `POST /jobs/me/applications/{id}/withdraw`, `POST /jobs/me/interviews/{id}/respond`,
 `GET /jobs/me/invitations`, `POST /jobs/me/invitations/{id}/respond`.
 
-Both parties: `GET|POST /recruitment/applications/{id}/messages`.
+Both parties: `GET|POST /recruitment/applications/{id}/messages`. The thread is
+bounded to the newest 200 messages, returned in chronological order (so the
+latest message is always visible); there is no unbounded thread endpoint.
 
 Employer (bearer + membership): `GET|POST|PATCH /jobs/employer`,
 `POST /jobs/employer/verification/request`, `GET|POST /jobs/employer/members`,
@@ -122,8 +133,8 @@ localises all of them (`apiErrors.*`).
 | --- | --- | --- |
 | `/jobs`, `/jobs/:id`, `/employers/:id` | public | search with URL-backed filters, job detail with apply block, employer page |
 | `/jobs/profile` | auth | structured résumé (onboarding + sections) |
-| `/jobs/my-applications` | auth | applications, interviews, invitations, message threads |
-| `/employer` | auth | organisation onboarding, verification, jobs, plan/usage meters, plan request, team |
+| `/jobs/my-applications` | auth | applications paginated from the URL (`?page=`), interviews, invitations, message threads |
+| `/employer` | auth | organisation onboarding, verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request, team |
 | `/employer/jobs/new`, `/employer/jobs/:id` | auth | job editor, lifecycle actions, moderation flags, history |
 | `/employer/jobs/:id/applications` | auth | applicants, transitions, interview requests, messages |
 | `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save, invite |
