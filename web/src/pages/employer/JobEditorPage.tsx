@@ -44,7 +44,8 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
   const name = useLocalizedName()
   const editable = job === null || job.status === 'DRAFT' || job.status === 'REJECTED'
   // Agency-only values kept by a job whose organisation is no longer an agency.
-  const retainedHiring = job !== null && (job.hiring_employer !== null || job.hiring_organization_name !== '')
+  // Only worth saying while the job can actually be saved (the save clears them).
+  const retainedHiring = job !== null && editable && (job.hiring_employer !== null || job.hiring_organization_name !== '')
   const [f, setF] = useState({
     title: job?.title ?? '',
     profession: (job?.profession ?? 'NURSE') as Profession,
