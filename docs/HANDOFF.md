@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **309 passed** (was 175): billing entitlements/admin API,
+- Backend: **327 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **137 passed** (was 87).
+- Web: **142 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -157,6 +157,24 @@ validator; saved-candidate and invitation lists remain capped at 200 without
 pagination (management screens, no data loss below that; noted below).
 
 Backend tests 309, web tests 137, no migration, OpenAPI changed (`active_jobs`).
+
+## PR #4 review, round three (2026-09-24, review 5301950655 on `d221abf`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 withdrawal reason leak | `validate_no_contact_info` on `RecruitmentReasonSerializer.reason`; `withdraw_application` and `transition_application` also refuse leaks at the service boundary; tests for e-mail, phone, `+964`, URL, WhatsApp, Telegram, ordinary text and stored history. |
+| P1 expired invitations block re-inviting | `expire_overdue_invitations` (read/action-time UPDATE) runs in both invitation lists and before the duplicate check in `invite_candidate`; the UPDATE locks the stale row and the conditional unique constraint keeps one live row under concurrency; threaded test. |
+| P1 reactivation next to a PENDING request → 500 | `activate_subscription` locks the billing account, re-reads the status, cancels any other ACTIVE **and** PENDING row as superseded (audited), and maps a constraint failure to a typed `SubscriptionError`. Policy documented in `BILLING.md`. |
+| P1 concurrent application transitions | `_lock_application` (`SELECT … FOR UPDATE` + status refresh) in withdraw, transition and interview request; interview and invitation responses and subscription transitions lock the same way; threaded ACCEPTED/REJECTED test, stale-instance test. |
+| P2 invitation picker capped at 20 | Picker keeps page 1 from the page load and appends further pages of PUBLISHED jobs through a "show more" `ApiActionButton`; count hint; tests for page 2 selection, loading state, empty state. |
+| P2 seeker invitations page 1 only | `?invites_page=` (independent of `?page=`), `LoadingState` while paging, `Pagination`, empty final page; tests for paging, accept/decline on page 2. |
+
+Targeted audit: interview notes/responses, invitation messages, employer
+transition reasons and recruitment messages were already validated; jobs,
+featured windows, subscriptions and now invitations all normalise at read
+time; no other hard-coded first page remains in management pages.
+
+Backend tests 327, web tests 142, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

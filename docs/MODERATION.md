@@ -27,7 +27,7 @@ categories:
 | Employer | `description` |
 | Job post | `title`, `detailed_specialty`, `description`, `responsibilities`, `requirements`, `workplace_text`, `hiring_organization_name` (all also re-scanned by `contact_flags` at submit) |
 | Seeker profile | `professional_title`, `professional_summary`, `detailed_specialty`, `institution_name`; experience `title`/`organization_name`/`description`; education `field_of_study`/`institution_name`; credential `name`/`issuer`; skill names; language names (`العربية`, `English`, `Kurdish`, `فارسی` stay valid) |
-| Application | `cover_text` |
+| Application | `cover_text`; transition `reason` from either side (seeker withdrawal, employer status change) — checked by the serializer and again at the service boundary because the history is shown to the other party |
 | Interview request | `location_text`, `note` (ONLINE meeting details are exchanged only inside Racheeta) |
 | Invitation | `message` |
 | Recruitment message | `body` |

@@ -102,7 +102,7 @@ Exceptions map to the uniform error envelope with typed codes and `meta`:
 2. Owner pays off-platform and tells Racheeta the reference.
 3. Super Admin verifies the payment in the console → `POST /admin/billing/subscriptions/{id}/activate` with optional `term_days`, `reference`, `note`, `payment{amount,currency,method,reference}` → ACTIVE with `ends_at = starts_at + term_days`.
 4. Read-time check: an ACTIVE subscription past `ends_at` is expired (`expire_subscription`) whenever entitlements are resolved **and** at the start of every `request_subscription`, under a row lock on the billing account, so a renewal is never rejected as "already active" because nobody had opened a billing page since the term ended. The default plan applies again after expiry.
-5. Admin can `reject` (PENDING), `suspend`/`cancel` (ACTIVE) and re-activate a SUSPENDED one; every step is audited.
+5. Admin can `reject` (PENDING), `suspend`/`cancel` (ACTIVE) and re-activate a SUSPENDED one; every step is audited. Activation runs under a row lock on the billing account and re-reads the subscription status. Policy: **the administrator's activation supersedes any other live row** — another ACTIVE subscription and any newer PENDING request are cancelled (audited as `billing.subscription.cancelled`, reason "superseded by activation of …") before the row becomes ACTIVE, so the one-live-subscription constraint can never surface as a 500. Every status transition re-reads the row under a lock.
 
 Credits: `POST /admin/billing/credits {billing_account, key, amount, note}`; negative amounts revoke.
 

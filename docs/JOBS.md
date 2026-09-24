@@ -51,13 +51,20 @@ Application: `SUBMITTED → REVIEWING → SHORTLISTED → INTERVIEW → ACCEPTED
 (seeker). Every change is a `JobApplicationTransition`.
 
 Invitation: `PENDING → ACCEPTED | DECLINED | CANCELLED`, `EXPIRED` at read
-time. Accepting an invitation does **not** create an application; the seeker
+time (`expire_overdue_invitations`, run by both invitation lists and before
+every new invitation, so an elapsed PENDING row never blocks re-inviting;
+the expired row stays in history and the new one consumes a new unit). Accepting an invitation does **not** create an application; the seeker
 applies from the job page. Each invitation consumes one `talent.invite_limit`
 unit keyed by its own id; each application attempt consumes one
 `applications.limit` unit keyed by the application id.
 
 Interview: `PROPOSED → ACCEPTED | DECLINED | CANCELLED`; proposing one moves
 the application to `INTERVIEW`.
+
+Every state change on an application, interview or invitation takes a row
+lock (`SELECT … FOR UPDATE`) and re-reads the status before validating, so two
+recruiters acting at once cannot both win: the second gets the typed
+`invalid_transition` error and the history always matches the final status.
 
 ## Talent search and the "one billable search" rule
 
@@ -133,11 +140,11 @@ localises all of them (`apiErrors.*`).
 | --- | --- | --- |
 | `/jobs`, `/jobs/:id`, `/employers/:id` | public | search with URL-backed filters, job detail with apply block, employer page |
 | `/jobs/profile` | auth | structured résumé (onboarding + sections) |
-| `/jobs/my-applications` | auth | applications paginated from the URL (`?page=`), interviews, invitations, message threads |
+| `/jobs/my-applications` | auth | applications paginated from the URL (`?page=`), interviews, invitations paginated independently (`?invites_page=`), message threads |
 | `/employer` | auth | organisation onboarding, verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request, team |
 | `/employer/jobs/new`, `/employer/jobs/:id` | auth | job editor, lifecycle actions, moderation flags, history |
 | `/employer/jobs/:id/applications` | auth | applicants, transitions, interview requests, messages |
-| `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save, invite |
+| `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save, invite (job picker loads further pages of published jobs on demand) |
 | `/admin-console` | staff | organisations, job review with contact findings, subscriptions, credits |
 
 Every action uses `ApiActionButton` (disable, spinner, stable size, restore);
