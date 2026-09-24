@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **383 passed** (was 175): billing entitlements/admin API,
+- Backend: **401 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -236,6 +236,19 @@ Targeted audit: job expiry and invitation expiry already re-check under
 locks; no other billable signature exists.
 
 Backend tests 383, web tests 155, no migration, OpenAPI unchanged.
+
+## PR #4 review, round eight (2026-09-24, review 5303372106 on `ec62133`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 retained hiring fields on non-agencies | Serializer validates the resulting job (`not_an_agency` per field); `edit_job` (now under the employer lock too) and `_submit_job` re-check `_require_agency_invariant` on the locked employer flag and job. Tests: agency creates both kinds, flag change before verification, retained fields block unrelated edits and submit, clearing restores, plain jobs unaffected, stale employer instance cannot bypass. |
+| P2 accepting an invitation on a closed job | `respond_to_invitation` locks employer, job and invitation, normalises expiry, and refuses acceptance when the job is not open or the organisation cannot recruit (`invitation_unavailable`, 409); the invitation stays PENDING and can still be declined. Tests per cause, expiry, threaded accept-vs-close/suspend. |
+| P2 saving candidates while suspended | `POST /talent/saved` runs the same `_require_talent_access` gate as GET, and `save_candidate` re-checks `can_recruit` on the refreshed row. Tests: entitled save, recruitment/verification/subscription suspended, service-level stale instance, viewer role, isolation, no row on rejection. |
+
+Targeted audit: search, detail, saved (GET/POST), invitation lists and
+invitation creation all enforce the recruiting gate consistently now.
+
+Backend tests 401, web tests 155, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

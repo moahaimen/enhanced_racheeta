@@ -60,7 +60,10 @@ every new invitation, so an elapsed PENDING row never blocks re-inviting;
 the expired row stays in history and the new one consumes a new unit).
 Applying to the job answers a still-live PENDING invitation as ACCEPTED under
 a row lock; an invitation whose window already closed becomes EXPIRED instead,
-never "accepted outreach". Accepting an invitation does **not** create an application; the seeker
+never "accepted outreach". Accepting explicitly is validated the same way under
+the employer, job and invitation locks: the job must still be open and the
+organisation able to recruit, otherwise `invitation_unavailable` (409) and the
+invitation stays PENDING (declining remains possible). Accepting an invitation does **not** create an application; the seeker
 applies from the job page. Each invitation consumes one `talent.invite_limit`
 unit keyed by its own id; each application attempt consumes one
 `applications.limit` unit keyed by the application id.
@@ -76,8 +79,15 @@ commits first makes the attempt fail (`job_not_open`) with nothing created or
 charged. Job submission re-checks `can_recruit` on the locked employer row
 before the slot check; the view's unlocked check is only an early exit.
 
+A job may name a `hiring_employer` or `hiring_organization_name` only while
+its organisation **is** a recruitment agency. The rule is checked on the
+resulting job (not only the fields in the request) at edit time and again at
+submit time on the locked employer and job rows (`not_an_agency`, 400), so a
+draft created while the organisation was an agency must clear those fields
+before it can be changed or published.
+
 Employer job edits (`PATCH /jobs/employer/jobs/{id}`) go through
-`services.edit_job`: the job row is locked, editability (DRAFT/REJECTED) is
+`services.edit_job`: the employer row is locked, then the job row, editability (DRAFT/REJECTED) is
 checked on the refreshed status, and only the edited columns are written, so a
 stale edit can neither revert a submitted job nor change reviewed content
 (`job_locked`, 409). Owner organisation edits go through
@@ -96,12 +106,13 @@ application row before its interview row.
 
 ## Talent search and the "one billable search" rule
 
-Paid recruitment reads are gated like writes: talent search and candidate
-detail need `talent.search`, the saved-candidates list needs
-`talent.save_candidate`, the sent-invitations list needs `talent.invite`, and
-all of them need a VERIFIED organisation with ACTIVE recruitment
-(`organization_not_verified`, 403). Losing the plan or being suspended closes
-the lists, not only the actions.
+Paid recruitment reads and writes share one gate: talent search and candidate
+detail need `talent.search`, listing **and saving** candidates need
+`talent.save_candidate`, the sent-invitations list and inviting need
+`talent.invite`, and all of them need a VERIFIED organisation with ACTIVE
+recruitment (`organization_not_verified`, 403), checked in the view and again
+in the service on the refreshed employer row. Losing the plan or being
+suspended closes the lists and the actions alike.
 
 Talent search is available only with `talent.search` and consumes
 `talent.search_limit`. The filter set is validated first: a request with an
