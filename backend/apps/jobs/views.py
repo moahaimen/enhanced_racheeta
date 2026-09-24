@@ -18,6 +18,7 @@ from apps.billing.serializers import (
     SubscriptionSerializer,
 )
 from apps.billing.services import SubscriptionError, request_subscription
+from apps.billing.types import Keys
 from apps.billing.views import billing_summary
 
 from . import services
@@ -88,6 +89,8 @@ from .types import ApplicationStatus, JobStatus, MemberStatus, MessageSide
 class JobsAPIError(APIException):
     status_code = status.HTTP_409_CONFLICT
 
+
+MESSAGE_THREAD_LIMIT = 200
 
 STATUS_FOR_CODE = {
     "job_not_open": status.HTTP_409_CONFLICT,
@@ -474,6 +477,8 @@ def _application_for_party(request) -> tuple[JobApplication, str]:
         and membership.employer_id == application.job.employer_id
         and membership.role in ("OWNER", "RECRUITER")
     ):
+        # Employer-side messaging is part of applicant review: same gate.
+        services.employer_entitlements(membership.employer).require(Keys.JOBS_APPLICATION_REVIEW)
         return application, MessageSide.EMPLOYER
     raise NotFound
 
@@ -490,11 +495,12 @@ class ApplicationMessagesView(_Throttled, APIView):
     )
     def get(self, request, pk):
         application, _ = _application_for_party(request)
-        return Response(
-            MessageSerializer(
-                RecruitmentMessage.objects.filter(application=application)[:200], many=True
-            ).data
-        )
+        # Bounded thread: the NEWEST messages, returned in chronological order.
+        newest_first = RecruitmentMessage.objects.filter(application=application).order_by(
+            "-created_at", "-id"
+        )[:MESSAGE_THREAD_LIMIT]
+        messages = list(reversed(list(newest_first)))
+        return Response(MessageSerializer(messages, many=True).data)
 
     @extend_schema(
         request=MessageCreateSerializer,
@@ -851,7 +857,15 @@ EmployerJobFeatureView = _job_action(
 # ---- employer: applicants ----------------------------------------------------
 
 
+def _require_application_review(request) -> None:
+    """One commercial gate for every employer-side endpoint that exposes or
+    changes applicant data (list, detail, transitions, interviews, employer
+    messages). Ownership scoping is separate and always applied as well."""
+    services.employer_entitlements(request.employer).require(Keys.JOBS_APPLICATION_REVIEW)
+
+
 def _employer_applications(request):
+    _require_application_review(request)
     return (
         JobApplication.objects.filter(job__employer=request.employer)
         .select_related(
@@ -890,7 +904,6 @@ class EmployerJobApplicationsView(generics.ListAPIView):
         job = get_object_or_404(
             JobPost.objects.filter(employer=self.request.employer), pk=self.kwargs["pk"]
         )
-        services.employer_entitlements(self.request.employer).require("jobs.application_review")
         return _employer_applications(self.request).filter(job=job)
 
 
@@ -1007,6 +1020,12 @@ class TalentSearchView(_Throttled, generics.ListAPIView):
             raise JobsAPIError(
                 "The organisation must be verified and active.", code="organization_not_verified"
             )
+        # Never charge a request that cannot execute: validate the filter set first.
+        filterset = self.filterset_class(
+            request.query_params, queryset=self.get_queryset(), request=request
+        )
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
         services.record_talent_search(
             request.employer, dict(request.query_params.items()), actor=request.user
         )

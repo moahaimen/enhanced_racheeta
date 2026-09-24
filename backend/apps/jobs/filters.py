@@ -1,8 +1,30 @@
 import django_filters
-from django.db.models import Q
+from django import forms
+from django.db.models import Exists, OuterRef, Q
 
-from .models import JobPost, JobSeekerProfile
-from .types import DEGREE_RANK, Degree, EmploymentType, Profession, ShiftType, WorkMode
+from .models import JobPost, JobSeekerProfile, LanguageSkill, Skill
+from .types import (
+    DEGREE_RANK,
+    Availability,
+    Degree,
+    EmploymentType,
+    LanguageLevel,
+    Profession,
+    ShiftType,
+    WorkMode,
+)
+
+
+class _UpperChoiceField(forms.ChoiceField):
+    """Accepts `advanced` as `ADVANCED`; anything outside the choices is still a 400."""
+
+    def to_python(self, value):
+        value = super().to_python(value)
+        return value.upper() if value else value
+
+
+class StrictChoiceFilter(django_filters.ChoiceFilter):
+    field_class = _UpperChoiceField
 
 
 class JobFilter(django_filters.FilterSet):
@@ -67,8 +89,10 @@ class TalentFilter(django_filters.FilterSet):
     city = django_filters.UUIDFilter(field_name="city_id")
     skill = django_filters.CharFilter(method="filter_skill")
     language = django_filters.CharFilter(method="filter_language")
-    language_level = django_filters.CharFilter(method="filter_language_level")
-    availability = django_filters.CharFilter(field_name="availability")
+    language_level = StrictChoiceFilter(
+        choices=LanguageLevel.choices, method="filter_language_level"
+    )
+    availability = StrictChoiceFilter(choices=Availability.choices)
     employment_type = django_filters.ChoiceFilter(
         choices=EmploymentType.choices, method="filter_employment"
     )
@@ -90,15 +114,30 @@ class TalentFilter(django_filters.FilterSet):
         return queryset.filter(degree__in=allowed)
 
     def filter_skill(self, queryset, name, value):
-        return queryset.filter(skills__name_normalized=" ".join(value.lower().split())).distinct()
+        rows = Skill.objects.filter(
+            profile=OuterRef("pk"), name_normalized=" ".join(value.lower().split())
+        )
+        return queryset.filter(Exists(rows))
+
+    def _language_rows(self):
+        """One subquery for `language` and `language_level` so both conditions
+        apply to the SAME LanguageSkill row (English BASIC + Arabic ADVANCED
+        must not match English ADVANCED). EXISTS also avoids duplicate rows."""
+        data = self.form.cleaned_data
+        rows = LanguageSkill.objects.filter(profile=OuterRef("pk"))
+        if data.get("language"):
+            rows = rows.filter(language_normalized=" ".join(data["language"].lower().split()))
+        if data.get("language_level"):
+            rows = rows.filter(level=data["language_level"])
+        return rows
 
     def filter_language(self, queryset, name, value):
-        return queryset.filter(
-            languages__language_normalized=" ".join(value.lower().split())
-        ).distinct()
+        return queryset.filter(Exists(self._language_rows()))
 
     def filter_language_level(self, queryset, name, value):
-        return queryset.filter(languages__level=value.upper()).distinct()
+        if self.form.cleaned_data.get("language"):
+            return queryset  # already applied together with the language
+        return queryset.filter(Exists(self._language_rows()))
 
     def filter_employment(self, queryset, name, value):
         return queryset.filter(employment_preferences__contains=[value])

@@ -4079,6 +4079,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        active_jobs:
+          type: integer
+          readOnly: true
         verification_status:
           allOf:
           - $ref: '#/components/schemas/VerificationStatusEnum'
@@ -4112,10 +4115,6 @@ components:
           type: string
           format: email
           readOnly: true
-        active_jobs:
-          type: integer
-          readOnly: true
-          default: 0
       required:
       - active_jobs
       - city
@@ -4209,6 +4208,9 @@ components:
           type: string
           format: uuid
           readOnly: true
+        active_jobs:
+          type: integer
+          readOnly: true
         verification_status:
           allOf:
           - $ref: '#/components/schemas/VerificationStatusEnum'
@@ -4239,6 +4241,7 @@ components:
           format: date-time
           readOnly: true
       required:
+      - active_jobs
       - city
       - created_at
       - description

@@ -14,6 +14,7 @@ from apps.providers.models import ProviderProfile
 from apps.specialties.models import Specialty
 from apps.specialties.serializers import SpecialtySerializer
 
+from . import services
 from .models import (
     Credential,
     Education,
@@ -120,8 +121,11 @@ class EmployerPublicSerializer(serializers.ModelSerializer):
 
 
 class EmployerOwnerSerializer(EmployerPublicSerializer):
+    active_jobs = serializers.SerializerMethodField()
+
     class Meta(EmployerPublicSerializer.Meta):
         fields = EmployerPublicSerializer.Meta.fields + (
+            "active_jobs",
             "verification_status",
             "verification_note",
             "verification_requested_at",
@@ -131,6 +135,14 @@ class EmployerOwnerSerializer(EmployerPublicSerializer):
             "created_at",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_active_jobs(self, obj) -> int:
+        """Authoritative server count for the `jobs.active_limit` gate (not a page count)."""
+        annotated = getattr(obj, "active_jobs", None)
+        if annotated is not None:
+            return annotated
+        return services._active_job_count(obj)
 
 
 class EmployerWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
@@ -204,10 +216,9 @@ class MemberAddSerializer(serializers.Serializer):
 
 class EmployerAdminSerializer(EmployerOwnerSerializer):
     created_by_email = serializers.EmailField(source="created_by.email", read_only=True)
-    active_jobs = serializers.IntegerField(read_only=True, default=0)
 
     class Meta(EmployerOwnerSerializer.Meta):
-        fields = EmployerOwnerSerializer.Meta.fields + ("created_by_email", "active_jobs")
+        fields = EmployerOwnerSerializer.Meta.fields + ("created_by_email",)
         read_only_fields = fields
 
 
@@ -297,6 +308,12 @@ class SkillSerializer(serializers.ModelSerializer):
 
 
 class LanguageSkillSerializer(serializers.ModelSerializer):
+    language = serializers.CharField(
+        max_length=40,
+        validators=[validate_no_contact_info],
+        help_text="e.g. Arabic, English, Kurdish",
+    )
+
     class Meta:
         model = LanguageSkill
         fields = ("id", "language", "level")
@@ -613,6 +630,9 @@ class JobWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
         required=False,
     )
     title = serializers.CharField(max_length=150, validators=[validate_no_contact_info])
+    detailed_specialty = serializers.CharField(
+        max_length=150, required=False, allow_blank=True, validators=[validate_no_contact_info]
+    )
     description = serializers.CharField(validators=[validate_no_contact_info])
     responsibilities = serializers.CharField(
         required=False, allow_blank=True, validators=[validate_no_contact_info]

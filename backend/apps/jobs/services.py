@@ -242,6 +242,7 @@ def contact_flags(job: JobPost) -> list[dict]:
     flags = []
     for field in (
         "title",
+        "detailed_specialty",
         "description",
         "responsibilities",
         "requirements",
