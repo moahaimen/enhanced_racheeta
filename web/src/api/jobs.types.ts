@@ -50,6 +50,8 @@ export interface EmployerPublic {
 }
 
 export interface EmployerOwner extends EmployerPublic {
+  /** Server-side count of PENDING_ADMIN_REVIEW + PUBLISHED jobs (the jobs.active_limit gate). */
+  active_jobs: number
   verification_status: EmployerVerificationStatus
   verification_note: string
   verification_requested_at: string | null

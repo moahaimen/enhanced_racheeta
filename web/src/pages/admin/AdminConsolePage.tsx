@@ -361,6 +361,16 @@ function SubscriptionRow({ sub: s, reload }: { sub: AdminSubscription; reload: (
             {t('common.cancel')}
           </ApiActionButton>
         </div>
+      ) : s.status === 'SUSPENDED' ? (
+        <div className={styles.actions}>
+          <TextField label={t('admin.note')} value={note} onChange={(e) => setNote(e.target.value)} />
+          <ApiActionButton size="sm" action={() => admin.subscriptionAction(s.id, 'activate', { note: note.trim() })} onSuccess={reload} onError={(err) => setError(toErrorMessage(err))} leading={<Icon name="check" size={16} />}>
+            {t('admin.reactivate')}
+          </ApiActionButton>
+          <ApiActionButton size="sm" variant="ghost" action={() => admin.subscriptionAction(s.id, 'cancel', { reason: note.trim() })} onSuccess={reload} onError={(err) => setError(toErrorMessage(err))}>
+            {t('common.cancel')}
+          </ApiActionButton>
+        </div>
       ) : null}
     </li>
   )

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { ApiError, jobs as jobsApi, reference } from '../../api'
 import type { BillingSummary, EmployerOwner, Governorate, JobEmployer, Member, Plan } from '../../api'
-import { Alert, ApiActionButton, AsyncPage, Badge, Container, EmptyState, ErrorState, FormActions, Icon, JobStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, SectionCard, Select, StatCard, Textarea, TextField, UsageMeter, useFormErrors } from '../../design-system'
+import { Alert, ApiActionButton, AsyncPage, Badge, Container, EmptyState, ErrorState, FormActions, Icon, JobStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, Pagination, SectionCard, Select, StatCard, Textarea, TextField, UsageMeter, useFormErrors } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { ClientValidationError } from '../validation'
 import { EmployerForm } from './EmployerForm'
@@ -42,6 +42,8 @@ export function EmployerWorkspacePage() {
   )
 }
 
+const JOBS_PAGE_SIZE = 20
+
 const SECTIONS = [
   { id: 'overview', icon: 'sparkle', key: 'overview' },
   { id: 'jobs', icon: 'briefcase', key: 'jobs' },
@@ -54,8 +56,11 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
   const { t } = useTranslation()
   const [employer, setEmployer] = useState(initial)
   const billing = useAsyncData<BillingSummary>((signal) => jobsApi.getEmployerBilling(signal), [])
-  const jobs = useAsyncData((signal) => jobsApi.listEmployerJobs('', 1, signal), [])
-  const activeJobs = (jobs.data?.results ?? []).filter((j) => j.status === 'PUBLISHED' || j.status === 'PENDING_ADMIN_REVIEW').length
+  const [params, setParams] = useSearchParams()
+  const jobsPage = Math.max(1, Number(params.get('jobs_page') ?? '1') || 1)
+  const jobs = useAsyncData((signal) => jobsApi.listEmployerJobs('', jobsPage, signal), [jobsPage])
+  // Authoritative server count (jobs.active_limit gate), never derived from the visible page.
+  const activeJobs = employer.active_jobs
   const isOwner = employer.my_role === 'OWNER'
   const canRecruit = employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE'
 
@@ -101,7 +106,7 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
               </Badge>
             </div>
             <div className={styles.stats}>
-              <StatCard label={t('entitlements.jobs.active_limit')} value={jobs.data ? activeJobs : <Icon name="clock" size={22} />} />
+              <StatCard label={t('entitlements.jobs.active_limit')} value={<span data-testid="active-jobs-stat">{activeJobs}</span>} />
               <StatCard label={t('employer.plan')} value={billing.data?.plan ? billing.data.plan.code : <Icon name="clock" size={22} />} hint={billing.data?.subscription ? t(`subscriptionStatus.${billing.data.subscription.status}`) : undefined} />
               <StatCard label={t('employer.jobsTitle')} value={jobs.data ? jobs.data.count : <Icon name="clock" size={22} />} />
             </div>
@@ -138,6 +143,9 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
                 ))}
               </ul>
             )}
+            {jobs.data ? (
+              <Pagination page={jobsPage} total={Math.max(1, Math.ceil(jobs.data.count / JOBS_PAGE_SIZE))} hasNext={jobs.data.next !== null} hasPrevious={jobs.data.previous !== null} onChange={(next) => setParams(next > 1 ? { jobs_page: String(next) } : {})} />
+            ) : null}
           </SectionCard>
 
           <BillingBlock billing={billing} isOwner={isOwner} />

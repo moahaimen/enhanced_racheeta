@@ -76,4 +76,41 @@ describe('AdminConsolePage', () => {
     await waitFor(() => expect(adminApi.grantCredits).toHaveBeenCalledWith('ba-1', 'talent.search_limit', 10, ''))
     expect(await within(form).findByText(/25/)).toBeInTheDocument()
   })
+
+  describe('suspended subscriptions', () => {
+    beforeEach(() => {
+      vi.mocked(adminApi.listSubscriptions).mockResolvedValue(paginated([makeAdminSubscription({ status: 'SUSPENDED' })]))
+    })
+
+    it('renders reactivate and cancel, and reactivates through the activate action', async () => {
+      const pending = deferred<ReturnType<typeof makeAdminSubscription>>()
+      vi.mocked(adminApi.subscriptionAction).mockReturnValue(pending.promise)
+      renderApp('/admin-console?tab=subscriptions&filter=SUSPENDED')
+      const row = await screen.findByTestId('admin-subscription')
+      expect(within(row).getByText(/موقوف|Suspended/)).toBeInTheDocument()
+      const reactivate = within(row).getByRole('button', { name: /إعادة التفعيل|Reactivate/i })
+      expect(within(row).getByRole('button', { name: /^إلغاء$|^Cancel$/i })).toBeInTheDocument()
+      expect(within(row).queryByRole('button', { name: /^إيقاف$|^Suspend$/i })).toBeNull()
+      const user = userEvent.setup()
+      await user.type(within(row).getByLabelText(/ملاحظة|Note/i), 'دفع المتأخرات')
+      await user.click(reactivate)
+      expect(reactivate).toBeDisabled()
+      expect(reactivate).toHaveAttribute('aria-busy', 'true')
+      await user.click(reactivate)
+      expect(adminApi.subscriptionAction).toHaveBeenCalledTimes(1)
+      expect(adminApi.subscriptionAction).toHaveBeenCalledWith('sub-1', 'activate', { note: 'دفع المتأخرات' })
+      pending.resolve(makeAdminSubscription({ status: 'ACTIVE' }))
+      await waitFor(() => expect(adminApi.listSubscriptions).toHaveBeenCalledTimes(2))
+    })
+
+    it('cancels a suspended subscription', async () => {
+      vi.mocked(adminApi.subscriptionAction).mockResolvedValue(makeAdminSubscription({ status: 'CANCELLED' }))
+      renderApp('/admin-console?tab=subscriptions&filter=SUSPENDED')
+      const row = await screen.findByTestId('admin-subscription')
+      const user = userEvent.setup()
+      await user.click(within(row).getByRole('button', { name: /^إلغاء$|^Cancel$/i }))
+      expect(adminApi.subscriptionAction).toHaveBeenCalledWith('sub-1', 'cancel', { reason: '' })
+      await waitFor(() => expect(adminApi.listSubscriptions).toHaveBeenCalledTimes(2))
+    })
+  })
 })

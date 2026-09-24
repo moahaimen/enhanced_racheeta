@@ -696,7 +696,14 @@
       "ACCEPTED": "مقبول",
       "DECLINED": "مرفوض",
       "CANCELLED": "ملغى"
-    }
+    },
+    "emptyPage": "لا توجد طلبات في هذه الصفحة.",
+    "count_zero": "لا توجد طلبات",
+    "count_one": "طلب واحد",
+    "count_two": "طلبان",
+    "count_few": "{{count}} طلبات",
+    "count_many": "{{count}} طلباً",
+    "count_other": "{{count}} طلب"
   },
   "seekerProfile": {
     "title": "سيرتي المهنية",
@@ -944,6 +951,7 @@
     "creditKey": "نوع الرصيد",
     "creditAmount": "الكمية (سالب للسحب)",
     "grant": "منح الرصيد",
-    "creditGranted": "تم. رصيد «{{key}}» الحالي: {{balance}}"
+    "creditGranted": "تم. رصيد «{{key}}» الحالي: {{balance}}",
+    "reactivate": "إعادة التفعيل"
   }
 }

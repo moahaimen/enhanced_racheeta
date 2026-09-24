@@ -672,7 +672,10 @@
       "ACCEPTED": "Accepted",
       "DECLINED": "Declined",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "emptyPage": "No applications on this page.",
+    "count_one": "{{count}} application",
+    "count_other": "{{count}} applications"
   },
   "seekerProfile": {
     "title": "My résumé",
@@ -916,6 +919,7 @@
     "creditKey": "Credit type",
     "creditAmount": "Amount (negative to revoke)",
     "grant": "Grant credits",
-    "creditGranted": "Done. Current “{{key}}” balance: {{balance}}"
+    "creditGranted": "Done. Current “{{key}}” balance: {{balance}}",
+    "reactivate": "Reactivate"
   }
 }

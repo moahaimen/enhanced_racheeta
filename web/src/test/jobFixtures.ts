@@ -20,6 +20,7 @@ export function makeEmployerPublic(overrides: Partial<EmployerPublic> = {}): Emp
 export function makeEmployerOwner(overrides: Partial<EmployerOwner> = {}): EmployerOwner {
   return {
     ...makeEmployerPublic(),
+    active_jobs: 0,
     verification_status: 'VERIFIED',
     verification_note: '',
     verification_requested_at: null,
@@ -248,6 +249,6 @@ export function makeAdminSubscription(overrides: Partial<AdminSubscription> = {}
   }
 }
 
-export function paginated<T>(results: T[], count = results.length) {
-  return { count, next: null, previous: null, results }
+export function paginated<T>(results: T[], count = results.length, next: string | null = null, previous: string | null = null) {
+  return { count, next, previous, results }
 }

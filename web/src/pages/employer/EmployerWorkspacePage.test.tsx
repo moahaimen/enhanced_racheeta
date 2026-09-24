@@ -9,7 +9,7 @@ import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
 import { makeBilling, makeEmployerOwner, makeJobEmployer, makePlan, paginated } from '../../test/jobFixtures'
 import { baghdad } from '../../test/providerFixtures'
-import { makeAccount, renderApp } from '../../test/renderApp'
+import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/jobs')
@@ -75,5 +75,40 @@ describe('EmployerWorkspacePage', () => {
     expect(await screen.findByText(/أُرسل طلبك|Your request was sent/i)).toBeInTheDocument()
     // Prices are never invented on the client: the plan card says "on request" when the API has none.
     expect(screen.queryByText(/IQD\s*\d/)).toBeNull()
+  })
+
+  describe('jobs pagination', () => {
+    const jobsPage = (page: number) =>
+      paginated(
+        Array.from({ length: 20 }, (_, i) => makeJobEmployer({ id: `j-${page}-${i}`, title: `Job ${page}-${i}`, status: 'CLOSED' })),
+        35,
+      )
+
+    it('uses the server active-job count, not the visible page', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ active_jobs: 7 }))
+      vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue({ ...jobsPage(1), next: 'n', previous: null })
+      renderApp('/employer')
+      expect(await screen.findByTestId('active-jobs-stat')).toHaveTextContent('7')
+      expect(await screen.findAllByTestId('employer-job-row')).toHaveLength(20)
+    })
+
+    it('navigates to page 2 through the URL with a loading indicator and the right API call', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ active_jobs: 7 }))
+      const second = deferred<ReturnType<typeof jobsPage>>()
+      vi.mocked(jobsApi.listEmployerJobs).mockImplementation((_status, page = 1) => {
+        if (page === 2) return second.promise
+        return Promise.resolve({ ...jobsPage(1), next: 'n', previous: null })
+      })
+      const { router } = renderApp('/employer')
+      expect(await screen.findByText('Job 1-0')).toBeInTheDocument()
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /التالي|Next/i }))
+      await waitFor(() => expect(router.state.location.search).toBe('?jobs_page=2'))
+      expect(await screen.findByTestId('jobs-loading')).toBeInTheDocument()
+      expect(screen.getByTestId('active-jobs-stat')).toHaveTextContent('7')
+      second.resolve({ ...jobsPage(2), next: null, previous: 'p' })
+      expect(await screen.findByText('Job 2-0')).toBeInTheDocument()
+      expect(jobsApi.listEmployerJobs).toHaveBeenLastCalledWith('', 2, expect.anything())
+    })
   })
 })

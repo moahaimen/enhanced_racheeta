@@ -1,31 +1,45 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { jobs as jobsApi } from '../../api'
 import type { ApplicationSeeker, Invitation } from '../../api'
-import { Alert, ApiActionButton, ApplicationStatusBadge, AsyncPage, Badge, Container, EmptyState, Icon, InvitationStatusBadge, LinkButton, PageHeader, PageStack, SectionCard, Textarea } from '../../design-system'
+import { Alert, ApiActionButton, ApplicationStatusBadge, AsyncPage, Badge, Container, EmptyState, Icon, InvitationStatusBadge, LinkButton, PageHeader, PageStack, Pagination, SectionCard, Textarea } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import styles from './MyApplicationsPage.module.css'
 
+const PAGE_SIZE = 20
+
+/** /jobs/my-applications — every application the seeker ever made, paginated from the URL (`?page=`). */
 export function MyApplicationsPage() {
   const { t } = useTranslation()
+  const [params, setParams] = useSearchParams()
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const goTo = (next: number) => setParams(next > 1 ? { page: String(next) } : {})
   return (
     <Container width="xl">
       <PageHeader eyebrow={<><Icon name="briefcase" size={16} />{t('nav.jobs')}</>} title={t('applications.title')} description={t('applications.intro')} />
       <PageStack>
         <InvitationsBlock />
-        <AsyncPage load={(signal) => jobsApi.listMyApplications(1, signal)}>
-          {(page, reload) =>
-            page.results.length === 0 ? (
+        <AsyncPage load={(signal) => jobsApi.listMyApplications(page, signal)} deps={[page]}>
+          {(result, reload) =>
+            result.results.length === 0 ? (
               <div className="card-block">
-                <EmptyState icon="briefcase" title={t('applications.empty')} testId="applications-empty" action={<LinkButton to="/jobs">{t('applications.browse')}</LinkButton>} />
+                {page > 1 ? (
+                  <EmptyState icon="briefcase" title={t('applications.emptyPage')} testId="applications-empty-page" action={<LinkButton to="/jobs/my-applications">{t('common.previous')}</LinkButton>} />
+                ) : (
+                  <EmptyState icon="briefcase" title={t('applications.empty')} testId="applications-empty" action={<LinkButton to="/jobs">{t('applications.browse')}</LinkButton>} />
+                )}
               </div>
             ) : (
               <>
-                {page.results.map((application) => (
+                <p className="text-caption" data-testid="applications-count">
+                  {t('applications.count', { count: result.count })}
+                </p>
+                {result.results.map((application) => (
                   <ApplicationCard key={application.id} application={application} reload={reload} />
                 ))}
+                <Pagination page={page} total={Math.max(1, Math.ceil(result.count / PAGE_SIZE))} hasNext={result.next !== null} hasPrevious={result.previous !== null} onChange={goTo} />
               </>
             )
           }
