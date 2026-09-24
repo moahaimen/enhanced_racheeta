@@ -31,9 +31,7 @@ class JobFilter(django_filters.FilterSet):
     q = django_filters.CharFilter(method="filter_q")
     profession = django_filters.ChoiceFilter(choices=Profession.choices)
     specialty = django_filters.CharFilter(field_name="general_specialty__slug")
-    detailed_specialty = django_filters.CharFilter(
-        field_name="detailed_specialty", lookup_expr="icontains"
-    )
+    detailed_specialty = django_filters.CharFilter(method="filter_detailed_specialty")
     degree = django_filters.ChoiceFilter(field_name="minimum_degree", choices=Degree.choices)
     governorate = django_filters.UUIDFilter(field_name="governorate_id")
     city = django_filters.UUIDFilter(field_name="city_id")
@@ -61,6 +59,9 @@ class JobFilter(django_filters.FilterSet):
             | Q(employer__name__icontains=value)
         )
 
+    def filter_detailed_specialty(self, queryset, name, value):
+        return queryset.filter(detailed_specialty__icontains=_collapse(value))
+
     def filter_salary(self, queryset, name, value):
         if value:
             return queryset.filter(salary_visible=True).filter(
@@ -73,9 +74,7 @@ class TalentFilter(django_filters.FilterSet):
     q = django_filters.CharFilter(method="filter_q")
     profession = django_filters.ChoiceFilter(choices=Profession.choices)
     specialty = django_filters.CharFilter(field_name="general_specialty__slug")
-    detailed_specialty = django_filters.CharFilter(
-        field_name="detailed_specialty", lookup_expr="icontains"
-    )
+    detailed_specialty = django_filters.CharFilter(method="filter_detailed_specialty")
     degree = django_filters.ChoiceFilter(
         choices=Degree.choices, method="filter_degree", help_text="Minimum degree"
     )
@@ -102,6 +101,7 @@ class TalentFilter(django_filters.FilterSet):
         fields = []
 
     def filter_q(self, queryset, name, value):
+        value = _collapse(value)
         return queryset.filter(
             Q(professional_title__icontains=value)
             | Q(professional_summary__icontains=value)
@@ -112,6 +112,9 @@ class TalentFilter(django_filters.FilterSet):
         rank = DEGREE_RANK.get(value, 0)
         allowed = [d for d, r in DEGREE_RANK.items() if r >= rank]
         return queryset.filter(degree__in=allowed)
+
+    def filter_detailed_specialty(self, queryset, name, value):
+        return queryset.filter(detailed_specialty__icontains=_collapse(value))
 
     def filter_skill(self, queryset, name, value):
         rows = Skill.objects.filter(
@@ -141,3 +144,57 @@ class TalentFilter(django_filters.FilterSet):
 
     def filter_employment(self, queryset, name, value):
         return queryset.filter(employment_preferences__contains=[value])
+
+
+# ---- billable identity of a talent search --------------------------------------
+
+
+def _collapse(value: str) -> str:
+    return " ".join(str(value).split())
+
+
+def _fold(value: str) -> str:
+    """Case-insensitive, whitespace-insensitive text (icontains / normalised lookups)."""
+    return _collapse(value).lower()
+
+
+def _number(value) -> str:
+    try:
+        return str(int(float(str(value).strip())))
+    except (TypeError, ValueError):
+        return str(value).strip()
+
+
+# One normaliser per filter, mirroring how TalentFilter matches that parameter.
+# Exact, case-sensitive choices/slugs are only trimmed; UUIDs are case-folded.
+TALENT_SIGNATURE_NORMALISERS = {
+    "q": _fold,
+    "profession": lambda v: str(v).strip(),
+    "specialty": lambda v: str(v).strip(),
+    "detailed_specialty": _fold,
+    "degree": lambda v: str(v).strip(),
+    "min_experience": _number,
+    "max_experience": _number,
+    "governorate": lambda v: str(v).strip().lower(),
+    "city": lambda v: str(v).strip().lower(),
+    "skill": _fold,
+    "language": _fold,
+    "language_level": lambda v: str(v).strip().upper(),
+    "availability": lambda v: str(v).strip().upper(),
+    "employment_type": lambda v: str(v).strip(),
+}
+
+
+def canonical_talent_params(params: dict) -> dict:
+    """Only real filter parameters, each in its canonical form; pagination,
+    ordering, blanks and unknown keys are ignored because they do not change
+    which candidates match."""
+    material = {}
+    for key, normaliser in TALENT_SIGNATURE_NORMALISERS.items():
+        raw = params.get(key)
+        if raw in ("", None):
+            continue
+        value = normaliser(raw)
+        if value != "":
+            material[key] = value
+    return material

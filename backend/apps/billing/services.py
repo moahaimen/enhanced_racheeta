@@ -435,12 +435,26 @@ def cancel_subscription(sub, *, admin, reason=""):
     )
 
 
-def expire_subscription(sub):
-    if sub.status == SubscriptionStatus.ACTIVE:
-        previous = sub.status
-        sub.status = SubscriptionStatus.EXPIRED
-        sub.save(update_fields=["status", "updated_at"])
-        _event(sub, previous, SubscriptionStatus.EXPIRED, None, "term ended")
+@transaction.atomic
+def expire_subscription(sub) -> bool:
+    """Read-time expiry under the subscription row lock: only a row that is
+    STILL ACTIVE with an elapsed term becomes EXPIRED, so a concurrent admin
+    suspension/cancellation is never overwritten and two concurrent lookups
+    produce exactly one ACTIVE → EXPIRED event. Lock order is unchanged
+    (billing account, when held, before the subscription row)."""
+    sub.status, sub.ends_at = (
+        Subscription.objects.select_for_update()
+        .filter(pk=sub.pk)
+        .values_list("status", "ends_at")
+        .get()
+    )
+    if sub.status != SubscriptionStatus.ACTIVE or not _has_elapsed(sub):
+        return False
+    previous = sub.status
+    sub.status = SubscriptionStatus.EXPIRED
+    sub.save(update_fields=["status", "updated_at"])
+    _event(sub, previous, SubscriptionStatus.EXPIRED, None, "term ended")
+    return True
 
 
 def _has_elapsed(sub: Subscription) -> bool:

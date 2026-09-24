@@ -15,6 +15,7 @@ from apps.billing import services as billing
 from apps.billing.types import Audience, Keys, SubjectType
 from apps.moderation.contact_leak import detector
 
+from .filters import canonical_talent_params
 from .models import (
     Employer,
     EmployerMembership,
@@ -578,9 +579,21 @@ def apply_to_job(
         to_status=ApplicationStatus.SUBMITTED,
         actor=profile.account,
     )
-    JobInvitation.objects.filter(
+    # Applying answers a LIVE invitation to this job; an invitation whose window
+    # already closed is normalised to EXPIRED here, exactly as the explicit
+    # response path and the invitation lists do. Rows are locked so no
+    # concurrent response can double-transition them.
+    now = timezone.now()
+    for invitation in JobInvitation.objects.select_for_update().filter(
         job=job, job_seeker=profile, status=InvitationStatus.PENDING
-    ).update(status=InvitationStatus.ACCEPTED, responded_at=timezone.now())
+    ):
+        if invitation.expires_at <= now:
+            invitation.status = InvitationStatus.EXPIRED
+            invitation.save(update_fields=["status", "updated_at"])
+        else:
+            invitation.status = InvitationStatus.ACCEPTED
+            invitation.responded_at = now
+            invitation.save(update_fields=["status", "responded_at", "updated_at"])
     return application
 
 
@@ -727,12 +740,11 @@ def send_message(
 
 
 def search_signature(params: dict) -> str:
-    """Pagination/ordering are excluded so paging through results is one search."""
-    material = {
-        k: v
-        for k, v in sorted(params.items())
-        if k not in ("page", "page_size", "ordering") and v not in ("", None)
-    }
+    """Billable identity of a talent search: the filter values canonicalised the
+    way the filter set actually matches them (see `canonical_talent_params`),
+    so `skill=Nursing`, `skill=nursing` and `skill= Nursing ` are one search,
+    while pagination, ordering and unknown parameters never create a new one."""
+    material = canonical_talent_params(params)
     return hashlib.sha256(
         json.dumps(material, sort_keys=True, ensure_ascii=False).encode()
     ).hexdigest()[:64]
