@@ -58,9 +58,10 @@ describe('MyApplicationsPage', () => {
 
   it('responds to an invitation without auto-applying', async () => {
     vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([]))
-    vi.mocked(jobsApi.listMyInvitations).mockResolvedValue(
-      paginated([{ id: 'inv-1', job: makeJobCard(), message: 'ندعوك للتقديم', status: 'PENDING', expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' }]),
-    )
+    const pendingInvite = { id: 'inv-1', job: makeJobCard(), message: 'ندعوك للتقديم', status: 'PENDING' as const, expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' }
+    vi.mocked(jobsApi.listMyInvitations)
+      .mockResolvedValueOnce(paginated([pendingInvite]))
+      .mockResolvedValue(paginated([{ ...pendingInvite, status: 'ACCEPTED' as const }]))
     vi.mocked(jobsApi.respondToInvitation).mockResolvedValue({ id: 'inv-1', job: makeJobCard(), message: '', status: 'ACCEPTED', expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' })
     renderApp('/jobs/my-applications')
     const row = await screen.findByTestId('invitation-row')
@@ -68,7 +69,8 @@ describe('MyApplicationsPage', () => {
     await user.click(within(row).getByRole('button', { name: /قبول الدعوة|Accept invitation/i }))
     expect(jobsApi.respondToInvitation).toHaveBeenCalledWith('inv-1', true)
     expect(jobsApi.applyToJob).not.toHaveBeenCalled()
-    expect(await screen.findByText(/قبلتَ الدعوة|You accepted the invitation/i)).toBeInTheDocument()
+    expect(await screen.findByTestId('invitation-accepted-hint')).toHaveTextContent(/قبلتَ الدعوة|You accepted the invitation/i)
+    expect(within(await screen.findByTestId('invitation-row')).queryByRole('button', { name: /قبول الدعوة|Accept invitation/i })).toBeNull()
   })
 
   describe('pagination', () => {
@@ -188,6 +190,64 @@ describe('MyApplicationsPage', () => {
       vi.mocked(jobsApi.listMyInvitations).mockResolvedValue({ count: 20, next: null, previous: 'p', results: [] })
       renderApp('/jobs/my-applications?invites_page=3')
       expect(await screen.findByTestId('invitations-empty-page')).toBeInTheDocument()
+    })
+  })
+
+  describe('review round four', () => {
+    const interview = (status: 'PROPOSED' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED') => ({ id: 'iv-1', proposed_at: '2026-10-01T10:00:00Z', mode: 'IN_PERSON' as const, location_text: '', employer_note: '', status, candidate_response: '', responded_at: null, created_at: '2026-09-22T00:00:00Z' })
+    const invite = (id: string, status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED') => ({ id, job: makeJobCard({ id: `job-${id}`, title: `Job ${id}` }), message: '', status, expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' })
+
+    it('lets the seeker withdraw while the application is in INTERVIEW, with the loading contract', async () => {
+      vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([makeApplicationSeeker({ status: 'INTERVIEW', interviews: [interview('PROPOSED')] })]))
+      const pending = deferred<ReturnType<typeof makeApplicationSeeker>>()
+      vi.mocked(jobsApi.withdrawApplication).mockReturnValue(pending.promise)
+      renderApp('/jobs/my-applications')
+      const card = await screen.findByTestId('application-card')
+      const withdraw = within(card).getByRole('button', { name: /سحب الطلب|Withdraw/i })
+      const user = userEvent.setup()
+      await user.click(withdraw)
+      expect(withdraw).toBeDisabled()
+      expect(withdraw).toHaveAttribute('aria-busy', 'true')
+      await user.click(withdraw)
+      expect(jobsApi.withdrawApplication).toHaveBeenCalledTimes(1)
+      pending.resolve(makeApplicationSeeker({ status: 'WITHDRAWN' }))
+      await waitFor(() => expect(jobsApi.listMyApplications).toHaveBeenCalledTimes(2))
+    })
+
+    it.each(['ACCEPTED', 'REJECTED', 'WITHDRAWN'] as const)('offers no withdrawal and no interview answers once the application is %s', async (status) => {
+      vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([makeApplicationSeeker({ status, interviews: [interview('PROPOSED')] })]))
+      renderApp('/jobs/my-applications')
+      const card = await screen.findByTestId('application-card')
+      expect(within(card).queryByRole('button', { name: /سحب الطلب|Withdraw/i })).toBeNull()
+      expect(within(card).queryByRole('button', { name: /قبول الموعد|Accept the time/i })).toBeNull()
+      expect(within(card).queryByRole('button', { name: /اعتذار|Decline/i })).toBeNull()
+    })
+
+    it('shows interview answers while the application is open', async () => {
+      vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([makeApplicationSeeker({ status: 'INTERVIEW', interviews: [interview('PROPOSED')] })]))
+      renderApp('/jobs/my-applications')
+      const card = await screen.findByTestId('application-card')
+      expect(within(card).getByRole('button', { name: /قبول الموعد|Accept the time/i })).toBeInTheDocument()
+    })
+
+    it('shows the acceptance guidance only for ACCEPTED invitations', async () => {
+      vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([]))
+      vi.mocked(jobsApi.listMyInvitations).mockResolvedValue(paginated([invite('p', 'PENDING'), invite('a', 'ACCEPTED'), invite('d', 'DECLINED'), invite('e', 'EXPIRED'), invite('c', 'CANCELLED')]))
+      renderApp('/jobs/my-applications')
+      const rows = await screen.findAllByTestId('invitation-row')
+      expect(rows).toHaveLength(5)
+      const [pendingRow, acceptedRow, declinedRow, expiredRow, cancelledRow] = rows
+      if (!pendingRow || !acceptedRow || !declinedRow || !expiredRow || !cancelledRow) throw new Error('rows missing')
+      expect(within(pendingRow).getByRole('button', { name: /قبول الدعوة|Accept invitation/i })).toBeInTheDocument()
+      expect(within(pendingRow).getByRole('button', { name: /رفض الدعوة|Decline invitation/i })).toBeInTheDocument()
+      expect(within(pendingRow).queryByTestId('invitation-accepted-hint')).toBeNull()
+      expect(within(acceptedRow).getByTestId('invitation-accepted-hint')).toHaveTextContent(/قبلتَ الدعوة|You accepted the invitation/)
+      expect(within(acceptedRow).queryByRole('button')).toBeNull()
+      for (const row of [declinedRow, expiredRow, cancelledRow]) {
+        expect(within(row).queryByTestId('invitation-accepted-hint')).toBeNull()
+        expect(within(row).queryByRole('button')).toBeNull()
+      }
+      expect(screen.getAllByTestId('invitation-accepted-hint')).toHaveLength(1)
     })
   })
 })

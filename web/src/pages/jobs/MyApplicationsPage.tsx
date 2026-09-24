@@ -52,7 +52,9 @@ export function MyApplicationsPage() {
 function ApplicationCard({ application, reload }: { application: ApplicationSeeker; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const [error, setError] = useState<string | null>(null)
-  const canWithdraw = ['SUBMITTED', 'REVIEWING', 'SHORTLISTED'].includes(application.status)
+  const TERMINAL: ApplicationSeeker['status'][] = ['ACCEPTED', 'REJECTED', 'WITHDRAWN']
+  const canWithdraw = ['SUBMITTED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW'].includes(application.status)
+  const isTerminal = TERMINAL.includes(application.status)
   return (
     <SectionCard
       title={
@@ -92,7 +94,7 @@ function ApplicationCard({ application, reload }: { application: ApplicationSeek
                     <span>
                       <Badge tone={iv.status === 'ACCEPTED' ? 'success' : iv.status === 'PROPOSED' ? 'warning' : 'neutral'}>{t(`applications.interviewStatus.${iv.status}`)}</Badge>
                     </span>
-                    {iv.status === 'PROPOSED' ? (
+                    {iv.status === 'PROPOSED' && !isTerminal ? (
                       <span className="cluster">
                         <ApiActionButton size="sm" action={() => jobsApi.respondToInterview(iv.id, true)} onSuccess={reload} onError={(e) => setError(toErrorMessage(e))}>
                           {t('applications.accept')}
@@ -190,7 +192,6 @@ function InvitationsBlock() {
     })
   const invitations = useAsyncData((signal) => jobsApi.listMyInvitations(invitesPage, signal), [invitesPage])
   const [error, setError] = useState<string | null>(null)
-  const pending = (invitations.data?.results ?? []).filter((i) => i.status === 'PENDING')
   if (invitations.loading) return <LoadingState testId="invitations-loading" />
   if (invitations.error) return <ErrorState error={invitations.error} onRetry={invitations.reload} />
   if (!invitations.data || (invitations.data.count === 0 && invitesPage === 1)) return null
@@ -210,6 +211,7 @@ function InvitationsBlock() {
             <span>
               <InvitationStatusBadge status={inv.status} />
             </span>
+            {inv.status === 'ACCEPTED' ? <span className="text-caption" data-testid="invitation-accepted-hint">{t('applications.inviteAccepted')}</span> : null}
             {inv.status === 'PENDING' ? (
               <span className="cluster">
                 <ApiActionButton size="sm" action={() => jobsApi.respondToInvitation(inv.id, true)} onSuccess={() => invitations.reload()} onError={(e) => setError(toErrorMessage(e))}>
@@ -223,7 +225,6 @@ function InvitationsBlock() {
           </li>
         ))}
       </ul>
-      {pending.length === 0 ? null : <p className="text-caption">{t('applications.inviteAccepted')}</p>}
       <Pagination page={invitesPage} total={Math.max(1, Math.ceil(invitations.data.count / PAGE_SIZE))} hasNext={invitations.data.next !== null} hasPrevious={invitations.data.previous !== null} onChange={goTo} />
     </SectionCard>
   )

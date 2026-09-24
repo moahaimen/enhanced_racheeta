@@ -525,7 +525,8 @@
     "already_member": "This account already belongs to an organisation.",
     "job_locked": "The job cannot be edited in its current state.",
     "application_closed": "This application is closed.",
-    "invitation_expired": "This invitation has expired."
+    "invitation_expired": "This invitation has expired.",
+    "identity_locked": "This field is locked after verification. Ask Racheeta administration to change it."
   },
   "jobs": {
     "featured": "Featured",
@@ -801,7 +802,8 @@
     },
     "endMember": "End membership",
     "saved": "Saved.",
-    "myRole": "My role"
+    "myRole": "My role",
+    "identityLocked": "Once verification is requested, the organisation's identity fields (name, type, governorate, linked facility, agency flag) are locked. Contact Racheeta administration to change them."
   },
   "jobEditor": {
     "newTitle": "New job",

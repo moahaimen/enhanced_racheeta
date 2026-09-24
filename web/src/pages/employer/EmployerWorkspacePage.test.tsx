@@ -111,4 +111,34 @@ describe('EmployerWorkspacePage', () => {
       expect(jobsApi.listEmployerJobs).toHaveBeenLastCalledWith('', 2, expect.anything())
     })
   })
+
+  describe('identity lock after verification', () => {
+    it('disables the identity fields for a verified organisation and only submits editable ones', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'VERIFIED' }))
+      vi.mocked(jobsApi.updateMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'VERIFIED', description: 'updated' }))
+      renderApp('/employer')
+      const nameField = await screen.findByLabelText(/اسم المؤسسة|Organisation name/i)
+      expect(nameField).toBeDisabled()
+      expect(screen.getByLabelText(/نوع المؤسسة|Organisation type/i)).toBeDisabled()
+      expect(screen.getByLabelText(/مكتب توظيف|Recruitment agency/i)).toBeDisabled()
+      expect(screen.getByText(/تُقفل بيانات هوية المؤسسة|identity fields .* are locked/i)).toBeInTheDocument()
+      const user = userEvent.setup()
+      const description = screen.getByLabelText(/نبذة عن المؤسسة|About the organisation/i)
+      expect(description).toBeEnabled()
+      await user.type(description, ' updated')
+      await user.click(screen.getByRole('button', { name: /^حفظ$|^Save$/i }))
+      await waitFor(() => expect(jobsApi.updateMyEmployer).toHaveBeenCalledTimes(1))
+      const payload = vi.mocked(jobsApi.updateMyEmployer).mock.calls[0]?.[0]
+      expect(payload).not.toHaveProperty('organization_type')
+      expect(payload).not.toHaveProperty('name')
+      expect(payload).toHaveProperty('description')
+    })
+
+    it('keeps the identity fields editable before verification is requested', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }))
+      renderApp('/employer')
+      expect(await screen.findByLabelText(/اسم المؤسسة|Organisation name/i)).toBeEnabled()
+      expect(screen.getByLabelText(/نوع المؤسسة|Organisation type/i)).toBeEnabled()
+    })
+  })
 })

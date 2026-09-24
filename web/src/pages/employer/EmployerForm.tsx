@@ -23,6 +23,8 @@ export function EmployerForm({ employer, governorates, onSaved }: { employer: Em
     is_discoverable: employer?.is_discoverable ?? true,
   })
   const [saved, setSaved] = useState(false)
+  // Backend rule (identity_locked): what the administrator verified is frozen for owners once review starts.
+  const identityLocked = employer !== null && (employer.verification_status === 'VERIFIED' || employer.verification_status === 'PENDING')
   const errors = useFormErrors(FIELDS)
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
   const cities = useAsyncData<City[]>((signal) => (f.governorate ? reference.listCities(f.governorate, signal) : Promise.resolve([])), [f.governorate])
@@ -35,7 +37,9 @@ export function EmployerForm({ employer, governorates, onSaved }: { employer: Em
     errors.setFieldErrors(next)
     errors.setFormError(null)
     if (Object.keys(next).length) throw new ClientValidationError()
-    const payload: EmployerWrite = { name: f.name.trim(), organization_type: f.organization_type, description: f.description, governorate: f.governorate, city: f.city || null, is_recruitment_agency: f.is_recruitment_agency, is_discoverable: f.is_discoverable }
+    const payload: EmployerWrite = identityLocked
+      ? { description: f.description, city: f.city || null, is_discoverable: f.is_discoverable }
+      : { name: f.name.trim(), organization_type: f.organization_type, description: f.description, governorate: f.governorate, city: f.city || null, is_recruitment_agency: f.is_recruitment_agency, is_discoverable: f.is_discoverable }
     return employer ? jobsApi.updateMyEmployer(payload) : jobsApi.createMyEmployer(payload)
   }
 
@@ -43,8 +47,9 @@ export function EmployerForm({ employer, governorates, onSaved }: { employer: Em
     <form noValidate onSubmit={(e) => e.preventDefault()}>
       {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
       {saved ? <Alert kind="success">{t('employer.saved')}</Alert> : null}
-      <TextField label={t('employer.orgName')} name="name" value={f.name} onChange={(e) => set('name', e.target.value)} error={errors.fieldErrors.name} required />
-      <Select label={t('employer.orgType')} value={f.organization_type} onChange={(e) => set('organization_type', e.target.value as OrganizationType)} error={errors.fieldErrors.organization_type}>
+      {identityLocked ? <Alert kind="info">{t('employer.identityLocked')}</Alert> : null}
+      <TextField label={t('employer.orgName')} name="name" value={f.name} onChange={(e) => set('name', e.target.value)} error={errors.fieldErrors.name} required disabled={identityLocked} />
+      <Select label={t('employer.orgType')} value={f.organization_type} onChange={(e) => set('organization_type', e.target.value as OrganizationType)} error={errors.fieldErrors.organization_type} disabled={identityLocked}>
         {ORGANIZATION_TYPES.map((o) => (
           <option key={o} value={o}>
             {t(`organizationTypes.${o}`)}
@@ -53,7 +58,7 @@ export function EmployerForm({ employer, governorates, onSaved }: { employer: Em
       </Select>
       <Textarea label={t('employer.description')} hint={t('employer.descriptionHint')} value={f.description} onChange={(e) => set('description', e.target.value)} error={errors.fieldErrors.description} />
       <div className="grid-2">
-        <Select label={t('jobEditor.governorate')} value={f.governorate} error={errors.fieldErrors.governorate} onChange={(e) => { set('governorate', e.target.value); set('city', '') }} required>
+        <Select label={t('jobEditor.governorate')} value={f.governorate} error={errors.fieldErrors.governorate} onChange={(e) => { set('governorate', e.target.value); set('city', '') }} required disabled={identityLocked}>
           <option value="">—</option>
           {governorates.map((g) => (
             <option key={g.id} value={g.id}>
@@ -70,7 +75,7 @@ export function EmployerForm({ employer, governorates, onSaved }: { employer: Em
           ))}
         </Select>
       </div>
-      <Checkbox label={t('employer.isAgency')} checked={f.is_recruitment_agency} onChange={(e) => set('is_recruitment_agency', e.target.checked)} />
+      <Checkbox label={t('employer.isAgency')} checked={f.is_recruitment_agency} onChange={(e) => set('is_recruitment_agency', e.target.checked)} disabled={identityLocked} />
       <Checkbox label={t('employer.discoverable')} checked={f.is_discoverable} onChange={(e) => set('is_discoverable', e.target.checked)} />
       <FormActions>
         <ApiActionButton type="submit" size="lg" action={submit} onSuccess={(e) => { setSaved(true); onSaved(e) }} onError={(e) => { if (!(e instanceof ClientValidationError)) errors.applyApiError(e) }} pendingLabel={employer ? t('common.saving') : t('employer.creating')}>
