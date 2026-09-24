@@ -611,7 +611,8 @@
       "work_mode": "Work mode",
       "shift_type": "Shift",
       "salary_available": "Salary shown"
-    }
+    },
+    "emptyPage": "No jobs on this page."
   },
   "jobDetail": {
     "employer": "Employer",

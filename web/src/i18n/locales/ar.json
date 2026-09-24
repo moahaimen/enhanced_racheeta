@@ -635,7 +635,8 @@
       "work_mode": "نمط العمل",
       "shift_type": "الوردية",
       "salary_available": "الراتب معلن"
-    }
+    },
+    "emptyPage": "لا توجد وظائف في هذه الصفحة."
   },
   "jobDetail": {
     "employer": "جهة التوظيف",

@@ -1,19 +1,22 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 
 import { ApiError, jobs as jobsApi } from '../../api'
-import { AsyncPage, Badge, Container, EmptyState, Icon, JobCard, PageHeader, PageStack, SectionCard } from '../../design-system'
+import type { EmployerPublic } from '../../api'
+import { AsyncPage, Badge, Container, EmptyState, Icon, JobCard, JobCardSkeleton, LinkButton, PageHeader, PageStack, Pagination, SectionCard } from '../../design-system'
 import { useLocalizedName } from '../../i18n/localized'
 import styles from './JobsPage.module.css'
 
-/** /employers/:id — public organisation page: description and its published jobs. No contact data. */
+const PAGE_SIZE = 20
+
+/** /employers/:id — public organisation page: description and its published jobs, paginated (`?jobs_page=`). No contact data. */
 export function EmployerPublicPage() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
   const name = useLocalizedName()
   const load = async (signal: AbortSignal) => {
     try {
-      return await Promise.all([jobsApi.getEmployerPublic(id, signal), jobsApi.listJobs({ employer: id, page_size: 20 }, signal)])
+      return await jobsApi.getEmployerPublic(id, signal)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'not_found', t('jobDetail.notFound'))
       throw e
@@ -22,7 +25,7 @@ export function EmployerPublicPage() {
   return (
     <Container width="xl">
       <AsyncPage load={load} deps={[id]}>
-        {([employer, jobs]) => (
+        {(employer) => (
           <>
             <PageHeader
               eyebrow={
@@ -54,23 +57,68 @@ export function EmployerPublicPage() {
                   <Link to={`/providers/${employer.provider_profile_id}`}>{t('jobDetail.providerProfile')}</Link>
                 </p>
               ) : null}
-              <SectionCard title={t('jobsPage.title')} headingLevel={2}>
-                {jobs.results.length === 0 ? (
-                  <EmptyState icon="briefcase" title={t('jobsPage.empty')} testId="employer-jobs-empty" />
-                ) : (
-                  <ul className={styles.grid} aria-label={t('jobsPage.title')}>
-                    {jobs.results.map((job) => (
-                      <li key={job.id}>
-                        <JobCard job={job} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </SectionCard>
+              <EmployerJobs employer={employer} />
             </PageStack>
           </>
         )}
       </AsyncPage>
     </Container>
+  )
+}
+
+/** The employer's published jobs; the header above stays mounted while a page loads. */
+function EmployerJobs({ employer }: { employer: EmployerPublic }) {
+  const { t } = useTranslation()
+  const [params, setParams] = useSearchParams()
+  const page = Math.max(1, Number(params.get('jobs_page') ?? '1') || 1)
+  const goTo = (next: number) =>
+    setParams((prev) => {
+      const out = new URLSearchParams(prev)
+      if (next > 1) out.set('jobs_page', String(next))
+      else out.delete('jobs_page')
+      return out
+    })
+  return (
+    <SectionCard title={t('jobsPage.title')} headingLevel={2}>
+      <AsyncPage
+        load={(signal) => jobsApi.listJobs({ employer: employer.id, page, page_size: PAGE_SIZE }, signal)}
+        deps={[employer.id, page]}
+        skeleton={
+          <ul className={styles.grid} data-testid="employer-jobs-loading" aria-busy="true">
+            {Array.from({ length: 3 }, (_, i) => (
+              <li key={i}>
+                <JobCardSkeleton />
+              </li>
+            ))}
+          </ul>
+        }
+      >
+        {(jobs) => (
+          <>
+            {jobs.results.length === 0 ? (
+              page > 1 ? (
+                <EmptyState icon="briefcase" title={t('jobsPage.emptyPage')} testId="employer-jobs-empty-page" action={<LinkButton to={`/employers/${employer.id}`} variant="ghost">{t('common.previous')}</LinkButton>} />
+              ) : (
+                <EmptyState icon="briefcase" title={t('jobsPage.empty')} testId="employer-jobs-empty" />
+              )
+            ) : (
+              <>
+                <p className="text-caption" data-testid="employer-jobs-count">
+                  {t('jobsPage.results', { count: jobs.count })}
+                </p>
+                <ul className={styles.grid} aria-label={t('jobsPage.title')}>
+                  {jobs.results.map((job) => (
+                    <li key={job.id}>
+                      <JobCard job={job} />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <Pagination page={page} total={Math.max(1, Math.ceil(jobs.count / PAGE_SIZE))} hasNext={jobs.next !== null} hasPrevious={jobs.previous !== null} onChange={goTo} />
+          </>
+        )}
+      </AsyncPage>
+    </SectionCard>
   )
 }
