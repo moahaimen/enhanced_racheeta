@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **373 passed** (was 175): billing entitlements/admin API,
+- Backend: **383 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -223,6 +223,19 @@ under the same locks as applying; no usage is consumed on any rejected
 attempt; no other public listing has a hard-coded first page.
 
 Backend tests 373, web tests 155, no migration, OpenAPI unchanged.
+
+## PR #4 review, round seven (2026-09-24, review 5303137536 on `b666379`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 stale subscription expiry | `expire_subscription` is atomic, locks the row, and transitions only if still ACTIVE and elapsed; threaded expire-vs-suspend, expire-vs-cancel and expire-vs-expire tests (one event, newer admin state kept), entitlement lookup after normalisation. |
+| P2 expired invitation marked ACCEPTED on apply | `apply_to_job` locks the seeker's PENDING invitations for the job and marks a live one ACCEPTED, an elapsed one EXPIRED; tests for both, history, no double transition, application still created. |
+| P2 raw query strings hashed for billing | `canonical_talent_params` mirrors the filter semantics (folded text, upper-cased choices, trimmed slugs/enums, numeric experience, folded UUIDs, unknown/paging/ordering keys ignored); `q`/`detailed_specialty` filters collapse whitespace too; tests for equivalent and different filters, paging, invalid filters, duplicate equivalent HTTP searches consuming once. |
+
+Targeted audit: job expiry and invitation expiry already re-check under
+locks; no other billable signature exists.
+
+Backend tests 383, web tests 155, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

@@ -57,7 +57,10 @@ application (`application_closed`, 409).
 Invitation: `PENDING → ACCEPTED | DECLINED | CANCELLED`, `EXPIRED` at read
 time (`expire_overdue_invitations`, run by both invitation lists and before
 every new invitation, so an elapsed PENDING row never blocks re-inviting;
-the expired row stays in history and the new one consumes a new unit). Accepting an invitation does **not** create an application; the seeker
+the expired row stays in history and the new one consumes a new unit).
+Applying to the job answers a still-live PENDING invitation as ACCEPTED under
+a row lock; an invitation whose window already closed becomes EXPIRED instead,
+never "accepted outreach". Accepting an invitation does **not** create an application; the seeker
 applies from the job page. Each invitation consumes one `talent.invite_limit`
 unit keyed by its own id; each application attempt consumes one
 `applications.limit` unit keyed by the application id.
