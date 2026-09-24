@@ -57,7 +57,7 @@ export const listMyApplications = (page = 1, signal?: AbortSignal) => apiRequest
 export const getMyApplication = (id: string, signal?: AbortSignal) => apiRequest<ApplicationSeeker>(`/api/v1/jobs/me/applications/${enc(id)}`, { signal })
 export const withdrawApplication = (id: string, reason = '') => apiRequest<ApplicationSeeker>(`/api/v1/jobs/me/applications/${enc(id)}/withdraw`, { method: 'POST', body: { reason } })
 export const respondToInterview = (id: string, accept: boolean, response = '') => apiRequest<Interview>(`/api/v1/jobs/me/interviews/${enc(id)}/respond`, { method: 'POST', body: { accept, response } })
-export const listMyInvitations = (signal?: AbortSignal) => apiRequest<Paginated<Invitation>>('/api/v1/jobs/me/invitations', { signal })
+export const listMyInvitations = (page = 1, signal?: AbortSignal) => apiRequest<Paginated<Invitation>>(`/api/v1/jobs/me/invitations?page=${page}`, { signal })
 export const respondToInvitation = (id: string, accept: boolean) => apiRequest<Invitation>(`/api/v1/jobs/me/invitations/${enc(id)}/respond`, { method: 'POST', body: { accept } })
 
 // ---- messages (both sides) -------------------------------------------------

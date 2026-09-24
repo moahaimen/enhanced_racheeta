@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,7 +9,7 @@ import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
 import { makeJobEmployer, makeTalentCard, makeTalentDetail, paginated } from '../../test/jobFixtures'
 import { baghdad, cardiology } from '../../test/providerFixtures'
-import { makeAccount, renderApp } from '../../test/renderApp'
+import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/jobs')
@@ -50,5 +50,51 @@ describe('Talent search', () => {
     await user.click(screen.getByRole('button', { name: /إرسال الدعوة|Send invitation/i }))
     await waitFor(() => expect(jobsApi.inviteCandidate).toHaveBeenCalledWith('j-1', 'sp-1', ''))
     expect(await screen.findByText(/أُرسلت الدعوة|Invitation sent/i)).toBeInTheDocument()
+  })
+
+  describe('invitation job picker', () => {
+    const jobsPage = (page: number, size = 20) =>
+      paginated(
+        Array.from({ length: size }, (_, i) => makeJobEmployer({ id: `j-${page}-${i}`, title: `Job ${page}-${i}`, status: 'PUBLISHED' })),
+        23,
+      )
+    const invitation = { id: 'inv-1', job: makeJobEmployer(), message: '', status: 'PENDING' as const, expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' }
+
+    it('shows the first page of published jobs and loads page 2 on demand with a loading state', async () => {
+      vi.mocked(jobsApi.getTalent).mockResolvedValue(makeTalentDetail())
+      const second = deferred<ReturnType<typeof jobsPage>>()
+      vi.mocked(jobsApi.listEmployerJobs).mockImplementation((_status, page = 1) => {
+        if (page === 2) return second.promise
+        return Promise.resolve({ ...jobsPage(1), next: 'n', previous: null })
+      })
+      vi.mocked(jobsApi.inviteCandidate).mockResolvedValue(invitation)
+      renderApp('/employer/talent/sp-1')
+      const select = await screen.findByLabelText(/الوظيفة|^Job$/i)
+      expect(within(select).getAllByRole('option')).toHaveLength(20)
+      expect(screen.getByText(/20 من 23|20 of 23/)).toBeInTheDocument()
+      const user = userEvent.setup()
+      const more = screen.getByRole('button', { name: /عرض المزيد من الوظائف|Show more jobs/i })
+      await user.click(more)
+      expect(more).toBeDisabled()
+      expect(more).toHaveAttribute('aria-busy', 'true')
+      await user.click(more)
+      expect(jobsApi.listEmployerJobs).toHaveBeenCalledTimes(2)
+      expect(jobsApi.listEmployerJobs).toHaveBeenLastCalledWith('PUBLISHED', 2)
+      second.resolve({ ...jobsPage(2, 3), next: null, previous: 'p' })
+      await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(23))
+      expect(screen.queryByRole('button', { name: /عرض المزيد من الوظائف|Show more jobs/i })).toBeNull()
+      await user.selectOptions(select, 'j-2-1')
+      await user.click(screen.getByRole('button', { name: /إرسال الدعوة|Send invitation/i }))
+      await waitFor(() => expect(jobsApi.inviteCandidate).toHaveBeenCalledWith('j-2-1', 'sp-1', ''))
+    })
+
+    it('explains when there are no published jobs to invite to', async () => {
+      vi.mocked(jobsApi.getTalent).mockResolvedValue(makeTalentDetail())
+      vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([]))
+      renderApp('/employer/talent/sp-1')
+      expect(await screen.findByRole('heading', { level: 1, name: 'ممرضة عناية مركزة' })).toBeInTheDocument()
+      expect(screen.getByText(/لم تنشئ أي وظيفة بعد|not created any job yet/i)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /إرسال الدعوة|Send invitation/i })).toBeNull()
+    })
   })
 })

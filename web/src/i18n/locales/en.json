@@ -579,7 +579,10 @@
     "languages": "Languages",
     "notFound": "Candidate not available.",
     "gate": "Talent search requires a plan that includes this feature.",
-    "savedNote": "Private note (never shown to the candidate)"
+    "savedNote": "Private note (never shown to the candidate)",
+    "loadMoreJobs": "Show more jobs",
+    "loadingJobs": "Loading jobs…",
+    "pickerCount": "{{count}} of {{total}} published jobs"
   },
   "jobsPage": {
     "title": "Medical and healthcare jobs",
@@ -675,7 +678,8 @@
     },
     "emptyPage": "No applications on this page.",
     "count_one": "{{count}} application",
-    "count_other": "{{count}} applications"
+    "count_other": "{{count}} applications",
+    "invitesEmptyPage": "No invitations on this page."
   },
   "seekerProfile": {
     "title": "My résumé",

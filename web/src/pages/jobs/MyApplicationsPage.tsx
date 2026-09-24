@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 
 import { jobs as jobsApi } from '../../api'
 import type { ApplicationSeeker, Invitation } from '../../api'
-import { Alert, ApiActionButton, ApplicationStatusBadge, AsyncPage, Badge, Container, EmptyState, Icon, InvitationStatusBadge, LinkButton, PageHeader, PageStack, Pagination, SectionCard, Textarea } from '../../design-system'
+import { Alert, ApiActionButton, ApplicationStatusBadge, AsyncPage, Badge, Container, EmptyState, ErrorState, Icon, InvitationStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, Pagination, SectionCard, Textarea } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import styles from './MyApplicationsPage.module.css'
 
@@ -176,15 +176,30 @@ export function MessagesThread({ applicationId, mySide, closed }: { applicationI
   )
 }
 
+/** Invitations the seeker received, paginated from the URL (`?invites_page=`, independent of `?page=`). */
 function InvitationsBlock() {
   const { t } = useTranslation()
-  const invitations = useAsyncData((signal) => jobsApi.listMyInvitations(signal), [])
+  const [params, setParams] = useSearchParams()
+  const invitesPage = Math.max(1, Number(params.get('invites_page') ?? '1') || 1)
+  const goTo = (next: number) =>
+    setParams((prev) => {
+      const out = new URLSearchParams(prev)
+      if (next > 1) out.set('invites_page', String(next))
+      else out.delete('invites_page')
+      return out
+    })
+  const invitations = useAsyncData((signal) => jobsApi.listMyInvitations(invitesPage, signal), [invitesPage])
   const [error, setError] = useState<string | null>(null)
   const pending = (invitations.data?.results ?? []).filter((i) => i.status === 'PENDING')
-  if (invitations.loading || invitations.error || (invitations.data?.results ?? []).length === 0) return null
+  if (invitations.loading) return <LoadingState testId="invitations-loading" />
+  if (invitations.error) return <ErrorState error={invitations.error} onRetry={invitations.reload} />
+  if (!invitations.data || (invitations.data.count === 0 && invitesPage === 1)) return null
   return (
     <SectionCard title={t('applications.invitations')} headingLevel={2}>
       {error ? <Alert kind="error">{error}</Alert> : null}
+      {invitations.data.results.length === 0 ? (
+        <EmptyState icon="mail" title={t('applications.invitesEmptyPage')} testId="invitations-empty-page" action={<LinkButton to="/jobs/my-applications" variant="ghost">{t('common.previous')}</LinkButton>} />
+      ) : null}
       <ul className={styles.history}>
         {(invitations.data?.results ?? []).map((inv: Invitation) => (
           <li key={inv.id} data-testid="invitation-row">
@@ -209,6 +224,7 @@ function InvitationsBlock() {
         ))}
       </ul>
       {pending.length === 0 ? null : <p className="text-caption">{t('applications.inviteAccepted')}</p>}
+      <Pagination page={invitesPage} total={Math.max(1, Math.ceil(invitations.data.count / PAGE_SIZE))} hasNext={invitations.data.next !== null} hasPrevious={invitations.data.previous !== null} onChange={goTo} />
     </SectionCard>
   )
 }

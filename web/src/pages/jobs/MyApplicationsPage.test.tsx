@@ -129,4 +129,65 @@ describe('MyApplicationsPage', () => {
       expect(screen.queryByTestId('applications-empty')).toBeNull()
     })
   })
+
+  describe('invitations pagination', () => {
+    const invitesPage = (n: number, size = 20) =>
+      paginated(
+        Array.from({ length: size }, (_, i) => ({ id: `inv-${n}-${i}`, job: makeJobCard({ id: `j-${n}-${i}`, title: `Invite job ${n}-${i}` }), message: '', status: 'PENDING' as const, expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' })),
+        25,
+      )
+    const answered = (id: string, status: 'ACCEPTED' | 'DECLINED') => ({ id, job: makeJobCard(), message: '', status, expires_at: '2026-10-01T00:00:00Z', created_at: '2026-09-22T00:00:00Z' })
+
+    beforeEach(() => {
+      vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([]))
+    })
+
+    it('reads ?invites_page= independently of ?page= and shows the loading state while paging', async () => {
+      const second = deferred<ReturnType<typeof invitesPage>>()
+      vi.mocked(jobsApi.listMyInvitations).mockImplementation((page = 1) => {
+        if (page === 2) return second.promise
+        return Promise.resolve({ ...invitesPage(1), next: 'n', previous: null })
+      })
+      const { router } = renderApp('/jobs/my-applications')
+      expect(await screen.findByText('Invite job 1-0')).toBeInTheDocument()
+      expect(screen.getAllByTestId('invitation-row')).toHaveLength(20)
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: /التالي|Next/i }))
+      await waitFor(() => expect(router.state.location.search).toBe('?invites_page=2'))
+      expect(await screen.findByTestId('invitations-loading')).toBeInTheDocument()
+      second.resolve({ ...invitesPage(2, 5), next: null, previous: 'p' })
+      expect(await screen.findByText('Invite job 2-0')).toBeInTheDocument()
+      expect(jobsApi.listMyInvitations).toHaveBeenLastCalledWith(2, expect.anything())
+      expect(jobsApi.listMyApplications).toHaveBeenLastCalledWith(1, expect.anything()) // applications page untouched
+      await user.click(screen.getByRole('button', { name: /السابق|Previous/i }))
+      await waitFor(() => expect(router.state.location.search).toBe(''))
+      expect(await screen.findByText('Invite job 1-0')).toBeInTheDocument()
+    })
+
+    it('accepts and declines invitations on page 2', async () => {
+      vi.mocked(jobsApi.listMyInvitations).mockImplementation((page = 1) => Promise.resolve({ ...invitesPage(page, page === 2 ? 5 : 20), next: page < 2 ? 'n' : null, previous: page > 1 ? 'p' : null }))
+      vi.mocked(jobsApi.respondToInvitation).mockImplementation((id, accept) => Promise.resolve(answered(id, accept ? 'ACCEPTED' : 'DECLINED')))
+      renderApp('/jobs/my-applications?invites_page=2')
+      const rows = await screen.findAllByTestId('invitation-row')
+      expect(rows).toHaveLength(5)
+      const user = userEvent.setup()
+      const first = rows[0]
+      const second = rows[1]
+      if (!first || !second) throw new Error('rows missing')
+      await user.click(within(first).getByRole('button', { name: /قبول الدعوة|Accept invitation/i }))
+      expect(jobsApi.respondToInvitation).toHaveBeenCalledWith('inv-2-0', true)
+      await waitFor(() => expect(jobsApi.listMyInvitations).toHaveBeenLastCalledWith(2, expect.anything()))
+      const again = await screen.findAllByTestId('invitation-row')
+      const target = again[1]
+      if (!target) throw new Error('row missing')
+      await user.click(within(target).getByRole('button', { name: /رفض الدعوة|Decline invitation/i }))
+      expect(jobsApi.respondToInvitation).toHaveBeenCalledWith('inv-2-1', false)
+    })
+
+    it('shows an empty final invitations page with a way back', async () => {
+      vi.mocked(jobsApi.listMyInvitations).mockResolvedValue({ count: 20, next: null, previous: 'p', results: [] })
+      renderApp('/jobs/my-applications?invites_page=3')
+      expect(await screen.findByTestId('invitations-empty-page')).toBeInTheDocument()
+    })
+  })
 })

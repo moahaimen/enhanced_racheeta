@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
 import { ApiError, jobs as jobsApi } from '../../api'
-import type { JobEmployer, TalentDetail } from '../../api'
+import type { JobEmployer, Paginated, TalentDetail } from '../../api'
 import { Alert, ApiActionButton, AsyncPage, Badge, Container, FormActions, Icon, PageHeader, PageStack, SectionCard, Select, Textarea, TextField, useFormErrors } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
@@ -17,7 +17,7 @@ export function TalentDetailPage() {
   const load = async (signal: AbortSignal) => {
     try {
       const [candidate, jobs] = await Promise.all([jobsApi.getTalent(id, signal), jobsApi.listEmployerJobs('PUBLISHED', 1, signal)])
-      return [candidate, jobs.results] as [TalentDetail, JobEmployer[]]
+      return [candidate, jobs] as [TalentDetail, Paginated<JobEmployer>]
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'not_found', t('talent.notFound'))
       throw e
@@ -26,17 +26,20 @@ export function TalentDetailPage() {
   return (
     <Container width="xl">
       <AsyncPage load={load} deps={[id]}>
-        {([candidate, jobs], reload) => <Detail candidate={candidate} jobs={jobs} reload={reload} />}
+        {([candidate, jobs], reload) => <Detail candidate={candidate} firstPage={jobs} reload={reload} />}
       </AsyncPage>
     </Container>
   )
 }
 
-function Detail({ candidate: c, jobs, reload }: { candidate: TalentDetail; jobs: JobEmployer[]; reload: () => void }) {
+function Detail({ candidate: c, firstPage, reload }: { candidate: TalentDetail; firstPage: Paginated<JobEmployer>; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const [saveNote, setSaveNote] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Published jobs for the picker: page 1 comes with the page, further pages on demand (never the whole set at once).
+  const [picker, setPicker] = useState<{ jobs: JobEmployer[]; page: number; hasMore: boolean }>({ jobs: firstPage.results, page: 1, hasMore: firstPage.next !== null })
+  const jobs = picker.jobs
   const [job, setJob] = useState(jobs[0]?.id ?? '')
   const [message, setMessage] = useState('')
   const [invited, setInvited] = useState(false)
@@ -176,13 +179,26 @@ function Detail({ candidate: c, jobs, reload }: { candidate: TalentDetail; jobs:
                 ) : (
                   <form noValidate onSubmit={(e) => e.preventDefault()}>
                     {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
-                    <Select label={t('talent.inviteJob')} value={job} onChange={(e) => setJob(e.target.value)} error={errors.fieldErrors.job}>
+                    <Select label={t('talent.inviteJob')} value={job} onChange={(e) => setJob(e.target.value)} error={errors.fieldErrors.job} hint={t('talent.pickerCount', { count: jobs.length, total: firstPage.count })}>
                       {jobs.map((j) => (
                         <option key={j.id} value={j.id}>
                           {j.title}
                         </option>
                       ))}
                     </Select>
+                    {picker.hasMore ? (
+                      <ApiActionButton
+                        variant="ghost"
+                        size="sm"
+                        action={() => jobsApi.listEmployerJobs('PUBLISHED', picker.page + 1)}
+                        onSuccess={(next) => setPicker((prev) => ({ jobs: [...prev.jobs, ...next.results], page: prev.page + 1, hasMore: next.next !== null }))}
+                        onError={(e) => errors.applyApiError(e)}
+                        pendingLabel={t('talent.loadingJobs')}
+                        leading={<Icon name="plus" size={16} />}
+                      >
+                        {t('talent.loadMoreJobs')}
+                      </ApiActionButton>
+                    ) : null}
                     <Textarea label={t('talent.inviteMessage')} optional rows={2} value={message} onChange={(e) => setMessage(e.target.value)} error={errors.fieldErrors.message} />
                     <FormActions>
                       <ApiActionButton

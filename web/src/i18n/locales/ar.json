@@ -596,7 +596,10 @@
     "languages": "اللغات",
     "notFound": "المرشح غير متاح.",
     "gate": "البحث عن الكوادر يتطلب خطة تشمل هذه الميزة.",
-    "savedNote": "ملاحظة خاصة (لا يراها المرشح)"
+    "savedNote": "ملاحظة خاصة (لا يراها المرشح)",
+    "loadMoreJobs": "عرض المزيد من الوظائف",
+    "loadingJobs": "جارٍ تحميل الوظائف…",
+    "pickerCount": "{{count}} من {{total}} وظيفة منشورة"
   },
   "jobsPage": {
     "title": "فرص العمل في القطاع الطبي والصحي",
@@ -703,7 +706,8 @@
     "count_two": "طلبان",
     "count_few": "{{count}} طلبات",
     "count_many": "{{count}} طلباً",
-    "count_other": "{{count}} طلب"
+    "count_other": "{{count}} طلب",
+    "invitesEmptyPage": "لا توجد دعوات في هذه الصفحة."
   },
   "seekerProfile": {
     "title": "سيرتي المهنية",
