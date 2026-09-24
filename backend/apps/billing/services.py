@@ -91,6 +91,7 @@ class EntitlementService:
     def __init__(self, billing_account: BillingAccount):
         self.billing_account = billing_account
         self._subscription: Subscription | None | bool = False
+        self._pending: Subscription | None | bool = False
         self._plan: Plan | None | bool = False
 
     # ---- resolution ---------------------------------------------------------
@@ -110,6 +111,26 @@ class EntitlementService:
                 sub = None
             self._subscription = sub
         return self._subscription  # type: ignore[return-value]
+
+    @property
+    def pending_subscription(self) -> Subscription | None:
+        """The request waiting for an administrator, if any.
+
+        This is billing *UI* state, never entitlement state: a PENDING request
+        grants nothing, so `plan`, `get()` and every capability check keep
+        resolving through the ACTIVE subscription (or the audience default).
+        Only PENDING counts — a SUSPENDED, CANCELLED, REJECTED or EXPIRED row
+        is finished business and must never be shown as a live request."""
+        if self._pending is False:
+            self._pending = (
+                Subscription.objects.filter(
+                    billing_account=self.billing_account, status=SubscriptionStatus.PENDING
+                )
+                .select_related("plan")
+                .order_by("-created_at")
+                .first()
+            )
+        return self._pending  # type: ignore[return-value]
 
     @property
     def plan(self) -> Plan | None:

@@ -3795,6 +3795,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/Subscription'
           nullable: true
+        pending_subscription:
+          allOf:
+          - $ref: '#/components/schemas/Subscription'
+          nullable: true
         entitlements:
           type: array
           items:
@@ -3805,6 +3809,7 @@ components:
             $ref: '#/components/schemas/Plan'
       required:
       - entitlements
+      - pending_subscription
       - plan
       - requestable_plans
       - subscription

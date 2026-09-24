@@ -25,11 +25,18 @@ from .types import Audience, PaymentMethod, PaymentStatus
 
 
 def billing_summary(ent: services.EntitlementService) -> dict:
-    """Build the self-service summary for any subject (used by jobs endpoints)."""
+    """Build the self-service summary for any subject (used by jobs endpoints).
+
+    `subscription` stays what it has always been — the ACTIVE subscription the
+    entitlements resolve through, or null. `pending_subscription` is separate
+    UI state: the request waiting for an administrator. Keeping them apart lets
+    the workspace show "your request is pending" after a reload without a
+    PENDING row ever granting an entitlement."""
     acc = ent.billing_account
     return {
         "plan": ent.plan,
         "subscription": ent.subscription,
+        "pending_subscription": ent.pending_subscription,
         "entitlements": [EntitlementSerializer.from_entitlement(e) for e in ent.all()],
         "requestable_plans": list(
             Plan.objects.filter(

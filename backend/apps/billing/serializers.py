@@ -78,7 +78,12 @@ class BillingSummarySerializer(serializers.Serializer):
     """What a subject sees about its own commercial state. No admin notes."""
 
     plan = PlanSerializer(allow_null=True)
+    # The ACTIVE subscription the entitlements resolve through (null when the
+    # audience default plan applies).
     subscription = SubscriptionSerializer(allow_null=True)
+    # A request waiting for an administrator. Never affects entitlements; it
+    # exists so the client can keep showing the pending state across reloads.
+    pending_subscription = SubscriptionSerializer(allow_null=True)
     entitlements = EntitlementSerializer(many=True)
     requestable_plans = PlanSerializer(many=True)
 

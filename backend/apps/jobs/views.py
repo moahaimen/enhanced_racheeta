@@ -11,7 +11,7 @@ from rest_framework.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -124,6 +124,24 @@ def raise_api(exc: services.JobsError):
 
 class _Throttled:
     throttle_classes = [ScopedRateThrottle]
+
+
+# Scoped throttling for unsafe methods only.
+#
+# A quota named after an action (creating a job, sending an invitation) must be
+# spent by that action alone. Declaring the scope at class level on a view that
+# also serves GET makes listing and pagination burn the write quota, so an
+# employer who refreshes the workspace is eventually 429'd on both reading and
+# creating. Safe methods fall back to the project defaults: `throttle_classes`
+# is deliberately NOT set here, so the lookup falls through to APIView (i.e.
+# DEFAULT_THROTTLE_CLASSES) and no global throttle is removed.
+#
+# No docstring: drf-spectacular would publish it as the endpoint description.
+class _ThrottledOnWrite:
+    def get_throttles(self):
+        if self.request.method in SAFE_METHODS:
+            return super().get_throttles()
+        return [ScopedRateThrottle()]
 
 
 # ---- public jobs -----------------------------------------------------------
@@ -745,9 +763,11 @@ def _employer_jobs(request):
 
 
 @extend_schema(tags=["employer"])
-class EmployerJobListView(_Throttled, generics.ListCreateAPIView):
+class EmployerJobListView(_ThrottledOnWrite, generics.ListCreateAPIView):
     permission_classes = [IsEmployerMember]
     serializer_class = JobEmployerSerializer
+    # POST only: listing and paginating the workspace must not spend the
+    # job-creation quota (see _ThrottledOnWrite).
     throttle_scope = "jobs_create"
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {"status": ["exact"]}
@@ -1165,8 +1185,10 @@ class SavedCandidateDeleteView(APIView):
 
 
 @extend_schema(tags=["talent"])
-class InvitationListView(_Throttled, APIView):
+class InvitationListView(_ThrottledOnWrite, APIView):
     permission_classes = [CanRecruit]
+    # POST only: reading the sent-invitations list must not spend the
+    # invitation quota (see _ThrottledOnWrite).
     throttle_scope = "talent_invite"
     serializer_class = InviteSerializer
 
