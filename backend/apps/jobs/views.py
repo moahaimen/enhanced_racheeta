@@ -4,7 +4,13 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    ErrorDetail,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -81,7 +87,7 @@ from .serializers import (
     TalentDetailSerializer,
     WorkExperienceSerializer,
 )
-from .types import ApplicationStatus, JobStatus, MemberStatus, MessageSide
+from .types import ApplicationStatus, MemberStatus, MessageSide
 
 # ---- error mapping ---------------------------------------------------------
 
@@ -574,7 +580,21 @@ class MyEmployerView(APIView):
             membership.employer, data=request.data, partial=True, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            services.update_employer(
+                membership.employer, dict(serializer.validated_data), actor=request.user
+            )
+        except services.IdentityLocked as exc:
+            raise ValidationError(
+                {
+                    field: ErrorDetail(
+                        "This field is locked after verification. Ask Racheeta "
+                        "administration to change it.",
+                        code="identity_locked",
+                    )
+                    for field in exc.fields
+                }
+            ) from exc
         data = EmployerOwnerSerializer(
             Employer.objects.select_related("governorate", "city", "provider_profile").get(
                 pk=membership.employer_id
@@ -780,7 +800,7 @@ class EmployerJobDetailView(APIView):
         if request.employer_membership.role not in ("OWNER", "RECRUITER"):
             raise PermissionDenied("Viewers cannot edit jobs.")
         job = get_object_or_404(JobPost.objects.filter(employer=request.employer), pk=pk)
-        if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
+        if job.status not in services.EDITABLE_JOB_STATUSES:  # early exit; the lock decides
             raise JobsAPIError(
                 "Only draft or rejected jobs can be edited. Close and recreate a published job.",
                 code="job_locked",
@@ -789,7 +809,10 @@ class EmployerJobDetailView(APIView):
             job, data=request.data, partial=True, context={"employer": request.employer}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            services.edit_job(job, dict(serializer.validated_data), actor=request.user)
+        except services.JobsError as exc:
+            raise JobsAPIError(str(exc), code=exc.code) from exc
         return Response(JobEmployerSerializer(_employer_jobs(request).get(pk=pk)).data)
 
 
@@ -977,6 +1000,17 @@ class EmployerInterviewRequestView(APIView):
 # ---- employer: talent ---------------------------------------------------------
 
 
+def _require_talent_access(request, key: str | None) -> None:
+    """Paid recruitment data (candidate cards) is readable only by a verified,
+    active organisation whose plan still carries the capability — on reads as
+    well as writes, so losing the plan closes the lists too. `key=None` when
+    the caller's service already requires the capability (talent search)."""
+    if not request.employer.can_recruit:
+        raise_api(services.OrganizationNotVerified("The organisation must be verified and active."))
+    if key is not None:
+        services.employer_entitlements(request.employer).require(key)
+
+
 def _talent_queryset():
     return (
         JobSeekerProfile.objects.filter(discoverable_by_employers=True, account__is_active=True)
@@ -1017,10 +1051,7 @@ class TalentSearchView(_Throttled, generics.ListAPIView):
     queryset = JobSeekerProfile.objects.none()
 
     def list(self, request, *args, **kwargs):
-        if not request.employer.can_recruit:
-            raise JobsAPIError(
-                "The organisation must be verified and active.", code="organization_not_verified"
-            )
+        _require_talent_access(request, None)  # record_talent_search requires talent.search
         # Never charge a request that cannot execute: validate the filter set first.
         filterset = self.filterset_class(
             request.query_params, queryset=self.get_queryset(), request=request
@@ -1046,7 +1077,7 @@ class TalentDetailView(APIView):
 
     @extend_schema(responses={200: TalentDetailSerializer})
     def get(self, request, pk):
-        services.employer_entitlements(request.employer).require("talent.search")
+        _require_talent_access(request, Keys.TALENT_SEARCH)
         qs = (
             JobSeekerProfile.objects.filter(account__is_active=True)
             .filter(
@@ -1075,6 +1106,7 @@ class SavedCandidateListView(APIView):
         summary="My organisation's saved candidates",
     )
     def get(self, request):
+        _require_talent_access(request, Keys.TALENT_SAVE)
         saved = (
             SavedCandidate.objects.filter(employer=request.employer)
             .select_related(
@@ -1130,6 +1162,7 @@ class InvitationListView(_Throttled, APIView):
         summary="Invitations sent by my organisation",
     )
     def get(self, request):
+        _require_talent_access(request, Keys.TALENT_INVITE)
         services.expire_overdue_invitations(employer=request.employer)
         invitations = (
             JobInvitation.objects.filter(employer=request.employer)

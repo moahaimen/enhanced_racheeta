@@ -74,6 +74,14 @@ class OrganizationNotVerified(JobsError):
     code = "organization_not_verified"
 
 
+class IdentityLocked(JobsError):
+    code = "identity_locked"
+
+    def __init__(self, fields: list[str]):
+        super().__init__("These fields are locked after verification.")
+        self.fields = fields
+
+
 class ContactLeak(JobsError):
     code = "contact_information_not_allowed"
 
@@ -116,7 +124,48 @@ def create_employer(account, **fields) -> Employer:
     return employer
 
 
+# What an administrator verifies: frozen for owners once review starts (PENDING/VERIFIED).
+IDENTITY_FIELDS = (
+    "name",
+    "organization_type",
+    "provider_profile",
+    "is_recruitment_agency",
+    "governorate",
+)
+IDENTITY_LOCKED_STATUSES = (VerificationStatus.PENDING, VerificationStatus.VERIFIED)
+EDITABLE_JOB_STATUSES = (JobStatus.DRAFT, JobStatus.REJECTED)
+
+
+def _refresh_employer_status(employer: Employer) -> None:
+    """Row lock + status refresh: identity edits and administrator decisions
+    serialise on the employer row, so a decision always applies to the exact
+    identity state visible while it holds the lock."""
+    employer.verification_status, employer.recruitment_status = (
+        Employer.objects.select_for_update()
+        .filter(pk=employer.pk)
+        .values_list("verification_status", "recruitment_status")
+        .get()
+    )
+
+
+@transaction.atomic
+def update_employer(employer: Employer, fields: dict, *, actor) -> Employer:
+    """Owner edit. Identity fields are checked against the LOCKED row, never a
+    stale instance, and only the intended fields are written."""
+    _refresh_employer_status(employer)
+    if employer.verification_status in IDENTITY_LOCKED_STATUSES:
+        changed = [f for f in IDENTITY_FIELDS if f in fields and fields[f] != getattr(employer, f)]
+        if changed:
+            raise IdentityLocked(changed)
+    for key, value in fields.items():
+        setattr(employer, key, value)
+    employer.save(update_fields=[*fields, "updated_at"])
+    return employer
+
+
+@transaction.atomic
 def request_employer_verification(employer: Employer, *, actor) -> Employer:
+    _refresh_employer_status(employer)
     if employer.verification_status not in (
         VerificationStatus.UNVERIFIED,
         VerificationStatus.REJECTED,
@@ -129,6 +178,7 @@ def request_employer_verification(employer: Employer, *, actor) -> Employer:
     return employer
 
 
+@transaction.atomic
 def set_employer_verification(
     employer: Employer, status: str, *, admin, note: str = ""
 ) -> Employer:
@@ -139,6 +189,10 @@ def set_employer_verification(
         VerificationStatus.UNVERIFIED,
     ):
         raise JobsError("Not an administrator-settable status.")
+    # Lock first: any owner identity edit either committed before this point
+    # (and is what the administrator decides on) or waits and is then rejected
+    # by the identity lock once the decision is committed.
+    _refresh_employer_status(employer)
     employer.verification_status = status
     employer.verification_note = note
     if status == VerificationStatus.VERIFIED:
@@ -155,9 +209,11 @@ def set_employer_verification(
     return employer
 
 
+@transaction.atomic
 def set_employer_recruitment_status(
     employer: Employer, status: str, *, admin, reason: str = ""
 ) -> Employer:
+    _refresh_employer_status(employer)
     employer.recruitment_status = status
     employer.save(update_fields=["recruitment_status", "updated_at"])
     audit.record(
@@ -263,6 +319,24 @@ def contact_flags(job: JobPost) -> list[dict]:
                 {"field": field, "category": finding.category, "excerpt": finding.excerpt[:80]}
             )
     return flags
+
+
+@transaction.atomic
+def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
+    """Employer edit of a DRAFT/REJECTED job. Editability is validated on the
+    LOCKED row (a concurrent submit wins or loses cleanly) and only the edited
+    fields are written, so lifecycle columns can never be overwritten by a
+    stale instance."""
+    _lock_job(job)
+    if job.status not in EDITABLE_JOB_STATUSES:
+        raise JobsError(
+            "Only draft or rejected jobs can be edited. Close and recreate a published job.",
+            code="job_locked",
+        )
+    for key, value in fields.items():
+        setattr(job, key, value)
+    job.save(update_fields=[*fields, "updated_at"])
+    return job
 
 
 def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
