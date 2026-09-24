@@ -107,8 +107,9 @@ require a verified, active organisation plus the matching capability
 (`talent.search`, `talent.save_candidate`, `talent.invite`), enforced by
 `_require_talent_access` in `apps/jobs/views.py`.
 
-Employer-side applicant endpoints additionally require the plan capability
-`jobs.application_review` through one shared gate (`_require_application_review`
+Employer-side applicant endpoints additionally require that the organisation
+is still allowed to recruit (`organization_not_verified` otherwise) and the
+plan capability `jobs.application_review`, through one shared gate (`_require_application_review`
 in `apps/jobs/views.py`): list, detail, transition, interview request and the
 employer side of message threads. The typed `entitlement_required` error (403)
 is returned even for a known application id.

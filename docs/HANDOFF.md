@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **360 passed** (was 175): billing entitlements/admin API,
+- Backend: **373 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **150 passed** (was 87).
+- Web: **155 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -207,6 +207,22 @@ analogous read bypasses and are gated now; no other verification-status
 write used a stale instance.
 
 Backend tests 360, web tests 150, no migration, OpenAPI unchanged.
+
+## PR #4 review, round six (2026-09-24, review 5302884006 on `06e30b6`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 suspended employers keep applicant workflows | `_require_recruiting` runs first inside `_require_application_review` (list, detail, transition, interview) and in the employer branch of the message resolver; typed `organization_not_verified` (403). Tests for recruitment- and verification-suspended organisations on every route, seeker reads/withdrawal intact, isolation. |
+| P1 apply uses a stale open job | `apply_to_job` locks the employer row, then the job row, re-reads both and only then creates the application and consumes usage; `invite_candidate` does the same. Threaded apply-vs-close and apply-vs-suspend tests: when the closer wins nothing is created or charged; stale-instance tests for closed jobs and suspended employers. |
+| P2 submit checks recruiting before the lock | `_submit_job` re-checks `can_recruit` on the locked employer row before the slot check; threaded submit-vs-suspend test, stale-instance test, typed 403 over HTTP, no transition on a blocked submit. Featuring re-checks the same way. |
+| P2 public employer page shows page 1 only | Employer header loads once; the jobs block is its own `AsyncPage` paginated from `?jobs_page=` with skeleton loading, count, `Pagination` and an empty-final-page state. Tests for page 1/2, next/previous, loading with the header kept, empty states, not found. |
+
+Targeted audit: talent search/detail/saved/invitations already required a
+recruiting organisation (round five); invitation creation now validates
+under the same locks as applying; no usage is consumed on any rejected
+attempt; no other public listing has a hard-coded first page.
+
+Backend tests 373, web tests 155, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

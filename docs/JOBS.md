@@ -65,6 +65,14 @@ unit keyed by its own id; each application attempt consumes one
 Interview: `PROPOSED → ACCEPTED | DECLINED | CANCELLED`; proposing one moves
 the application to `INTERVIEW`.
 
+Applying and inviting validate against locked state: the employer row is
+locked, then the job row, the job's open status and the employer's recruiting
+status are re-read, and only then is the application/invitation created and
+the usage unit consumed — a close, suspension or employer suspension that
+commits first makes the attempt fail (`job_not_open`) with nothing created or
+charged. Job submission re-checks `can_recruit` on the locked employer row
+before the slot check; the view's unlocked check is only an early exit.
+
 Employer job edits (`PATCH /jobs/employer/jobs/{id}`) go through
 `services.edit_job`: the job row is locked, editability (DRAFT/REJECTED) is
 checked on the refreshed status, and only the edited columns are written, so a
@@ -115,9 +123,12 @@ never with e-mail, phone or account identity.
   the caller's membership; seeker endpoints by `request.user`.
 - Applicant data is a paid capability: every employer-side endpoint that lists,
   reads or changes applications (list, detail, transition, interview request,
-  employer-side messages) runs the single `jobs.application_review` gate
-  (`_require_application_review`) in addition to ownership scoping, so a
-  direct object URL cannot bypass the plan.
+  employer-side messages) runs the single `_require_application_review` gate —
+  the organisation must still be allowed to recruit (VERIFIED and ACTIVE,
+  otherwise `organization_not_verified`, 403) **and** the plan must carry
+  `jobs.application_review` — in addition to ownership scoping, so a direct
+  object URL cannot bypass the plan or a suspension. Seekers keep reading and
+  withdrawing their own applications regardless.
 
 ## Endpoints (all under `/api/v1`)
 
@@ -162,7 +173,7 @@ localises all of them (`apiErrors.*`).
 
 | Route | Guard | Page |
 | --- | --- | --- |
-| `/jobs`, `/jobs/:id`, `/employers/:id` | public | search with URL-backed filters, job detail with apply block, employer page |
+| `/jobs`, `/jobs/:id`, `/employers/:id` | public | search with URL-backed filters, job detail with apply block, employer page with its published jobs paginated (`?jobs_page=`) |
 | `/jobs/profile` | auth | structured résumé (onboarding + sections) |
 | `/jobs/my-applications` | auth | applications paginated from the URL (`?page=`), interviews, invitations paginated independently (`?invites_page=`), message threads |
 | `/employer` | auth | organisation onboarding, verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request, team |
