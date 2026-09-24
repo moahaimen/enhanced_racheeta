@@ -96,9 +96,31 @@ Exceptions map to the uniform error envelope with typed codes and `meta`:
 | `entitlement_required` | 402 | `key` |
 | `usage_limit_reached` | 402 | `key`, `limit`, `used` |
 
+## Summary contract
+
+`GET /jobs/employer/billing` (and the administrator's `GET /admin/billing/accounts/{id}`)
+return two distinct subscription fields:
+
+| Field | Meaning |
+| --- | --- |
+| `subscription` | The **ACTIVE** subscription the entitlements resolve through, or `null`. Entitlement resolution is unchanged: ACTIVE subscription plan → default plan of the audience → nothing. |
+| `pending_subscription` | The request waiting for an administrator (status PENDING only), or `null`. **It never grants an entitlement.** |
+
+A PENDING request used to be invisible: the summary said `subscription: null`,
+so after a reload the workspace offered the request form again and the second
+submit failed on the one-live-subscription rule. Keeping the two apart lets the
+client show the pending state across reloads while entitlements stay exactly
+where they were. A SUSPENDED, CANCELLED, REJECTED or EXPIRED row appears in
+neither field.
+
+ACTIVE and PENDING cannot coexist (the one-live-subscription DB constraint), so
+in practice at most one of the two fields is set — except after a suspension,
+which does not block a new request: then `subscription` is `null` (the default
+plan applies) and `pending_subscription` carries the new request.
+
 ## Lifecycle
 
-1. Employer owner picks a public plan on the workspace page → `POST /jobs/employer/billing/request` → `Subscription(PENDING)`.
+1. Employer owner picks a public plan on the workspace page → `POST /jobs/employer/billing/request` → `Subscription(PENDING)`. The summary reports it as `pending_subscription` until an administrator decides.
 2. Owner pays off-platform and tells Racheeta the reference.
 3. Super Admin verifies the payment in the console → `POST /admin/billing/subscriptions/{id}/activate` with optional `term_days`, `reference`, `note`, `payment{amount,currency,method,reference}` → ACTIVE with `ends_at = starts_at + term_days`.
 4. Read-time check: an ACTIVE subscription past `ends_at` is expired (`expire_subscription`, which locks the subscription row and transitions only if it is still ACTIVE and elapsed, so a concurrent administrator decision is never overwritten and concurrent lookups write one event) whenever entitlements are resolved **and** at the start of every `request_subscription`, under a row lock on the billing account, so a renewal is never rejected as "already active" because nobody had opened a billing page since the term ended. The default plan applies again after expiry.

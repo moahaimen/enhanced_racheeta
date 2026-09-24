@@ -72,6 +72,13 @@ Ownership never comes from a client id: every self-management view resolves
 `request.user.provider_profile` and scopes querysets to it, so a foreign
 service or membership id is a 404. Public provider ids accept no writes.
 
+The same rule governs linking an organisation to a facility profile
+(`Employer.provider_profile`): `EmployerWriteSerializer.validate_provider_profile`
+accepts only a profile owned by the caller, of FACILITY kind, not already linked
+to another organisation. The employer form offers the caller's own profile from
+`GET /providers/me` (404/403 simply means "nothing to choose") — it never lists
+global provider identities — and the backend stays authoritative.
+
 Verification state machine:
 
 | Transition | Who |

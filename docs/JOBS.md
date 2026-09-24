@@ -84,7 +84,11 @@ its organisation **is** a recruitment agency. The rule is checked on the
 resulting job (not only the fields in the request) at edit time and again at
 submit time on the locked employer and job rows (`not_an_agency`, 400), so a
 draft created while the organisation was an agency must clear those fields
-before it can be changed or published.
+before it can be changed or published. The editor hides those two inputs for a
+non-agency, so it now sends the clearing values (`hiring_employer: null`,
+`hiring_organization_name: ""`) on every save of an existing non-agency job and
+warns the owner first — otherwise such a draft could not be repaired from the
+web at all. A non-agency **create** still sends no agency-only value.
 
 Employer job edits (`PATCH /jobs/employer/jobs/{id}`) go through
 `services.edit_job`: the employer row is locked, then the job row, editability (DRAFT/REJECTED) is
@@ -176,11 +180,20 @@ plus billing and audit endpoints (`BILLING.md`).
 Throttle scopes: `jobs_create 30/h`, `jobs_apply 20/h`, `talent_search 60/min`,
 `talent_invite 30/h`, `recruitment_messages 60/h`.
 
+A scope named after a write is spent by that write only. `jobs_create` and
+`talent_invite` sit on views that also serve GET (`GET|POST /jobs/employer/jobs`,
+`GET|POST /talent/invitations`), so they select the throttle per request
+(`_ThrottledOnWrite.get_throttles`): POST consumes the quota, GET does not.
+Listing and paginating the workspace therefore never exhausts the creation
+allowance, and the POST limits are unchanged. Safe methods fall through to
+`DEFAULT_THROTTLE_CLASSES`.
+
 ## Typed error codes
 
 `job_not_open`, `already_applied`, `already_invited`, `already_saved`,
 `organization_not_verified`, `invalid_transition`, `already_member`,
-`contact_information_not_allowed` (validation), and the billing codes. The web
+`not_an_agency`, `contact_information_not_allowed` (validation), and the
+billing codes. The web
 localises all of them (`apiErrors.*`).
 
 ## Web pages
@@ -190,7 +203,7 @@ localises all of them (`apiErrors.*`).
 | `/jobs`, `/jobs/:id`, `/employers/:id` | public | search with URL-backed filters, job detail with apply block, employer page with its published jobs paginated (`?jobs_page=`) |
 | `/jobs/profile` | auth | structured résumé (onboarding + sections) |
 | `/jobs/my-applications` | auth | applications paginated from the URL (`?page=`), interviews, invitations paginated independently (`?invites_page=`), message threads |
-| `/employer` | auth | organisation onboarding, verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request, team |
+| `/employer` | auth | organisation onboarding (including the optional link to the account's own facility provider profile, locked once verification starts), verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request — replaced by the pending notice while `pending_subscription` is set — team |
 | `/employer/jobs/new`, `/employer/jobs/:id` | auth | job editor, lifecycle actions, moderation flags, history |
 | `/employer/jobs/:id/applications` | auth | applicants, transitions, interview requests, messages |
 | `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save, invite (job picker loads further pages of published jobs on demand) |

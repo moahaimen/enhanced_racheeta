@@ -250,6 +250,29 @@ invitation creation all enforce the recruiting gate consistently now.
 
 Backend tests 401, web tests 155, no migration, OpenAPI unchanged.
 
+## PR #4 review, round nine (2026-09-24, review 5305174384 on `0e399c1`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 pending subscriptions missing from the billing summary | Entitlement resolution and billing UI state are now separate. `EntitlementService.pending_subscription` resolves PENDING only; `billing_summary` adds `pending_subscription` beside the unchanged `subscription` (ACTIVE only). A PENDING row still grants nothing — `plan`, `get()` and every capability check are untouched. The workspace reads the new field, so after a reload it shows the pending notice, hides the request form and cannot produce a duplicate request. Tests: pending-only summary, default entitlements without a subscription, ACTIVE effective with the duplicate request refused, SUSPENDED + PENDING coexistence, suspended/cancelled/rejected/expired never reported as pending, admin activation clears it; web: pending survives reload, form and radios gone, ACTIVE shows no pending, suspended is not pending. |
+| P2 retained hiring fields unclearable in the UI | `JobEditorPage` warns about the retained values (`retained-hiring-notice`) and, on every save of an **existing** non-agency job, submits `hiring_employer: null` and `hiring_organization_name: ""`. Nothing else is touched; a non-agency **create** still sends no agency-only value and an agency keeps both editable fields. Tests: repair warns + clears + `ApiActionButton` loading contract, clean job shows no warning, create stays clean, agency edit preserved; backend: clearing both in one save unblocks the later submit. |
+| P2 `provider_profile` missing from employer onboarding | `EmployerForm` fetches the caller's own profile from `GET /providers/me` (404/403 = nothing to choose), offers it only when it is a FACILITY, and sends `provider_profile` in create/update. No new endpoint and no global provider list: the backend stays authoritative (own profile, facility kind, not already linked). Locked once verification is PENDING/VERIFIED, matching the existing identity rule. Tests: eligible profile offered and sent, practitioner never offered, existing link loaded and disabled when locked, empty state, loading state. |
+| P2 `jobs_create` throttle applied to GET | `_ThrottledOnWrite.get_throttles()` selects `ScopedRateThrottle` for unsafe methods only; safe methods fall through to `DEFAULT_THROTTLE_CLASSES` (`throttle_classes` is deliberately unset). Applied to `EmployerJobListView`. POST limits unchanged. Tests: 30 GETs leave the whole creation allowance, the 31st POST is 429 at the configured rate, listing still works once creation is exhausted. |
+
+Targeted audit: `InvitationListView` had the same misuse — `talent_invite`
+(a write quota) on a GET+POST view — and was fixed the same way, with a test
+that GET does not consume it and POST still does. `ApplicationMessagesView`
+(`recruitment_messages`, GET+POST) has the same *shape* but its scope is a
+resource name rather than a write verb, so it falls outside the stated audit
+criterion and was **left unchanged**; it is listed under Known Problems.
+Every other scoped throttle (`auth`, `password_reset`, `email_verification`,
+`jobs_apply`, `talent_search`) is on a POST-only view, so no other change was
+needed. Noted but not changed: `billing.services.request_subscription` carries
+`@transaction.atomic` twice (harmless — the inner one is a no-op savepoint).
+
+Backend tests 415, web tests 169, no migration, **OpenAPI regenerated**
+(`BillingSummary.pending_subscription`).
+
 ## Known Problems
 
 - No notifications yet for recruitment events (Phase 9): parties must open
@@ -264,6 +287,11 @@ Backend tests 401, web tests 155, no migration, OpenAPI unchanged.
   (no pagination yet); paginate when an employer approaches that volume.
 - Talent search language filter matches by free text; language names are
   not normalised across Arabic/English spellings.
+- `ApplicationMessagesView` applies the `recruitment_messages` scope
+  (60/h) to GET as well as POST, so repeatedly opening a thread consumes the
+  send allowance. Left as-is in round nine because the scope is named after
+  the resource, not the write; decide whether reads should have their own
+  scope before Phase 9 notifications make polling common.
 
 ## Deferred (deliberately)
 
