@@ -33,6 +33,7 @@ from .types import (
     ACTIVE_APPLICATION_STATUSES,
     EMPLOYER_APPLICATION_TRANSITIONS,
     SEEKER_WITHDRAWABLE,
+    TERMINAL_APPLICATION_STATUSES,
     ApplicationStatus,
     InterviewStatus,
     InvitationStatus,
@@ -168,7 +169,6 @@ def set_employer_recruitment_status(
     return employer
 
 
-@transaction.atomic
 def _lock_employer(employer: Employer) -> Employer:
     """Serialises every check-then-commit on a shared commercial resource of the
     organisation (active-job slots, featured slots, recruiter seats). Row lock
@@ -227,6 +227,15 @@ def end_membership(membership: EmployerMembership, *, actor) -> EmployerMembersh
 # ---- job posts -------------------------------------------------------------
 
 
+def _lock_job(job: JobPost) -> None:
+    """Serialise every lifecycle change on a job: row lock plus a status refresh
+    so validation runs against the committed state. Lock order everywhere is
+    employer row first (when a commercial slot is involved), then the job row."""
+    job.status = (
+        JobPost.objects.select_for_update().filter(pk=job.pk).values_list("status", flat=True).get()
+    )
+
+
 def _job_transition(job: JobPost, to_status: str, *, actor, reason: str = "") -> None:
     JobPostTransition.objects.create(
         job=job,
@@ -277,6 +286,9 @@ def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
 @transaction.atomic
 def _submit_job(job: JobPost, *, actor) -> JobPost:
     employer = _lock_employer(job.employer)
+    _lock_job(job)
+    if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
+        raise JobsError(f"A job in status {job.status} cannot be submitted.")
     _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
@@ -288,6 +300,7 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
 
 @transaction.atomic
 def approve_job(job: JobPost, *, admin, note: str = "") -> JobPost:
+    _lock_job(job)
     if job.status != JobStatus.PENDING_ADMIN_REVIEW:
         raise JobsError("Only jobs pending review can be approved.")
     if contact_flags(job):
@@ -304,6 +317,7 @@ def approve_job(job: JobPost, *, admin, note: str = "") -> JobPost:
 
 @transaction.atomic
 def reject_job(job: JobPost, *, admin, reason: str) -> JobPost:
+    _lock_job(job)
     if job.status != JobStatus.PENDING_ADMIN_REVIEW:
         raise JobsError("Only jobs pending review can be rejected.")
     _job_transition(job, JobStatus.REJECTED, actor=admin, reason=reason)
@@ -315,6 +329,7 @@ def reject_job(job: JobPost, *, admin, reason: str) -> JobPost:
 
 @transaction.atomic
 def suspend_job(job: JobPost, *, admin, reason: str) -> JobPost:
+    _lock_job(job)
     if job.status != JobStatus.PUBLISHED:
         raise JobsError("Only published jobs can be suspended.")
     _job_transition(job, JobStatus.SUSPENDED, actor=admin, reason=reason)
@@ -326,11 +341,12 @@ def suspend_job(job: JobPost, *, admin, reason: str) -> JobPost:
 
 @transaction.atomic
 def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
+    # A suspended job holds no active slot; the employer may have used it since,
+    # so restoring re-runs the same gate as submission (employer lock, then job).
+    employer = _lock_employer(job.employer)
+    _lock_job(job)
     if job.status != JobStatus.SUSPENDED:
         raise JobsError("Only suspended jobs can be restored.")
-    # A suspended job holds no active slot; the employer may have used it since,
-    # so restoring re-runs the same gate as submission.
-    employer = _lock_employer(job.employer)
     _require_active_job_slot(employer, job)
     _job_transition(job, JobStatus.PUBLISHED, actor=admin, reason=note)
     job.save(update_fields=["status", "updated_at"])
@@ -340,6 +356,7 @@ def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
 
 @transaction.atomic
 def close_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
+    _lock_job(job)
     if job.status not in (JobStatus.PUBLISHED, JobStatus.PENDING_ADMIN_REVIEW, JobStatus.EXPIRED):
         raise JobsError(f"A job in status {job.status} cannot be closed.")
     _job_transition(job, JobStatus.CLOSED, actor=actor, reason=reason)
@@ -351,6 +368,7 @@ def close_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
 
 @transaction.atomic
 def archive_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
+    _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.CLOSED, JobStatus.EXPIRED, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be archived.")
     _job_transition(job, JobStatus.ARCHIVED, actor=actor)
@@ -375,6 +393,9 @@ def expire_overdue_jobs() -> int:
     count = 0
     for job in overdue.iterator():
         with transaction.atomic():
+            _lock_job(job)
+            if job.status != JobStatus.PUBLISHED:  # changed by a concurrent action
+                continue
             _job_transition(job, JobStatus.EXPIRED, actor=None, reason="deadline passed")
             job.save(update_fields=["status", "updated_at"])
             count += 1
@@ -384,9 +405,10 @@ def expire_overdue_jobs() -> int:
 @transaction.atomic
 def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobPost:
     if featured:
+        employer = _lock_employer(job.employer)
+        _lock_job(job)
         if job.status != JobStatus.PUBLISHED:
             raise JobsError("Only published jobs can be featured.")
-        employer = _lock_employer(job.employer)
         expire_featured_jobs()
         ent = employer_entitlements(employer)
         ent.require(Keys.JOBS_FEATURED)
@@ -477,7 +499,6 @@ def apply_to_job(
     return application
 
 
-@transaction.atomic
 def _lock_application(application: JobApplication) -> None:
     """Serialise every state change on an application (two recruiters, or a
     recruiter and the candidate, acting at once). Takes the row lock and
@@ -496,6 +517,15 @@ def _check_transition_text(reason: str) -> None:
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
 
 
+def _cancel_open_interviews(application: JobApplication) -> int:
+    """Policy: when an application reaches a terminal state, every still
+    PROPOSED interview is cancelled in the same transaction, so nobody can
+    answer an interview for a closed application."""
+    return InterviewRequest.objects.filter(
+        application=application, status=InterviewStatus.PROPOSED
+    ).update(status=InterviewStatus.CANCELLED, responded_at=timezone.now())
+
+
 @transaction.atomic
 def withdraw_application(application: JobApplication, *, actor, reason: str = "") -> JobApplication:
     _check_transition_text(reason)
@@ -511,6 +541,7 @@ def withdraw_application(application: JobApplication, *, actor, reason: str = ""
     )
     application.status = ApplicationStatus.WITHDRAWN
     application.save(update_fields=["status", "updated_at"])
+    _cancel_open_interviews(application)
     return application
 
 
@@ -532,6 +563,8 @@ def transition_application(
     )
     application.status = to_status
     application.save(update_fields=["status", "updated_at"])
+    if to_status in TERMINAL_APPLICATION_STATUSES:
+        _cancel_open_interviews(application)
     return application
 
 
@@ -569,12 +602,17 @@ def request_interview(
 def respond_to_interview(
     interview: InterviewRequest, *, actor, accept: bool, response: str = ""
 ) -> InterviewRequest:
+    # Lock order: parent application first, then the interview row.
+    application = interview.application
+    _lock_application(application)
     interview.status = (
         InterviewRequest.objects.select_for_update()
         .filter(pk=interview.pk)
         .values_list("status", flat=True)
         .get()
     )
+    if application.status in TERMINAL_APPLICATION_STATUSES:
+        raise JobsError("This application is closed.", code="application_closed")
     if interview.status != InterviewStatus.PROPOSED:
         raise JobsError("This interview request was already answered.")
     if detector.categories(response):

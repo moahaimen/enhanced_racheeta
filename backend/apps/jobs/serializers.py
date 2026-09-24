@@ -35,6 +35,16 @@ from .models import (
 )
 from .types import EmploymentType, InterviewMode, OrganizationType
 
+# What an administrator verified: frozen for owners once review starts.
+IDENTITY_FIELDS = (
+    "name",
+    "organization_type",
+    "provider_profile",
+    "is_recruitment_agency",
+    "governorate",
+)
+IDENTITY_LOCKED_STATUSES = ("PENDING", "VERIFIED")
+
 ADMIN_ONLY_EMPLOYER_FIELDS = frozenset(
     {
         "verification_status",
@@ -197,7 +207,26 @@ class EmployerWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         _validate_city(attrs, self.instance)
+        self._enforce_identity_lock(attrs)
         return attrs
+
+    def _enforce_identity_lock(self, attrs) -> None:
+        """Once an organisation is under review or verified, the fields that
+        define *what* was verified are frozen for owners (backend rule; the web
+        only mirrors it). Changing them needs a Racheeta administrator."""
+        employer = self.instance
+        if employer is None or employer.verification_status not in IDENTITY_LOCKED_STATUSES:
+            return
+        errors = {}
+        for field in IDENTITY_FIELDS:
+            if field in attrs and attrs[field] != getattr(employer, field):
+                errors[field] = serializers.ErrorDetail(
+                    "This field is locked after verification. Ask Racheeta administration "
+                    "to change it.",
+                    code="identity_locked",
+                )
+        if errors:
+            raise serializers.ValidationError(errors)
 
 
 class EmployerMemberSerializer(serializers.ModelSerializer):
