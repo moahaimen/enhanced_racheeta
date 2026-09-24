@@ -315,13 +315,27 @@ def activate_subscription(
     reference: str = "",
     note: str = "",
 ) -> Subscription:
+    # Serialise admin decisions per account and re-read the row under the lock.
+    BillingAccount.objects.select_for_update().get(pk=sub.billing_account_id)
+    sub.status = (
+        Subscription.objects.select_for_update()
+        .filter(pk=sub.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
     if sub.status not in (SubscriptionStatus.PENDING, SubscriptionStatus.SUSPENDED):
         raise SubscriptionError(f"Cannot activate a subscription in status {sub.status}.")
-    # Only one live subscription per account: cancel any other ACTIVE one.
+    # One live subscription per account (DB constraint): the administrator's
+    # decision supersedes any other ACTIVE row *and* any newer PENDING request
+    # (policy: reactivating a suspended subscription cancels the pending
+    # request; the cancellation is its own audited event).
     for other in Subscription.objects.filter(
-        billing_account=sub.billing_account, status=SubscriptionStatus.ACTIVE
+        billing_account=sub.billing_account,
+        status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.PENDING],
     ).exclude(pk=sub.pk):
-        cancel_subscription(other, admin=admin, reason="replaced by new activation")
+        cancel_subscription(
+            other, admin=admin, reason=f"superseded by activation of {sub.plan.code} ({sub.pk})"
+        )
     starts = starts_at or timezone.now()
     days = term_days or sub.plan.term_days
     previous = sub.status
@@ -331,17 +345,21 @@ def activate_subscription(
     sub.activated_by = admin
     sub.admin_reference = reference or sub.admin_reference
     sub.admin_note = note or sub.admin_note
-    sub.save(
-        update_fields=[
-            "status",
-            "starts_at",
-            "ends_at",
-            "activated_by",
-            "admin_reference",
-            "admin_note",
-            "updated_at",
-        ]
-    )
+    try:
+        with transaction.atomic():
+            sub.save(
+                update_fields=[
+                    "status",
+                    "starts_at",
+                    "ends_at",
+                    "activated_by",
+                    "admin_reference",
+                    "admin_note",
+                    "updated_at",
+                ]
+            )
+    except IntegrityError as exc:  # never a 500: another live row won a race
+        raise SubscriptionError("Another live subscription exists for this account.") from exc
     _event(sub, previous, SubscriptionStatus.ACTIVE, admin, note)
     audit.record(
         actor=admin,
@@ -363,6 +381,12 @@ def _transition(
     action: str,
     allowed_from: tuple[str, ...],
 ) -> Subscription:
+    sub.status = (
+        Subscription.objects.select_for_update()
+        .filter(pk=sub.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
     if sub.status not in allowed_from:
         raise SubscriptionError(f"Cannot move a subscription from {sub.status} to {to_status}.")
     previous = sub.status

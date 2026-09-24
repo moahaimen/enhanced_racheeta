@@ -236,7 +236,15 @@ class EmployerVerificationDecisionSerializer(serializers.Serializer):
 
 
 class RecruitmentReasonSerializer(serializers.Serializer):
-    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    # Free text the other party may later read (withdrawal reasons end up in the
+    # transition history shown to the employer): contact-checked.
+    reason = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+        validators=[validate_no_contact_info],
+    )
 
 
 # ---- job seeker profile -----------------------------------------------------

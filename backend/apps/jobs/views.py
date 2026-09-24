@@ -421,6 +421,7 @@ class MyInvitationListView(generics.ListAPIView):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return JobInvitation.objects.none()
+        services.expire_overdue_invitations(job_seeker=self.request.job_seeker)
         return JobInvitation.objects.filter(job_seeker=self.request.job_seeker).select_related(
             "job",
             "job__employer",
@@ -1129,6 +1130,7 @@ class InvitationListView(_Throttled, APIView):
         summary="Invitations sent by my organisation",
     )
     def get(self, request):
+        services.expire_overdue_invitations(employer=request.employer)
         invitations = (
             JobInvitation.objects.filter(employer=request.employer)
             .select_related(

@@ -478,7 +478,28 @@ def apply_to_job(
 
 
 @transaction.atomic
+def _lock_application(application: JobApplication) -> None:
+    """Serialise every state change on an application (two recruiters, or a
+    recruiter and the candidate, acting at once). Takes the row lock and
+    refreshes the status so validation runs against the committed state."""
+    application.status = (
+        JobApplication.objects.select_for_update()
+        .filter(pk=application.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
+
+
+def _check_transition_text(reason: str) -> None:
+    """Service-boundary guard: transition reasons are visible to the other party."""
+    if detector.categories(reason):
+        raise ContactLeak("Direct contact information is not allowed in recruitment content.")
+
+
+@transaction.atomic
 def withdraw_application(application: JobApplication, *, actor, reason: str = "") -> JobApplication:
+    _check_transition_text(reason)
+    _lock_application(application)
     if application.status not in SEEKER_WITHDRAWABLE:
         raise JobsError(f"An application in status {application.status} cannot be withdrawn.")
     JobApplicationTransition.objects.create(
@@ -497,6 +518,8 @@ def withdraw_application(application: JobApplication, *, actor, reason: str = ""
 def transition_application(
     application: JobApplication, to_status: str, *, actor, reason: str = ""
 ) -> JobApplication:
+    _check_transition_text(reason)
+    _lock_application(application)
     allowed = EMPLOYER_APPLICATION_TRANSITIONS.get(application.status, ())
     if to_status not in allowed:
         raise JobsError(f"Cannot move an application from {application.status} to {to_status}.")
@@ -522,6 +545,7 @@ def request_interview(
     location_text: str = "",
     note: str = "",
 ) -> InterviewRequest:
+    _lock_application(application)
     if application.status not in (ApplicationStatus.SHORTLISTED, ApplicationStatus.INTERVIEW):
         raise JobsError("Interviews can be requested for shortlisted candidates.")
     if detector.categories(location_text) or detector.categories(note):
@@ -541,9 +565,16 @@ def request_interview(
     return interview
 
 
+@transaction.atomic
 def respond_to_interview(
     interview: InterviewRequest, *, actor, accept: bool, response: str = ""
 ) -> InterviewRequest:
+    interview.status = (
+        InterviewRequest.objects.select_for_update()
+        .filter(pk=interview.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
     if interview.status != InterviewStatus.PROPOSED:
         raise JobsError("This interview request was already answered.")
     if detector.categories(response):
@@ -632,6 +663,11 @@ def invite_candidate(
         raise JobsError("This candidate is not discoverable.", code="not_found")
     if detector.categories(message):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
+    # Read/action-time normalisation: an elapsed PENDING invitation must not
+    # block a new one forever. The UPDATE also locks the old row, so two
+    # concurrent attempts serialise here and the unique constraint below keeps
+    # a single live invitation.
+    expire_overdue_invitations(job=job, job_seeker=profile)
     if JobInvitation.objects.filter(
         job=job, job_seeker=profile, status=InvitationStatus.PENDING
     ).exists():
@@ -660,7 +696,26 @@ def invite_candidate(
     return invitation
 
 
+def expire_overdue_invitations(**scope) -> int:
+    """Read/action-time normalisation (no scheduler): PENDING past `expires_at`
+    becomes EXPIRED. Called by the invitation lists and before inviting."""
+    return JobInvitation.objects.filter(
+        status=InvitationStatus.PENDING, expires_at__lt=timezone.now(), **scope
+    ).update(status=InvitationStatus.EXPIRED, updated_at=timezone.now())
+
+
+def _lock_invitation(invitation: JobInvitation) -> None:
+    invitation.status = (
+        JobInvitation.objects.select_for_update()
+        .filter(pk=invitation.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
+
+
+@transaction.atomic
 def respond_to_invitation(invitation: JobInvitation, *, accept: bool) -> JobInvitation:
+    _lock_invitation(invitation)
     if invitation.status != InvitationStatus.PENDING:
         raise JobsError("This invitation was already answered.")
     if invitation.expires_at < timezone.now():
@@ -673,7 +728,9 @@ def respond_to_invitation(invitation: JobInvitation, *, accept: bool) -> JobInvi
     return invitation
 
 
+@transaction.atomic
 def cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
+    _lock_invitation(invitation)
     if invitation.status != InvitationStatus.PENDING:
         raise JobsError("Only pending invitations can be cancelled.")
     invitation.status = InvitationStatus.CANCELLED
