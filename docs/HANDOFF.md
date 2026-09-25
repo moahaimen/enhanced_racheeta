@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **550 passed** (was 175): billing entitlements/admin API,
+- Backend: **586 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -394,6 +394,23 @@ surfaces the workspace does not link for a VIEWER and that fail closed with a
 403 error state if reached by URL.
 
 Backend tests 550, web tests 191, no migration, OpenAPI unchanged.
+
+## PR #4 review, round eighteen — Phase 3 closure (2026-09-25, review 5322161319 on `1ef2e74`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 owner PATCH decides on a stale employer instance | `update_employer` re-reads the whole row under `select_for_update` and uses that locked instance for the frozen-identity rule, every identity comparison and the write; the caller's instance is only synchronised afterwards. Tests: unverified edits, each frozen identity field on a verified employer, the stale-instance scenario for every identity field category, non-identity edits, agency/non-agency verification, threaded stale edit vs edit+verification. |
+| P2 recruitment mutations trust the view pre-check | `_require_recruitment_mutation` locks the employer row first, re-reads it, re-runs `can_recruit` and the gating entitlements; used by `transition_application`, `request_interview` (and its nested transition) and employer-side `send_message` before the application lock (order employer → application → interview). Tests: eligible actions, suspension after the pre-check for each action (no row, no audit change, typed error), lost entitlement for each action, API 403s, candidate actions unaffected, threaded transition vs suspension. |
+| P2 elapsed ACTIVE rows listed and actionable as ACTIVE | `expire_all_elapsed_subscriptions()` (reuses `expire_subscription`, bounded to elapsed rows, idempotent) runs in the admin list `get_queryset` before filtering and serialisation; `suspend_subscription`/`cancel_subscription` expire an elapsed term first and then refuse with the typed error; `activate_subscription` expires the account's elapsed rows before superseding. Tests: expired before response, event written once across repeated lists, status filters, future ACTIVE untouched, SUSPENDED/CANCELLED/EXPIRED not rewritten, actions after listing, direct paths, live terms still suspend/cancel, activation over an elapsed row. Round-seven's stale-expiry test now decides on a live term (an elapsed one can no longer be suspended). |
+
+Bounded audit: every other employer-entering service already decides on the
+locked row (`_lock_employer` fresh instance or `_refresh_employer_status` for
+status-only decisions); `invite_candidate` and `save_candidate` re-check the
+locked employer, `cancel_invitation` only retracts; subscription list, suspend,
+cancel and activate all normalise elapsed terms. No directly analogous defect
+is known to remain in these three families.
+
+Backend tests 586, web tests 191, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
