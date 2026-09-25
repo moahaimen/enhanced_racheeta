@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.accounts.models import Account
 from apps.audit import services as audit
 from apps.billing import services as billing
 from apps.billing.exceptions import EntitlementError
@@ -156,10 +157,10 @@ def _refresh_employer_status(employer: Employer) -> None:
     """Row lock + status refresh: identity edits and administrator decisions
     serialise on the employer row, so a decision always applies to the exact
     identity state visible while it holds the lock."""
-    employer.verification_status, employer.recruitment_status = (
+    employer.verification_status, employer.recruitment_status, employer.is_recruitment_agency = (
         Employer.objects.select_for_update()
         .filter(pk=employer.pk)
-        .values_list("verification_status", "recruitment_status")
+        .values_list("verification_status", "recruitment_status", "is_recruitment_agency")
         .get()
     )
 
@@ -209,6 +210,31 @@ def set_employer_verification(
     # (and is what the administrator decides on) or waits and is then rejected
     # by the identity lock once the decision is committed.
     _refresh_employer_status(employer)
+    suspended_jobs: list[str] = []
+    if status == VerificationStatus.VERIFIED:
+        # Verification makes PUBLISHED jobs public again. They were approved
+        # under a possibly different identity, so each is re-checked against the
+        # invariant the submit/approve/restore gate uses (lock order employer →
+        # job); a job that no longer holds is suspended in this transaction with
+        # a clear reason, never edited or deleted.
+        for job in JobPost.objects.filter(employer=employer, status=JobStatus.PUBLISHED):
+            _lock_job(job)
+            if job.status != JobStatus.PUBLISHED:
+                continue
+            try:
+                _require_agency_invariant(employer, job)
+            except HiringFieldsNotAllowed:
+                reason = (
+                    "suspended at re-verification: the organisation is no longer a recruitment "
+                    "agency, clear the hiring fields and ask for a restore"
+                )
+                _job_transition(job, JobStatus.SUSPENDED, actor=admin, reason=reason)
+                job.moderation_note = reason
+                job.save(update_fields=["status", "moderation_note", "updated_at"])
+                audit.record(
+                    actor=admin, action="jobs.post.suspended", target=job, summary=reason[:255]
+                )
+                suspended_jobs.append(str(job.pk))
     employer.verification_status = status
     employer.verification_note = note
     if status == VerificationStatus.VERIFIED:
@@ -221,6 +247,7 @@ def set_employer_verification(
         action="jobs.employer.verification_set",
         target=employer,
         summary=f"{status}: {note}"[:255],
+        data={"suspended_jobs": suspended_jobs},
     )
     return employer
 
@@ -304,11 +331,27 @@ def add_member(employer: Employer, account, role: str, *, actor) -> EmployerMemb
     if role == MemberRole.OWNER:
         raise JobsError("Ownership cannot be granted through this action.", code="invalid_role")
     _lock_employer(employer)
+    # Lock order: employer row, then the TARGET account row. Two organisations
+    # adding the same account lock different employer rows but the same account
+    # row, so the second waits and then sees the first membership.
+    Account.objects.select_for_update().filter(pk=account.pk).values_list("pk", flat=True).get()
     if EmployerMembership.objects.filter(account=account, status=MemberStatus.ACTIVE).exists():
         raise JobsError("This account already belongs to an organisation.", code="already_member")
     seats = EmployerMembership.objects.filter(employer=employer, status=MemberStatus.ACTIVE).count()
     employer_entitlements(employer).check_concurrent(Keys.RECRUITER_SEATS, current=seats)
-    membership = EmployerMembership.objects.create(employer=employer, account=account, role=role)
+    try:
+        with transaction.atomic():
+            membership = EmployerMembership.objects.create(
+                employer=employer, account=account, role=role
+            )
+    except IntegrityError as exc:
+        # Final protection: only the one-active-membership constraint maps to the
+        # typed business error; anything else is a genuine failure.
+        if "jobs_membership_one_active_per_account" not in str(exc):
+            raise
+        raise JobsError(
+            "This account already belongs to an organisation.", code="already_member"
+        ) from exc
     audit.record(
         actor=actor,
         action="jobs.employer.member_added",
