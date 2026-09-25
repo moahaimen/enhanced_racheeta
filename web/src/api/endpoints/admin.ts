@@ -7,6 +7,8 @@ const enc = encodeURIComponent
 export interface AdminEmployer extends EmployerOwner {
   created_by_email: string
   active_jobs: number
+  /** Linked facility profile, as the reviewer must see it before freezing the identity. */
+  provider_profile: { id: string; display_name: string; provider_type: string; verification_status: string } | null
 }
 export interface AdminJob extends JobEmployer {
   contact_findings: { field: string; category: string; excerpt: string }[]

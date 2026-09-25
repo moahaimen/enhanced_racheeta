@@ -944,7 +944,7 @@
     "suspendRecruitment": "إيقاف التوظيف",
     "restoreRecruitment": "استئناف التوظيف",
     "employer": "المؤسسة",
-    "submitted": "آخر تحديث",
+    "submitted": "تاريخ الإرسال للمراجعة",
     "showText": "عرض نص الإعلان",
     "contactFindings": "معلومات اتصال محتملة في النص",
     "reasonOrNote": "السبب / الملاحظة",
@@ -968,6 +968,14 @@
     "creditAmount": "الكمية (سالب للسحب)",
     "grant": "منح الرصيد",
     "creditGranted": "تم. رصيد «{{key}}» الحالي: {{balance}}",
-    "reactivate": "إعادة التفعيل"
+    "reactivate": "إعادة التفعيل",
+    "notSubmitted": "لم تُرسل بعد",
+    "published": "تاريخ النشر",
+    "lastUpdated": "آخر تحديث",
+    "agency": "مكتب توظيف",
+    "linkedProvider": "المنشأة الطبية المرتبطة",
+    "noLinkedProvider": "غير مرتبطة بمنشأة",
+    "verificationRequestedAt": "طلب التوثيق في",
+    "city": "المدينة"
   }
 }

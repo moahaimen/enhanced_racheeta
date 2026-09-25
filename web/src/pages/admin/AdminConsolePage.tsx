@@ -86,7 +86,7 @@ function EmployersTab() {
 }
 
 function EmployerRow({ employer: e, reload }: { employer: AdminEmployer; reload: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -110,8 +110,36 @@ function EmployerRow({ employer: e, reload }: { employer: AdminEmployer; reload:
           <dd>{name(e.governorate)}</dd>
         </div>
         <div>
+          <dt>{t('admin.city')}</dt>
+          <dd>{e.city ? name(e.city) : '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('admin.agency')}</dt>
+          <dd data-testid="admin-employer-agency">{e.is_recruitment_agency ? t('common.yes') : t('common.no')}</dd>
+        </div>
+        <div>
+          <dt>{t('admin.linkedProvider')}</dt>
+          <dd data-testid="admin-employer-provider">
+            {e.provider_profile ? (
+              <>
+                {e.provider_profile.display_name} · {t(`providerTypes.${e.provider_profile.provider_type}`, { defaultValue: e.provider_profile.provider_type })}
+                <span className="text-caption" dir="ltr">
+                  {' '}
+                  ({e.provider_profile.id})
+                </span>
+              </>
+            ) : (
+              t('admin.noLinkedProvider')
+            )}
+          </dd>
+        </div>
+        <div>
           <dt>{t('admin.createdBy')}</dt>
           <dd dir="ltr">{e.created_by_email}</dd>
+        </div>
+        <div>
+          <dt>{t('admin.verificationRequestedAt')}</dt>
+          <dd>{e.verification_requested_at ? new Date(e.verification_requested_at).toLocaleString(i18n.language) : '—'}</dd>
         </div>
         <div>
           <dt>{t('admin.activeJobs')}</dt>
@@ -211,7 +239,17 @@ function JobRow({ job: j, reload }: { job: AdminJob; reload: () => void }) {
         </div>
         <div>
           <dt>{t('admin.submitted')}</dt>
-          <dd>{new Date(j.updated_at).toLocaleString(i18n.language)}</dd>
+          <dd data-testid="admin-job-submitted">{j.submitted_at ? new Date(j.submitted_at).toLocaleString(i18n.language) : t('admin.notSubmitted')}</dd>
+        </div>
+        {j.published_at ? (
+          <div>
+            <dt>{t('admin.published')}</dt>
+            <dd data-testid="admin-job-published">{new Date(j.published_at).toLocaleString(i18n.language)}</dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>{t('admin.lastUpdated')}</dt>
+          <dd data-testid="admin-job-updated">{new Date(j.updated_at).toLocaleString(i18n.language)}</dd>
         </div>
       </dl>
       <details>

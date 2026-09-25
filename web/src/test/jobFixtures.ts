@@ -235,7 +235,7 @@ export function makeBilling(overrides: Partial<BillingSummary> = {}): BillingSum
 }
 
 export function makeAdminEmployer(overrides: Partial<AdminEmployer> = {}): AdminEmployer {
-  return { ...makeEmployerOwner({ verification_status: 'PENDING', is_verified: false }), created_by_email: 'owner@example.com', active_jobs: 0, ...overrides }
+  return { ...makeEmployerOwner({ verification_status: 'PENDING', is_verified: false }), created_by_email: 'owner@example.com', active_jobs: 0, provider_profile: null, ...overrides }
 }
 
 export function makeAdminJob(overrides: Partial<AdminJob> = {}): AdminJob {

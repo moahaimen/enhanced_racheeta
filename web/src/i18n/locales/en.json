@@ -912,7 +912,7 @@
     "suspendRecruitment": "Suspend recruitment",
     "restoreRecruitment": "Resume recruitment",
     "employer": "Organisation",
-    "submitted": "Last updated",
+    "submitted": "Submitted for review",
     "showText": "Show listing text",
     "contactFindings": "Possible contact details in the text",
     "reasonOrNote": "Reason / note",
@@ -936,6 +936,14 @@
     "creditAmount": "Amount (negative to revoke)",
     "grant": "Grant credits",
     "creditGranted": "Done. Current “{{key}}” balance: {{balance}}",
-    "reactivate": "Reactivate"
+    "reactivate": "Reactivate",
+    "notSubmitted": "Not submitted yet",
+    "published": "Published",
+    "lastUpdated": "Last updated",
+    "agency": "Recruitment agency",
+    "linkedProvider": "Linked facility profile",
+    "noLinkedProvider": "No linked facility",
+    "verificationRequestedAt": "Verification requested",
+    "city": "City"
   }
 }
