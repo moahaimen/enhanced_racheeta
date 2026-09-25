@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **586 passed** (was 175): billing entitlements/admin API,
+- Backend: **609 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -411,6 +411,43 @@ cancel and activate all normalise elapsed terms. No directly analogous defect
 is known to remain in these three families.
 
 Backend tests 586, web tests 191, no migration, OpenAPI unchanged.
+
+## Phase 3 production-closure audit (2026-09-25, on `eb028ea`)
+
+One systematic pass over every Phase 3 mutation, queryset, admin surface and
+web control, with four read-only audit tracks (authorization/visibility,
+concurrency/lifecycle, billing/entitlements, web role controls) and a
+scripted end-to-end smoke test (`apps/jobs/tests/test_phase3_smoke.py`,
+thirteen workflows). Blockers fixed:
+
+| Area | Blocker | Fix |
+| --- | --- | --- |
+| Privacy | Invitation cancel returned the candidate card of a candidate the visibility rule hides, and worked for a suspended organisation | `InvitationCancelView` runs the talent gate and renders `candidate: null` unless `_visible_candidates` allows it; `SavedCandidateDeleteView` runs the gate too |
+| Privacy | A non-discoverable organisation's profile (incl. description) was published through an agency job's `hiring_employer` | Only verified, discoverable organisations can be named; public cards/detail render `hiring_employer: null` once the named organisation is not public; the agency and admins still see it |
+| Visibility | Public employer page stayed public while recruitment was SUSPENDED | Same rule as `public()`: recruitment ACTIVE required |
+| Concurrency | The featured-window sweep ran unscoped under the employer lock (row locks on other organisations' jobs → Postgres deadlock → 500) | `expire_featured_jobs(employer=…)` is scoped whenever a lock is held; the unscoped sweep stays on listing paths |
+| Lifecycle | Suspending a job past its deadline created a row nobody could restore, edit, close or archive | `suspend_job` normalises overdue jobs first; `restore_job` turns a suspended job whose deadline elapsed into EXPIRED (one transition, audited) |
+| Lifecycle | `_lock_job` refreshed only the status; deadline, hiring fields, featured window and content were decided on the caller's instance | `_lock_job` re-reads the whole row; submit re-scans contact data on the locked row |
+| Conflict → 500 | Double-submitted seeker profile (and child rows) hit the unique constraint uncaught | Account row lock + re-check + constraint mapped to the typed `already_exists`/`duplicate` error |
+| Billing | A SUSPENDED subscription outlived the activation of a newer paid one; "reactivating" it cancelled the paid row | Activation supersedes SUSPENDED rows as well (cancelled, audited) |
+| Billing | Retiring or deleting the default plan revoked every unsubscribed account's capabilities with one checkbox | `Plan.save()` and the admin form refuse retiring the default; the admin cannot delete it |
+| Billing | Reported usage ignored the perpetual bucket `consume()` increments for `period=NONE` limits | `get()` reads the same bucket for every LIMIT row |
+| Billing | Payment record written outside the activation transaction | Activation view is atomic |
+| Stale state | Non-VERIFIED decisions wrote a stale `verified_at`; ending a membership had no transaction/lock; cancelling an elapsed invitation recorded CANCELLED; job PATCH mapped every domain error to 409; deactivated candidates could be saved/invited | Each fixed in the service or view |
+| Web | VIEWER linked to the recruiter-only talent page; plan request form shown while a subscription is ACTIVE (always refused) | Plain text for viewers; live-subscription notice instead of the form |
+
+Backlog (not production-blocking, unchanged): no saved-candidates / sent-invitations
+UI (API exists); credits on concurrent keys are permanent capacity (document);
+UTC period boundaries; docs still say 402 for entitlement errors (they are
+403) and seats "non-owner" (owner counts); `term_days=0` yields a perpetual
+term; reactivation grants a fresh term (policy); no renewal while ACTIVE; plan
+retirement counts not-yet-normalised elapsed rows; ACCEPTED invitations never
+expire; PENDING jobs past deadline hold a slot; withdrawn applications keep
+the candidate visible (documented policy); deactivated seeker's live card on
+applicant rows; UI-only apply role gate not enforced server-side; a few
+ApiActionButton nits (interview toggle, ClientValidationError).
+
+Backend tests 609, web tests 191, no migration, OpenAPI regenerated (two fields now nullable).
 
 ## Known Problems
 
