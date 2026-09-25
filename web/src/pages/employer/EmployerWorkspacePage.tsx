@@ -242,6 +242,11 @@ function BillingBlock({ billing, isOwner }: { billing: ReturnType<typeof useAsyn
                 <Alert kind="info" testId="pending-request-notice">
                   {t('employer.pendingRequestPlan', { plan: planName(pending.plan) })}
                 </Alert>
+              ) : billing.data.subscription?.status === 'ACTIVE' ? (
+                // The backend refuses a new request while one is ACTIVE (a suspended one may be replaced).
+                <Alert kind="info" testId="live-subscription-notice">
+                  {t('employer.liveSubscriptionPlan', { plan: planName(billing.data.subscription.plan) })}
+                </Alert>
               ) : (
                 <form noValidate onSubmit={(e) => e.preventDefault()}>
                   {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}

@@ -32,6 +32,7 @@ describe('ApplicantsPage', () => {
     expect(within(card).getByRole('button', { name: /^رفض$|^Reject$/ })).toBeInTheDocument()
     expect(within(card).getByLabelText(/السبب|Reason/)).toBeInTheDocument()
     expect(within(card).getByTestId('messages-thread')).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: /ممرضة|Nurse/i })).toHaveAttribute('href', expect.stringContaining('/employer/talent/'))
     expect(screen.queryByText(VIEWER_NOTE)).toBeNull()
   })
 
@@ -46,7 +47,9 @@ describe('ApplicantsPage', () => {
     expect(within(card).getByText('أرغب بالانضمام.')).toBeInTheDocument()
     expect(within(card).getByText('خبرة في العناية المركزة.')).toBeInTheDocument()
     expect(within(card).getByText('ICU')).toBeInTheDocument()
-    expect(within(card).getByRole('link', { name: /ممرضة|Nurse/i })).toBeInTheDocument()
+    // the candidate title is plain text: talent detail is a recruiter-only page
+    expect(within(card).queryByRole('link', { name: /ممرضة|Nurse/i })).toBeNull()
+    expect(within(card).getByText(/ممرضة|Nurse/i)).toBeInTheDocument()
     // no transition, interview, reason field or messaging
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(within(card).queryByLabelText(/السبب|Reason/)).toBeNull()

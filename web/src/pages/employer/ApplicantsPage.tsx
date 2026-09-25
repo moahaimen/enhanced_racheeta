@@ -78,9 +78,13 @@ function ApplicantCard({ application, canWrite, reload }: { application: Applica
   return (
     <SectionCard
       title={
-        <Link to={`/employer/talent/${c.id}`} className={styles.rowTitle} style={{ color: 'inherit', textDecoration: 'none' }}>
-          {c.professional_title}
-        </Link>
+        canWrite ? (
+          <Link to={`/employer/talent/${c.id}`} className={styles.rowTitle} style={{ color: 'inherit', textDecoration: 'none' }}>
+            {c.professional_title}
+          </Link>
+        ) : (
+          <span className={styles.rowTitle}>{c.professional_title}</span> // talent detail is a recruiter-only page
+        )
       }
       description={`${t(`professions.${c.profession}`)} · ${t(`degrees.${c.degree}`)} · ${t('talent.experienceYears', { count: c.years_of_experience })} · ${name(c.governorate)}`}
       headingLevel={2}

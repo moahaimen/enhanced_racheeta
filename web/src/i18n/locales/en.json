@@ -811,6 +811,7 @@
     "myRole": "My role",
     "identityLocked": "Once verification is requested, the organisation's identity fields (name, type, governorate, linked facility, agency flag) are locked. Contact Racheeta administration to change them.",
     "pendingRequestPlan": "Your request for the “{{plan}}” plan is waiting for Racheeta administration. There is no need to send another one.",
+    "liveSubscriptionPlan": "Your organisation already has a subscription to the “{{plan}}” plan. A new plan can be requested once it ends; contact Racheeta administration to change it earlier.",
     "linkProviderHint": "If you have a medical facility profile on Racheeta you can link it to this organisation before requesting verification. The link is locked once review starts.",
     "linkProviderNone": "No medical facility profile is attached to your account.",
     "linkProviderNoneHint": "Create a facility provider profile first if you want to link it to this organisation.",

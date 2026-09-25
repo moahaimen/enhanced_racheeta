@@ -145,7 +145,9 @@ describe('EmployerWorkspacePage', () => {
       expect((await screen.findAllByText(/^نشط$|^Active$/i)).length).toBeGreaterThan(0)
       expect(screen.queryByTestId('pending-request-notice')).toBeNull()
       expect(screen.queryByTestId('pending-subscription-badge')).toBeNull()
-      expect(requestButton()).toBeInTheDocument()
+      // The backend refuses a new request while one is ACTIVE: a notice replaces the form.
+      expect(screen.queryByRole('button', { name: /إرسال طلب الاشتراك|Send subscription request/i })).toBeNull()
+      expect(screen.getByTestId('live-subscription-notice')).toHaveTextContent(/احترافية|Professional/)
     })
 
     it('does not treat a suspended or cancelled subscription as a pending request', async () => {
@@ -160,14 +162,15 @@ describe('EmployerWorkspacePage', () => {
       expect(requestButton()).toBeInTheDocument()
     })
 
-    it('offers the form again once the administrator has activated the plan', async () => {
+    it('offers the form again once the subscription has ended', async () => {
       vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
       vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
-        makeBilling({ subscription: makeSubscription({ status: 'ACTIVE' }), pending_subscription: null }),
+        makeBilling({ subscription: null, pending_subscription: null }),
       )
       renderApp('/employer')
       await screen.findByTestId('usage-meters')
       expect(screen.queryByTestId('pending-request-notice')).toBeNull()
+      expect(screen.queryByTestId('live-subscription-notice')).toBeNull()
       expect(requestButton()).toBeInTheDocument()
     })
   })
