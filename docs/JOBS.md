@@ -121,6 +121,15 @@ application row before its interview row.
 
 ## Talent search and the "one billable search" rule
 
+Saved candidates (`GET /talent/saved`) use the standard paginated envelope
+(`count`, `next`, `previous`, `results`, newest first). The relation stays
+stored when a candidate hides their profile, but the card is returned only
+while the shared visibility rule (`_visible_candidates`, also used by talent
+detail) allows it: an active account that is currently discoverable, or that
+applied to one of this employer's jobs. Talent detail exposes
+`saved_candidate_id` for the requesting employer's own record (null when not
+saved, never another organisation's id) so the web can unsave in place.
+
 Paid recruitment reads and writes share one gate: talent search and candidate
 detail need `talent.search`, listing **and saving** candidates need
 `talent.save_candidate`, the sent-invitations list and inviting need
@@ -226,7 +235,7 @@ localises all of them (`apiErrors.*`).
 | `/employer` | auth | organisation onboarding (including the optional link to the account's own facility provider profile, locked once verification starts), verification, paginated jobs (`?jobs_page=`), server-side `active_jobs` statistic, plan/usage meters, plan request — replaced by the pending notice while `pending_subscription` is set — team |
 | `/employer/jobs/new`, `/employer/jobs/:id` | auth | job editor, lifecycle actions, moderation flags, history |
 | `/employer/jobs/:id/applications` | auth | applicants, transitions, interview requests, messages |
-| `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save, invite (job picker loads further pages of published jobs on demand) |
+| `/employer/talent`, `/employer/talent/:id` | auth | talent search (quota note), candidate detail, save / remove from saved, invite (job picker loads further pages of published jobs on demand) |
 | `/admin-console` | staff | organisations, job review with contact findings, subscriptions, credits |
 
 Every action uses `ApiActionButton` (disable, spinner, stable size, restore);

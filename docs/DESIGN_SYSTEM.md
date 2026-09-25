@@ -127,6 +127,10 @@ Directional icons pass `flipInRtl`. No emoji, no mixed libraries.
 
 `LinkButton` accepts router `state` (used to return to `/employer` after login).
 
+`ApiActionButton` reports every completed action through `onSuccess`, including
+actions that resolve with nothing (a DELETE / 204); only a click ignored while
+another call is pending is skipped (`DUPLICATE_CALL` from `useAsyncAction`).
+
 Not built yet (no page needs them): `Modal/Dialog`, `Drawer`, `Dropdown`,
 `Tooltip`, `Toast`, `Breadcrumb`, `Radio`, `QuickActionCard`, `ActivityCard`.
 Add them in `components/` with a CSS module and a behaviour test when a page

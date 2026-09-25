@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **460 passed** (was 175): billing entitlements/admin API,
+- Backend: **471 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **177 passed** (was 87).
+- Web: **181 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -308,6 +308,27 @@ Backend tests 444, web tests 177, no migration, OpenAPI unchanged.
 | P2 public detail of an elapsed job | `JobPost.objects.public()` excludes PUBLISHED jobs whose deadline elapsed (same boundary as `is_open`), so search, detail and apply agree; employer/admin reads unchanged; listing still normalises history once. Tests for future/today/past deadlines and repeated reads. |
 
 Backend tests 460, web tests 177, no migration, **OpenAPI regenerated** (`AdminDecision.note` maxLength 500).
+
+## PR #4 review, round thirteen (2026-09-25, review 5316217187 on `5c1bb4b`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 Django admin as a second state machine | `SubscriptionAdmin`: lifecycle/identity fields read-only, no add/delete, read-only event and payment inlines; `Plan.code`/`audience` frozen after creation; `UsageCounter` read-only. Tests: change form without editable status/plan/account/dates, POST cannot flip PENDING→ACTIVE, service activation and API actions unchanged. |
+| P2 saved cards ignore discoverability | `_visible_candidates(employer)` (active account, discoverable or applied to this employer) shared by talent detail and the saved list; the relation stays stored. Tests: hidden without application disappears, prior applicant stays, other employer's applicant hidden, inactive hidden, isolation, re-enable restores. |
+| P2 saved list truncated at 200 | `SavedCandidateListView` is a `ListCreateAPIView` on the standard pagination (newest first). Tests: 205 rows across pages, count, next/previous, ordering, page 2 ids, privacy + pagination. OpenAPI regenerated. |
+| P2 no unsave in the UI | Talent detail exposes `saved_candidate_id` (own record only); the candidate page shows Remove-from-saved via `ApiActionButton` and reloads. Backend tests: own id, null when unsaved, other employer's id never leaked, DELETE scoped; web tests: save → saved, remove → unsaved, duplicate clicks, error keeps state. |
+
+Targeted audit: delete reachability is restored by pagination plus the
+detail id; isolation, discoverability, recruiting and entitlement gates are
+enforced on every saved-candidate path. Found while wiring unsave:
+`ApiActionButton` treated an `undefined` result as "no success", so every
+void action (unsave, and the seeker profile's delete buttons) never fired
+`onSuccess`/reload. `useAsyncAction.run` now returns a `DUPLICATE_CALL`
+sentinel for ignored clicks and the button reports every completed action,
+with a design-system test.
+
+Backend tests 471, web tests 181, no migration, **OpenAPI regenerated**
+(paginated saved candidates, `TalentDetail.saved_candidate_id`).
 
 ## Known Problems
 

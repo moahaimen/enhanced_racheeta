@@ -150,3 +150,15 @@ Add keys to `Keys` and `KEY_SPECS`, add them to plans (migration or admin),
 call `require/check_concurrent/consume` from the module's service layer, and
 translate the key in `entitlements.*` on the web. Nothing in `billing` imports
 `jobs`.
+
+## Django admin
+
+The Django admin is for inspection only. `Subscription` lifecycle and identity
+fields (`billing_account`, `plan`, `status`, `starts_at`, `ends_at`,
+`requested_by`, `requester_note`, `activated_by`, `admin_reference`) are
+read-only, subscriptions cannot be added or deleted there, and the event and
+payment inlines are read-only; every state change goes through
+`apps.billing.services` (locked, evented, audited) via the admin console API.
+`Plan` prices, limits and flags remain editable (that is how the owner sets
+IQD prices), but a plan's `code` and `audience` are frozen once created.
+`UsageCounter` rows are read-only.
