@@ -191,16 +191,21 @@ def _refresh_employer_status(employer: Employer) -> None:
 
 @transaction.atomic
 def update_employer(employer: Employer, fields: dict, *, actor) -> Employer:
-    """Owner edit. Identity fields are checked against the LOCKED row, never a
-    stale instance, and only the intended fields are written."""
-    _refresh_employer_status(employer)
-    if employer.verification_status in IDENTITY_LOCKED_STATUSES:
-        changed = [f for f in IDENTITY_FIELDS if f in fields and fields[f] != getattr(employer, f)]
+    """Owner edit. The LOCKED row is the authoritative state for every decision:
+    it is re-read in full under `select_for_update`, the frozen-identity rule
+    is evaluated on it, every submitted identity field is compared with its
+    CURRENT value, and only then are the allowed changes written. The caller's
+    instance may be stale (another owner edit or a verification may have
+    committed since it was read) and is never consulted, only synchronised."""
+    locked = Employer.objects.select_for_update().get(pk=employer.pk)
+    if locked.verification_status in IDENTITY_LOCKED_STATUSES:
+        changed = [f for f in IDENTITY_FIELDS if f in fields and fields[f] != getattr(locked, f)]
         if changed:
             raise IdentityLocked(changed)
     for key, value in fields.items():
-        setattr(employer, key, value)
-    employer.save(update_fields=[*fields, "updated_at"])
+        setattr(locked, key, value)
+    locked.save(update_fields=[*fields, "updated_at"])
+    employer.__dict__.update({k: v for k, v in locked.__dict__.items() if k != "_state"})
     return employer
 
 
@@ -771,6 +776,23 @@ def apply_to_job(
     return application
 
 
+def _require_recruitment_mutation(employer: Employer, *keys: str) -> Employer:
+    """Authoritative gate for every employer-side recruitment mutation
+    (application transitions, interview requests, employer messages). The
+    employer row is locked FIRST (established order: employer → application →
+    interview), its state re-read, and recruiting eligibility plus the gating
+    entitlements re-run on that locked row, so an administrator suspension or
+    a plan change that committed after the view's pre-check still refuses the
+    mutation before anything is written."""
+    employer = _lock_employer(employer)
+    if not employer.can_recruit:
+        raise OrganizationNotVerified("The organisation must be verified and active.")
+    ent = employer_entitlements(employer)
+    for key in keys:
+        ent.require(key)
+    return employer
+
+
 def _lock_application(application: JobApplication) -> None:
     """Serialise every state change on an application (two recruiters, or a
     recruiter and the candidate, acting at once). Takes the row lock and
@@ -822,6 +844,7 @@ def transition_application(
     application: JobApplication, to_status: str, *, actor, reason: str = ""
 ) -> JobApplication:
     _check_transition_text(reason)
+    _require_recruitment_mutation(application.job.employer, Keys.JOBS_APPLICATION_REVIEW)
     _lock_application(application)
     allowed = EMPLOYER_APPLICATION_TRANSITIONS.get(application.status, ())
     if to_status not in allowed:
@@ -850,6 +873,7 @@ def request_interview(
     location_text: str = "",
     note: str = "",
 ) -> InterviewRequest:
+    _require_recruitment_mutation(application.job.employer, Keys.JOBS_APPLICATION_REVIEW)
     _lock_application(application)
     if application.status not in (ApplicationStatus.SHORTLISTED, ApplicationStatus.INTERVIEW):
         raise JobsError("Interviews can be requested for shortlisted candidates.")
@@ -902,13 +926,17 @@ def send_message(
 ) -> RecruitmentMessage:
     if detector.categories(body):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
+    if side == MessageSide.EMPLOYER:
+        # Employer-side messaging is applicant review: same authoritative gate,
+        # employer row first, then the application row.
+        _require_recruitment_mutation(
+            application.job.employer, Keys.JOBS_APPLICATION_REVIEW, Keys.RECRUITMENT_MESSAGING
+        )
     # Lock and refresh the application so a rejection or withdrawal that
     # commits first closes the thread before this message can be inserted.
     _lock_application(application)
     if application.status in (ApplicationStatus.WITHDRAWN, ApplicationStatus.REJECTED):
         raise JobsError("This application is closed.", code="application_closed")
-    if side == MessageSide.EMPLOYER:
-        employer_entitlements(application.job.employer).require(Keys.RECRUITMENT_MESSAGING)
     return RecruitmentMessage.objects.create(
         application=application, sender=sender, sender_side=side, body=body
     )
