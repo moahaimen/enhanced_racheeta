@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 
 from .models import (
@@ -18,8 +19,44 @@ class PlanEntitlementInline(admin.TabularInline):
     extra = 0
 
 
+class PlanAdminForm(forms.ModelForm):
+    class Meta:
+        model = Plan
+        fields = [
+            "code",
+            "audience",
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "billing_period",
+            "term_days",
+            "price_amount",
+            "price_currency",
+            "is_active",
+            "is_public",
+            "is_default",
+            "sort_order",
+        ]
+
+    def clean(self):
+        cleaned = super().clean()
+        # Same invariant the model enforces, raised here so the admin renders a
+        # normal field error instead of a 500. The model still guards every path.
+        if self.instance.pk and cleaned.get("is_active") is False:
+            blocking = self.instance.subscriptions.filter(status="ACTIVE").count()
+            if blocking:
+                self.add_error(
+                    "is_active",
+                    f"{blocking} active subscription(s) still reference this plan; move them "
+                    "through the subscription lifecycle first.",
+                )
+        return cleaned
+
+
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
+    form = PlanAdminForm
     list_display = (
         "code",
         "audience",

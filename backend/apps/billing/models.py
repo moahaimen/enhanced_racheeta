@@ -3,7 +3,8 @@ identified by (subject_type, subject_id), and capabilities by string keys.
 Prices are administrator-set and deliberately unset in seeds."""
 
 from django.conf import settings
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 from django.db.models import Q
 
 from apps.core.models import BaseModel
@@ -37,6 +38,7 @@ class Plan(BaseModel):
     price_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     price_currency = models.CharField(max_length=3, default="IQD")
     is_active = models.BooleanField(default=True)
+
     is_public = models.BooleanField(default=True, help_text="Shown to users as requestable")
     is_default = models.BooleanField(
         default=False, help_text="Applies to subjects of this audience with no active subscription"
@@ -56,6 +58,36 @@ class Plan(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.code} ({self.audience})"
+
+    def save(self, *args, **kwargs):
+        """Invariant: an ACTIVE subscription never references a retired plan.
+        Retiring (`is_active` true → false) locks this row — the same row lock
+        `activate_subscription` takes before it re-reads the plan — and is
+        refused while ACTIVE subscriptions reference it, so activation and
+        retirement serialise and can never commit ACTIVE + inactive."""
+        if self.pk is not None and not self.is_active:
+            with transaction.atomic():
+                was_active = (
+                    Plan.objects.select_for_update()
+                    .filter(pk=self.pk)
+                    .values_list("is_active", flat=True)
+                    .first()
+                )
+                if was_active:
+                    blocking = self.subscriptions.filter(status="ACTIVE").count()
+                    if blocking:
+                        raise ValidationError(
+                            {
+                                "is_active": [
+                                    f"{blocking} active subscription(s) still reference this "
+                                    "plan. Suspend, cancel or let them expire through the "
+                                    "subscription lifecycle before retiring it."
+                                ]
+                            },
+                            code="plan_in_use",
+                        )
+                return super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class PlanEntitlement(BaseModel):
