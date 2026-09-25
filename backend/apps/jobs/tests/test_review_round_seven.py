@@ -73,9 +73,14 @@ def test_elapsed_active_subscription_expires_once(employer_factory, admin):
 
 
 def test_stale_expiry_never_overwrites_a_newer_admin_decision(employer_factory, admin):
+    # Round eighteen: an ELAPSED term can no longer be suspended (it is expired
+    # first), so the administrator decides on a live term and the term elapses
+    # afterwards; the stale expiry must still not overwrite that decision.
     _, sub = _elapsed_active(employer_factory(), admin)
+    Subscription.objects.filter(pk=sub.pk).update(ends_at=timezone.now() + timedelta(days=5))
     stale = Subscription.objects.get(pk=sub.pk)  # loaded while still ACTIVE
     billing.suspend_subscription(sub, admin=admin, reason="late payment")
+    Subscription.objects.filter(pk=sub.pk).update(ends_at=timezone.now() - timedelta(days=1))
     assert billing.expire_subscription(stale) is False
     sub.refresh_from_db()
     assert sub.status == SubscriptionStatus.SUSPENDED

@@ -80,6 +80,15 @@ class AdminSubscriptionListView(generics.ListAPIView):
         .order_by("-created_at")
     )
 
+    def get_queryset(self):
+        # Lifecycle state is normalised BEFORE filtering and serialisation: an
+        # ACTIVE row whose term ended is persisted as EXPIRED through the
+        # authoritative helper, so `?status=ACTIVE` never lists it and the
+        # console never offers suspend/cancel on an elapsed term.
+        if not getattr(self, "swagger_fake_view", False):
+            services.expire_all_elapsed_subscriptions()
+        return super().get_queryset()
+
 
 class _AdminSubscriptionAction(APIView):
     permission_classes = [IsAuthenticated, IsAdminAccount]

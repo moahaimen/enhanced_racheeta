@@ -356,6 +356,9 @@ def activate_subscription(
             "organisation to choose a current plan."
         )
     sub.plan = plan_row
+    # Elapsed ACTIVE rows of this account are EXPIRED first (same helper as
+    # every entitlement read), so only a genuinely live row gets superseded.
+    expire_elapsed_subscriptions(sub.billing_account)
     # One live subscription per account (DB constraint): the administrator's
     # decision supersedes any other ACTIVE row *and* any newer PENDING request
     # (policy: reactivating a suspended subscription cancels the pending
@@ -441,6 +444,10 @@ def reject_subscription(sub, *, admin, reason=""):
 
 
 def suspend_subscription(sub, *, admin, reason=""):
+    # An elapsed term is EXPIRED, never SUSPENDED: normalise first (locked,
+    # evented, committed on its own), then the transition sees EXPIRED and
+    # refuses with the typed error.
+    expire_subscription(sub)
     return _transition(
         sub,
         SubscriptionStatus.SUSPENDED,
@@ -452,6 +459,7 @@ def suspend_subscription(sub, *, admin, reason=""):
 
 
 def cancel_subscription(sub, *, admin, reason=""):
+    expire_subscription(sub)  # same rule as suspend: ACTIVE + elapsed → EXPIRED, not CANCELLED
     return _transition(
         sub,
         SubscriptionStatus.CANCELLED,
@@ -503,6 +511,21 @@ def expire_elapsed_subscriptions(billing_account: BillingAccount) -> int:
     ):
         expire_subscription(sub)
         count += 1
+    return count
+
+
+def expire_all_elapsed_subscriptions() -> int:
+    """Read-time normalisation for staff listings: every ACTIVE row whose term
+    ended becomes EXPIRED through the same locked, evented path
+    (`expire_subscription`). Only rows that are actually elapsed are touched,
+    one short transaction each, so the work is bounded by the number of
+    not-yet-normalised rows and a repeated call finds nothing to do."""
+    count = 0
+    for sub in Subscription.objects.filter(
+        status=SubscriptionStatus.ACTIVE, ends_at__lt=timezone.now()
+    ).order_by("pk"):
+        if expire_subscription(sub):
+            count += 1
     return count
 
 
