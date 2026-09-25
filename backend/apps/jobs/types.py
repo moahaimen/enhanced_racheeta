@@ -143,6 +143,9 @@ class ApplicationStatus(models.TextChoices):
 ACTIVE_APPLICATION_STATUSES = ("SUBMITTED", "REVIEWING", "SHORTLISTED", "INTERVIEW", "ACCEPTED")
 SEEKER_WITHDRAWABLE = ("SUBMITTED", "REVIEWING", "SHORTLISTED", "INTERVIEW")
 TERMINAL_APPLICATION_STATUSES = ("ACCEPTED", "REJECTED", "WITHDRAWN")
+# An invitation that still represents live outreach: waiting for an answer, or
+# accepted but not yet turned into an application. Both block a duplicate.
+ACTIVE_INVITATION_STATUSES = ("PENDING", "ACCEPTED")
 # employer transitions: from -> allowed to
 EMPLOYER_APPLICATION_TRANSITIONS: dict[str, tuple[str, ...]] = {
     "SUBMITTED": ("REVIEWING", "SHORTLISTED", "REJECTED"),

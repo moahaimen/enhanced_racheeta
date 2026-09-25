@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from apps.audit import services as audit
 from apps.billing import services as billing
+from apps.billing.exceptions import EntitlementError
 from apps.billing.types import Audience, Keys, SubjectType
 from apps.moderation.contact_leak import detector
 
@@ -33,6 +34,7 @@ from .models import (
 )
 from .types import (
     ACTIVE_APPLICATION_STATUSES,
+    ACTIVE_INVITATION_STATUSES,
     EMPLOYER_APPLICATION_TRANSITIONS,
     SEEKER_WITHDRAWABLE,
     TERMINAL_APPLICATION_STATUSES,
@@ -495,9 +497,35 @@ def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
     # submission would refuse (unverified/suspended organisation, retained
     # agency hiring fields, no free slot).
     _require_publication_eligibility(employer, job)
+    # Retained featured state is re-validated against the CURRENT plan and
+    # capacity (suspended jobs occupied no slot, so another job may have taken
+    # it). Policy: the job is always restored; its featured flag survives only
+    # if it is still entitled and a slot is free, otherwise it comes back as a
+    # normal published job — never silently over quota.
+    featured_kept = False
+    if job.is_featured:
+        featured_until = (
+            JobPost.objects.filter(pk=job.pk).values_list("featured_until", flat=True).get()
+        )
+        window_open = bool(featured_until and featured_until > timezone.now())
+        if window_open:
+            try:
+                _require_featured_slot(employer, job)
+                featured_kept = True
+            except EntitlementError:  # base of SubscriptionRequired / UsageLimitReached
+                featured_kept = False
+        if not featured_kept:
+            job.is_featured = False
+            job.featured_until = None
     _job_transition(job, JobStatus.PUBLISHED, actor=admin, reason=note)
-    job.save(update_fields=["status", "updated_at"])
-    audit.record(actor=admin, action="jobs.post.restored", target=job, summary=note[:255])
+    job.save(update_fields=["status", "is_featured", "featured_until", "updated_at"])
+    audit.record(
+        actor=admin,
+        action="jobs.post.restored",
+        target=job,
+        summary=note[:255],
+        data={"featured_kept": featured_kept},
+    )
     return job
 
 
@@ -555,6 +583,31 @@ def expire_overdue_jobs(*, employer: Employer | None = None) -> int:
 
 
 @transaction.atomic
+def _live_featured_count(employer: Employer, *, exclude: JobPost | None = None) -> int:
+    """THE definition of an occupied featured slot, shared by featuring and by
+    restore: PUBLISHED with a featured window still open. Suspended jobs and
+    elapsed windows occupy nothing."""
+    qs = JobPost.objects.filter(
+        employer=employer,
+        is_featured=True,
+        featured_until__gt=timezone.now(),
+        status=JobStatus.PUBLISHED,
+    )
+    if exclude is not None:
+        qs = qs.exclude(pk=exclude.pk)
+    return qs.count()
+
+
+def _require_featured_slot(employer: Employer, job: JobPost) -> None:
+    """Current entitlement + current capacity, on the locked employer row."""
+    ent = employer_entitlements(employer)
+    ent.require(Keys.JOBS_FEATURED)
+    ent.check_concurrent(
+        Keys.JOBS_FEATURED_LIMIT, current=_live_featured_count(employer, exclude=job)
+    )
+
+
+@transaction.atomic
 def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobPost:
     if featured:
         employer = _lock_employer(job.employer)
@@ -563,20 +616,13 @@ def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobP
             raise JobsError("Only published jobs can be featured.")
         if not employer.can_recruit:
             raise OrganizationNotVerified("The organisation must be verified and active.")
+        # Genuinely open right now: the same deadline boundary as public search
+        # and applying (the deadline day is still open). A PUBLISHED row past
+        # its deadline is dead and must never occupy a featured slot.
+        if job.application_deadline is not None and job.application_deadline < timezone.localdate():
+            raise DeadlinePassed("The application deadline has already passed.")
         expire_featured_jobs()
-        ent = employer_entitlements(employer)
-        ent.require(Keys.JOBS_FEATURED)
-        current = (
-            JobPost.objects.filter(
-                employer=employer,
-                is_featured=True,
-                featured_until__gt=timezone.now(),
-                status=JobStatus.PUBLISHED,
-            )
-            .exclude(pk=job.pk)
-            .count()
-        )
-        ent.check_concurrent(Keys.JOBS_FEATURED_LIMIT, current=current)
+        _require_featured_slot(employer, job)
         job.is_featured = True
         job.featured_until = timezone.now() + timedelta(days=days)
     else:
@@ -885,8 +931,11 @@ def invite_candidate(
     # concurrent attempts serialise here and the unique constraint below keeps
     # a single live invitation.
     expire_overdue_invitations(job=job, job_seeker=profile)
+    # PENDING and ACCEPTED are both live outreach (accepted but not yet applied);
+    # declined, expired and cancelled invitations allow a fresh one. Checked under
+    # the employer lock, before anything is created or charged.
     if JobInvitation.objects.filter(
-        job=job, job_seeker=profile, status=InvitationStatus.PENDING
+        job=job, job_seeker=profile, status__in=ACTIVE_INVITATION_STATUSES
     ).exists():
         raise AlreadyInvited("This candidate was already invited to this job.")
     if JobApplication.objects.filter(
