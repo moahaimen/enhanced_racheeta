@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **527 passed** (was 175): billing entitlements/admin API,
+- Backend: **550 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **186 passed** (was 87).
+- Web: **191 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -375,6 +375,25 @@ restore, edit); employer → account (membership). No path takes them in
 reverse.
 
 Backend tests 527, web tests 186, no migration, OpenAPI unchanged.
+
+## PR #4 review, round seventeen (2026-09-25, review 5321643473 on `153493f`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 `BillingAccount` mutable in the admin | `InspectionOnlyAdmin` base (all concrete fields read-only, no add/change/delete, no bulk actions) applied to `BillingAccount` with read-only subscription and credit inlines. Tests: identity fields not editable, POSTs to change identity refused (403) and nothing rebound, add/delete/bulk delete refused, data still inspectable, services unaffected. |
+| P2 `CreditBalance` movable/deletable in the admin | Same base for `CreditBalance`, `CreditTransaction`, `UsageCounter`, `UsageEvent`, `SubscriptionEvent`, `PaymentRecord`; `Subscription` loses bulk actions. Tests: no editable field, POST refused, add/delete refused, `grant_credits` still ledgers correctly, history rows append-only. |
+| P2 concurrent `POST /jobs/employer` → 500 | `create_employer` locks the owner account row (shared `_lock_account`, the policy `add_member` uses) before the membership check, inserts the OWNER membership through the shared savepoint helper that maps only the one-active-membership violation to `already_member`; Employer row and audit roll back with it. Tests: normal creation, typed 409 for existing members, rollback leaves no orphan, other IntegrityErrors propagate, ended membership frees the account, threaded same-account double creation (one 201, one 409, one Employer, one OWNER membership), threaded create-vs-add_member race. |
+| P2 VIEWER sees applicant mutation controls | `ApplicantsPage` loads the membership (`getMyEmployer`) with the job and applications and gates transition, interview, reason field and the message thread on OWNER/RECRUITER; VIEWER and unknown roles see a read-only note and the applicant data. Web tests: OWNER/RECRUITER see the controls, VIEWER/unknown see none but keep the data, loading/error states unchanged. |
+
+Sibling audit (bounded): billing admin models classified and locked as above;
+account → organisation assignment paths (`create_employer`, `add_member`,
+`end_membership`) share one serialisation policy; employer pages checked for
+VIEWER write controls — workspace, job editor and applicants page gate them,
+talent search/detail, saved candidates and invitations are `CanRecruit`-only
+surfaces the workspace does not link for a VIEWER and that fail closed with a
+403 error state if reached by URL.
+
+Backend tests 550, web tests 191, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

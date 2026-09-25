@@ -159,6 +159,15 @@ fields (`billing_account`, `plan`, `status`, `starts_at`, `ends_at`,
 read-only, subscriptions cannot be added or deleted there, and the event and
 payment inlines are read-only; every state change goes through
 `apps.billing.services` (locked, evented, audited) via the admin console API.
+The Django admin is split by what a model is: **configuration** (`Plan`,
+`PlanEntitlement`) is editable within the rules below; **lifecycle state**
+(`BillingAccount`, `Subscription`) and **ledger/history** (`CreditBalance`,
+`CreditTransaction`, `UsageCounter`, `UsageEvent`, `SubscriptionEvent`,
+`PaymentRecord`) are inspection-only: no add, no change, no delete, no bulk
+actions, every field read-only. A billing account is created by services on
+first use and is never re-bound to another subject or deleted from the admin;
+credits move only through `grant_credits()` (locked, ledgered, audited).
+
 `Plan` prices, limits and flags remain editable (that is how the owner sets
 IQD prices), but a plan's `code` and `audience` are frozen once created, and
 retiring a plan (`is_active` true → false) is refused — by the model, so on
