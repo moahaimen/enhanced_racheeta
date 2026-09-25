@@ -290,6 +290,8 @@ export interface TalentDetail extends TalentCard {
   education: EducationRecord[]
   credentials: CredentialRecord[]
   is_saved: boolean
+  /** The requesting employer's own saved-candidate record, or null. Needed to unsave. */
+  saved_candidate_id: string | null
 }
 
 export interface TalentParams {

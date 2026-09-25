@@ -586,7 +586,9 @@
     "savedNote": "Private note (never shown to the candidate)",
     "loadMoreJobs": "Show more jobs",
     "loadingJobs": "Loading jobs…",
-    "pickerCount": "{{count}} of {{total}} published jobs"
+    "pickerCount": "{{count}} of {{total}} published jobs",
+    "unsaving": "Removing…",
+    "unsaved": "Candidate removed from your saved list."
   },
   "jobsPage": {
     "title": "Medical and healthcare jobs",

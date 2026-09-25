@@ -603,7 +603,9 @@
     "savedNote": "ملاحظة خاصة (لا يراها المرشح)",
     "loadMoreJobs": "عرض المزيد من الوظائف",
     "loadingJobs": "جارٍ تحميل الوظائف…",
-    "pickerCount": "{{count}} من {{total}} وظيفة منشورة"
+    "pickerCount": "{{count}} من {{total}} وظيفة منشورة",
+    "unsaving": "جارٍ الإزالة…",
+    "unsaved": "أُزيل المرشح من المحفوظين."
   },
   "jobsPage": {
     "title": "فرص العمل في القطاع الطبي والصحي",

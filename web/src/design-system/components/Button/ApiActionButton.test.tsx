@@ -72,4 +72,17 @@ describe('ApiActionButton', () => {
     expect(reported.message).toBe('boom')
     expect(screen.getByRole('button')).toBeEnabled()
   })
+
+  it('calls onSuccess for an action that resolves with nothing (DELETE / 204)', async () => {
+    const onSuccess = vi.fn()
+    const action = vi.fn(async () => undefined)
+    render(
+      <ApiActionButton action={action} onSuccess={onSuccess}>
+        Remove
+      </ApiActionButton>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onSuccess).toHaveBeenCalledWith(undefined)
+  })
 })

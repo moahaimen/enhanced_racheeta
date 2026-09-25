@@ -88,7 +88,7 @@ export const requestInterview = (id: string, payload: { proposed_at: string; mod
 // ---- talent ----------------------------------------------------------------
 export const searchTalent = (params: TalentParams = {}, signal?: AbortSignal) => apiRequest<Paginated<TalentCard>>(`/api/v1/talent${buildQuery(params)}`, { signal })
 export const getTalent = (id: string, signal?: AbortSignal) => apiRequest<TalentDetail>(`/api/v1/talent/${enc(id)}`, { signal })
-export const listSaved = (signal?: AbortSignal) => apiRequest<SavedCandidate[]>('/api/v1/talent/saved', { signal })
+export const listSaved = (page = 1, signal?: AbortSignal) => apiRequest<Paginated<SavedCandidate>>(`/api/v1/talent/saved?page=${page}`, { signal })
 export const saveCandidate = (jobSeeker: string, note = '') => apiRequest<SavedCandidate>('/api/v1/talent/saved', { method: 'POST', body: { job_seeker: jobSeeker, note } })
 export const unsaveCandidate = (id: string) => apiRequest<void>(`/api/v1/talent/saved/${enc(id)}`, { method: 'DELETE' })
 export const listInvitations = (signal?: AbortSignal) => apiRequest<Invitation[]>('/api/v1/talent/invitations', { signal })

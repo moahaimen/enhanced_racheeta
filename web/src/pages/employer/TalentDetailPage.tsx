@@ -158,8 +158,21 @@ function Detail({ candidate: c, firstPage, reload }: { candidate: TalentDetail; 
               </SectionCard>
               <SectionCard title={t('talent.save')} headingLevel={2}>
                 {saveError ? <Alert kind="error">{saveError}</Alert> : null}
-                {c.is_saved ? (
-                  <p className="text-muted">{t('talent.saved')}</p>
+                {c.is_saved && c.saved_candidate_id ? (
+                  <div className="cluster" data-testid="saved-state">
+                    <Badge tone="success">{t('talent.saved')}</Badge>
+                    <ApiActionButton
+                      variant="ghost"
+                      size="sm"
+                      action={() => jobsApi.unsaveCandidate(c.saved_candidate_id as string)}
+                      onSuccess={() => { setSaveError(null); reload() }}
+                      onError={(e) => setSaveError(toErrorMessage(e))}
+                      pendingLabel={t('talent.unsaving')}
+                      leading={<Icon name="x" size={16} />}
+                    >
+                      {t('talent.unsave')}
+                    </ApiActionButton>
+                  </div>
                 ) : (
                   <form noValidate onSubmit={(e) => e.preventDefault()}>
                     <TextField label={t('talent.savedNote')} optional value={saveNote} onChange={(e) => setSaveNote(e.target.value)} />

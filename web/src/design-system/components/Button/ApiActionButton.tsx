@@ -1,6 +1,6 @@
 import { useCallback, type MouseEvent, type ReactNode } from 'react'
 
-import { useAsyncAction } from '../../../hooks/useAsync'
+import { DUPLICATE_CALL, useAsyncAction } from '../../../hooks/useAsync'
 import { Button, type ButtonProps } from './Button'
 
 export interface ApiActionButtonProps<Result>
@@ -35,14 +35,15 @@ export function ApiActionButton<Result>({
   const handleClick = useCallback(
     async (event: MouseEvent<HTMLButtonElement>) => {
       if (type === 'submit') event.preventDefault()
-      let result: Result | undefined
+      let result: Result | typeof DUPLICATE_CALL
       try {
         result = await run()
       } catch (error) {
         onError?.(error)
         return
       }
-      if (result !== undefined) onSuccess?.(result)
+      if (result === DUPLICATE_CALL) return // the click was ignored while another call was pending
+      onSuccess?.(result) // including `undefined` results (a DELETE / 204 is still a success)
     },
     [run, type, onSuccess, onError],
   )

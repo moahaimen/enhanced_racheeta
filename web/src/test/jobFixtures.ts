@@ -168,6 +168,7 @@ export function makeTalentDetail(overrides: Partial<TalentDetail> = {}): TalentD
     education: [],
     credentials: [],
     is_saved: false,
+    saved_candidate_id: null,
     ...overrides,
   }
 }
