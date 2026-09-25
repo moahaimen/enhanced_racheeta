@@ -121,11 +121,12 @@ application row before its interview row.
 
 ## Talent search and the "one billable search" rule
 
-Saved candidates (`GET /talent/saved`) use the standard paginated envelope
-(`count`, `next`, `previous`, `results`, newest first). The relation stays
-stored when a candidate hides their profile, but the card is returned only
-while the shared visibility rule (`_visible_candidates`, also used by talent
-detail) allows it: an active account that is currently discoverable, or that
+Saved candidates (`GET /talent/saved`) and sent invitations
+(`GET /talent/invitations`) use the standard paginated envelope (`count`,
+`next`, `previous`, `results`, newest first by `created_at` then id). The saved relation and the invitation row stay
+stored when a candidate hides their profile, but a row is listed and its card
+returned only while the one shared visibility rule (`_visible_candidates`,
+also used by talent detail) allows it, so `count` only counts visible rows: an active account that is currently discoverable, or that
 applied to one of this employer's jobs. Talent detail exposes
 `saved_candidate_id` for the requesting employer's own record (null when not
 saved, never another organisation's id) so the web can unsave in place.
@@ -141,7 +142,10 @@ suspended closes the lists and the actions alike.
 Talent search is available only with `talent.search` and consumes
 `talent.search_limit`. The filter set is validated first: a request with an
 invalid `profession`, `language_level`, `availability`, degree, UUID or number
-is rejected with 400 and consumes nothing. `language` and `language_level`
+is rejected with 400 and consumes nothing. `min_experience` and
+`max_experience` are integers (years, like the stored value): `05` and `5.0`
+parse as 5, while a fractional bound such as `5.9` is rejected rather than
+silently truncated. `language` and `language_level`
 apply to the same language row (EXISTS subquery, no duplicate rows), so
 "English BASIC + Arabic ADVANCED" never matches "English ADVANCED". To be fair to employers, **one billable search is one
 (employer, normalised filter signature, calendar day)**: the same filters on the

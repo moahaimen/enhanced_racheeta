@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **471 passed** (was 175): billing entitlements/admin API,
+- Backend: **478 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -329,6 +329,21 @@ with a design-system test.
 
 Backend tests 471, web tests 181, no migration, **OpenAPI regenerated**
 (paginated saved candidates, `TalentDetail.saved_candidate_id`).
+
+## PR #4 review, round fourteen (2026-09-25, review 5317147760 on `1daeec7`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 lossy experience in the billing signature | Experience is an integer column, so `min_experience`/`max_experience` are now `IntegerFilter`s (fractional input → 400, nothing consumed) on both the talent and public job filter sets, and the signature normaliser canonicalises exactly as `forms.IntegerField` parses (`05` and `5.0` → `5`) without any `int(float())` truncation. Tests: `5.9`/`5.5` rejected with no quota, `05` and `5.0` are the same search as `5`, `6` and `max_experience=5` differ, parameter order irrelevant, quota unchanged. |
+| P2 sent invitations ignore discoverability | `InvitationListView.get_queryset` filters `job_seeker__in=_visible_candidates(employer)` — the same predicate as talent detail and saved candidates — before serialisation; rows stay stored. Tests: hidden without application disappears, prior applicant stays, other employer's applicant hidden, inactive hidden, isolation, re-enable restores, row kept. |
+| P2 sent invitations truncated at 200 | `InvitationListView` is a `ListCreateAPIView` on the standard pagination, newest first, client ordering disabled; POST unchanged. Tests: 205 rows across pages, count, links, ordering, page 2 ids, visibility + count, gates. OpenAPI regenerated. |
+
+Targeted audit: talent detail, saved candidates and sent invitations share
+`_visible_candidates`; both employer collections are paginated; no `[:200]`
+slice remains on them; no billing normaliser is lossy.
+
+Backend tests 478, web tests 181, no migration, **OpenAPI regenerated**
+(paginated sent invitations).
 
 ## Known Problems
 
