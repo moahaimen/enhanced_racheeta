@@ -50,6 +50,17 @@ Approval therefore never publishes what a fresh submission would refuse, no
 matter how long the job waited in review, and a refused transition writes no
 history. Submission also re-scans text for contact data.
 
+Featured slots have one definition, `_live_featured_count`: PUBLISHED jobs
+whose featured window is still open (suspended jobs and elapsed windows occupy
+nothing). Featuring requires a genuinely open job — the same deadline boundary
+as public search and applying (`deadline_passed` for an elapsed one), so an
+expired job can never take a slot. An administrator restore re-validates a
+retained featured flag against the *current* plan and capacity: the job is
+always restored, and its featured state survives only if `jobs.featured` is
+still enabled, a slot is free and the window has not elapsed; otherwise it
+comes back as a normal published job (the audit event records
+`featured_kept`). Restore therefore never exceeds `jobs.featured_limit`.
+
 Active-slot capacity is authoritative and independent of read endpoints: the
 gate first normalises this organisation's overdue PUBLISHED jobs to EXPIRED
 (each job row locked, one transition), and the count itself ignores PUBLISHED
@@ -68,7 +79,12 @@ application (`application_closed`, 409).
 Invitation: `PENDING → ACCEPTED | DECLINED | CANCELLED`, `EXPIRED` at read
 time (`expire_overdue_invitations`, run by both invitation lists and before
 every new invitation, so an elapsed PENDING row never blocks re-inviting;
-the expired row stays in history and the new one consumes a new unit).
+the expired row stays in history and the new one consumes a new unit). A
+duplicate is refused while an invitation for the same job and candidate is
+still live outreach — PENDING **or** ACCEPTED (`ACTIVE_INVITATION_STATUSES`);
+declined, expired and cancelled ones allow a fresh invitation. The check runs
+under the employer lock before anything is created, so a refused duplicate
+consumes no quota.
 Applying to the job answers a still-live PENDING invitation as ACCEPTED under
 a row lock; an invitation whose window already closed becomes EXPIRED instead,
 never "accepted outreach". Accepting explicitly is validated the same way under

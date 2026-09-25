@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **478 passed** (was 175): billing entitlements/admin API,
+- Backend: **497 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **181 passed** (was 87).
+- Web: **186 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -344,6 +344,22 @@ slice remains on them; no billing normaliser is lossy.
 
 Backend tests 478, web tests 181, no migration, **OpenAPI regenerated**
 (paginated sent invitations).
+
+## PR #4 review, round fifteen (2026-09-25, review 5317937828 on `ed45278`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 restore revives featured state over quota | `_live_featured_count` / `_require_featured_slot` shared by featuring and restore; restore keeps a retained featured flag only if the window is open, `jobs.featured` is still enabled and a slot is free, otherwise restores as a normal published job (audit `featured_kept`). Tests: preserved, slot taken meanwhile, entitlement lost, limit reduced, window elapsed, threaded restore-vs-feature, plain restore unchanged, active-slot check intact. |
+| P2 featuring an elapsed job | `set_featured` refuses `application_deadline < today` (`deadline_passed`) under the locks before any slot is checked; EXPIRED rows already fail the status check. Tests: future, today, past, EXPIRED, no slot consumed, entitlement/limit still enforced, threaded expiry-vs-feature. |
+| P2 ACCEPTED invitation allows a duplicate | `ACTIVE_INVITATION_STATUSES = (PENDING, ACCEPTED)` used by the duplicate check, which runs under the employer lock before creation and consumption. Tests: PENDING/ACCEPTED block, DECLINED/EXPIRED/CANCELLED allow, application still blocks, refused duplicate consumes nothing, legitimate reinvite consumes, threaded duplicates. |
+| P2 VIEWER sees New Job | Workspace shows New Job and talent search only to OWNER/RECRUITER (unknown role gets nothing); the editor renders read-only with a notice for a VIEWER reaching it by URL. Web tests per role. Backend 403s unchanged. |
+
+Targeted audit: no path can exceed `jobs.featured_limit` or feature an
+elapsed job; expired windows occupy no capacity; PENDING and ACCEPTED both
+block duplicates while terminal states permit reinvites; failed duplicates
+consume nothing; VIEWER is read-only in the UI with the backend authoritative.
+
+Backend tests 497, web tests 186, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
