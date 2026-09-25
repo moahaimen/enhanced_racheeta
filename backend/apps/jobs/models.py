@@ -286,14 +286,21 @@ class JobPostQuerySet(models.QuerySet):
         )
 
     def with_public_relations(self):
+        """Everything JobCardSerializer / JobPublicSerializer read through
+        EmployerPublicSerializer (for both the employer and, on agency jobs,
+        the hiring employer): one query per page regardless of page size."""
         return self.select_related(
             "employer",
             "employer__governorate",
             "employer__city",
+            "employer__provider_profile",
             "governorate",
             "city",
             "general_specialty",
             "hiring_employer",
+            "hiring_employer__governorate",
+            "hiring_employer__city",
+            "hiring_employer__provider_profile",
         )
 
 

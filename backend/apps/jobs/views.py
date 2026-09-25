@@ -110,6 +110,7 @@ STATUS_FOR_CODE = {
     "invalid_role": status.HTTP_400_BAD_REQUEST,
     "invitation_expired": status.HTTP_409_CONFLICT,
     "invitation_unavailable": status.HTTP_409_CONFLICT,
+    "deadline_passed": status.HTTP_409_CONFLICT,
     "not_an_agency": status.HTTP_400_BAD_REQUEST,
     "application_closed": status.HTTP_409_CONFLICT,
     "not_found": status.HTTP_404_NOT_FOUND,

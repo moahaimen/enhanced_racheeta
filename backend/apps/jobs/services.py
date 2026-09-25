@@ -8,6 +8,7 @@ import json
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.audit import services as audit
@@ -89,6 +90,10 @@ class HiringFieldsNotAllowed(JobsError):
 
 class InvitationUnavailable(JobsError):
     code = "invitation_unavailable"
+
+
+class DeadlinePassed(JobsError):
+    code = "deadline_passed"
 
 
 class ContactLeak(JobsError):
@@ -241,15 +246,32 @@ def _lock_employer(employer: Employer) -> Employer:
     return Employer.objects.select_for_update().get(pk=employer.pk)
 
 
+def _live_active_jobs(employer: Employer):
+    """Jobs that really occupy an active slot: pending review, or published with
+    a deadline that has not elapsed. A PUBLISHED job whose deadline passed is
+    dead even if no read endpoint has normalised it to EXPIRED yet."""
+    today = timezone.localdate()
+    return JobPost.objects.filter(employer=employer).filter(
+        Q(status=JobStatus.PENDING_ADMIN_REVIEW)
+        | Q(status=JobStatus.PUBLISHED)
+        & (Q(application_deadline__isnull=True) | Q(application_deadline__gte=today))
+    )
+
+
 def _active_job_count(employer: Employer, *, exclude: JobPost | None = None) -> int:
-    qs = JobPost.objects.filter(employer=employer, status__in=ACTIVE_JOB_STATUSES)
+    qs = _live_active_jobs(employer)
     if exclude is not None:
         qs = qs.exclude(pk=exclude.pk)
     return qs.count()
 
 
 def _require_active_job_slot(employer: Employer, job: JobPost) -> None:
-    """Commercial part of the gate for entering an active status."""
+    """Commercial part of the gate for entering an active status. Called with
+    the employer row locked: overdue jobs of this organisation are normalised
+    first (job rows locked in turn, one EXPIRED transition each), and the
+    count itself ignores elapsed PUBLISHED jobs, so capacity never depends on
+    whether a listing happened to run."""
+    expire_overdue_jobs(employer=employer)
     ent = employer_entitlements(employer)
     ent.require(Keys.JOBS_POST)
     ent.check_concurrent(Keys.JOBS_ACTIVE_LIMIT, current=_active_job_count(employer, exclude=job))
@@ -267,6 +289,11 @@ def _require_publication_eligibility(employer: Employer, job: JobPost) -> None:
             "The organisation must be verified and active before publishing jobs."
         )
     _require_agency_invariant(employer, job)
+    if job.application_deadline is not None and job.application_deadline < timezone.localdate():
+        # Same boundary as JobPost.is_open: the deadline day itself is still open.
+        raise DeadlinePassed(
+            "The application deadline has already passed; update the deadline first."
+        )
     _require_active_job_slot(employer, job)
 
 
@@ -412,6 +439,10 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
 
 @transaction.atomic
 def approve_job(job: JobPost, *, admin, note: str = "") -> JobPost:
+    # Established lock order: employer row, then the job row. A job can sit in
+    # review while the organisation is suspended, its plan lapses or its
+    # identity changes, so approval re-runs the SAME gate as submit/restore.
+    employer = _lock_employer(job.employer)
     _lock_job(job)
     if job.status != JobStatus.PENDING_ADMIN_REVIEW:
         raise JobsError("Only jobs pending review can be approved.")
@@ -419,6 +450,7 @@ def approve_job(job: JobPost, *, admin, note: str = "") -> JobPost:
         raise ContactLeak(
             "The job contains direct contact information; reject it or ask the employer to fix it."
         )
+    _require_publication_eligibility(employer, job)
     _job_transition(job, JobStatus.PUBLISHED, actor=admin, reason=note)
     job.published_at = timezone.now()
     job.moderation_note = note
@@ -499,12 +531,17 @@ def expire_featured_jobs() -> int:
     )
 
 
-def expire_overdue_jobs() -> int:
-    """Read-time strategy (ADR-036): called by public/employer listings; cheap indexed update.
-    Also normalises expired featured windows so ordering and slot counts stay correct."""
+def expire_overdue_jobs(*, employer: Employer | None = None) -> int:
+    """Read-time strategy (ADR-036): called by public/employer listings and,
+    scoped to one organisation, by every capacity check (with the employer row
+    already locked, so the lock order employer → job holds). Each overdue job
+    is locked and re-read before its single EXPIRED transition, so concurrent
+    callers never duplicate history. Also normalises expired featured windows."""
     expire_featured_jobs()
     today = timezone.localdate()
     overdue = JobPost.objects.filter(status=JobStatus.PUBLISHED, application_deadline__lt=today)
+    if employer is not None:
+        overdue = overdue.filter(employer=employer)
     count = 0
     for job in overdue.iterator():
         with transaction.atomic():
