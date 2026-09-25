@@ -161,6 +161,13 @@ never with e-mail, phone or account identity.
 
 ## Endpoints (all under `/api/v1`)
 
+Public visibility (`JobPost.objects.public()`, used by search, detail and
+apply) requires PUBLISHED, a verified active organisation **and** a deadline
+that has not elapsed (the deadline day is still open), so a job past its
+deadline is gone from direct detail exactly when it is gone from search, even
+before a listing normalises it to EXPIRED. Employer and administrator reads
+still see it.
+
 Public: `GET /jobs` (filters `q, employer, profession, specialty, governorate, city, degree, min_experience, max_experience, employment_type, work_mode, shift_type, salary_available, ordering`), `GET /jobs/{id}`, `GET /employers/{id}`.
 
 Seeker (bearer): `GET|POST|PATCH /jobs/me/profile`, child collections
@@ -169,8 +176,10 @@ Seeker (bearer): `GET|POST|PATCH /jobs/me/profile`, child collections
 `POST /jobs/me/applications/{id}/withdraw`, `POST /jobs/me/interviews/{id}/respond`,
 `GET /jobs/me/invitations`, `POST /jobs/me/invitations/{id}/respond`.
 
-Both parties: `GET|POST /recruitment/applications/{id}/messages`. The thread is
-bounded to the newest 200 messages, returned in chronological order (so the
+Both parties: `GET|POST /recruitment/applications/{id}/messages`. Sending
+locks and refreshes the application first, so a rejection or withdrawal that
+commits first closes the thread (`application_closed`, 409) even under
+concurrency. The thread is bounded to the newest 200 messages, returned in chronological order (so the
 latest message is always visible); there is no unbounded thread endpoint.
 
 Employer (bearer + membership): `GET|POST|PATCH /jobs/employer`,

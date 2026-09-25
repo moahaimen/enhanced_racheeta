@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **444 passed** (was 175): billing entitlements/admin API,
+- Backend: **460 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -297,6 +297,17 @@ Backend tests 425, web tests 177, no migration, **OpenAPI regenerated**
 | P2 N+1 on job cards | `with_public_relations` also selects `employer__provider_profile` and the hiring employer's governorate, city and provider profile. Query-count tests for a 20-card page with linked facilities and agency jobs, and for page-size growth. |
 
 Backend tests 444, web tests 177, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twelve (2026-09-25, review 5315871704 on `0dddd00`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 activation on a retired plan | `activate_subscription` re-reads the plan under lock inside the activation transaction and refuses (typed `SubscriptionError`) when it is inactive, before cancelling anything; no ACTIVE event, no payment record. Tests: active plan activates, retired plan blocks activation and reactivation, state unchanged, entitlements still ignore inactive plans, threaded activate-vs-deactivate. |
+| P2 decision notes exceed the transition column | `AdminDecisionSerializer.note` max 500 (reason serializers already 500). Tests for approve, restore, reject, suspend at 500/501 with no transition on rejection. |
+| P2 messages race closure | `send_message` is atomic and locks/refreshes the application before the closed check. Tests: open, after REJECTED, after WITHDRAWN, threaded message-vs-reject and message-vs-withdraw with no partial row. |
+| P2 public detail of an elapsed job | `JobPost.objects.public()` excludes PUBLISHED jobs whose deadline elapsed (same boundary as `is_open`), so search, detail and apply agree; employer/admin reads unchanged; listing still normalises history once. Tests for future/today/past deadlines and repeated reads. |
+
+Backend tests 460, web tests 177, no migration, **OpenAPI regenerated** (`AdminDecision.note` maxLength 500).
 
 ## Known Problems
 

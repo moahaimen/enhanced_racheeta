@@ -42,7 +42,7 @@ shows as "possible contact details" before approval.
 
 ## Human review
 
-- Jobs are published only after Super Admin approval (`PENDING_ADMIN_REVIEW → PUBLISHED`), with reject/suspend/restore and a note to the employer.
+- Jobs are published only after Super Admin approval (`PENDING_ADMIN_REVIEW → PUBLISHED`), with reject/suspend/restore and a note to the employer. Decision notes and reasons are validated to 500 characters, the capacity of the transition history column, so an over-long note is a 400 rather than a database error.
 - Employers are verified by Super Admin; recruitment can be suspended per organisation. The admin list shows every identity field the decision freezes — name, type, governorate/city, agency flag, the linked facility profile as `provider_profile {id, display_name, provider_type, verification_status}` (no contact or owner data) — plus when verification was requested.
 - Every decision is written to `audit_event` (`apps/audit`), queryable at `GET /api/v1/admin/audit`.
 
