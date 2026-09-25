@@ -45,6 +45,12 @@ class PlanAdminForm(forms.ModelForm):
         # Same invariant the model enforces, raised here so the admin renders a
         # normal field error instead of a 500. The model still guards every path.
         if self.instance.pk and cleaned.get("is_active") is False:
+            if cleaned.get("is_default") or self.instance.is_default:
+                self.add_error(
+                    "is_active",
+                    "This is the default plan of its audience; make another plan the default "
+                    "before retiring it.",
+                )
             blocking = self.instance.subscriptions.filter(status="ACTIVE").count()
             if blocking:
                 self.add_error(
@@ -79,6 +85,10 @@ class PlanAdmin(admin.ModelAdmin):
         # Prices, limits and flags are legitimate configuration; the identity
         # (code, audience) that subscriptions and seeds reference is not.
         return ("code", "audience") if obj is not None else ()
+
+    def has_delete_permission(self, request, obj=None):
+        # The default plan is what every unsubscribed account resolves to.
+        return obj is None or not obj.is_default
 
 
 # Lifecycle state is owned by apps.billing.services (request → activate /

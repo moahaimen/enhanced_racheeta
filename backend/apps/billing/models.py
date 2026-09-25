@@ -66,6 +66,16 @@ class Plan(BaseModel):
         refused while ACTIVE subscriptions reference it, so activation and
         retirement serialise and can never commit ACTIVE + inactive."""
         if self.pk is not None and not self.is_active:
+            if self.is_default:
+                raise ValidationError(
+                    {
+                        "is_active": [
+                            "This is the default plan of its audience; every account without a "
+                            "subscription resolves to it. Make another plan the default first."
+                        ]
+                    },
+                    code="default_plan",
+                )
             with transaction.atomic():
                 was_active = (
                     Plan.objects.select_for_update()

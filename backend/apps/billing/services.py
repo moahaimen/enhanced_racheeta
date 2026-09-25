@@ -169,7 +169,9 @@ class EntitlementService:
                 credits=credits,
             )
         used = 0
-        if row.kind == EntitlementKind.LIMIT and row.period != UsagePeriod.NONE:
+        if row.kind == EntitlementKind.LIMIT:
+            # Same bucket `consume()` increments (the perpetual one for NONE), so
+            # what is reported always equals what is enforced.
             start = period_start_for(row.period, self.subscription)
             used = (
                 UsageCounter.objects.filter(
@@ -363,9 +365,15 @@ def activate_subscription(
     # decision supersedes any other ACTIVE row *and* any newer PENDING request
     # (policy: reactivating a suspended subscription cancels the pending
     # request; the cancellation is its own audited event).
+    # A SUSPENDED row is superseded too: left alone it could be "reactivated"
+    # later and cancel the subscription that replaced it.
     for other in Subscription.objects.filter(
         billing_account=sub.billing_account,
-        status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.PENDING],
+        status__in=[
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PENDING,
+            SubscriptionStatus.SUSPENDED,
+        ],
     ).exclude(pk=sub.pk):
         cancel_subscription(
             other, admin=admin, reason=f"superseded by activation of {sub.plan.code} ({sub.pk})"

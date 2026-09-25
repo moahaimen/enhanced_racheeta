@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -114,6 +115,7 @@ class AdminSubscriptionActivateView(_AdminSubscriptionAction):
     serializer_class = ActivateSerializer
 
     @extend_schema(request=ActivateSerializer, responses={200: AdminSubscriptionSerializer})
+    @transaction.atomic  # activation and its payment record commit together
     def post(self, request, pk):
         sub = self._get(pk)
         serializer = ActivateSerializer(data=request.data)
