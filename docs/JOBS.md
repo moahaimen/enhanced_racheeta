@@ -37,12 +37,15 @@ DRAFT ─submit─▶ PENDING_ADMIN_REVIEW ─approve─▶ PUBLISHED ─close�
 DRAFT / CLOSED / EXPIRED / REJECTED ─archive─▶ ARCHIVED
 ```
 
-`submit` requires a VERIFIED organisation with ACTIVE recruitment, the
-`jobs.post` capability and a free `jobs.active_limit` slot; it re-scans text
-for contact data. The slot check and the transition run under a row lock on
-the employer, so concurrent submissions cannot exceed the limit. `restore`
-(SUSPENDED → PUBLISHED) re-runs exactly the same gate and fails with
-`usage_limit_reached` when the employer used the freed slot meanwhile.
+`submit` and an administrator `restore` (SUSPENDED → PUBLISHED) share one
+gate, `_require_publication_eligibility`, evaluated on the locked employer and
+job rows: the organisation must be VERIFIED with ACTIVE recruitment
+(`organization_not_verified`), the agency invariant must hold for the current
+identity (`not_an_agency`), and the plan must carry `jobs.post` with a free
+`jobs.active_limit` slot (`entitlement_required` / `usage_limit_reached`). A
+restore can therefore never publish what a fresh submission would refuse, and
+a refused restore writes no transition. Submission also re-scans text for
+contact data.
 Featuring requires `jobs.featured` and a `jobs.featured_limit` slot; a job is
 featured only while `featured_until > now` (see `BILLING.md`, Featured window).
 

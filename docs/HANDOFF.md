@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **401 passed** (was 175): billing entitlements/admin API,
+- Backend: **425 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **155 passed** (was 87).
+- Web: **177 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -272,6 +272,20 @@ needed. Noted but not changed: `billing.services.request_subscription` carries
 
 Backend tests 415, web tests 169, no migration, **OpenAPI regenerated**
 (`BillingSummary.pending_subscription`).
+
+## PR #4 review, round ten (2026-09-25, review 5305876644 on `8fa90f8`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 restore skips business eligibility | One `_require_publication_eligibility` helper (recruiting status → agency invariant → capability and slot) now runs for both `_submit_job` and `restore_job` on the locked employer and job rows. Tests: eligible restore, unverified / recruitment-suspended / verification-suspended organisations, former agency with retained hiring fields (blocked, then allowed after clearing), capacity, missing `jobs.post`, threaded restore-vs-suspend; refused restores write no transition. |
+| P2 admin cannot see the identity being verified | `EmployerAdminSerializer.provider_profile` is a read-only reference (`id`, `display_name`, `provider_type`, `verification_status`; no contact/owner data) and the console row shows the agency flag, city, linked facility (name · type, id secondary) or a clear "no linked facility", and the verification request time. OpenAPI regenerated. Tests on both sides. |
+| P2 `updated_at` labelled "Submitted" | The job row renders `submitted_at` (with "Not submitted yet" for drafts), shows `published_at` when present, and labels `updated_at` as "Last updated". Tests for pending, published/rejected/suspended and draft jobs. |
+
+Targeted audit: the employer row now shows `verification_requested_at`;
+no other timestamp in the moderation UI was mislabelled.
+
+Backend tests 425, web tests 177, no migration, **OpenAPI regenerated**
+(`EmployerAdmin.provider_profile`).
 
 ## Known Problems
 
