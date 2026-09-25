@@ -243,11 +243,23 @@ class MemberAddSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=[("RECRUITER", "Recruiter"), ("VIEWER", "Viewer")])
 
 
+class ProviderReferenceSerializer(serializers.ModelSerializer):
+    """Read-only reference to the linked facility profile for administrator
+    review: what the reviewer is about to freeze as the organisation's identity.
+    No contact data, no owner identity."""
+
+    class Meta:
+        model = ProviderProfile
+        fields = ("id", "display_name", "provider_type", "verification_status")
+        read_only_fields = fields
+
+
 class EmployerAdminSerializer(EmployerOwnerSerializer):
     created_by_email = serializers.EmailField(source="created_by.email", read_only=True)
+    provider_profile = ProviderReferenceSerializer(read_only=True)
 
     class Meta(EmployerOwnerSerializer.Meta):
-        fields = EmployerOwnerSerializer.Meta.fields + ("created_by_email",)
+        fields = EmployerOwnerSerializer.Meta.fields + ("created_by_email", "provider_profile")
         read_only_fields = fields
 
 

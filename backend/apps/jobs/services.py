@@ -249,10 +249,25 @@ def _active_job_count(employer: Employer, *, exclude: JobPost | None = None) -> 
 
 
 def _require_active_job_slot(employer: Employer, job: JobPost) -> None:
-    """The single gate for entering an active status (submit and restore)."""
+    """Commercial part of the gate for entering an active status."""
     ent = employer_entitlements(employer)
     ent.require(Keys.JOBS_POST)
     ent.check_concurrent(Keys.JOBS_ACTIVE_LIMIT, current=_active_job_count(employer, exclude=job))
+
+
+def _require_publication_eligibility(employer: Employer, job: JobPost) -> None:
+    """THE gate for a job entering an active status — used by submission and by
+    an administrator restore alike, always on the LOCKED employer and job rows:
+    the organisation must still be able to recruit (verified + active), the
+    agency invariant must hold for the current identity, and a slot must be
+    free. Business checks come first so nothing commercial is evaluated for an
+    ineligible organisation."""
+    if not employer.can_recruit:
+        raise OrganizationNotVerified(
+            "The organisation must be verified and active before publishing jobs."
+        )
+    _require_agency_invariant(employer, job)
+    _require_active_job_slot(employer, job)
 
 
 @transaction.atomic
@@ -386,12 +401,7 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be submitted.")
-    if not employer.can_recruit:  # re-checked on the locked row, not the view's instance
-        raise OrganizationNotVerified(
-            "The organisation must be verified and active before publishing jobs."
-        )
-    _require_agency_invariant(employer, job)
-    _require_active_job_slot(employer, job)
+    _require_publication_eligibility(employer, job)  # on the locked rows, not the view's instance
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
     job.moderation_flags = []
@@ -449,7 +459,10 @@ def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
     _lock_job(job)
     if job.status != JobStatus.SUSPENDED:
         raise JobsError("Only suspended jobs can be restored.")
-    _require_active_job_slot(employer, job)
+    # Exactly the submission gate: a restore must never publish what a fresh
+    # submission would refuse (unverified/suspended organisation, retained
+    # agency hiring fields, no free slot).
+    _require_publication_eligibility(employer, job)
     _job_transition(job, JobStatus.PUBLISHED, actor=admin, reason=note)
     job.save(update_fields=["status", "updated_at"])
     audit.record(actor=admin, action="jobs.post.restored", target=job, summary=note[:255])
