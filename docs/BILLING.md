@@ -160,5 +160,12 @@ read-only, subscriptions cannot be added or deleted there, and the event and
 payment inlines are read-only; every state change goes through
 `apps.billing.services` (locked, evented, audited) via the admin console API.
 `Plan` prices, limits and flags remain editable (that is how the owner sets
-IQD prices), but a plan's `code` and `audience` are frozen once created.
+IQD prices), but a plan's `code` and `audience` are frozen once created, and
+retiring a plan (`is_active` true → false) is refused — by the model, so on
+every path, and shown as a normal field error in the admin — while ACTIVE
+subscriptions still reference it. Subscribers are never downgraded, migrated,
+cancelled or expired automatically; move them through the lifecycle first.
+Retirement locks the plan row, the same lock activation takes before it
+re-reads the plan, so an ACTIVE subscription on a retired plan cannot be
+committed from either side.
 `UsageCounter` rows are read-only.

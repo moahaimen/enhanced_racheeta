@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **497 passed** (was 175): billing entitlements/admin API,
+- Backend: **527 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -360,6 +360,21 @@ block duplicates while terminal states permit reinvites; failed duplicates
 consume nothing; VIEWER is read-only in the UI with the backend authoritative.
 
 Backend tests 497, web tests 186, no migration, OpenAPI unchanged.
+
+## PR #4 review, round sixteen (2026-09-25, review 5319207695 on `eca49d0`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 retiring a plan with ACTIVE subscribers | `Plan.save()` refuses `is_active` true → false while ACTIVE subscriptions reference the plan, under a lock on the plan row (the lock `activate_subscription` takes first), raising a `ValidationError`; `PlanAdminForm.clean()` shows the same as a field error. Tests: zero/one/several ACTIVE, PENDING/SUSPENDED/EXPIRED/CANCELLED do not block, plan and subscriptions unchanged on refusal, price edits fine, retirement after suspension, activation on a retired plan still refused, threaded activation-vs-retirement. |
+| P2 re-verification republishes invalid jobs | `set_employer_verification(VERIFIED)` locks the employer, then each PUBLISHED job, and suspends (transition + audit, clear reason) any that fails `_require_agency_invariant` under the current identity; valid jobs stay published. Tests: agency → unverified → non-agency → re-verified hides the old job from search and detail, history, mixed valid/invalid handled atomically, no-job and unchanged-identity verifications. |
+| P2 concurrent membership add → 500 | `add_member` locks the employer row, then the target account row, re-checks the active membership, and maps only the one-active-membership constraint violation to typed `already_member`. Tests: normal add, same/other employer duplicates, threaded two-employer race (one success, one typed error, one row), seats, reassignment after ending. |
+
+Lock orders: billing account → subscription → plan (activation) vs plan
+row alone (retirement); employer → job (verification, submit, approve,
+restore, edit); employer → account (membership). No path takes them in
+reverse.
+
+Backend tests 527, web tests 186, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
