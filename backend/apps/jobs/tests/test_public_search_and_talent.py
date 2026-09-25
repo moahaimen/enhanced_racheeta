@@ -192,7 +192,7 @@ def test_talent_detail_saved_and_invite(api_client, employer, seeker, seeker_fac
     assert not job.applications.exists()
     # saved list and cancel are org-scoped
     api_client.force_authenticate(user=owner_of(employer))
-    assert len(api_client.get(f"{TALENT}/saved").json()) == 1
+    assert api_client.get(f"{TALENT}/saved").json()["count"] == 1
 
 
 def test_invite_quota_and_isolation(api_client, employer_factory, seeker, job_factory):

@@ -37,17 +37,57 @@ class PlanAdmin(admin.ModelAdmin):
     search_fields = ("code", "name_en", "name_ar")
     inlines = [PlanEntitlementInline]
 
+    def get_readonly_fields(self, request, obj=None):
+        # Prices, limits and flags are legitimate configuration; the identity
+        # (code, audience) that subscriptions and seeds reference is not.
+        return ("code", "audience") if obj is not None else ()
 
-class SubscriptionEventInline(admin.TabularInline):
-    model = SubscriptionEvent
+
+# Lifecycle state is owned by apps.billing.services (request → activate /
+# reject / suspend / cancel / expire, each locked, evented and audited). The
+# Django admin is for inspection, search and filtering only: nothing here may
+# become a second state machine.
+SUBSCRIPTION_LIFECYCLE_FIELDS = (
+    "billing_account",
+    "plan",
+    "status",
+    "starts_at",
+    "ends_at",
+    "requested_by",
+    "requester_note",
+    "activated_by",
+    "admin_reference",
+)
+
+
+class ReadOnlyInline(admin.TabularInline):
     extra = 0
-    readonly_fields = ("from_status", "to_status", "actor", "reason", "created_at")
     can_delete = False
 
+    def has_add_permission(self, request, obj=None):
+        return False
 
-class PaymentInline(admin.TabularInline):
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+class SubscriptionEventInline(ReadOnlyInline):
+    model = SubscriptionEvent
+    readonly_fields = ("from_status", "to_status", "actor", "reason", "created_at")
+
+
+class PaymentInline(ReadOnlyInline):
     model = PaymentRecord
-    extra = 0
+    readonly_fields = (
+        "amount",
+        "currency",
+        "method",
+        "reference",
+        "status",
+        "recorded_by",
+        "note",
+        "created_at",
+    )
 
 
 @admin.register(Subscription)
@@ -63,8 +103,14 @@ class SubscriptionAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "plan")
     search_fields = ("billing_account__subject_id", "requested_by__email", "admin_reference")
-    readonly_fields = ("id", "created_at", "updated_at")
+    readonly_fields = ("id", "created_at", "updated_at", *SUBSCRIPTION_LIFECYCLE_FIELDS)
     inlines = [SubscriptionEventInline, PaymentInline]
+
+    def has_add_permission(self, request):
+        return False  # subscriptions are requested by owners and activated by services
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # history is part of the audit trail
 
 
 @admin.register(BillingAccount)
@@ -98,3 +144,7 @@ class CreditTransactionAdmin(admin.ModelAdmin):
 @admin.register(UsageCounter)
 class UsageCounterAdmin(admin.ModelAdmin):
     list_display = ("billing_account", "key", "period_start", "used")
+    readonly_fields = ("billing_account", "key", "period_start", "used")
+
+    def has_add_permission(self, request):
+        return False

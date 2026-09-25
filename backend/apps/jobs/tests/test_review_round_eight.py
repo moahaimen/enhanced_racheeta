@@ -280,5 +280,5 @@ def test_viewer_cannot_save_and_organisations_stay_isolated(
     )
     other = employer_factory(plan_code="BASIC")
     api_client.force_authenticate(user=owner_of(other))
-    assert api_client.get(f"{TALENT}/saved").json() == []
+    assert api_client.get(f"{TALENT}/saved").json()["results"] == []
     assert not SavedCandidate.objects.exists()

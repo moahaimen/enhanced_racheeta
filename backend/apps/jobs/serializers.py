@@ -539,6 +539,7 @@ class TalentDetailSerializer(TalentCardSerializer):
     credentials = CredentialSerializer(many=True, read_only=True)
     desired_governorate = GovernorateSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
+    saved_candidate_id = serializers.SerializerMethodField()
 
     class Meta(TalentCardSerializer.Meta):
         fields = TalentCardSerializer.Meta.fields + (
@@ -552,14 +553,31 @@ class TalentDetailSerializer(TalentCardSerializer):
             "education",
             "credentials",
             "is_saved",
+            "saved_candidate_id",
         )
         read_only_fields = fields
 
+    def _own_saved_id(self, obj):
+        """The requesting employer's own SavedCandidate id (never another
+        organisation's), cached per object so both fields cost one query."""
+        cache = self.context.setdefault("_saved_ids", {})
+        if obj.pk not in cache:
+            employer = self.context.get("employer")
+            cache[obj.pk] = (
+                SavedCandidate.objects.filter(employer=employer, job_seeker=obj)
+                .values_list("id", flat=True)
+                .first()
+                if employer
+                else None
+            )
+        return cache[obj.pk]
+
     def get_is_saved(self, obj) -> bool:
-        employer = self.context.get("employer")
-        return bool(
-            employer and SavedCandidate.objects.filter(employer=employer, job_seeker=obj).exists()
-        )
+        return self._own_saved_id(obj) is not None
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_saved_candidate_id(self, obj):
+        return self._own_saved_id(obj)
 
 
 # ---- job posts --------------------------------------------------------------

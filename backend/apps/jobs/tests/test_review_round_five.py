@@ -189,9 +189,9 @@ def test_entitled_employer_lists_saved_candidates(api_client, basic_with_saved):
     employer, candidate = basic_with_saved
     api_client.force_authenticate(user=owner_of(employer))
     listed = api_client.get(f"{TALENT}/saved")
-    assert listed.status_code == 200 and [r["candidate"]["id"] for r in listed.json()] == [
-        str(candidate.id)
-    ]
+    assert listed.status_code == 200 and [
+        r["candidate"]["id"] for r in listed.json()["results"]
+    ] == [str(candidate.id)]
 
 
 def test_expired_subscription_cannot_list_saved_candidates(api_client, basic_with_saved, admin):
@@ -242,7 +242,7 @@ def test_saved_candidates_stay_isolated_between_organisations(
 ):
     other = employer_factory(plan_code="BASIC")
     api_client.force_authenticate(user=owner_of(other))
-    assert api_client.get(f"{TALENT}/saved").json() == []
+    assert api_client.get(f"{TALENT}/saved").json()["results"] == []
 
 
 def test_talent_detail_and_sent_invitations_need_recruitment_access(

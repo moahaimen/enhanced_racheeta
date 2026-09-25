@@ -1044,6 +1044,17 @@ def _require_talent_access(request, key: str | None) -> None:
         services.employer_entitlements(request.employer).require(key)
 
 
+def _visible_candidates(employer):
+    """THE candidate visibility rule for one employer, shared by talent detail
+    and the saved-candidates list: an active account that is currently
+    discoverable, or that applied to one of this employer's jobs."""
+    return (
+        JobSeekerProfile.objects.filter(account__is_active=True)
+        .filter(Q(discoverable_by_employers=True) | Q(applications__job__employer=employer))
+        .distinct()
+    )
+
+
 def _talent_queryset():
     return (
         JobSeekerProfile.objects.filter(discoverable_by_employers=True, account__is_active=True)
@@ -1111,13 +1122,7 @@ class TalentDetailView(APIView):
     @extend_schema(responses={200: TalentDetailSerializer})
     def get(self, request, pk):
         _require_talent_access(request, Keys.TALENT_SEARCH)
-        qs = (
-            JobSeekerProfile.objects.filter(account__is_active=True)
-            .filter(
-                Q(discoverable_by_employers=True) | Q(applications__job__employer=request.employer)
-            )
-            .distinct()
-        )
+        qs = _visible_candidates(request.employer)
         profile = get_object_or_404(
             qs.select_related(
                 "general_specialty", "governorate", "city", "desired_governorate"
@@ -1130,34 +1135,45 @@ class TalentDetailView(APIView):
 
 
 @extend_schema(tags=["talent"])
-class SavedCandidateListView(APIView):
-    permission_classes = [CanRecruit]
-    serializer_class = SaveCandidateSerializer
+class SavedCandidateListView(generics.ListCreateAPIView):
+    """Saved candidates, newest first, on the standard paginated envelope.
+    The relation stays stored when a candidate hides their profile; the
+    professional card is returned only while `_visible_candidates` allows it."""
 
-    @extend_schema(
-        responses={200: SavedCandidateSerializer(many=True)},
-        summary="My organisation's saved candidates",
-    )
-    def get(self, request):
-        _require_talent_access(request, Keys.TALENT_SAVE)
-        saved = (
-            SavedCandidate.objects.filter(employer=request.employer)
+    permission_classes = [CanRecruit]
+    serializer_class = SavedCandidateSerializer
+    queryset = SavedCandidate.objects.none()
+    filter_backends = []  # fixed newest-first order; no client ordering/filtering
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SavedCandidate.objects.none()
+        _require_talent_access(self.request, Keys.TALENT_SAVE)
+        return (
+            SavedCandidate.objects.filter(
+                employer=self.request.employer,
+                job_seeker__in=_visible_candidates(self.request.employer),
+            )
             .select_related(
                 "job_seeker",
                 "job_seeker__general_specialty",
                 "job_seeker__governorate",
                 "job_seeker__city",
             )
-            .prefetch_related("job_seeker__skills", "job_seeker__languages")[:200]
+            .prefetch_related("job_seeker__skills", "job_seeker__languages")
+            .order_by("-created_at", "-id")
         )
-        return Response(SavedCandidateSerializer(saved, many=True).data)
+
+    @extend_schema(summary="My organisation's saved candidates (paginated, newest first)")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     @extend_schema(
         request=SaveCandidateSerializer,
         responses={201: SavedCandidateSerializer},
         summary="Save a candidate (private note never shown to the candidate)",
     )
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         _require_talent_access(request, Keys.TALENT_SAVE)  # same gate as GET
         serializer = SaveCandidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

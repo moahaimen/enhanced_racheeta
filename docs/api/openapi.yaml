@@ -3293,7 +3293,24 @@ paths:
   /api/v1/talent/saved:
     get:
       operationId: talent_saved_list
-      summary: My organisation's saved candidates
+      description: |-
+        Saved candidates, newest first, on the standard paginated envelope.
+        The relation stays stored when a candidate hides their profile; the
+        professional card is returned only while `_visible_candidates` allows it.
+      summary: My organisation's saved candidates (paginated, newest first)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
       tags:
       - talent
       security:
@@ -3303,12 +3320,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SavedCandidate'
+                $ref: '#/components/schemas/PaginatedSavedCandidateList'
           description: ''
     post:
       operationId: talent_saved_create
+      description: |-
+        Saved candidates, newest first, on the standard paginated envelope.
+        The relation stays stored when a candidate hides their profile; the
+        professional card is returned only while `_visible_candidates` allows it.
       summary: Save a candidate (private note never shown to the candidate)
       tags:
       - talent
@@ -6123,6 +6142,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProviderCard'
+    PaginatedSavedCandidateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedCandidate'
     PaginatedTalentCardList:
       type: object
       required:
@@ -7759,6 +7801,11 @@ components:
         is_saved:
           type: boolean
           readOnly: true
+        saved_candidate_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
       required:
       - availability
       - city
@@ -7781,6 +7828,7 @@ components:
       - professional_title
       - salary_currency
       - salary_expectation_min
+      - saved_candidate_id
       - skills
       - years_of_experience
     TokenPair:
