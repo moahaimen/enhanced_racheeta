@@ -11,6 +11,7 @@ from .models import (
     Subscription,
     SubscriptionEvent,
     UsageCounter,
+    UsageEvent,
 )
 
 
@@ -142,6 +143,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ("billing_account__subject_id", "requested_by__email", "admin_reference")
     readonly_fields = ("id", "created_at", "updated_at", *SUBSCRIPTION_LIFECYCLE_FIELDS)
     inlines = [SubscriptionEventInline, PaymentInline]
+    actions = None  # no bulk delete of lifecycle history
 
     def has_add_permission(self, request):
         return False  # subscriptions are requested by owners and activated by services
@@ -150,38 +152,103 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return False  # history is part of the audit trail
 
 
-@admin.register(BillingAccount)
-class BillingAccountAdmin(admin.ModelAdmin):
-    list_display = ("subject_type", "subject_id", "audience", "created_at")
-    list_filter = ("subject_type", "audience")
-    search_fields = ("subject_id",)
+class InspectionOnlyAdmin(admin.ModelAdmin):
+    """Service-managed state: search, filter and read, never add, edit or delete.
+    Every field is read-only; bulk actions are removed (no delete_selected)."""
 
+    actions = None
 
-@admin.register(CreditBalance)
-class CreditBalanceAdmin(admin.ModelAdmin):
-    list_display = ("billing_account", "key", "balance")
-    readonly_fields = ("balance",)
-
-
-@admin.register(CreditTransaction)
-class CreditTransactionAdmin(admin.ModelAdmin):
-    list_display = ("billing_account", "key", "delta", "reason", "actor", "created_at")
-    readonly_fields = (
-        "billing_account",
-        "key",
-        "delta",
-        "reason",
-        "actor",
-        "reference",
-        "note",
-        "created_at",
-    )
-
-
-@admin.register(UsageCounter)
-class UsageCounterAdmin(admin.ModelAdmin):
-    list_display = ("billing_account", "key", "period_start", "used")
-    readonly_fields = ("billing_account", "key", "period_start", "used")
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(f.name for f in self.model._meta.concrete_fields)
 
     def has_add_permission(self, request):
         return False
+
+    def has_change_permission(self, request, obj=None):
+        return False  # view-only pages: no save row, POSTs are refused
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class CreditBalanceInline(ReadOnlyInline):
+    model = CreditBalance
+    readonly_fields = ("key", "balance", "updated_at")
+
+
+class SubscriptionInline(ReadOnlyInline):
+    model = Subscription
+    fields = ("plan", "status", "starts_at", "ends_at", "created_at")
+    readonly_fields = fields
+    show_change_link = True
+
+
+@admin.register(BillingAccount)
+class BillingAccountAdmin(InspectionOnlyAdmin):
+    """Identity (subject_type, subject_id, audience) binds subscriptions, usage
+    and credits to an organisation or account: created by services on first
+    use, never re-bound or deleted here."""
+
+    list_display = ("subject_type", "subject_id", "audience", "created_at")
+    list_filter = ("subject_type", "audience")
+    search_fields = ("subject_id",)
+    inlines = [SubscriptionInline, CreditBalanceInline]
+
+
+@admin.register(CreditBalance)
+class CreditBalanceAdmin(InspectionOnlyAdmin):
+    """Balances move only through `services.grant_credits` (locked, ledgered,
+    audited); the row itself is never created, moved between accounts or deleted."""
+
+    list_display = ("billing_account", "key", "balance", "updated_at")
+    list_filter = ("key",)
+    search_fields = ("billing_account__subject_id",)
+
+
+@admin.register(CreditTransaction)
+class CreditTransactionAdmin(InspectionOnlyAdmin):
+    list_display = ("billing_account", "key", "delta", "reason", "actor", "created_at")
+    list_filter = ("reason", "key")
+    search_fields = ("billing_account__subject_id", "reference")
+
+
+@admin.register(UsageCounter)
+class UsageCounterAdmin(InspectionOnlyAdmin):
+    list_display = ("billing_account", "key", "period_start", "used")
+    list_filter = ("key",)
+    search_fields = ("billing_account__subject_id",)
+
+
+@admin.register(UsageEvent)
+class UsageEventAdmin(InspectionOnlyAdmin):
+    list_display = (
+        "billing_account",
+        "key",
+        "amount",
+        "reference",
+        "covered_by_credit",
+        "created_at",
+    )
+    list_filter = ("key", "covered_by_credit")
+    search_fields = ("billing_account__subject_id", "reference")
+
+
+@admin.register(SubscriptionEvent)
+class SubscriptionEventAdmin(InspectionOnlyAdmin):
+    list_display = ("subscription", "from_status", "to_status", "actor", "created_at")
+    list_filter = ("to_status",)
+
+
+@admin.register(PaymentRecord)
+class PaymentRecordAdmin(InspectionOnlyAdmin):
+    list_display = (
+        "subscription",
+        "amount",
+        "currency",
+        "method",
+        "reference",
+        "status",
+        "created_at",
+    )
+    list_filter = ("method", "status")
+    search_fields = ("reference",)
