@@ -32,7 +32,7 @@ Capability keys live in `apps.billing.types.Keys`:
 | Key | Kind | Used by |
 | --- | --- | --- |
 | `jobs.post` | BOOLEAN | creating/submitting jobs |
-| `jobs.active_limit` | LIMIT (concurrent) | jobs in PENDING_ADMIN_REVIEW or PUBLISHED |
+| `jobs.active_limit` | LIMIT (concurrent) | jobs in PENDING_ADMIN_REVIEW, or PUBLISHED with a deadline that has not elapsed (overdue ones are normalised to EXPIRED before every capacity check) |
 | `jobs.featured`, `jobs.featured_limit` | BOOLEAN + LIMIT (concurrent) | featured jobs |
 | `jobs.application_review` | BOOLEAN | applicant list, transitions, interviews |
 | `talent.search`, `talent.search_limit` | BOOLEAN + LIMIT (monthly) | talent search (see the billable-search rule in `JOBS.md`) |

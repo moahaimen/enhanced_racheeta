@@ -37,15 +37,23 @@ DRAFT ─submit─▶ PENDING_ADMIN_REVIEW ─approve─▶ PUBLISHED ─close�
 DRAFT / CLOSED / EXPIRED / REJECTED ─archive─▶ ARCHIVED
 ```
 
-`submit` and an administrator `restore` (SUSPENDED → PUBLISHED) share one
-gate, `_require_publication_eligibility`, evaluated on the locked employer and
-job rows: the organisation must be VERIFIED with ACTIVE recruitment
-(`organization_not_verified`), the agency invariant must hold for the current
-identity (`not_an_agency`), and the plan must carry `jobs.post` with a free
-`jobs.active_limit` slot (`entitlement_required` / `usage_limit_reached`). A
-restore can therefore never publish what a fresh submission would refuse, and
-a refused restore writes no transition. Submission also re-scans text for
-contact data.
+`submit`, an administrator `approve` (PENDING_ADMIN_REVIEW → PUBLISHED) and an
+administrator `restore` (SUSPENDED → PUBLISHED) share one gate,
+`_require_publication_eligibility`, evaluated on the locked employer and job
+rows (employer first, then job): the organisation must be VERIFIED with ACTIVE
+recruitment (`organization_not_verified`), the agency invariant must hold for
+the current identity (`not_an_agency`), the application deadline must not have
+elapsed — the deadline day itself is still open, exactly as `is_open`
+(`deadline_passed`, 409) — and the plan must carry `jobs.post` with a free
+`jobs.active_limit` slot (`entitlement_required` / `usage_limit_reached`).
+Approval therefore never publishes what a fresh submission would refuse, no
+matter how long the job waited in review, and a refused transition writes no
+history. Submission also re-scans text for contact data.
+
+Active-slot capacity is authoritative and independent of read endpoints: the
+gate first normalises this organisation's overdue PUBLISHED jobs to EXPIRED
+(each job row locked, one transition), and the count itself ignores PUBLISHED
+jobs whose deadline elapsed.
 Featuring requires `jobs.featured` and a `jobs.featured_limit` slot; a job is
 featured only while `featured_until > now` (see `BILLING.md`, Featured window).
 

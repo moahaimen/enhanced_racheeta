@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **425 passed** (was 175): billing entitlements/admin API,
+- Backend: **444 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -286,6 +286,17 @@ no other timestamp in the moderation UI was mislabelled.
 
 Backend tests 425, web tests 177, no migration, **OpenAPI regenerated**
 (`EmployerAdmin.provider_profile`).
+
+## PR #4 review, round eleven (2026-09-25, review 5315446119 on `fe0e3ee`)
+
+| Finding | Fix |
+| --- | --- |
+| P1 approval skips eligibility | `approve_job` locks the employer row first, then the job, checks it is still pending and clean, and runs the same `_require_publication_eligibility` as submit and restore (recruiting status, agency invariant, deadline, `jobs.post`, active slot). Tests: eligible approval, recruitment-/verification-suspended and unverified organisations, lapsed subscription, missing capability, reduced limit, former agency, threaded approve-vs-suspend; refused approvals write no history. |
+| P2 approval after the deadline | The shared gate refuses `application_deadline < today` (`deadline_passed`, 409; the deadline day itself is still open, matching `is_open`) for submit, approve and restore. Tests: future, today, past, no PUBLISHED history. |
+| P2 overdue jobs counted as active | `_require_active_job_slot` normalises the organisation's overdue PUBLISHED jobs under the employer lock (job rows locked in turn, one EXPIRED transition), and `_active_job_count` ignores elapsed PUBLISHED jobs regardless. Applies to submit, approve and restore. Tests: overdue job frees the slot, fresh job still counts, submit/approve/restore share the semantics, concurrent normalisation writes one transition. |
+| P2 N+1 on job cards | `with_public_relations` also selects `employer__provider_profile` and the hiring employer's governorate, city and provider profile. Query-count tests for a 20-card page with linked facilities and agency jobs, and for page-size growth. |
+
+Backend tests 444, web tests 177, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
