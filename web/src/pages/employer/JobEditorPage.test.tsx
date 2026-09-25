@@ -159,4 +159,14 @@ describe('JobEditorPage', () => {
     expect(screen.queryByRole('button', { name: /^حفظ$|^Save$/i })).toBeNull()
     expect(screen.getByLabelText(/المسمى الوظيفي|Job title/i)).toBeDisabled()
   })
+
+  it('shows a VIEWER a read-only editor when reached directly by URL', async () => {
+    vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+    vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
+    renderApp('/employer/jobs/j-1')
+    expect(await screen.findByText(/دورك في المؤسسة|Your role in this organisation/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/المسمى الوظيفي|Job title/i)).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /^حفظ$|^Save$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /إرسال للمراجعة|Submit for review/i })).toBeNull()
+  })
 })

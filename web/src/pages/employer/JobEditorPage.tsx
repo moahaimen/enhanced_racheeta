@@ -42,7 +42,8 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const name = useLocalizedName()
-  const editable = job === null || job.status === 'DRAFT' || job.status === 'REJECTED'
+  const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
+  const editable = canWrite && (job === null || job.status === 'DRAFT' || job.status === 'REJECTED')
   // Agency-only values kept by a job whose organisation is no longer an agency.
   // Only worth saying while the job can actually be saved (the save clears them).
   const retainedHiring = job !== null && editable && (job.hiring_employer !== null || job.hiring_organization_name !== '')
@@ -157,22 +158,22 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
               </Alert>
             ) : null}
             <div className={styles.rowActions} style={{ marginBlockStart: 'var(--space-3)' }}>
-              {job.status === 'DRAFT' || job.status === 'REJECTED' ? (
+              {canWrite && (job.status === 'DRAFT' || job.status === 'REJECTED') ? (
                 <ApiActionButton action={() => jobsApi.jobAction(job.id, 'submit')} onSuccess={reload} onError={(e) => setActionError(toErrorMessage(e))} pendingLabel={t('common.submitting')} leading={<Icon name="check" size={18} />}>
                   {t('jobEditor.submit')}
                 </ApiActionButton>
               ) : null}
-              {job.status === 'PUBLISHED' || job.status === 'PENDING_ADMIN_REVIEW' || job.status === 'EXPIRED' ? (
+              {canWrite && (job.status === 'PUBLISHED' || job.status === 'PENDING_ADMIN_REVIEW' || job.status === 'EXPIRED') ? (
                 <ApiActionButton variant="ghost" action={() => jobsApi.jobAction(job.id, 'close')} onSuccess={reload} onError={(e) => setActionError(toErrorMessage(e))} pendingLabel={t('common.closing')}>
                   {t('jobEditor.close')}
                 </ApiActionButton>
               ) : null}
-              {job.status === 'PUBLISHED' ? (
+              {canWrite && job.status === 'PUBLISHED' ? (
                 <ApiActionButton variant={job.is_featured ? 'ghost' : 'secondary'} action={() => jobsApi.featureJob(job.id, !job.is_featured)} onSuccess={reload} onError={(e) => setActionError(toErrorMessage(e))} leading={<Icon name="sparkle" size={18} />}>
                   {job.is_featured ? t('jobEditor.unfeature') : t('jobEditor.feature')}
                 </ApiActionButton>
               ) : null}
-              {['DRAFT', 'CLOSED', 'EXPIRED', 'REJECTED'].includes(job.status) ? (
+              {canWrite && ['DRAFT', 'CLOSED', 'EXPIRED', 'REJECTED'].includes(job.status) ? (
                 <ApiActionButton variant="ghost" action={() => jobsApi.jobAction(job.id, 'archive')} onSuccess={() => navigate('/employer')} onError={(e) => setActionError(toErrorMessage(e))}>
                   {t('jobEditor.archive')}
                 </ApiActionButton>
@@ -195,7 +196,7 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
         ) : null}
 
         <SectionCard title={job ? t('jobEditor.editTitle') : t('jobEditor.newTitle')} headingLevel={2}>
-          {!editable ? <Alert kind="info">{t('jobEditor.locked')}</Alert> : null}
+          {!canWrite ? <Alert kind="info">{t('jobEditor.viewerReadOnly')}</Alert> : !editable ? <Alert kind="info">{t('jobEditor.locked')}</Alert> : null}
           <form noValidate onSubmit={(e) => e.preventDefault()}>
             {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
             {saved ? <Alert kind="success">{t('employer.saved')}</Alert> : null}

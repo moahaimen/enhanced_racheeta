@@ -252,4 +252,33 @@ describe('EmployerWorkspacePage', () => {
       expect(screen.getByLabelText(/نوع المؤسسة|Organisation type/i)).toBeEnabled()
     })
   })
+
+  describe('write controls by role', () => {
+    it.each(['OWNER', 'RECRUITER'] as const)('shows New Job to a %s', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      renderApp('/employer')
+      await screen.findByRole('heading', { level: 1, name: 'مستشفى الأمل' })
+      expect(screen.getAllByRole('link', { name: /وظيفة جديدة|New job/i }).length).toBeGreaterThan(0)
+      expect(screen.getByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeInTheDocument()
+    })
+
+    it('hides New Job and talent search from a VIEWER without changing the rest of the page', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+      const { router } = renderApp('/employer')
+      await screen.findByRole('heading', { level: 1, name: 'مستشفى الأمل' })
+      expect(screen.queryByRole('link', { name: /وظيفة جديدة|New job/i })).toBeNull()
+      expect(screen.queryByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeNull()
+      expect(await screen.findByTestId('usage-meters')).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/employer')
+    })
+
+    it('gives an unknown role no write controls either', async () => {
+      const employer = makeEmployerOwner()
+      delete (employer as Partial<typeof employer>).my_role
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(employer)
+      renderApp('/employer')
+      await screen.findByRole('heading', { level: 1, name: 'مستشفى الأمل' })
+      expect(screen.queryByRole('link', { name: /وظيفة جديدة|New job/i })).toBeNull()
+    })
+  })
 })

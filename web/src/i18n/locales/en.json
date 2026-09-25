@@ -864,7 +864,8 @@
     "viewPublic": "View public page",
     "applicants": "Applicants",
     "notFound": "Job not found.",
-    "retainedHiring": "This draft still carries hiring-on-behalf-of details, but your organisation is no longer a recruitment agency. Saving clears those two fields so the job becomes editable and submittable again."
+    "retainedHiring": "This draft still carries hiring-on-behalf-of details, but your organisation is no longer a recruitment agency. Saving clears those two fields so the job becomes editable and submittable again.",
+    "viewerReadOnly": "Your role in this organisation is Viewer: you can read jobs but not create or edit them."
   },
   "applicants": {
     "title": "Applicants",

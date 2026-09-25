@@ -62,6 +62,8 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
   // Authoritative server count (jobs.active_limit gate), never derived from the visible page.
   const activeJobs = employer.active_jobs
   const isOwner = employer.my_role === 'OWNER'
+  // Mirrors the backend CanRecruit rule (OWNER or RECRUITER). VIEWER is read-only; an unknown role gets nothing.
+  const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
   const canRecruit = employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE'
 
   return (
@@ -72,14 +74,16 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
         description={t('employer.intro')}
         actions={
           <>
-            {canRecruit ? (
+            {canRecruit && canWrite ? (
               <LinkButton to="/employer/talent" variant="secondary" leading={<Icon name="search" size={18} />}>
                 {t('employer.nav.talent')}
               </LinkButton>
             ) : null}
-            <LinkButton to="/employer/jobs/new" leading={<Icon name="plus" size={18} />}>
-              {t('employer.newJob')}
-            </LinkButton>
+            {canWrite ? (
+              <LinkButton to="/employer/jobs/new" leading={<Icon name="plus" size={18} />}>
+                {t('employer.newJob')}
+              </LinkButton>
+            ) : null}
           </>
         }
       />
@@ -114,7 +118,7 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
 
           <VerificationBlock employer={employer} isOwner={isOwner} onChange={setEmployer} />
 
-          <SectionCard id="jobs" title={t('employer.jobsTitle')} headingLevel={2} actions={<LinkButton to="/employer/jobs/new" size="sm" leading={<Icon name="plus" size={16} />}>{t('employer.newJob')}</LinkButton>}>
+          <SectionCard id="jobs" title={t('employer.jobsTitle')} headingLevel={2} actions={canWrite ? <LinkButton to="/employer/jobs/new" size="sm" leading={<Icon name="plus" size={16} />}>{t('employer.newJob')}</LinkButton> : undefined}>
             {jobs.loading ? (
               <LoadingState testId="jobs-loading" />
             ) : jobs.error ? (
