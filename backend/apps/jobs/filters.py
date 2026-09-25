@@ -1,3 +1,5 @@
+import re
+
 import django_filters
 from django import forms
 from django.db.models import Exists, OuterRef, Q
@@ -27,6 +29,13 @@ class StrictChoiceFilter(django_filters.ChoiceFilter):
     field_class = _UpperChoiceField
 
 
+class IntegerFilter(django_filters.NumberFilter):
+    """`years_of_experience` is an integer column: a fractional bound such as
+    `5.9` would silently behave like `5`, so it is rejected (400) instead."""
+
+    field_class = forms.IntegerField
+
+
 class JobFilter(django_filters.FilterSet):
     q = django_filters.CharFilter(method="filter_q")
     profession = django_filters.ChoiceFilter(choices=Profession.choices)
@@ -35,12 +44,8 @@ class JobFilter(django_filters.FilterSet):
     degree = django_filters.ChoiceFilter(field_name="minimum_degree", choices=Degree.choices)
     governorate = django_filters.UUIDFilter(field_name="governorate_id")
     city = django_filters.UUIDFilter(field_name="city_id")
-    min_experience = django_filters.NumberFilter(
-        field_name="minimum_experience_years", lookup_expr="gte"
-    )
-    max_experience = django_filters.NumberFilter(
-        field_name="minimum_experience_years", lookup_expr="lte"
-    )
+    min_experience = IntegerFilter(field_name="minimum_experience_years", lookup_expr="gte")
+    max_experience = IntegerFilter(field_name="minimum_experience_years", lookup_expr="lte")
     employment_type = django_filters.ChoiceFilter(choices=EmploymentType.choices)
     work_mode = django_filters.ChoiceFilter(choices=WorkMode.choices)
     shift_type = django_filters.ChoiceFilter(choices=ShiftType.choices)
@@ -78,12 +83,8 @@ class TalentFilter(django_filters.FilterSet):
     degree = django_filters.ChoiceFilter(
         choices=Degree.choices, method="filter_degree", help_text="Minimum degree"
     )
-    min_experience = django_filters.NumberFilter(
-        field_name="years_of_experience", lookup_expr="gte"
-    )
-    max_experience = django_filters.NumberFilter(
-        field_name="years_of_experience", lookup_expr="lte"
-    )
+    min_experience = IntegerFilter(field_name="years_of_experience", lookup_expr="gte")
+    max_experience = IntegerFilter(field_name="years_of_experience", lookup_expr="lte")
     governorate = django_filters.UUIDFilter(field_name="governorate_id")
     city = django_filters.UUIDFilter(field_name="city_id")
     skill = django_filters.CharFilter(method="filter_skill")
@@ -158,11 +159,19 @@ def _fold(value: str) -> str:
     return _collapse(value).lower()
 
 
-def _number(value) -> str:
+_TRAILING_ZERO_FRACTION = re.compile(r"\.0*\s*$")
+
+
+def _integer(value) -> str:
+    """Canonical integer text exactly as `forms.IntegerField` parses it: `05` and
+    `5.0` are the integer 5, while `5.9` is rejected by validation before any
+    search is billed. Anything the field would reject is kept verbatim so it can
+    never collide with an accepted value."""
+    text = str(value).strip()
     try:
-        return str(int(float(str(value).strip())))
+        return str(int(_TRAILING_ZERO_FRACTION.sub("", text)))
     except (TypeError, ValueError):
-        return str(value).strip()
+        return text
 
 
 # One normaliser per filter, mirroring how TalentFilter matches that parameter.
@@ -173,8 +182,8 @@ TALENT_SIGNATURE_NORMALISERS = {
     "specialty": lambda v: str(v).strip(),
     "detailed_specialty": _fold,
     "degree": lambda v: str(v).strip(),
-    "min_experience": _number,
-    "max_experience": _number,
+    "min_experience": _integer,
+    "max_experience": _integer,
     "governorate": lambda v: str(v).strip().lower(),
     "city": lambda v: str(v).strip().lower(),
     "skill": _fold,

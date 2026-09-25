@@ -122,7 +122,9 @@ def test_invitation_lists_normalise_expired_rows(api_client, employer, job_facto
     listed = api_client.get("/api/v1/jobs/me/invitations").json()["results"]
     assert [i["status"] for i in listed] == ["EXPIRED"]
     api_client.force_authenticate(user=owner_of(employer))
-    assert [i["status"] for i in api_client.get("/api/v1/talent/invitations").json()] == ["EXPIRED"]
+    assert [
+        i["status"] for i in api_client.get("/api/v1/talent/invitations").json()["results"]
+    ] == ["EXPIRED"]
 
 
 @pytest.mark.django_db(transaction=True, serialized_rollback=True)

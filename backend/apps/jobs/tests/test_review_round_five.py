@@ -254,7 +254,7 @@ def test_talent_detail_and_sent_invitations_need_recruitment_access(
     services.invite_candidate(employer, job_factory(employer), candidate, actor=owner)
     api_client.force_authenticate(user=owner)
     assert api_client.get(f"{TALENT}/{candidate.id}").status_code == 200
-    assert len(api_client.get(f"{TALENT}/invitations").json()) == 1
+    assert api_client.get(f"{TALENT}/invitations").json()["count"] == 1
     services.set_employer_recruitment_status(employer, "SUSPENDED", admin=admin, reason="audit")
     for url in (f"{TALENT}/{candidate.id}", f"{TALENT}/invitations"):
         resp = api_client.get(url)

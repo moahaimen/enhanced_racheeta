@@ -91,6 +91,6 @@ export const getTalent = (id: string, signal?: AbortSignal) => apiRequest<Talent
 export const listSaved = (page = 1, signal?: AbortSignal) => apiRequest<Paginated<SavedCandidate>>(`/api/v1/talent/saved?page=${page}`, { signal })
 export const saveCandidate = (jobSeeker: string, note = '') => apiRequest<SavedCandidate>('/api/v1/talent/saved', { method: 'POST', body: { job_seeker: jobSeeker, note } })
 export const unsaveCandidate = (id: string) => apiRequest<void>(`/api/v1/talent/saved/${enc(id)}`, { method: 'DELETE' })
-export const listInvitations = (signal?: AbortSignal) => apiRequest<Invitation[]>('/api/v1/talent/invitations', { signal })
+export const listInvitations = (page = 1, signal?: AbortSignal) => apiRequest<Paginated<Invitation>>(`/api/v1/talent/invitations?page=${page}`, { signal })
 export const inviteCandidate = (job: string, jobSeeker: string, message = '') => apiRequest<Invitation>('/api/v1/talent/invitations', { method: 'POST', body: { job, job_seeker: jobSeeker, message } })
 export const cancelInvitation = (id: string) => apiRequest<Invitation>(`/api/v1/talent/invitations/${enc(id)}/cancel`, { method: 'POST' })

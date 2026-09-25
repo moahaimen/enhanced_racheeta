@@ -3231,7 +3231,26 @@ paths:
   /api/v1/talent/invitations:
     get:
       operationId: talent_invitations_list
-      summary: Invitations sent by my organisation
+      description: |-
+        Invitations sent by my organisation, newest first, on the standard
+        paginated envelope. The rows stay stored when a candidate hides their
+        profile; a row is listed (and its candidate card serialised) only while the
+        shared visibility rule `_visible_candidates` allows it, so `count` is the
+        number of rows the employer may actually see.
+      summary: Invitations sent by my organisation (paginated, newest first)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
       tags:
       - talent
       security:
@@ -3241,12 +3260,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Invitation'
+                $ref: '#/components/schemas/PaginatedInvitationList'
           description: ''
     post:
       operationId: talent_invitations_create
+      description: |-
+        Invitations sent by my organisation, newest first, on the standard
+        paginated envelope. The rows stay stored when a candidate hides their
+        profile; a row is listed (and its candidate card serialised) only while the
+        shared visibility rule `_visible_candidates` allows it, so `count` is the
+        number of rows the employer may actually see.
       summary: Invite a discoverable candidate to apply to one of my open jobs (quota-consuming)
       tags:
       - talent
@@ -6027,6 +6050,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmployerAdmin'
+    PaginatedInvitationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invitation'
     PaginatedInvitationSeekerList:
       type: object
       required:

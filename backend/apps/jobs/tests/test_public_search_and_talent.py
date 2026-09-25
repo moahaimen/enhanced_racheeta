@@ -222,7 +222,7 @@ def test_invite_quota_and_isolation(api_client, employer_factory, seeker, job_fa
         == 404
     )
     api_client.force_authenticate(user=owner_of(other))
-    assert api_client.get(f"{TALENT}/invitations").json() == []
+    assert api_client.get(f"{TALENT}/invitations").json()["results"] == []
 
 
 def test_applied_candidate_visible_to_that_employer_only(

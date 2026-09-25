@@ -1202,22 +1202,31 @@ class SavedCandidateDeleteView(APIView):
 
 
 @extend_schema(tags=["talent"])
-class InvitationListView(_ThrottledOnWrite, APIView):
+class InvitationListView(_ThrottledOnWrite, generics.ListCreateAPIView):
+    """Invitations sent by my organisation, newest first, on the standard
+    paginated envelope. The rows stay stored when a candidate hides their
+    profile; a row is listed (and its candidate card serialised) only while the
+    shared visibility rule `_visible_candidates` allows it, so `count` is the
+    number of rows the employer may actually see."""
+
     permission_classes = [CanRecruit]
     # POST only: reading the sent-invitations list must not spend the
     # invitation quota (see _ThrottledOnWrite).
     throttle_scope = "talent_invite"
-    serializer_class = InviteSerializer
+    serializer_class = InvitationSerializer
+    queryset = JobInvitation.objects.none()
+    filter_backends = []  # fixed newest-first order; no client ordering/filtering
 
-    @extend_schema(
-        responses={200: InvitationSerializer(many=True)},
-        summary="Invitations sent by my organisation",
-    )
-    def get(self, request):
-        _require_talent_access(request, Keys.TALENT_INVITE)
-        services.expire_overdue_invitations(employer=request.employer)
-        invitations = (
-            JobInvitation.objects.filter(employer=request.employer)
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return JobInvitation.objects.none()
+        _require_talent_access(self.request, Keys.TALENT_INVITE)
+        services.expire_overdue_invitations(employer=self.request.employer)
+        return (
+            JobInvitation.objects.filter(
+                employer=self.request.employer,
+                job_seeker__in=_visible_candidates(self.request.employer),
+            )
             .select_related(
                 "job",
                 "job__employer",
@@ -1229,16 +1238,20 @@ class InvitationListView(_ThrottledOnWrite, APIView):
                 "job_seeker__governorate",
                 "job_seeker__city",
             )
-            .prefetch_related("job_seeker__skills", "job_seeker__languages")[:200]
+            .prefetch_related("job_seeker__skills", "job_seeker__languages")
+            .order_by("-created_at", "-id")
         )
-        return Response(InvitationSerializer(invitations, many=True).data)
+
+    @extend_schema(summary="Invitations sent by my organisation (paginated, newest first)")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     @extend_schema(
         request=InviteSerializer,
         responses={201: InvitationSerializer},
         summary="Invite a discoverable candidate to apply to one of my open jobs (quota-consuming)",
     )
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = InviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         d = serializer.validated_data
