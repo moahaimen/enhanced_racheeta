@@ -129,12 +129,36 @@ def membership_for(account) -> EmployerMembership | None:
     )
 
 
+def _lock_account(account) -> None:
+    """One serialisation policy for every account → organisation assignment
+    (`create_employer`, `add_member`): the account row is locked BEFORE the
+    one-active-membership check, so two concurrent assignments of the same
+    account queue on it and the second sees the first membership."""
+    Account.objects.select_for_update().filter(pk=account.pk).values_list("pk", flat=True).get()
+
+
+def _create_active_membership(employer: Employer, account, role: str) -> EmployerMembership:
+    """Insert under a savepoint; only the one-active-membership constraint maps
+    to the typed business error, any other IntegrityError propagates."""
+    try:
+        with transaction.atomic():
+            return EmployerMembership.objects.create(employer=employer, account=account, role=role)
+    except IntegrityError as exc:
+        if "jobs_membership_one_active_per_account" not in str(exc):
+            raise
+        raise JobsError(
+            "This account already belongs to an organisation.", code="already_member"
+        ) from exc
+
+
 @transaction.atomic
 def create_employer(account, **fields) -> Employer:
+    _lock_account(account)
     if membership_for(account) is not None:
         raise JobsError("This account already belongs to an organisation.", code="already_member")
     employer = Employer.objects.create(created_by=account, **fields)
-    EmployerMembership.objects.create(employer=employer, account=account, role=MemberRole.OWNER)
+    # Same transaction: a refused membership rolls the Employer row back too.
+    _create_active_membership(employer, account, MemberRole.OWNER)
     audit.record(
         actor=account, action="jobs.employer.created", target=employer, summary=employer.name
     )
@@ -334,24 +358,12 @@ def add_member(employer: Employer, account, role: str, *, actor) -> EmployerMemb
     # Lock order: employer row, then the TARGET account row. Two organisations
     # adding the same account lock different employer rows but the same account
     # row, so the second waits and then sees the first membership.
-    Account.objects.select_for_update().filter(pk=account.pk).values_list("pk", flat=True).get()
+    _lock_account(account)
     if EmployerMembership.objects.filter(account=account, status=MemberStatus.ACTIVE).exists():
         raise JobsError("This account already belongs to an organisation.", code="already_member")
     seats = EmployerMembership.objects.filter(employer=employer, status=MemberStatus.ACTIVE).count()
     employer_entitlements(employer).check_concurrent(Keys.RECRUITER_SEATS, current=seats)
-    try:
-        with transaction.atomic():
-            membership = EmployerMembership.objects.create(
-                employer=employer, account=account, role=role
-            )
-    except IntegrityError as exc:
-        # Final protection: only the one-active-membership constraint maps to the
-        # typed business error; anything else is a genuine failure.
-        if "jobs_membership_one_active_per_account" not in str(exc):
-            raise
-        raise JobsError(
-            "This account already belongs to an organisation.", code="already_member"
-        ) from exc
+    membership = _create_active_membership(employer, account, role)
     audit.record(
         actor=actor,
         action="jobs.employer.member_added",
