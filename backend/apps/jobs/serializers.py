@@ -778,7 +778,9 @@ class JobAdminSerializer(JobEmployerSerializer):
 
 
 class AdminDecisionSerializer(serializers.Serializer):
-    note = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
+    # Persisted as JobPostTransition.reason (max_length=500): validate to the
+    # same bound so an over-long note is a 400, never a database error.
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 
 class FeaturedSerializer(serializers.Serializer):

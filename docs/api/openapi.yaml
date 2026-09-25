@@ -3459,7 +3459,7 @@ components:
         note:
           type: string
           default: ''
-          maxLength: 2000
+          maxLength: 500
     AdminSubscription:
       type: object
       properties:

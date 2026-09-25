@@ -346,6 +346,16 @@ def activate_subscription(
     )
     if sub.status not in (SubscriptionStatus.PENDING, SubscriptionStatus.SUSPENDED):
         raise SubscriptionError(f"Cannot activate a subscription in status {sub.status}.")
+    # The plan is re-read under lock in the same transaction: a plan retired
+    # between the request and the decision must not become an ACTIVE row that
+    # entitlements would then ignore (they fall back to the default plan).
+    plan_row = Plan.objects.select_for_update().filter(pk=sub.plan_id).first()
+    if plan_row is None or not plan_row.is_active:
+        raise SubscriptionError(
+            "The requested plan is no longer available; reject this request and ask the "
+            "organisation to choose a current plan."
+        )
+    sub.plan = plan_row
     # One live subscription per account (DB constraint): the administrator's
     # decision supersedes any other ACTIVE row *and* any newer PENDING request
     # (policy: reactivating a suspended subscription cancels the pending

@@ -795,11 +795,15 @@ def respond_to_interview(
     return interview
 
 
+@transaction.atomic
 def send_message(
     application: JobApplication, *, sender, side: str, body: str
 ) -> RecruitmentMessage:
     if detector.categories(body):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
+    # Lock and refresh the application so a rejection or withdrawal that
+    # commits first closes the thread before this message can be inserted.
+    _lock_application(application)
     if application.status in (ApplicationStatus.WITHDRAWN, ApplicationStatus.REJECTED):
         raise JobsError("This application is closed.", code="application_closed")
     if side == MessageSide.EMPLOYER:

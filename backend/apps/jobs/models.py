@@ -279,10 +279,16 @@ class Credential(BaseModel):
 
 class JobPostQuerySet(models.QuerySet):
     def public(self):
+        """What the public may see: published by a verified, active organisation
+        and still open — a job whose deadline elapsed is excluded here as well
+        as in search, whether or not a listing has normalised it to EXPIRED yet
+        (same boundary as `is_open`: the deadline day is still open)."""
         return self.filter(
             status=JobStatus.PUBLISHED,
             employer__verification_status=VerificationStatus.VERIFIED,
             employer__recruitment_status=RecruitmentStatus.ACTIVE,
+        ).filter(
+            Q(application_deadline__isnull=True) | Q(application_deadline__gte=timezone.localdate())
         )
 
     def with_public_relations(self):
