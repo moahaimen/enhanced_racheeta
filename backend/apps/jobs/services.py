@@ -266,11 +266,11 @@ def set_employer_verification(
                 suspended_jobs.append(str(job.pk))
     employer.verification_status = status
     employer.verification_note = note
+    update_fields = ["verification_status", "verification_note", "updated_at"]
     if status == VerificationStatus.VERIFIED:
         employer.verified_at = timezone.now()
-    employer.save(
-        update_fields=["verification_status", "verification_note", "verified_at", "updated_at"]
-    )
+        update_fields.append("verified_at")  # never written from a stale instance otherwise
+    employer.save(update_fields=update_fields)
     audit.record(
         actor=admin,
         action="jobs.employer.verification_set",
@@ -378,9 +378,18 @@ def add_member(employer: Employer, account, role: str, *, actor) -> EmployerMemb
     return membership
 
 
+@transaction.atomic
 def end_membership(membership: EmployerMembership, *, actor) -> EmployerMembership:
     if membership.role == MemberRole.OWNER:
         raise JobsError("The owner membership cannot be ended.", code="invalid_role")
+    membership.status = (
+        EmployerMembership.objects.select_for_update()
+        .filter(pk=membership.pk)
+        .values_list("status", flat=True)
+        .get()
+    )
+    if membership.status != MemberStatus.ACTIVE:
+        raise JobsError("This membership has already ended.", code="invalid_transition")
     membership.status = MemberStatus.ENDED
     membership.ended_at = timezone.now()
     membership.save(update_fields=["status", "ended_at", "updated_at"])
@@ -400,9 +409,11 @@ def _lock_job(job: JobPost) -> None:
     """Serialise every lifecycle change on a job: row lock plus a status refresh
     so validation runs against the committed state. Lock order everywhere is
     employer row first (when a commercial slot is involved), then the job row."""
-    job.status = (
-        JobPost.objects.select_for_update().filter(pk=job.pk).values_list("status", flat=True).get()
-    )
+    locked = JobPost.objects.select_for_update().get(pk=job.pk)
+    # Every column, not only the status: decisions taken after the lock
+    # (deadline, hiring fields, featured window, content scans) must see the
+    # committed row, never what the caller loaded earlier.
+    job.__dict__.update({k: v for k, v in locked.__dict__.items() if k != "_state"})
 
 
 def _job_transition(job: JobPost, to_status: str, *, actor, reason: str = "") -> None:
@@ -490,6 +501,10 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be submitted.")
+    if contact_flags(
+        job
+    ):  # re-scanned on the locked row: a concurrent edit may have added contact data
+        raise ContactLeak("Direct contact information is not allowed in recruitment content.")
     _require_publication_eligibility(employer, job)  # on the locked rows, not the view's instance
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
     job.submitted_at = timezone.now()
@@ -533,8 +548,15 @@ def reject_job(job: JobPost, *, admin, reason: str) -> JobPost:
     return job
 
 
-@transaction.atomic
 def suspend_job(job: JobPost, *, admin, reason: str) -> JobPost:
+    # An elapsed deadline is EXPIRED, never SUSPENDED: normalise first (own
+    # committed transitions), then decide on the locked row.
+    expire_overdue_jobs(employer=job.employer)
+    return _suspend_job(job, admin=admin, reason=reason)
+
+
+@transaction.atomic
+def _suspend_job(job: JobPost, *, admin, reason: str) -> JobPost:
     _lock_job(job)
     if job.status != JobStatus.PUBLISHED:
         raise JobsError("Only published jobs can be suspended.")
@@ -553,6 +575,17 @@ def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
     _lock_job(job)
     if job.status != JobStatus.SUSPENDED:
         raise JobsError("Only suspended jobs can be restored.")
+    if job.application_deadline is not None and job.application_deadline < timezone.localdate():
+        # The deadline elapsed while suspended: the job is over. Normalise to
+        # EXPIRED (one transition, audited) instead of leaving a row nobody can
+        # restore, edit, close or archive.
+        _job_transition(
+            job, JobStatus.EXPIRED, actor=admin, reason="deadline passed while suspended"
+        )
+        job.is_featured, job.featured_until = False, None
+        job.save(update_fields=["status", "is_featured", "featured_until", "updated_at"])
+        audit.record(actor=admin, action="jobs.post.expired", target=job, summary=job.title)
+        return job
     # Exactly the submission gate: a restore must never publish what a fresh
     # submission would refuse (unverified/suspended organisation, retained
     # agency hiring fields, no free slot).
@@ -611,12 +644,16 @@ def archive_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
     return job
 
 
-def expire_featured_jobs() -> int:
+def expire_featured_jobs(*, employer: Employer | None = None) -> int:
     """Read-time normalisation of the featured window: `is_featured` is only
-    authoritative together with `featured_until > now`. One indexed UPDATE."""
-    return JobPost.objects.filter(is_featured=True, featured_until__lte=timezone.now()).update(
-        is_featured=False, featured_until=None
-    )
+    authoritative together with `featured_until > now`. One indexed UPDATE.
+    Under an employer lock it MUST be scoped to that organisation: a global
+    sweep would take row locks on other organisations' jobs outside the
+    employer → job order and deadlock against their own actions."""
+    qs = JobPost.objects.filter(is_featured=True, featured_until__lte=timezone.now())
+    if employer is not None:
+        qs = qs.filter(employer=employer)
+    return qs.update(is_featured=False, featured_until=None)
 
 
 def expire_overdue_jobs(*, employer: Employer | None = None) -> int:
@@ -625,7 +662,7 @@ def expire_overdue_jobs(*, employer: Employer | None = None) -> int:
     already locked, so the lock order employer → job holds). Each overdue job
     is locked and re-read before its single EXPIRED transition, so concurrent
     callers never duplicate history. Also normalises expired featured windows."""
-    expire_featured_jobs()
+    expire_featured_jobs(employer=employer)
     today = timezone.localdate()
     overdue = JobPost.objects.filter(status=JobStatus.PUBLISHED, application_deadline__lt=today)
     if employer is not None:
@@ -681,7 +718,7 @@ def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobP
         # its deadline is dead and must never occupy a featured slot.
         if job.application_deadline is not None and job.application_deadline < timezone.localdate():
             raise DeadlinePassed("The application deadline has already passed.")
-        expire_featured_jobs()
+        expire_featured_jobs(employer=employer)  # own rows only: the lock order holds
         _require_featured_slot(employer, job)
         job.is_featured = True
         job.featured_until = timezone.now() + timedelta(days=days)
@@ -982,7 +1019,7 @@ def save_candidate(
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
     employer_entitlements(employer).require(Keys.TALENT_SAVE)
-    if (
+    if not profile.account.is_active or (
         not profile.discoverable_by_employers
         and not JobApplication.objects.filter(job__employer=employer, job_seeker=profile).exists()
     ):
@@ -1005,7 +1042,7 @@ def invite_candidate(
     _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
-    if not profile.discoverable_by_employers:
+    if not profile.discoverable_by_employers or not profile.account.is_active:
         raise JobsError("This candidate is not discoverable.", code="not_found")
     if detector.categories(message):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
@@ -1096,9 +1133,18 @@ def _respond_to_invitation(invitation: JobInvitation, *, accept: bool) -> JobInv
     return invitation
 
 
-@transaction.atomic
 def cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
+    # Elapsed first (own committed write, as for responses): history records
+    # EXPIRED, never a cancellation of an invitation that was already dead.
+    expire_overdue_invitations(pk=invitation.pk)
+    return _cancel_invitation(invitation, actor=actor)
+
+
+@transaction.atomic
+def _cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
     _lock_invitation(invitation)
+    if invitation.status == InvitationStatus.EXPIRED:
+        raise JobsError("This invitation has expired.", code="invitation_expired")
     if invitation.status != InvitationStatus.PENDING:
         raise JobsError("Only pending invitations can be cancelled.")
     invitation.status = InvitationStatus.CANCELLED

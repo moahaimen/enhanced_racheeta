@@ -164,16 +164,21 @@ def test_restore_and_submit_refuse_a_passed_deadline(
     suspended = job_factory(
         employer, status=JobStatus.SUSPENDED, application_deadline=TODAY - timedelta(days=1)
     )
+    # Production audit: a suspended job whose deadline elapsed is over; restore
+    # normalises it to EXPIRED (one transition) instead of publishing it or
+    # leaving a row nobody can restore, edit, close or archive.
     resp = admin_client.post(f"{ADMIN}/{suspended.id}/restore")
-    assert resp.status_code == 409 and resp.json()["error"]["code"] == "deadline_passed"
+    assert resp.status_code == 200 and resp.json()["status"] == "EXPIRED"
+    suspended.refresh_from_db()
+    assert suspended.status == JobStatus.EXPIRED
+    assert list(suspended.transitions.values_list("to_status", flat=True)) == ["EXPIRED"]
     draft = job_factory(
         employer, status=JobStatus.DRAFT, application_deadline=TODAY - timedelta(days=1)
     )
     resp = employer_client.post(f"{JOBS}/{draft.id}/submit")
     assert resp.status_code == 409 and resp.json()["error"]["code"] == "deadline_passed"
-    for job in (suspended, draft):
-        job.refresh_from_db()
-        assert not job.transitions.exists()
+    draft.refresh_from_db()
+    assert not draft.transitions.exists()
     # Fixing the deadline (write validation still requires >= today) unblocks the draft.
     fixed = employer_client.patch(
         f"{JOBS}/{draft.id}", {"application_deadline": str(TODAY + timedelta(days=3))}

@@ -4633,6 +4633,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/TalentCard'
           readOnly: true
+          nullable: true
         message:
           type: string
           readOnly: true
@@ -4752,6 +4753,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EmployerPublic'
           readOnly: true
+          nullable: true
         hiring_organization_name:
           type: string
           readOnly: true
@@ -4946,6 +4948,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EmployerPublic'
           readOnly: true
+          nullable: true
         hiring_organization_name:
           type: string
           readOnly: true
@@ -5056,6 +5059,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EmployerPublic'
           readOnly: true
+          nullable: true
         hiring_organization_name:
           type: string
           readOnly: true
@@ -5243,6 +5247,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EmployerPublic'
           readOnly: true
+          nullable: true
         hiring_organization_name:
           type: string
           readOnly: true

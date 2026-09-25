@@ -585,7 +585,7 @@ class TalentDetailSerializer(TalentCardSerializer):
 
 class JobCardSerializer(serializers.ModelSerializer):
     employer = EmployerPublicSerializer(read_only=True)
-    hiring_employer = EmployerPublicSerializer(read_only=True)
+    hiring_employer = EmployerPublicSerializer(read_only=True, allow_null=True)
     governorate = GovernorateSerializer(read_only=True)
     city = CitySerializer(read_only=True)
     general_specialty = SpecialtySerializer(read_only=True)
@@ -624,6 +624,17 @@ class JobCardSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_is_featured(self, obj) -> bool:
         return obj.is_actively_featured
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # Public surfaces render the hiring organisation only while it has a
+        # public presence itself (verified, discoverable): naming a hidden or
+        # no-longer-verified organisation must not publish its profile.
+        if self.context.get("public") and data.get("hiring_employer") is not None:
+            he = obj.hiring_employer
+            if not (he.is_discoverable and he.verification_status == "VERIFIED"):
+                data["hiring_employer"] = None
+        return data
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_salary_min(self, obj):
@@ -692,7 +703,8 @@ class JobWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
         queryset=City.objects.filter(is_active=True), allow_null=True, required=False
     )
     hiring_employer = serializers.PrimaryKeyRelatedField(
-        queryset=Employer.objects.filter(verification_status="VERIFIED"),
+        # Only an organisation with a public presence can be named publicly.
+        queryset=Employer.objects.filter(verification_status="VERIFIED", is_discoverable=True),
         allow_null=True,
         required=False,
     )
@@ -975,7 +987,7 @@ class SaveCandidateSerializer(serializers.Serializer):
 
 class InvitationSerializer(serializers.ModelSerializer):
     job = JobCardSerializer(read_only=True)
-    candidate = TalentCardSerializer(source="job_seeker", read_only=True)
+    candidate = TalentCardSerializer(source="job_seeker", read_only=True, allow_null=True)
 
     class Meta:
         model = JobInvitation

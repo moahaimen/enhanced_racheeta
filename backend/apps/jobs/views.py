@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -173,6 +173,10 @@ class JobListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = JobCardSerializer
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "public": True}
+
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = JobFilter
     ordering_fields = ["published_at", "application_deadline"]
@@ -192,6 +196,9 @@ class JobDetailView(generics.RetrieveAPIView):
     authentication_classes = []
     serializer_class = JobPublicSerializer
 
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "public": True}
+
     def get_queryset(self):
         return JobPost.objects.public().with_public_relations()
 
@@ -201,8 +208,10 @@ class EmployerPublicView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = EmployerPublicSerializer
+    # Same public rule as `JobPost.objects.public()`: a suspended organisation
+    # has no public presence while it cannot recruit.
     queryset = Employer.objects.filter(
-        verification_status="VERIFIED", is_discoverable=True
+        verification_status="VERIFIED", recruitment_status="ACTIVE", is_discoverable=True
     ).select_related("governorate", "city", "provider_profile")
 
 
@@ -241,14 +250,26 @@ class MySeekerProfileView(APIView):
         summary="Create my professional profile",
     )
     def post(self, request):
-        if JobSeekerProfile.objects.filter(account=request.user).exists():
-            raise ValidationError(
-                {"non_field_errors": ["You already have a professional profile."]},
-                code="already_exists",
-            )
         serializer = JobSeekerProfileWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(account=request.user)
+        duplicate = ValidationError(
+            {"non_field_errors": ["You already have a professional profile."]},
+            code="already_exists",
+        )
+        with transaction.atomic():
+            # One profile per account: serialise on the account row (the policy
+            # every account-scoped uniqueness check uses), re-check, and map the
+            # constraint itself to the same typed error for the residual race.
+            services._lock_account(request.user)
+            if JobSeekerProfile.objects.filter(account=request.user).exists():
+                raise duplicate
+            try:
+                with transaction.atomic():
+                    serializer.save(account=request.user)
+            except IntegrityError as exc:
+                if "jobs_seeker_profile_account_id" not in str(exc):
+                    raise
+                raise duplicate from exc
         return Response(
             JobSeekerProfileSerializer(_own_seeker(request)).data, status=status.HTTP_201_CREATED
         )
@@ -281,7 +302,13 @@ def _child_views(model, ser, related: str, tag_summary: str):
             return model.objects.filter(profile=self.request.job_seeker)
 
         def perform_create(self, serializer):
-            serializer.save(profile=self.request.job_seeker)
+            try:
+                with transaction.atomic():
+                    serializer.save(profile=self.request.job_seeker)
+            except IntegrityError as exc:  # concurrent duplicate: typed, never a 500
+                raise ValidationError(
+                    {"non_field_errors": ["This entry is already listed."]}, code="duplicate"
+                ) from exc
 
     @extend_schema(tags=["job-seeker"], summary=f"One of my {tag_summary}")
     class Detail(generics.RetrieveUpdateDestroyAPIView):
@@ -836,7 +863,7 @@ class EmployerJobDetailView(APIView):
         try:
             services.edit_job(job, dict(serializer.validated_data), actor=request.user)
         except services.JobsError as exc:
-            raise JobsAPIError(str(exc), code=exc.code) from exc
+            raise_api(exc)  # the documented status per code (e.g. not_an_agency → 400)
         return Response(JobEmployerSerializer(_employer_jobs(request).get(pk=pk)).data)
 
 
@@ -1196,6 +1223,9 @@ class SavedCandidateDeleteView(APIView):
     serializer_class = None
 
     def delete(self, request, pk):
+        _require_talent_access(
+            request, Keys.TALENT_SAVE
+        )  # suspended: lists and actions closed alike
         saved = get_object_or_404(SavedCandidate.objects.filter(employer=request.employer), pk=pk)
         saved.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1276,6 +1306,7 @@ class InvitationCancelView(APIView):
 
     @extend_schema(request=None, responses={200: InvitationSerializer})
     def post(self, request, pk):
+        _require_talent_access(request, Keys.TALENT_INVITE)  # same gate as sending/listing
         invitation = get_object_or_404(
             JobInvitation.objects.filter(employer=request.employer).select_related(
                 "job", "job_seeker"
@@ -1286,7 +1317,12 @@ class InvitationCancelView(APIView):
             services.cancel_invitation(invitation, actor=request.user)
         except services.JobsError as exc:
             raise_api(exc)
-        return Response(InvitationSerializer(invitation).data)
+        data = InvitationSerializer(invitation).data
+        # THE candidate visibility rule applies here as on the list: a candidate
+        # who is no longer discoverable and never applied is not rendered.
+        if not _visible_candidates(request.employer).filter(pk=invitation.job_seeker_id).exists():
+            data["candidate"] = None
+        return Response(data)
 
 
 # ---- administrators ---------------------------------------------------------
