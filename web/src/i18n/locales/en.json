@@ -868,6 +868,7 @@
     "viewerReadOnly": "Your role in this organisation is Viewer: you can read jobs but not create or edit them."
   },
   "applicants": {
+    "viewerReadOnly": "Your role in this organisation is Viewer: you can read applicants but not change their status, arrange interviews or send messages.",
     "title": "Applicants",
     "intro": "Applicants' professional profiles — no contact data. Communicate through messages inside Racheeta.",
     "empty": "No applicants yet.",

@@ -21,8 +21,12 @@ export function ApplicantsPage() {
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
   return (
     <Container width="xl">
-      <AsyncPage load={(signal) => Promise.all([jobsApi.getEmployerJob(id, signal), jobsApi.listJobApplications(id, status, page, signal)])} deps={[id, status, page]}>
-        {([job, applications], reload) => (
+      <AsyncPage load={(signal) => Promise.all([jobsApi.getMyEmployer(signal), jobsApi.getEmployerJob(id, signal), jobsApi.listJobApplications(id, status, page, signal)])} deps={[id, status, page]}>
+        {([employer, job, applications], reload) => {
+          // Mirrors the backend CanRecruit rule (OWNER or RECRUITER): VIEWER reads applicants but
+          // gets no transition, interview or messaging control. An unknown role fails closed.
+          const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
+          return (
           <>
             <PageHeader
               eyebrow={
@@ -44,23 +48,25 @@ export function ApplicantsPage() {
               }
             />
             <PageStack>
+              {!canWrite ? <Alert kind="info">{t('applicants.viewerReadOnly')}</Alert> : null}
               {applications.results.length === 0 ? (
                 <div className="card-block">
                   <EmptyState icon="users" title={t('applicants.empty')} testId="applicants-empty" />
                 </div>
               ) : (
-                applications.results.map((a) => <ApplicantCard key={a.id} application={a} reload={reload} />)
+                applications.results.map((a) => <ApplicantCard key={a.id} application={a} canWrite={canWrite} reload={reload} />)
               )}
               <Pagination page={page} total={Math.max(1, Math.ceil(applications.count / 20))} hasNext={applications.next !== null} hasPrevious={applications.previous !== null} onChange={(p) => setParams({ ...(status ? { status } : {}), page: String(p) })} />
             </PageStack>
           </>
-        )}
+          )
+        }}
       </AsyncPage>
     </Container>
   )
 }
 
-function ApplicantCard({ application, reload }: { application: ApplicationEmployer; reload: () => void }) {
+function ApplicantCard({ application, canWrite, reload }: { application: ApplicationEmployer; canWrite: boolean; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +135,7 @@ function ApplicantCard({ application, reload }: { application: ApplicationEmploy
               </ul>
             </>
           ) : null}
-          {['SUBMITTED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW'].includes(s) ? (
+          {canWrite && ['SUBMITTED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW'].includes(s) ? (
             <div style={{ marginBlockStart: 'var(--space-4)' }}>
               <TextField label={t('applicants.reason')} value={reason} onChange={(e) => setReason(e.target.value)} />
               <div className={styles.rowActions}>
@@ -161,7 +167,8 @@ function ApplicantCard({ application, reload }: { application: ApplicationEmploy
             </div>
           ) : null}
         </div>
-        <MessagesThread applicationId={application.id} mySide="EMPLOYER" closed={s === 'WITHDRAWN' || s === 'REJECTED'} />
+        {/* Employer-side messaging is part of applicant review (CanRecruit on read and write): a VIEWER is not a party. */}
+        {canWrite ? <MessagesThread applicationId={application.id} mySide="EMPLOYER" closed={s === 'WITHDRAWN' || s === 'REJECTED'} /> : null}
       </div>
     </SectionCard>
   )
