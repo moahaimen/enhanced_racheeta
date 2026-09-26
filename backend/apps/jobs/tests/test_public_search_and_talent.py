@@ -250,7 +250,9 @@ def test_talent_search_query_count(
     # SELECT ... FOR UPDATE) and the charge plus the listing run in one
     # transaction (savepoint pair), so authorisation and disclosure use
     # committed state.
-    with django_assert_max_num_queries(17):
+    # Round twenty-nine: +1, the page's candidate rows are locked (PK order) and
+    # re-checked before the cards are built.
+    with django_assert_max_num_queries(18):
         assert api_client.get(TALENT).json()["count"] == 8
 
 

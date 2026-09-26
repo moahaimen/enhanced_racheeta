@@ -1032,6 +1032,18 @@ class EmployerJobApplicationsView(generics.ListAPIView):
         )
         return _employer_applications(self.request).filter(job=job)
 
+    def list(self, request, *args, **kwargs):
+        # Applicant data (snapshot, cover text, current card) is disclosed on
+        # committed access state: every member may read, the organisation must
+        # recruit and the plan must carry application review, decided under
+        # lock and held until the page is serialised. An applicant stays
+        # visible through the application itself (no candidate privacy lock).
+        with transaction.atomic():
+            _authoritative_talent_read(
+                request, Keys.JOBS_APPLICATION_REVIEW, roles=services.MEMBER_ROLES
+            )
+            return super().list(request, *args, **kwargs)
+
 
 @extend_schema(tags=["employer"], summary="One applicant (my organisation's jobs only)")
 class EmployerApplicationDetailView(generics.RetrieveAPIView):
@@ -1043,6 +1055,13 @@ class EmployerApplicationDetailView(generics.RetrieveAPIView):
         if getattr(self, "swagger_fake_view", False):
             return JobApplication.objects.none()
         return _employer_applications(self.request)
+
+    def retrieve(self, request, *args, **kwargs):
+        with transaction.atomic():  # see EmployerJobApplicationsView.list
+            _authoritative_talent_read(
+                request, Keys.JOBS_APPLICATION_REVIEW, roles=services.MEMBER_ROLES
+            )
+            return super().retrieve(request, *args, **kwargs)
 
 
 @extend_schema(
@@ -1060,18 +1079,21 @@ class EmployerApplicationTransitionView(APIView):
         application = get_object_or_404(_employer_applications(request), pk=pk)
         serializer = ApplicationTransitionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        try:
-            services.transition_application(
-                application,
-                serializer.validated_data["status"],
-                actor=request.user,
-                reason=serializer.validated_data.get("reason", ""),
-            )
-        except services.JobsError as exc:
-            raise_api(exc)
-        return Response(
-            ApplicationEmployerSerializer(_employer_applications(request).get(pk=pk)).data
-        )
+        # The service's locks (employer, membership, billing account,
+        # application) stay held by this outer transaction until the response
+        # is built, so the applicant data cannot be emitted after a revocation.
+        with transaction.atomic():
+            try:
+                services.transition_application(
+                    application,
+                    serializer.validated_data["status"],
+                    actor=request.user,
+                    reason=serializer.validated_data.get("reason", ""),
+                )
+            except services.JobsError as exc:
+                raise_api(exc)
+            data = ApplicationEmployerSerializer(_employer_applications(request).get(pk=pk)).data
+        return Response(data)
 
 
 @extend_schema(tags=["employer"], summary="Request an interview (shortlisted applicants)")
@@ -1113,14 +1135,50 @@ def _require_talent_access(request, key: str | None) -> None:
         services.employer_entitlements(request.employer).require(key)
 
 
-def _authoritative_talent_read(request, key: str) -> None:
-    """Round-28: candidate-data reads decide on committed state. Must run
-    inside the transaction that also evaluates the queryset and builds the
-    serializer data (see services.authoritative_talent_access)."""
+def _authoritative_talent_read(request, key: str, roles=services.RECRUITING_ROLES) -> None:
+    """Candidate-data disclosure decides on committed state. Must run inside
+    the transaction that also evaluates the queryset, locks the candidate rows
+    the policy depends on and builds the serializer data
+    (see services.authoritative_talent_access)."""
     try:
-        services.authoritative_talent_access(request.employer, request.user, key)
+        services.authoritative_talent_access(request.employer, request.user, key, roles=roles)
     except services.JobsError as exc:  # revoked membership / suspended organisation
         raise_api(exc)
+
+
+def _disclosable(rows, employer, candidate_of, *, allow_applicants: bool):
+    """Locks the candidate profiles of one response page (PK order), drops the
+    rows whose candidate is no longer visible on the locked state (an opt-out
+    that committed first), and synchronises the in-memory profiles with the
+    locked rows so the cards render current state. Runs inside the disclosing
+    transaction; the locks are held until the response data is built."""
+    profiles = {}
+    for row in rows:
+        profile = candidate_of(row)
+        if profile is not None:
+            profiles[profile.pk] = profile
+    locked = services.lock_candidates(profiles)
+    visible = services.visible_candidate_ids(
+        locked.values(), employer, allow_applicants=allow_applicants
+    )
+    for pk, profile in profiles.items():
+        if pk in locked:
+            profile.discoverable_by_employers = locked[pk].discoverable_by_employers
+    return [
+        row for row in rows if candidate_of(row) is not None and candidate_of(row).pk in visible
+    ]
+
+
+def _materialized_list(view, request, candidate_of, *, allow_applicants: bool):
+    """DRF's list(), with the page's candidate rows locked and re-checked and
+    the serializer data forced BEFORE returning (inside the caller's
+    transaction). Only the page's candidates are locked, never the table."""
+    queryset = view.filter_queryset(view.get_queryset())
+    page = view.paginate_queryset(queryset)
+    rows = page if page is not None else list(queryset)
+    rows = _disclosable(rows, request.employer, candidate_of, allow_applicants=allow_applicants)
+    data = view.get_serializer(rows, many=True).data  # materialised here, under the locks
+    return view.get_paginated_response(data) if page is not None else Response(data)
 
 
 def _visible_candidates(employer):
@@ -1192,7 +1250,10 @@ class TalentSearchView(_Throttled, generics.ListAPIView):
                 )
             except services.JobsError as exc:  # revoked membership / suspended organisation
                 raise_api(exc)
-            return super().list(request, *args, **kwargs)
+            # Search discloses discoverable candidates only: the page's rows are
+            # locked and re-checked, so an opt-out that committed first is
+            # excluded (the charge above is per search, never per candidate).
+            return _materialized_list(self, request, lambda p: p, allow_applicants=False)
 
     def get_queryset(self):
         return _talent_queryset()
@@ -1214,14 +1275,21 @@ class TalentDetailView(APIView):
         # profile has been serialised, so nothing is returned on revoked access.
         with transaction.atomic():
             _authoritative_talent_read(request, Keys.TALENT_SEARCH)
-            qs = _visible_candidates(request.employer)
-            profile = get_object_or_404(
-                qs.select_related(
+            # The candidate row is locked BEFORE the visibility decision (an
+            # opt-out that committed first → the same 404 as a hidden or unknown
+            # candidate; a later one waits until this response is built).
+            locked = services.lock_candidates([pk])
+            visible = services.visible_candidate_ids(
+                locked.values(), request.employer, allow_applicants=True
+            )
+            if pk not in visible:
+                raise NotFound
+            profile = (
+                JobSeekerProfile.objects.select_related(
                     "account", "general_specialty", "governorate", "city", "desired_governorate"
-                ).prefetch_related(
-                    "skills", "languages", "experiences", "education", "credentials"
-                ),
-                pk=pk,
+                )
+                .prefetch_related("skills", "languages", "experiences", "education", "credentials")
+                .get(pk=pk)
             )
             data = TalentDetailSerializer(profile, context={"employer": request.employer}).data
         return Response(data)
@@ -1259,10 +1327,12 @@ class SavedCandidateListView(generics.ListCreateAPIView):
 
     @extend_schema(summary="My organisation's saved candidates (paginated, newest first)")
     def get(self, request, *args, **kwargs):
-        # Locks held through pagination and serialisation (see TalentDetailView).
+        # Locks held through pagination, candidate re-check and serialisation.
         with transaction.atomic():
             _authoritative_talent_read(request, Keys.TALENT_SAVE)
-            return super().get(request, *args, **kwargs)
+            return _materialized_list(
+                self, request, lambda row: row.job_seeker, allow_applicants=True
+            )
 
     @extend_schema(
         request=SaveCandidateSerializer,
@@ -1274,16 +1344,20 @@ class SavedCandidateListView(generics.ListCreateAPIView):
         serializer = SaveCandidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         profile = get_object_or_404(JobSeekerProfile, pk=serializer.validated_data["job_seeker"])
-        try:
-            saved = services.save_candidate(
-                request.employer,
-                profile,
-                actor=request.user,
-                note=serializer.validated_data.get("note", ""),
-            )
-        except services.JobsError as exc:
-            raise_api(exc)
-        return Response(SavedCandidateSerializer(saved).data, status=status.HTTP_201_CREATED)
+        # The service's locks (employer, membership, billing account, candidate
+        # row) stay held by this outer transaction until the card is built.
+        with transaction.atomic():
+            try:
+                saved = services.save_candidate(
+                    request.employer,
+                    profile,
+                    actor=request.user,
+                    note=serializer.validated_data.get("note", ""),
+                )
+            except services.JobsError as exc:
+                raise_api(exc)
+            data = SavedCandidateSerializer(saved).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=["talent"], summary="Remove a saved candidate")
@@ -1346,10 +1420,12 @@ class InvitationListView(_ThrottledOnWrite, generics.ListCreateAPIView):
 
     @extend_schema(summary="Invitations sent by my organisation (paginated, newest first)")
     def get(self, request, *args, **kwargs):
-        # Locks held through pagination and serialisation (see TalentDetailView).
+        # Locks held through pagination, candidate re-check and serialisation.
         with transaction.atomic():
             _authoritative_talent_read(request, Keys.TALENT_INVITE)
-            return super().get(request, *args, **kwargs)
+            return _materialized_list(
+                self, request, lambda row: row.job_seeker, allow_applicants=True
+            )
 
     @extend_schema(
         request=InviteSerializer,
@@ -1365,13 +1441,18 @@ class InvitationListView(_ThrottledOnWrite, generics.ListCreateAPIView):
             pk=d["job"],
         )
         profile = get_object_or_404(JobSeekerProfile, pk=d["job_seeker"])
-        try:
-            invitation = services.invite_candidate(
-                request.employer, job, profile, actor=request.user, message=d.get("message", "")
-            )
-        except services.JobsError as exc:
-            raise_api(exc)
-        return Response(InvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+        # The service's locks (employer, membership, job, billing account,
+        # candidate row) stay held by this outer transaction until the
+        # response, candidate card included, is built.
+        with transaction.atomic():
+            try:
+                invitation = services.invite_candidate(
+                    request.employer, job, profile, actor=request.user, message=d.get("message", "")
+                )
+            except services.JobsError as exc:
+                raise_api(exc)
+            data = InvitationSerializer(invitation, context={"internal": True}).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=["talent"], summary="Cancel a pending invitation")
@@ -1388,15 +1469,23 @@ class InvitationCancelView(APIView):
             ),
             pk=pk,
         )
-        try:
-            services.cancel_invitation(invitation, actor=request.user)
-        except services.JobsError as exc:
-            raise_api(exc)
-        data = InvitationSerializer(invitation, context={"internal": True}).data
-        # THE candidate visibility rule applies here as on the list: a candidate
-        # who is no longer discoverable and never applied is not rendered.
-        if not _visible_candidates(request.employer).filter(pk=invitation.job_seeker_id).exists():
-            data["candidate"] = None
+        # Expiry normalisation is its own committed write and stays OUTSIDE the
+        # transaction below (its UPDATE must never precede the employer lock).
+        services.expire_overdue_invitations(pk=invitation.pk)
+        with transaction.atomic():
+            try:
+                services.cancel_invitation_locked(invitation, actor=request.user)
+            except services.JobsError as exc:
+                raise_api(exc)
+            # THE candidate visibility rule, on the row the service locked: a
+            # candidate who is no longer discoverable and never applied is not
+            # rendered. Built here, under the locks.
+            visible = services.visible_candidate_ids(
+                [invitation.job_seeker], request.employer, allow_applicants=True
+            )
+            data = InvitationSerializer(invitation, context={"internal": True}).data
+            if invitation.job_seeker_id not in visible:
+                data["candidate"] = None
         return Response(data)
 
 

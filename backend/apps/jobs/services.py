@@ -341,6 +341,7 @@ def set_employer_recruitment_status(
 
 
 RECRUITING_ROLES = (MemberRole.OWNER, MemberRole.RECRUITER)
+MEMBER_ROLES = (MemberRole.OWNER, MemberRole.RECRUITER, MemberRole.VIEWER)
 
 
 def _require_member_role(employer: Employer, actor, roles=RECRUITING_ROLES) -> EmployerMembership:
@@ -1100,25 +1101,64 @@ def search_signature(params: dict) -> str:
 
 @transaction.atomic
 def authoritative_talent_access(
-    employer: Employer, actor, key: str | None = None
+    employer: Employer, actor, key: str | None = None, *, roles=RECRUITING_ROLES
 ) -> tuple[Employer, billing.EntitlementService]:
     """THE access decision for candidate data, taken on committed state inside
     the caller's transaction (order employer → actor membership → billing
     account): the employer row is locked and re-read, the actor's membership
-    re-read under lock and its role checked, the organisation must still be
-    able to recruit, and the entitlement `key` is resolved on the locked
-    billing account. Callers keep the transaction open until the response
-    data is built, so a revocation that committed first refuses the read and
-    one that comes later waits. Reads consume nothing; talent search charges
-    through the returned service."""
+    re-read under lock and its CURRENT role checked against `roles`
+    (recruiting roles by default; every member for applicant review), the
+    organisation must still be able to recruit, and the entitlement `key` is
+    resolved on the locked billing account. Callers keep the transaction open
+    until the response data is built, so a revocation that committed first
+    refuses the read and one that comes later waits. Reads consume nothing;
+    talent search charges through the returned service. Endpoints whose
+    disclosure depends on the candidate's CURRENT privacy then lock the
+    candidate rows (`lock_candidates`) and decide with `visible_candidate_ids`."""
     employer = _lock_employer(employer)
-    _require_member_role(employer, actor)
+    _require_member_role(employer, actor, roles)
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
     ent = employer_entitlements(employer, lock=True)
     if key is not None:
         ent.require(key)
     return employer, ent
+
+
+def lock_candidates(ids) -> dict:
+    """Locks the candidate profile rows that may be disclosed, in primary-key
+    order (deterministic across concurrent readers), and returns them by pk.
+    The row lock is what a privacy opt-out (`update_seeker_profile`) contends
+    on: an opt-out that committed first is seen, one that comes later waits
+    until the disclosing transaction has built its response."""
+    ids = sorted({pk for pk in ids if pk is not None})
+    if not ids:
+        return {}
+    rows = (
+        JobSeekerProfile.objects.select_for_update(of=("self",))
+        .select_related("account")
+        .filter(pk__in=ids)
+        .order_by("pk")
+    )
+    return {row.pk: row for row in rows}
+
+
+def visible_candidate_ids(locked_profiles, employer: Employer, *, allow_applicants: bool) -> set:
+    """The existing visibility rule, evaluated on LOCKED rows: an active
+    account that is currently discoverable, or (when the endpoint's policy
+    allows it: talent detail, saved candidates, invitations) that applied to
+    one of this organisation's jobs. Talent search allows discoverable only."""
+    profiles = list(locked_profiles)
+    visible = {p.pk for p in profiles if p.account.is_active and p.discoverable_by_employers}
+    if allow_applicants:
+        hidden_active = [p.pk for p in profiles if p.account.is_active and p.pk not in visible]
+        if hidden_active:
+            visible |= set(
+                JobApplication.objects.filter(
+                    job__employer=employer, job_seeker_id__in=hidden_active
+                ).values_list("job_seeker_id", flat=True)
+            )
+    return visible
 
 
 def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
@@ -1218,7 +1258,14 @@ def invite_candidate(
     _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
-    # Lock order continues employer → job → candidate profile → invitation rows.
+    # The billing account is locked before the candidate row (the order every
+    # disclosing path uses: … job → billing account → candidate → invitation
+    # rows), so a suspension/cancellation that committed meanwhile is seen and
+    # one that comes later waits; entitlement, quota, consumption and the row
+    # are one decision on the committed state.
+    ent = employer_entitlements(employer, lock=True)
+    ent.require(Keys.TALENT_INVITE)
+    # Lock order continues → candidate profile → invitation rows.
     # Eligibility is decided on the LOCKED profile row, never on the instance
     # the view loaded: an opt-out that committed meanwhile refuses the
     # invitation, and the caller's instance is synchronised so any response is
@@ -1247,13 +1294,6 @@ def invite_candidate(
         job=job, job_seeker=profile, status__in=ACTIVE_APPLICATION_STATUSES
     ).exists():
         raise AlreadyApplied("This candidate already applied to this job.")
-    # The billing account is locked before the entitlement is resolved, so a
-    # suspension/cancellation that committed meanwhile is seen and one that
-    # comes later waits: entitlement, quota, consumption and the row are one
-    # decision on the committed state (order: … invitation rows → billing
-    # account → subscription → plan → usage rows).
-    ent = employer_entitlements(employer, lock=True)
-    ent.require(Keys.TALENT_INVITE)
     try:
         with transaction.atomic():
             invitation = JobInvitation.objects.create(
@@ -1327,12 +1367,26 @@ def cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
     # Elapsed first (own committed write, as for responses): history records
     # EXPIRED, never a cancellation of an invitation that was already dead.
     expire_overdue_invitations(pk=invitation.pk)
-    return _cancel_invitation(invitation, actor=actor)
+    return cancel_invitation_locked(invitation, actor=actor)
 
 
 @transaction.atomic
-def _cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
-    _require_member_role(_lock_employer(invitation.employer), actor)  # employer → membership → row
+def cancel_invitation_locked(invitation: JobInvitation, *, actor) -> JobInvitation:
+    """The cancellation proper. Callers that build a response containing the
+    candidate keep their own transaction open around this call (after
+    normalising expiry with `expire_overdue_invitations` OUTSIDE it, so that
+    UPDATE never precedes the employer lock). Order employer → membership →
+    candidate profile → invitation row; the candidate instance on the
+    invitation is synchronised from the locked row."""
+    # Same gate as sending and listing (recruiting organisation, current role,
+    # talent.invite on the locked billing account), decided here rather than
+    # only by the view's pre-check.
+    authoritative_talent_access(invitation.employer, actor, Keys.TALENT_INVITE)
+    locked = lock_candidates([invitation.job_seeker_id]).get(invitation.job_seeker_id)
+    if locked is not None:
+        invitation.job_seeker.__dict__.update(
+            {k: v for k, v in locked.__dict__.items() if k != "_state"}
+        )
     _lock_invitation(invitation)
     if invitation.status == InvitationStatus.EXPIRED:
         raise JobsError("This invitation has expired.", code="invitation_expired")
