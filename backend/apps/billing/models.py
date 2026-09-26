@@ -10,6 +10,7 @@ from django.db.models import Q
 from apps.core.models import BaseModel
 
 from .types import (
+    KNOWN_KEYS,
     Audience,
     BillingPeriod,
     CreditReason,
@@ -109,6 +110,31 @@ class PlanEntitlement(BaseModel):
         null=True, blank=True, help_text="LIMIT kind: null = unlimited"
     )
     period = models.CharField(max_length=14, choices=UsagePeriod.choices, default=UsagePeriod.NONE)
+
+    def validate_shape(self) -> None:
+        """Every KNOWN key has one canonical shape (kind, period) in
+        `KNOWN_KEYS`, and the services rely on it (`consume()` only counts LIMIT
+        rows, periods decide the usage bucket). Refused on every write path,
+        not only in the admin form. Unknown keys keep their free shape."""
+        expected = KNOWN_KEYS.get(self.key)
+        if expected is None:
+            return
+        kind, period = expected
+        errors = {}
+        if self.kind != kind:
+            errors["kind"] = [f"'{self.key}' is a {kind} entitlement."]
+        if self.period != period:
+            errors["period"] = [f"'{self.key}' is counted per {period}."]
+        if errors:
+            raise ValidationError(errors, code="entitlement_shape")
+
+    def clean(self):
+        super().clean()
+        self.validate_shape()
+
+    def save(self, *args, **kwargs):
+        self.validate_shape()
+        return super().save(*args, **kwargs)
 
     class Meta:
         db_table = "billing_plan_entitlement"

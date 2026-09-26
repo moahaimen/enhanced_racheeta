@@ -1,5 +1,5 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, UniqueConstraint
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -174,9 +174,6 @@ class JobListView(generics.ListAPIView):
     authentication_classes = []
     serializer_class = JobCardSerializer
 
-    def get_serializer_context(self):
-        return {**super().get_serializer_context(), "public": True}
-
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = JobFilter
     ordering_fields = ["published_at", "application_deadline"]
@@ -196,9 +193,6 @@ class JobDetailView(generics.RetrieveAPIView):
     authentication_classes = []
     serializer_class = JobPublicSerializer
 
-    def get_serializer_context(self):
-        return {**super().get_serializer_context(), "public": True}
-
     def get_queryset(self):
         return JobPost.objects.public().with_public_relations()
 
@@ -208,11 +202,7 @@ class EmployerPublicView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = EmployerPublicSerializer
-    # Same public rule as `JobPost.objects.public()`: a suspended organisation
-    # has no public presence while it cannot recruit.
-    queryset = Employer.objects.filter(
-        verification_status="VERIFIED", recruitment_status="ACTIVE", is_discoverable=True
-    ).select_related("governorate", "city", "provider_profile")
+    queryset = Employer.objects.public().select_related("governorate", "city", "provider_profile")
 
 
 # ---- job seeker: profile -------------------------------------------------
@@ -287,6 +277,17 @@ class MySeekerProfileView(APIView):
         return Response(JobSeekerProfileSerializer(_own_seeker(request)).data)
 
 
+def _duplicate_or_raise(exc: IntegrityError, model) -> None:
+    """Only the model's own uniqueness constraints are an expected business
+    conflict (typed `duplicate`); any other IntegrityError propagates."""
+    names = {c.name for c in model._meta.constraints if isinstance(c, UniqueConstraint)}
+    if not any(name in str(exc) for name in names):
+        raise exc
+    raise ValidationError(
+        {"non_field_errors": ["This entry is already listed."]}, code="duplicate"
+    ) from exc
+
+
 def _child_views(model, ser, related: str, tag_summary: str):
     @extend_schema(tags=["job-seeker"], summary=f"My {tag_summary}")
     class ListCreate(generics.ListCreateAPIView):
@@ -306,9 +307,7 @@ def _child_views(model, ser, related: str, tag_summary: str):
                 with transaction.atomic():
                     serializer.save(profile=self.request.job_seeker)
             except IntegrityError as exc:  # concurrent duplicate: typed, never a 500
-                raise ValidationError(
-                    {"non_field_errors": ["This entry is already listed."]}, code="duplicate"
-                ) from exc
+                _duplicate_or_raise(exc, model)
 
     @extend_schema(tags=["job-seeker"], summary=f"One of my {tag_summary}")
     class Detail(generics.RetrieveUpdateDestroyAPIView):
@@ -321,6 +320,15 @@ def _child_views(model, ser, related: str, tag_summary: str):
             if getattr(self, "swagger_fake_view", False):
                 return model.objects.none()
             return model.objects.filter(profile=self.request.job_seeker)
+
+        def perform_update(self, serializer):
+            # Two renames to the same value pass the serializer check together;
+            # the constraint decides, and the loser gets the typed duplicate.
+            try:
+                with transaction.atomic():
+                    serializer.save()
+            except IntegrityError as exc:
+                _duplicate_or_raise(exc, model)
 
     ListCreate.__name__ = f"My{model.__name__}ListView"
     Detail.__name__ = f"My{model.__name__}DetailView"
@@ -1239,6 +1247,9 @@ class InvitationListView(_ThrottledOnWrite, generics.ListCreateAPIView):
     shared visibility rule `_visible_candidates` allows it, so `count` is the
     number of rows the employer may actually see."""
 
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "internal": True}
+
     permission_classes = [CanRecruit]
     # POST only: reading the sent-invitations list must not spend the
     # invitation quota (see _ThrottledOnWrite).
@@ -1317,7 +1328,7 @@ class InvitationCancelView(APIView):
             services.cancel_invitation(invitation, actor=request.user)
         except services.JobsError as exc:
             raise_api(exc)
-        data = InvitationSerializer(invitation).data
+        data = InvitationSerializer(invitation, context={"internal": True}).data
         # THE candidate visibility rule applies here as on the list: a candidate
         # who is no longer discoverable and never applied is not rendered.
         if not _visible_candidates(request.employer).filter(pk=invitation.job_seeker_id).exists():

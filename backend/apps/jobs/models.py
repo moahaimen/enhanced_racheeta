@@ -48,9 +48,24 @@ from .types import (
 # ---- employers --------------------------------------------------------------
 
 
+class EmployerQuerySet(models.QuerySet):
+    def public(self):
+        """THE public-presence rule for an organisation, shared by the public
+        employer page, the public rendering of a job's hiring organisation and
+        the choice of organisations an agency may name: verified, allowed to
+        recruit and discoverable. `Employer.is_public` is the row-level twin."""
+        return self.filter(
+            verification_status=VerificationStatus.VERIFIED,
+            recruitment_status=RecruitmentStatus.ACTIVE,
+            is_discoverable=True,
+        )
+
+
 class Employer(BaseModel):
     """A hiring organisation. When a Phase 2 facility profile exists, it is
     linked and remains authoritative for name/type/location display."""
+
+    objects = EmployerQuerySet.as_manager()
 
     name = models.CharField(max_length=150, help_text="Recruitment display name")
     organization_type = models.CharField(max_length=32, choices=OrganizationType.choices)
@@ -98,6 +113,11 @@ class Employer(BaseModel):
             self.verification_status == VerificationStatus.VERIFIED
             and self.recruitment_status == RecruitmentStatus.ACTIVE
         )
+
+    @property
+    def is_public(self) -> bool:
+        """Row-level twin of `EmployerQuerySet.public()`."""
+        return self.can_recruit and self.is_discoverable
 
 
 class EmployerMembership(BaseModel):

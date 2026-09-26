@@ -625,15 +625,21 @@ class JobCardSerializer(serializers.ModelSerializer):
     def get_is_featured(self, obj) -> bool:
         return obj.is_actively_featured
 
+    # Public and job-seeker surfaces render the hiring organisation only while
+    # it has a public presence itself (`Employer.is_public`: verified, recruiting,
+    # discoverable — exactly the public employer page rule). Internal
+    # representations (the agency's own views, administrators) keep it.
+    redact_hidden_hiring_employer = True
+
     def to_representation(self, obj):
         data = super().to_representation(obj)
-        # Public surfaces render the hiring organisation only while it has a
-        # public presence itself (verified, discoverable): naming a hidden or
-        # no-longer-verified organisation must not publish its profile.
-        if self.context.get("public") and data.get("hiring_employer") is not None:
-            he = obj.hiring_employer
-            if not (he.is_discoverable and he.verification_status == "VERIFIED"):
-                data["hiring_employer"] = None
+        if (
+            self.redact_hidden_hiring_employer
+            and not self.context.get("internal")
+            and data.get("hiring_employer") is not None
+            and not obj.hiring_employer.is_public
+        ):
+            data["hiring_employer"] = None
         return data
 
     @extend_schema_field(serializers.CharField(allow_null=True))
@@ -670,6 +676,9 @@ class JobTransitionSerializer(serializers.ModelSerializer):
 class JobEmployerSerializer(JobPublicSerializer):
     """Employer view: real salary values, status, moderation, counts."""
 
+    # The organisation and administrators see whom it hires for.
+    redact_hidden_hiring_employer = False
+
     salary_min = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     salary_max = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     applications_count = serializers.IntegerField(read_only=True, default=0)
@@ -704,7 +713,7 @@ class JobWriteSerializer(ForbidFieldsMixin, serializers.ModelSerializer):
     )
     hiring_employer = serializers.PrimaryKeyRelatedField(
         # Only an organisation with a public presence can be named publicly.
-        queryset=Employer.objects.filter(verification_status="VERIFIED", is_discoverable=True),
+        queryset=Employer.objects.public(),
         allow_null=True,
         required=False,
     )
