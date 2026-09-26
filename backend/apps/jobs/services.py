@@ -103,6 +103,17 @@ class ContactLeak(JobsError):
     code = "contact_information_not_allowed"
 
 
+class JobFieldsInvalid(JobsError):
+    """A cross-field rule broken by the RESULTING job (e.g. two concurrent
+    partial edits that were each valid against the row they read)."""
+
+    code = "validation_error"
+
+    def __init__(self, errors: dict[str, list[str]]):
+        super().__init__("; ".join(m for msgs in errors.values() for m in msgs))
+        self.errors = errors
+
+
 # ---- billing helpers ------------------------------------------------------
 
 
@@ -473,8 +484,26 @@ def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
     for key, value in fields.items():
         setattr(job, key, value)
     _require_agency_invariant(employer, job)  # resulting state, fresh employer flag
+    _require_job_field_invariants(job)  # resulting state, never only the fields in this edit
     job.save(update_fields=[*fields, "updated_at"])
     return job
+
+
+def _require_job_field_invariants(job: JobPost) -> None:
+    """The serializer's cross-field rules, re-run on the locked row with the
+    edit applied: a concurrent edit to the other half of a pair (salary bounds,
+    governorate/city) commits between this request's validation and its lock."""
+    errors: dict[str, list[str]] = {}
+    if (
+        job.salary_min is not None
+        and job.salary_max is not None
+        and job.salary_min > job.salary_max
+    ):
+        errors["salary_max"] = ["Maximum salary must be at least the minimum."]
+    if job.city_id is not None and job.city.governorate_id != job.governorate_id:
+        errors["city"] = ["This city does not belong to the selected governorate."]
+    if errors:
+        raise JobFieldsInvalid(errors)
 
 
 def submit_job_for_review(job: JobPost, *, actor) -> JobPost:

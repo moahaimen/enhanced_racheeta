@@ -870,6 +870,8 @@ class EmployerJobDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             services.edit_job(job, dict(serializer.validated_data), actor=request.user)
+        except services.JobFieldsInvalid as exc:
+            raise ValidationError(exc.errors) from exc  # same shape as the serializer's check
         except services.JobsError as exc:
             raise_api(exc)  # the documented status per code (e.g. not_an_agency → 400)
         return Response(JobEmployerSerializer(_employer_jobs(request).get(pk=pk)).data)
