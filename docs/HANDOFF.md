@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **681 passed** (was 175): billing entitlements/admin API,
+- Backend: **689 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -513,6 +513,14 @@ Backend tests 671, web tests 228, no migration, OpenAPI regenerated (`can_invite
 | P2 Workspace Applicants link ignored recruiting state | The link now needs `canRecruit` (VERIFIED + recruitment ACTIVE) and `jobs.application_review`, for any member (read gate; VIEWER keeps it). Tests: OWNER/RECRUITER/VIEWER visible, unverified/suspended/disabled/missing hidden. |
 
 Backend tests 681, web tests 234, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-four (2026-09-26, review 5326074529 on `58b35ba`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 concurrent work-experience date PATCHes could commit `end_date < start_date` | The generic child-row update locks and refreshes the row, then re-runs the serializer's cross-field `validate()` on that row with the submitted fields applied before saving, so the loser of an opposite-bound race gets the existing `end_date` error. Sibling audit: WorkExperience is the only child model with a two-field rule (education years carry no rule today; skills, languages and credentials are single-field), so nothing else changed. Tests: single and simultaneous date edits, invalid single request, open-ended employment, unrelated fields and omitted fields, stale request refused on the locked row, threaded races in both orders, unrelated IntegrityError propagates. |
+
+Backend tests 689, web tests 234, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
