@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **657 passed** (was 175): billing entitlements/admin API,
+- Backend: **665 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **201 passed** (was 87).
+- Web: **212 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -483,6 +483,15 @@ Default switching is intentionally unsupported (documented). `QuerySet.update()`
 is not used for these columns by any application path.
 
 Backend tests 657, web tests 201, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-one (2026-09-26, review 5325140837 on `db9b02d`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 concurrent employer PATCHes commit a city outside the governorate | `update_employer` applies the edit to the locked row and re-runs the shared location invariant (`_require_location_invariant`, also used by `edit_job`) before saving; the PATCH view maps the typed `FieldsInvalid` to the serializer's field error. The identity lock still runs first. Tests: valid update, foreign city, governorate change clearing city, stale city and stale governorate edits refused, threaded races in both orders (no 500, row always valid, verification afterwards exposes no mismatch), identity lock unchanged. |
+| P2 Feature shown without `jobs.featured` | `JobEditorPage` loads the billing summary (failure → null → no capability) and shows Feature only with `jobs.featured`; an already-featured job keeps Unfeature regardless. Sibling: Submit needs `jobs.post` and is gated the same way. Web tests: OWNER/RECRUITER with the capability, disabled/TRIAL/BASIC/missing/unloadable summaries, VIEWER, Unfeature with and without the entitlement (and it still works), Submit without `jobs.post`. |
+
+Backend tests 665, web tests 212, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
