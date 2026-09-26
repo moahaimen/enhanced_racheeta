@@ -42,8 +42,14 @@ class PlanAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        # Same invariant the model enforces, raised here so the admin renders a
-        # normal field error instead of a 500. The model still guards every path.
+        # Same invariants the model enforces, raised here so the admin renders
+        # normal field errors instead of a 500. The model still guards every path.
+        if (
+            self.instance.pk is None
+            and cleaned.get("is_default")
+            and Plan.objects.filter(audience=cleaned.get("audience"), is_default=True).exists()
+        ):
+            self.add_error("is_default", "This audience already has a default plan.")
         if self.instance.pk and cleaned.get("is_active") is False:
             if cleaned.get("is_default") or self.instance.is_default:
                 self.add_error(
@@ -83,8 +89,9 @@ class PlanAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         # Prices, limits and flags are legitimate configuration; the identity
-        # (code, audience) that subscriptions and seeds reference is not.
-        return ("code", "audience") if obj is not None else ()
+        # (code, audience) that subscriptions and seeds reference is not, and
+        # neither is the audience's default (no default-switch operation exists).
+        return ("code", "audience", "is_default") if obj is not None else ()
 
     def has_delete_permission(self, request, obj=None):
         # The default plan is what every unsubscribed account resolves to.

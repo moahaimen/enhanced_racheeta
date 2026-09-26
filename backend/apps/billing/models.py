@@ -62,12 +62,54 @@ class Plan(BaseModel):
     def __str__(self) -> str:
         return f"{self.code} ({self.audience})"
 
+    def _validate_default_identity(self) -> None:
+        """Invariant: every audience keeps exactly one usable default plan.
+        The partial unique constraint gives AT MOST one; this gives AT LEAST
+        one by making `is_default` and `audience` immutable once a plan exists
+        (there is no default-switch operation in Phase 3, so no ordinary write
+        may clear an audience's fallback or move it to another audience), and
+        by refusing a second default at creation with a clear error instead of
+        a constraint violation. Applies to `save()`; `QuerySet.update()` is not
+        used for these columns by any application path (see docs/BILLING.md)."""
+        if self._state.adding:  # UUID primary keys are set before the first save
+            if (
+                self.is_default
+                and Plan.objects.filter(audience=self.audience, is_default=True).exists()
+            ):
+                raise ValidationError(
+                    {"is_default": ["This audience already has a default plan."]},
+                    code="default_exists",
+                )
+            return
+        stored = Plan.objects.filter(pk=self.pk).values("is_default", "audience").first()
+        if stored is None:
+            return
+        errors = {}
+        if stored["is_default"] and not self.is_default:
+            errors["is_default"] = [
+                "This is the default plan of its audience; every account without a "
+                "subscription resolves to it. Switching defaults is not supported."
+            ]
+        if not stored["is_default"] and self.is_default:
+            errors["is_default"] = ["Defaults are fixed; this plan cannot become the default."]
+        if stored["audience"] != self.audience:
+            errors["audience"] = ["The audience of an existing plan cannot change."]
+        if errors:
+            raise ValidationError(errors, code="default_fixed")
+
+    def clean(self):
+        super().clean()
+        self._validate_default_identity()
+
     def save(self, *args, **kwargs):
-        """Invariant: an ACTIVE subscription never references a retired plan.
-        Retiring (`is_active` true → false) locks this row — the same row lock
-        `activate_subscription` takes before it re-reads the plan — and is
-        refused while ACTIVE subscriptions reference it, so activation and
-        retirement serialise and can never commit ACTIVE + inactive."""
+        """Invariants: (1) every audience keeps exactly one default plan
+        (`_validate_default_identity`); (2) an ACTIVE subscription never
+        references a retired plan. Retiring (`is_active` true → false) locks
+        this row — the same row lock `activate_subscription` takes before it
+        re-reads the plan — and is refused while ACTIVE subscriptions reference
+        it, so activation and retirement serialise and can never commit
+        ACTIVE + inactive."""
+        self._validate_default_identity()
         if self.pk is not None and not self.is_active:
             if self.is_default:
                 raise ValidationError(
