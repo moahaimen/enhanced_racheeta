@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **650 passed** (was 175): billing entitlements/admin API,
+- Backend: **657 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -470,6 +470,19 @@ Backend tests 631, web tests 196, no migration, OpenAPI unchanged.
 | P2 activation payment status chosen by the client | `ActivationPaymentSerializer` has no `status` input and a client-supplied one is refused (`field_not_allowed`); the view records the payment `VERIFIED` inside the activation transaction. Tests: full and minimal payment objects → VERIFIED, REJECTED/RECORDED/VERIFIED inputs refused with nothing written, reference-only still VERIFIED, retired-plan activation writes no payment, a payment failure rolls the activation back. |
 
 Backend tests 650, web tests 201, no migration, OpenAPI regenerated (activation `payment` request schema without `status`).
+
+## PR #4 round twenty follow-up: default-plan invariant (2026-09-26, on `bb800a8`)
+
+Invariant: for each audience, application-supported operations cannot commit
+a state with zero or multiple default plans. `Plan._validate_default_identity()`
+(run from `save()` and `clean()`) makes `is_default` and `audience` immutable
+once a plan exists and refuses a second default at creation; the admin shows
+`is_default` read-only for existing plans and a field error on a duplicate
+default at creation; delete and retire guards from earlier rounds stand.
+Default switching is intentionally unsupported (documented). `QuerySet.update()`
+is not used for these columns by any application path.
+
+Backend tests 657, web tests 201, no migration, OpenAPI unchanged.
 
 ## Known Problems
 

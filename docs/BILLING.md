@@ -170,7 +170,7 @@ credits move only through `grant_credits()` (locked, ledgered, audited).
 
 `Plan` prices, limits and flags remain editable (that is how the owner sets
 IQD prices), but a plan's `code` and `audience` are frozen once created, and
-the default plan of an audience can be neither retired nor deleted (a `pre_delete` guard covers every ORM path, including admin bulk actions), and retiring a plan (`is_active` true → false) is refused — by the model, so on
+the default plan of an audience can be neither retired, deleted (a `pre_delete` guard covers every ORM path, including admin bulk actions) nor unset: `is_default` and `audience` are immutable once a plan exists and a second default is refused at creation, so every audience keeps exactly one default (the partial unique constraint gives at most one, `Plan.save()`/`clean()` give at least one). Switching an audience's default is intentionally unsupported in Phase 3 and would need an explicit atomic service. `QuerySet.update()` bypasses model validation; no application path uses it for `is_default`, `is_active` or `audience`, and retiring a plan (`is_active` true → false) is refused — by the model, so on
 every path, and shown as a normal field error in the admin — while ACTIVE
 subscriptions still reference it. Subscribers are never downgraded, migrated,
 cancelled or expired automatically; move them through the lifecycle first.
