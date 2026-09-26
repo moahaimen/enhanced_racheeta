@@ -72,6 +72,13 @@ Ownership never comes from a client id: every self-management view resolves
 `request.user.provider_profile` and scopes querysets to it, so a foreign
 service or membership id is a 404. Public provider ids accept no writes.
 
+The same rule governs linking an organisation to a facility profile
+(`Employer.provider_profile`): `EmployerWriteSerializer.validate_provider_profile`
+accepts only a profile owned by the caller, of FACILITY kind, not already linked
+to another organisation. The employer form offers the caller's own profile from
+`GET /providers/me` (404/403 simply means "nothing to choose") — it never lists
+global provider identities — and the backend stays authoritative.
+
 Verification state machine:
 
 | Transition | Who |
@@ -93,10 +100,36 @@ Membership state machine:
 Provider role is assigned at registration (or first Firebase sign-in) and is
 not client-changeable afterwards; a role change is an administrator action.
 
+## Recruitment permissions (`apps/jobs/permissions.py`)
+
+| Class | Rule |
+| --- | --- |
+| `IsEmployerMember` | caller has an ACTIVE `EmployerMembership`; sets `request.employer`/`request.membership`. Used by every `/jobs/employer/*` and `/talent/*` route. |
+| `IsEmployerOwner` | membership role is OWNER (organisation edits, verification request, members, plan requests). Even the owner cannot change the verified identity fields (`name`, `organization_type`, `governorate`, `provider_profile`, `is_recruitment_agency`) once the organisation is PENDING or VERIFIED — the write serializer rejects them with `identity_locked`; only an administrator can. |
+| `CanRecruit` | OWNER or RECRUITER (job writes, applicant transitions, interviews, invitations, messages); VIEWER is read-only. The permission class is a pre-check: every write service re-reads the actor's membership under lock at commit time and refuses with `membership_inactive` if it was ended or its role changed meanwhile. The employer workspace mirrors this: New Job and talent search are shown only to OWNER/RECRUITER, the job editor renders read-only for a VIEWER who reaches it by URL, and the applicants page shows a VIEWER the applicant data but no transition, interview, reason or messaging control (employer-side messaging is part of applicant review, so a VIEWER is not a party to the thread). An unknown or missing role gets no write control; on the talent detail page Save/Unsave and Invite appear only when the plan carries `talent.save_candidate` / `talent.invite`, on the workspace the Talent action needs `talent.search` and each Applicants link a recruiting organisation with `jobs.application_review` (a read gate, so VIEWER sees it; hidden while the billing summary loads), in the job editor Feature needs `jobs.featured`, Submit `jobs.post`, and the Applicants link a recruiting organisation with `jobs.application_review` (a read gate, so VIEWER sees it too), while Unfeature stays available for an already-featured job; on the applicants page actions need `jobs.application_review` and the message composer also `recruitment.messaging` (the history stays readable); on the talent detail Invite also needs the server's `can_invite`. UX only, the backend stays authoritative. |
+| `IsAdminAccount` (accounts) | `is_staff` for every `/admin/*` route. |
+
+Talent reads (`GET /talent`, `/talent/{id}`, `/talent/saved`, `/talent/invitations`)
+require a verified, active organisation plus the matching capability
+(`talent.search`, `talent.save_candidate`, `talent.invite`), enforced by
+`_require_talent_access` in `apps/jobs/views.py`.
+
+Employer-side applicant endpoints additionally require that the organisation
+is still allowed to recruit (`organization_not_verified` otherwise) and the
+plan capability `jobs.application_review`, through one shared gate (`_require_application_review`
+in `apps/jobs/views.py`): list, detail, transition, interview request and the
+employer side of message threads. The typed `entitlement_required` error (403)
+is returned even for a known application id.
+
+Job seekers act only on their own profile/applications (`request.user`);
+message threads accept the candidate of the application or an active member of
+the employer, nobody else (404 for third parties). Commercial capability is a
+separate axis enforced by the billing service, not by permission classes.
+
 ## Web route guards
 
 `web/src/app/guards.tsx`: `RequireAuth` wraps protected routes, `PublicOnly`
-wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`). Pages contain no authentication checks. Guards improve
+wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`), `RequireStaff` wraps `/admin-console` (`account.is_staff`). Pages contain no authentication checks. Guards improve
 UX only; a protected page's data calls still fail with 401 without a valid
 token.
 

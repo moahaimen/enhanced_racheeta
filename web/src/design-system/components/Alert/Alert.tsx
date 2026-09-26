@@ -10,14 +10,16 @@ export interface AlertProps {
   title?: ReactNode
   children: ReactNode
   className?: string
+  /** Optional hook for tests, like LoadingState/EmptyState already have. */
+  testId?: string
 }
 
 const ICONS = { error: 'alertCircle', success: 'checkCircle', warning: 'alertCircle', info: 'info' } as const
 
 /** Inline feedback. Errors are announced (role=alert); the rest are polite status. */
-export function Alert({ kind, title, children, className = '' }: AlertProps) {
+export function Alert({ kind, title, children, className = '', testId }: AlertProps) {
   return (
-    <div className={`${styles.alert} ${styles[kind]} ${className}`.trim()} role={kind === 'error' ? 'alert' : 'status'}>
+    <div className={`${styles.alert} ${styles[kind]} ${className}`.trim()} role={kind === 'error' ? 'alert' : 'status'} data-testid={testId}>
       <Icon name={ICONS[kind]} className={styles.icon} />
       <div className={styles.body}>
         {title ? <div className={styles.title}>{title}</div> : null}

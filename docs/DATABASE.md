@@ -87,6 +87,27 @@ nullable), `price` decimal(12,2) ≥ 0 (`providers_service_price_nonneg`),
 `duration_minutes` > 0 or null (`providers_service_duration_positive`),
 `is_active`. Unique `(provider, title)`; index `(provider, is_active)`.
 
+### Phase 3 — audit, billing, jobs
+
+| Table | Purpose / notable constraints |
+| --- | --- |
+| `audit_event` | actor (nullable FK), action, target_type/target_id, summary, JSON data; indexed by (target_type, target_id) and created_at |
+| `billing_plan`, `billing_plan_entitlement` | plan catalogue; unique (plan, key); `price_amount` nullable (no prices seeded) |
+| `billing_account` | unique (subject_type, subject_id) |
+| `billing_subscription` | one live (PENDING/ACTIVE) subscription per account (partial unique index); `billing_subscription_event` history |
+| `billing_payment_record` | minimal admin bookkeeping |
+| `billing_credit_balance` (unique account+key), `billing_credit_transaction` | credits ledger |
+| `billing_usage_counter` (unique account+key+period_start), `billing_usage_event` (unique account+key+reference when set) | atomic usage |
+| `jobs_employer` | verification/recruitment status, optional FK to `providers_profile`, `created_by` |
+| `jobs_employer_membership` | one live membership per account (partial unique), role, status |
+| `jobs_seeker_profile` (one per account) + `jobs_seeker_experience`, `jobs_seeker_education`, `jobs_seeker_skill` (unique profile+name_normalized), `jobs_seeker_language` (unique profile+language), `jobs_seeker_credential` | structured résumé, no files |
+| `jobs_post`, `jobs_post_transition` | status, moderation note/flags, featured window, deadline; indexes on (status, published_at), profession, governorate |
+| `jobs_application` (unique job+job_seeker), `jobs_application_transition` | snapshot JSON of the profile at apply time |
+| `jobs_interview_request`, `jobs_recruitment_message` | scoped to an application; messages immutable |
+| `jobs_saved_candidate` (unique employer+job_seeker), `jobs_invitation` (unique job+job_seeker), `jobs_talent_search_query` (unique employer+signature+day) | talent marketplace |
+
+Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`.
+
 ### SimpleJWT
 
 `token_blacklist_outstandingtoken`, `token_blacklist_blacklistedtoken` — one

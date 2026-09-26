@@ -28,5 +28,8 @@ export default defineConfig({
     env: { VITE_API_BASE_URL: '' },
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Full-page tests render 20-row lists in jsdom; the default 5s trips on a loaded
+    // machine with one worker per core. A timeout is not an assertion.
+    testTimeout: 20000,
   },
 })

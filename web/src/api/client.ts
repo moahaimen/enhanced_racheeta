@@ -19,13 +19,26 @@ export class ApiError extends Error {
   readonly status: number
   readonly code: string
   readonly details: Record<string, string[]> | undefined
+  /** Field -> error codes (validation errors). */
+  readonly codes: Record<string, string[]> | undefined
+  /** Entitlement metadata (key, limit, used) for commercial errors. */
+  readonly meta: Record<string, string | number> | undefined
 
-  constructor(status: number, code: string, message: string, details?: Record<string, string[]>) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: Record<string, string[]>,
+    codes?: Record<string, string[]>,
+    meta?: Record<string, string | number>,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.details = details
+    this.codes = codes
+    this.meta = meta
   }
 
   /** First message for a field, or undefined. Handy for form errors. */
@@ -121,7 +134,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const data = await parseBody(response)
   if (!response.ok) {
     if (isErrorBody(data)) {
-      throw new ApiError(response.status, data.error.code, data.error.message, data.error.details)
+      throw new ApiError(response.status, data.error.code, data.error.message, data.error.details, data.error.codes, data.error.meta)
     }
     throw new ApiError(response.status, 'http_error', `Request failed with status ${response.status}.`)
   }

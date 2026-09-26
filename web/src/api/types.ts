@@ -84,5 +84,7 @@ export interface ApiErrorBody {
     code: string
     message: string
     details?: Record<string, string[]>
+    codes?: Record<string, string[]>
+    meta?: Record<string, string | number>
   }
 }
