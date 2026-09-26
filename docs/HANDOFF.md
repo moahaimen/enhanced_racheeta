@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **671 passed** (was 175): billing entitlements/admin API,
+- Backend: **681 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **228 passed** (was 87).
+- Web: **234 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -503,6 +503,16 @@ Backend tests 665, web tests 212, no migration, OpenAPI unchanged.
 | P2 ApplicantsPage composer ignored `recruitment.messaging` | The page loads the billing summary; actions need `jobs.application_review`, the thread is shown to OWNER/RECRUITER with it, and the composer (`MessagesThread canSend`) only with `recruitment.messaging` as well; the seeker side is unchanged. |
 
 Backend tests 671, web tests 228, no migration, OpenAPI regenerated (`can_invite` on the talent detail).
+
+## PR #4 review, round twenty-three (2026-09-26, review 5325989806 on `cb98621`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 stale profile PATCH could restore a privacy opt-out | `update_seeker_profile` locks and re-reads the profile, applies ONLY the submitted fields to that row, re-runs the location rule on the result and writes only those columns; the view no longer saves the serializer instance. Child-row updates lock and refresh the row before saving. Tests: partial and explicit PATCHes, stale instance, validation and cross-field rules, threaded unrelated-PATCH vs opt-out (both apply, opt-out stands), child-row overwrite. |
+| P2 Save Candidate decided on a stale candidate | `save_candidate` locks the candidate row after the employer row (order employer → candidate; invitations use employer → job → candidate) and decides eligibility on it, synchronising the caller's instance. Existing policy kept: applicants remain saveable, existing relationships survive an opt-out. Tests: discoverable saved, duplicates, non-discoverable refused without a card, prior applicant, stale instance, threaded opt-out vs save. |
+| P2 Workspace Applicants link ignored recruiting state | The link now needs `canRecruit` (VERIFIED + recruitment ACTIVE) and `jobs.application_review`, for any member (read gate; VIEWER keeps it). Tests: OWNER/RECRUITER/VIEWER visible, unverified/suspended/disabled/missing hidden. |
+
+Backend tests 681, web tests 234, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
