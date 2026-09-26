@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **699 passed** (was 175): billing entitlements/admin API,
+- Backend: **736 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **234 passed** (was 87).
+- Web: **239 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -529,6 +529,18 @@ Backend tests 689, web tests 234, no migration, OpenAPI unchanged.
 | P2 child-row PATCH losing a race against DELETE → 500 | The generic child-row update re-reads the row through the SAME scoped queryset as the initial lookup, under `select_for_update`; a missing row (deleted meanwhile, or outside the caller's profile) raises the endpoint's ordinary `NotFound` (404). Only `DoesNotExist` is handled; IntegrityError keeps its typed-duplicate mapping and other database errors propagate. The round-24 locked-row re-validation is unchanged. DELETE already answers 404 for missing and out-of-scope rows. Covers WorkExperience, Education, Skill, LanguageSkill and Credential (one shared path). Tests: every child model with a vanished row, out-of-scope row, threaded PATCH vs DELETE (204 + 200/404, row stays deleted), DELETE path, unrelated DatabaseError propagates, round-24 date rule still holds. |
 
 Backend tests 699, web tests 234, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-six (2026-09-26, review 5326237535 on `fe963f0`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 Applicants page linked to TalentDetail without `talent.search` | The applicant title is a link only for OWNER/RECRUITER of a recruiting organisation whose plan carries `talent.search` (the TalentDetail gate); otherwise plain text, review controls unchanged. |
+| P2 stale membership at commit time | `_require_member_role(employer, actor)`: inside every employer-side write transaction, right after the employer lock, the actor's ACTIVE membership row for that organisation is locked and re-read and its current role must allow the write; otherwise typed `membership_inactive` (403). `end_membership` locks the same row, so a committed revocation is seen and a later one waits. Routed through: `create_job` (new service used by the view), `edit_job`, `_submit_job`, `close_job`, `archive_job`, `set_featured` (both directions), `transition_application`, `request_interview`, employer `send_message`, `invite_candidate`, `save_candidate`, `_cancel_invitation`. Owner-only writes are not affected: the OWNER membership cannot be ended. |
+| P2 stale entitlement at commit time | `entitlements_for(..., lock=True)` locks the billing account row before resolving subscription, plan, entitlement and quota, and every subscription lifecycle transition (`_transition`: reject/suspend/cancel) now locks the billing account first (order account → subscription, as activation and requests already did). Every paid write resolves through the locked account: invitations (entitlement, quota, consumption and the row in one decision), active-job slot, featured slot, recruiter seats, saved candidates, recruitment mutations, talent-search charging. |
+
+Lock order (single, deterministic): employer → actor membership → job → candidate profile → invitation rows → billing account → subscription → plan → usage/credit rows; application/interview rows are taken after the billing account in the recruitment-mutation gate, and no path takes them the other way round. Membership ending locks only the membership row; billing lifecycle transitions lock account → subscription → plan.
+
+Backend tests 736, web tests 239, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
