@@ -329,13 +329,18 @@ def _child_views(model, ser, related: str, tag_summary: str):
             # Two renames to the same value pass the serializer check together;
             # the constraint decides, and the loser gets the typed duplicate.
             # The row is locked and refreshed first so the save writes the
-            # submitted fields over the COMMITTED row, never over a stale copy.
+            # submitted fields over the COMMITTED row, never over a stale copy,
+            # and the serializer's cross-field rules (e.g. the experience date
+            # range) are re-run on that locked row with the submitted fields
+            # applied: a concurrent edit to the other half of a pair is refused
+            # with the same field error, never committed.
             try:
                 with transaction.atomic():
                     locked = model.objects.select_for_update().get(pk=serializer.instance.pk)
                     serializer.instance.__dict__.update(
                         {k: v for k, v in locked.__dict__.items() if k != "_state"}
                     )
+                    serializer.validate(dict(serializer.validated_data))
                     serializer.save()
             except IntegrityError as exc:
                 _duplicate_or_raise(exc, model)
