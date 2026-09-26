@@ -20,7 +20,7 @@ times?" through capability keys. Reservations will stay free (owner decision).
 | --- | --- | --- |
 | Subject | `BillingAccount(subject_type, subject_id, audience)` | One billing account per employer organisation (`organization`) or per job seeker account (`account`). Created lazily. |
 | Plan | `Plan(code, audience, is_default, is_public, billing_period, term_days, price_amount?)` | `is_default` plans apply automatically when no subscription is live (TRIAL for employers, SEEKER_FREE for seekers). |
-| Entitlement | `PlanEntitlement(key, kind BOOLEAN|LIMIT, enabled, limit null=unlimited, period NONE|DAILY|MONTHLY|SUBSCRIPTION)` | Editable in the admin without code changes. |
+| Entitlement | `PlanEntitlement(key, kind BOOLEAN|LIMIT, enabled, limit null=unlimited, period NONE|DAILY|MONTHLY|SUBSCRIPTION)` | Values editable in the admin without code changes; for every known key the shape (kind, period) is fixed by `KNOWN_KEYS` and enforced on every write. |
 | Subscription | `Subscription(status PENDING|ACTIVE|SUSPENDED|CANCELLED|EXPIRED|REJECTED)` | One live (PENDING or ACTIVE) subscription per account (DB constraint). Activation cancels any other ACTIVE one. |
 | History | `SubscriptionEvent` | Every status change with actor and reason. |
 | Payment | `PaymentRecord` | Optional; recorded by the admin on activation (amount/method/reference). |

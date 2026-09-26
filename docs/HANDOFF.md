@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **609 passed** (was 175): billing entitlements/admin API,
+- Backend: **631 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **191 passed** (was 87).
+- Web: **196 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -448,6 +448,17 @@ applicant rows; UI-only apply role gate not enforced server-side; a few
 ApiActionButton nits (interview toggle, ClientValidationError).
 
 Backend tests 609, web tests 191, no migration, OpenAPI regenerated (two fields now nullable).
+
+## PR #4 review, round nineteen (2026-09-26, review 5322623760 on `5c3ebcb`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 public `hiring_employer` ignored recruitment status | One rule: `EmployerQuerySet.public()` / `Employer.is_public` (VERIFIED + recruitment ACTIVE + discoverable) backs the public employer page, the choice of organisations an agency may name, and the public/job-seeker rendering of `hiring_employer` (`null` otherwise). Internal representations (`JobEmployerSerializer`, admin, the agency's invitation views via `internal` context) keep it. Tests: five-state matrix where page, list and detail agree, internal views, write refusal. |
+| P2 `PlanEntitlement` shape editable in the admin | `PlanEntitlement.validate_shape()` enforces `KNOWN_KEYS` (kind, period) from `clean()` and `save()`; unknown keys keep a free shape. Tests: canonical shapes save and stay editable, each mismatch refused, admin inline shows the error, a reshaped limit cannot bypass `consume()`, every persisted known row matches the registry (seed and dev database audited: no mismatch, no data migration). |
+| P2 concurrent child-row renames → 500 | `perform_update` (and `perform_create`) of the job-seeker child views map only the model's own unique constraints to the typed `duplicate` error; other IntegrityErrors propagate. Tests: normal and duplicate PATCH, threaded rename race for skills and languages, unrelated IntegrityError propagates. |
+| P2 Save/Unsave shown without `talent.save_candidate` | `TalentDetailPage` loads the billing summary with the profile and shows Save/Unsave only when `talent.save_candidate` is enabled and Invite only when `talent.invite` is enabled (missing rows fail closed); the profile stays readable. Web tests cover both capabilities, saved state, disabled save, missing rows and a refused role. |
+
+Backend tests 631, web tests 196, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
