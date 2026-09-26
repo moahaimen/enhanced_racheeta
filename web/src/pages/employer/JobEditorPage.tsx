@@ -3,14 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { ApiError, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, PROFESSIONS, reference, SHIFT_TYPES, WORK_MODES } from '../../api'
-import type { City, Degree, EmployerOwner, EmploymentType, Governorate, JobEmployer, JobWrite, Profession, ShiftType, Specialty, WorkMode } from '../../api'
+import type { BillingSummary, City, Degree, EmployerOwner, EmploymentType, Governorate, JobEmployer, JobWrite, Profession, ShiftType, Specialty, WorkMode } from '../../api'
 import { Alert, ApiActionButton, AsyncPage, Checkbox, Container, FormActions, FormSection, Icon, JobStatusBadge, LinkButton, PageHeader, PageStack, SectionCard, Select, Spinner, Textarea, TextField, useFormErrors } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError } from '../validation'
 import styles from './EmployerWorkspacePage.module.css'
+import { entitled } from './entitlements'
 
-type Loaded = [JobEmployer | null, EmployerOwner, Governorate[], Specialty[]]
+type Loaded = [JobEmployer | null, EmployerOwner, Governorate[], Specialty[], BillingSummary | null]
 
 /** /employer/jobs/new and /employer/jobs/:id — draft editing and lifecycle actions. */
 export function JobEditorPage() {
@@ -18,10 +19,15 @@ export function JobEditorPage() {
   const { id } = useParams()
   const load = async (signal: AbortSignal): Promise<Loaded> => {
     const employer = await jobsApi.getMyEmployer(signal)
-    const [governorates, specialties] = await Promise.all([reference.listGovernorates(undefined, signal), reference.listSpecialties(signal)])
-    if (!id) return [null, employer, governorates, specialties]
+    // The plan's capabilities gate the premium actions; a failed summary fails closed (null → no capability).
+    const [governorates, specialties, billing] = await Promise.all([
+      reference.listGovernorates(undefined, signal),
+      reference.listSpecialties(signal),
+      jobsApi.getEmployerBilling(signal).catch(() => null),
+    ])
+    if (!id) return [null, employer, governorates, specialties, billing]
     try {
-      return [await jobsApi.getEmployerJob(id, signal), employer, governorates, specialties]
+      return [await jobsApi.getEmployerJob(id, signal), employer, governorates, specialties, billing]
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'not_found', t('jobEditor.notFound'))
       throw e
@@ -30,7 +36,7 @@ export function JobEditorPage() {
   return (
     <Container width="xl">
       <AsyncPage load={load} deps={[id]}>
-        {([job, employer, governorates, specialties], reload) => <Editor job={job} employer={employer} governorates={governorates} specialties={specialties} reload={reload} />}
+        {([job, employer, governorates, specialties, billing], reload) => <Editor job={job} employer={employer} governorates={governorates} specialties={specialties} billing={billing} reload={reload} />}
       </AsyncPage>
     </Container>
   )
@@ -38,11 +44,15 @@ export function JobEditorPage() {
 
 const FIELDS = ['title', 'profession', 'general_specialty', 'detailed_specialty', 'description', 'responsibilities', 'requirements', 'minimum_degree', 'minimum_experience_years', 'governorate', 'city', 'workplace_text', 'employment_type', 'work_mode', 'shift_type', 'salary_min', 'salary_max', 'salary_currency', 'salary_visible', 'number_of_openings', 'application_deadline', 'hiring_employer', 'hiring_organization_name'] as const
 
-function Editor({ job, employer, governorates, specialties, reload }: { job: JobEmployer | null; employer: EmployerOwner; governorates: Governorate[]; specialties: Specialty[]; reload: () => void }) {
+function Editor({ job, employer, governorates, specialties, billing, reload }: { job: JobEmployer | null; employer: EmployerOwner; governorates: Governorate[]; specialties: Specialty[]; billing: BillingSummary | null; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const name = useLocalizedName()
   const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
+  // Premium actions follow the plan (backend: jobs.featured to feature, jobs.post to submit). Removing a
+  // premium state (unfeature) needs no entitlement, so an already-featured job keeps that action.
+  const canFeature = entitled(billing, 'jobs.featured')
+  const canPost = entitled(billing, 'jobs.post')
   const editable = canWrite && (job === null || job.status === 'DRAFT' || job.status === 'REJECTED')
   // Agency-only values kept by a job whose organisation is no longer an agency.
   // Only worth saying while the job can actually be saved (the save clears them).
@@ -158,7 +168,7 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
               </Alert>
             ) : null}
             <div className={styles.rowActions} style={{ marginBlockStart: 'var(--space-3)' }}>
-              {canWrite && (job.status === 'DRAFT' || job.status === 'REJECTED') ? (
+              {canWrite && canPost && (job.status === 'DRAFT' || job.status === 'REJECTED') ? (
                 <ApiActionButton action={() => jobsApi.jobAction(job.id, 'submit')} onSuccess={reload} onError={(e) => setActionError(toErrorMessage(e))} pendingLabel={t('common.submitting')} leading={<Icon name="check" size={18} />}>
                   {t('jobEditor.submit')}
                 </ApiActionButton>
@@ -168,7 +178,7 @@ function Editor({ job, employer, governorates, specialties, reload }: { job: Job
                   {t('jobEditor.close')}
                 </ApiActionButton>
               ) : null}
-              {canWrite && job.status === 'PUBLISHED' ? (
+              {canWrite && job.status === 'PUBLISHED' && (job.is_featured || canFeature) ? (
                 <ApiActionButton variant={job.is_featured ? 'ghost' : 'secondary'} action={() => jobsApi.featureJob(job.id, !job.is_featured)} onSuccess={reload} onError={(e) => setActionError(toErrorMessage(e))} leading={<Icon name="sparkle" size={18} />}>
                   {job.is_featured ? t('jobEditor.unfeature') : t('jobEditor.feature')}
                 </ApiActionButton>

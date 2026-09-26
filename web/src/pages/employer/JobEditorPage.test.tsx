@@ -7,13 +7,31 @@ import * as authApi from '../../api/endpoints/auth'
 import * as jobsApi from '../../api/endpoints/jobs'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
-import { makeEmployerOwner, makeEmployerPublic, makeJobEmployer } from '../../test/jobFixtures'
+import { makeBilling, makeEmployerOwner, makeEmployerPublic, makeJobEmployer } from '../../test/jobFixtures'
 import { baghdad, cardiology } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/jobs')
 vi.mock('../../api/endpoints/reference')
+
+/** A billing summary whose plan carries exactly the given boolean capabilities. */
+function billingWith(keys: string[]) {
+  return makeBilling({
+    entitlements: keys.map((key) => ({ key, kind: 'BOOLEAN' as const, enabled: true, limit: null, period: 'NONE' as const, used: 0, credits: 0, remaining: null })),
+  })
+}
+
+/** Seeded plans as the summary reports them: TRIAL and BASIC carry jobs.post but no jobs.featured. */
+function seededPlan(code: 'TRIAL' | 'BASIC') {
+  return makeBilling({
+    entitlements: [
+      { key: 'jobs.post', kind: 'BOOLEAN', enabled: true, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },
+      { key: 'jobs.featured', kind: 'BOOLEAN', enabled: false, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },
+      { key: 'jobs.active_limit', kind: 'LIMIT', enabled: true, limit: code === 'TRIAL' ? 1 : 3, period: 'NONE', used: 0, credits: 0, remaining: 1 },
+    ],
+  })
+}
 
 describe('JobEditorPage', () => {
   beforeEach(() => {
@@ -24,6 +42,7 @@ describe('JobEditorPage', () => {
     vi.mocked(referenceApi.listSpecialties).mockResolvedValue([cardiology])
     vi.mocked(referenceApi.listCities).mockResolvedValue([])
     vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.post', 'jobs.featured']))
   })
 
   it('creates a draft after client validation and moves to the job page', async () => {
@@ -168,5 +187,72 @@ describe('JobEditorPage', () => {
     expect(screen.getByLabelText(/المسمى الوظيفي|Job title/i)).toBeDisabled()
     expect(screen.queryByRole('button', { name: /^حفظ$|^Save$/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /إرسال للمراجعة|Submit for review/i })).toBeNull()
+  })
+
+  describe('feature action follows jobs.featured', () => {
+    const FEATURE = /تمييز الوظيفة|Feature job/i
+    const UNFEATURE = /إلغاء التمييز|^Unfeature$/i
+    const published = (overrides = {}) => makeJobEmployer({ status: 'PUBLISHED', is_featured: false, ...overrides })
+
+    it.each(['OWNER', 'RECRUITER'] as const)('shows Feature to a %s whose plan includes it', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByRole('button', { name: FEATURE })).toBeInTheDocument()
+    })
+
+    it.each([
+      ['jobs.featured=false', () => billingWith(['jobs.post'])],
+      ['TRIAL plan', () => seededPlan('TRIAL')],
+      ['BASIC plan', () => seededPlan('BASIC')],
+      ['missing rows', () => makeBilling({ entitlements: [] })],
+    ])('hides Feature when the plan does not include it (%s) but keeps the other controls', async (_label, billing) => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByRole('button', { name: /إغلاق|^Close$/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: FEATURE })).toBeNull()
+      expect(screen.getByRole('link', { name: /المتقدمون|Applicants/i })).toBeInTheDocument()
+    })
+
+    it('hides Feature while the billing summary cannot be loaded', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockRejectedValue(new ApiError(500, 'server_error', 'boom'))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByRole('button', { name: /إغلاق|^Close$/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: FEATURE })).toBeNull()
+    })
+
+    it('hides the mutation control from a VIEWER regardless of the plan', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByText(/دورك في المؤسسة|Your role in this organisation/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: FEATURE })).toBeNull()
+      expect(screen.queryByRole('button', { name: UNFEATURE })).toBeNull()
+    })
+
+    it.each([
+      ['still entitled', () => billingWith(['jobs.post', 'jobs.featured'])],
+      ['entitlement lost', () => billingWith(['jobs.post'])],
+    ])('keeps Unfeature for an already-featured job (%s) and it still works', async (_label, billing) => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published({ is_featured: true }))
+      vi.mocked(jobsApi.featureJob).mockResolvedValue(published({ is_featured: false }))
+      renderApp('/employer/jobs/j-1')
+      const unfeature = await screen.findByRole('button', { name: UNFEATURE })
+      expect(screen.queryByRole('button', { name: FEATURE })).toBeNull()
+      await userEvent.setup().click(unfeature)
+      await waitFor(() => expect(jobsApi.featureJob).toHaveBeenCalledWith('j-1', false))
+    })
+
+    it('hides Submit when the plan carries no jobs.post', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.featured']))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
+      renderApp('/employer/jobs/j-1')
+      await screen.findByLabelText(/المسمى الوظيفي|Job title/i)
+      expect(screen.queryByRole('button', { name: /إرسال للمراجعة|Submit for review/i })).toBeNull()
+      expect(screen.getByRole('button', { name: /حفظ المسودة|Save draft/i })).toBeInTheDocument()
+    })
   })
 })
