@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **775 passed** (was 175): billing entitlements/admin API,
+- Backend: **834 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -567,6 +567,37 @@ Sibling audit: the three endpoints above are the only candidate-data reads behin
 Lock order (unchanged): employer → actor membership → billing account → candidate/saved/invitation rows; no path takes them in reverse.
 
 Backend tests 775, web tests 239, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-nine — candidate-data disclosure closure (2026-09-26, review 5327180567 on `4ca9e8c`)
+
+One policy for every employer endpoint that returns candidate professional data:
+`services.authoritative_talent_access(employer, actor, key, roles=…)` decides on
+committed state (employer row → actor membership with its current role → recruiting
+state → billing account → entitlement `key`), then endpoints whose disclosure depends
+on the candidate's CURRENT privacy lock the page's candidate rows in primary-key order
+(`lock_candidates`) and decide with the existing visibility rule on those rows
+(`visible_candidate_ids`: discoverable and active, or — where the endpoint's policy
+allows it — an applicant of the organisation). The response (`serializer.data`,
+pagination included) is built inside that transaction, so nothing is emitted after a
+committed revocation or opt-out, and a competing writer waits until the response exists.
+
+| Endpoint | Roles | Entitlement | Candidate lock | Change |
+| --- | --- | --- | --- | --- |
+| `GET /talent` (search, charges) | OWNER/RECRUITER | `talent.search` | page rows, discoverable only | page locked and re-checked, materialised in the transaction |
+| `GET /talent/{id}` | OWNER/RECRUITER | `talent.search` | the row, discoverable or applicant | locked before the visibility decision (404 otherwise) |
+| `GET /talent/saved` | OWNER/RECRUITER | `talent.save_candidate` | page rows, discoverable or applicant | page locked and re-checked |
+| `POST /talent/saved` | OWNER/RECRUITER | `talent.save_candidate` | service lock | outer transaction holds the service's locks through the response |
+| `GET /talent/invitations` | OWNER/RECRUITER | `talent.invite` | page rows, discoverable or applicant | page locked and re-checked |
+| `POST /talent/invitations` | OWNER/RECRUITER | `talent.invite` | service lock | outer transaction; billing account now locked BEFORE the candidate row |
+| `POST /talent/invitations/{id}/cancel` | OWNER/RECRUITER | `talent.invite` | service lock (`cancel_invitation_locked`) | gate moved into the service; expiry normalised outside, response built under the locks |
+| `GET …/jobs/{id}/applications`, `GET …/applications/{id}` | every member (VIEWER included) | `jobs.application_review` | none (applicants stay visible through the application) | guard + materialisation in the transaction |
+| `POST …/applications/{id}/transition` | OWNER/RECRUITER | `jobs.application_review` | none | outer transaction holds the service's locks through the response |
+
+Not in the family (inspected, unchanged): `DELETE /talent/saved/{id}` (204), interview request and message responses (no candidate profile fields), job and member endpoints.
+
+Lock order (final, every path): employer → actor membership → job → billing account → candidate profile rows (PK order) → application/saved/invitation rows → usage/credit rows. A privacy PATCH locks only the profile row and therefore contends with every disclosing read.
+
+Backend tests 834, web tests 239, no migration, OpenAPI unchanged. Candidate-data disclosure surface audited completely for Phase 3.
 
 ## Known Problems
 
