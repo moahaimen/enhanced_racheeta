@@ -29,7 +29,7 @@ describe('ApplicantsPage', () => {
     vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
     vi.mocked(jobsApi.listJobApplications).mockResolvedValue(paginated([makeApplicationEmployer({ status: 'SHORTLISTED' })]))
     vi.mocked(jobsApi.listMessages).mockResolvedValue([])
-    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.application_review', 'recruitment.messaging']))
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.application_review', 'recruitment.messaging', 'talent.search']))
   })
 
   it.each(['OWNER', 'RECRUITER'] as const)('shows %s the recruiter actions and the message composer', async (role) => {
@@ -127,6 +127,37 @@ describe('ApplicantsPage', () => {
       const card = await screen.findByTestId('applicant-card')
       expect(within(card).queryByRole('button', { name: SEND })).toBeNull()
       expect(within(card).queryByTestId('messages-thread')).toBeNull()
+    })
+  })
+
+  describe('talent link follows talent.search', () => {
+    const NAME = /ممرضة|Nurse/i
+
+    it.each(['OWNER', 'RECRUITER'] as const)('links the applicant for a %s whose plan includes talent search', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      expect(within(card).getByRole('link', { name: NAME })).toHaveAttribute('href', expect.stringContaining('/employer/talent/'))
+    })
+
+    it.each([
+      ['talent.search=false (TRIAL-shaped)', () => billingWith(['jobs.application_review', 'recruitment.messaging'])],
+      ['talent.search row missing', () => makeBilling({ entitlements: [{ key: 'jobs.application_review', kind: 'BOOLEAN', enabled: true, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null }] })],
+    ])('keeps the applicant visible and reviewable but unlinked (%s)', async (_label, billing) => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      expect(within(card).queryByRole('link', { name: NAME })).toBeNull()
+      expect(within(card).getByText(NAME)).toBeInTheDocument()
+      expect(within(card).getByRole('button', { name: /^قبول$|^Accept$/ })).toBeInTheDocument() // review still works
+    })
+
+    it('does not link for a VIEWER even with the entitlement', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      expect(within(card).queryByRole('link', { name: NAME })).toBeNull()
     })
   })
 })

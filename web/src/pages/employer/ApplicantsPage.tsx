@@ -28,8 +28,12 @@ export function ApplicantsPage() {
           // needs jobs.application_review, and sending a message additionally needs recruitment.messaging.
           // Unknown roles and missing capabilities fail closed.
           const canReview = entitled(billing, 'jobs.application_review')
-          const canWrite = (employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER') && canReview
+          const recruiterRole = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
+          const canWrite = recruiterRole && canReview
           const canMessage = canWrite && entitled(billing, 'recruitment.messaging')
+          // TalentDetail is its own gate (CanRecruit + recruiting organisation + talent.search), independent of
+          // application review: the applicant is always shown, but linked only when that page would open.
+          const canOpenTalent = recruiterRole && employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE' && entitled(billing, 'talent.search')
           return (
           <>
             <PageHeader
@@ -58,7 +62,7 @@ export function ApplicantsPage() {
                   <EmptyState icon="users" title={t('applicants.empty')} testId="applicants-empty" />
                 </div>
               ) : (
-                applications.results.map((a) => <ApplicantCard key={a.id} application={a} canWrite={canWrite} canMessage={canMessage} reload={reload} />)
+                applications.results.map((a) => <ApplicantCard key={a.id} application={a} canWrite={canWrite} canMessage={canMessage} canOpenTalent={canOpenTalent} reload={reload} />)
               )}
               <Pagination page={page} total={Math.max(1, Math.ceil(applications.count / 20))} hasNext={applications.next !== null} hasPrevious={applications.previous !== null} onChange={(p) => setParams({ ...(status ? { status } : {}), page: String(p) })} />
             </PageStack>
@@ -70,7 +74,7 @@ export function ApplicantsPage() {
   )
 }
 
-function ApplicantCard({ application, canWrite, canMessage, reload }: { application: ApplicationEmployer; canWrite: boolean; canMessage: boolean; reload: () => void }) {
+function ApplicantCard({ application, canWrite, canMessage, canOpenTalent, reload }: { application: ApplicationEmployer; canWrite: boolean; canMessage: boolean; canOpenTalent: boolean; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const [error, setError] = useState<string | null>(null)
@@ -82,12 +86,12 @@ function ApplicantCard({ application, canWrite, canMessage, reload }: { applicat
   return (
     <SectionCard
       title={
-        canWrite ? (
+        canOpenTalent ? (
           <Link to={`/employer/talent/${c.id}`} className={styles.rowTitle} style={{ color: 'inherit', textDecoration: 'none' }}>
             {c.professional_title}
           </Link>
         ) : (
-          <span className={styles.rowTitle}>{c.professional_title}</span> // talent detail is a recruiter-only page
+          <span className={styles.rowTitle}>{c.professional_title}</span> // talent detail needs its own entitlement
         )
       }
       description={`${t(`professions.${c.profession}`)} · ${t(`degrees.${c.degree}`)} · ${t('talent.experienceYears', { count: c.years_of_experience })} · ${name(c.governorate)}`}
