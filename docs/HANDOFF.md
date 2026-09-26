@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **665 passed** (was 175): billing entitlements/admin API,
+- Backend: **671 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **212 passed** (was 87).
+- Web: **228 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -492,6 +492,17 @@ Backend tests 657, web tests 201, no migration, OpenAPI unchanged.
 | P2 Feature shown without `jobs.featured` | `JobEditorPage` loads the billing summary (failure → null → no capability) and shows Feature only with `jobs.featured`; an already-featured job keeps Unfeature regardless. Sibling: Submit needs `jobs.post` and is gated the same way. Web tests: OWNER/RECRUITER with the capability, disabled/TRIAL/BASIC/missing/unloadable summaries, VIEWER, Unfeature with and without the entitlement (and it still works), Submit without `jobs.post`. |
 
 Backend tests 665, web tests 212, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-two (2026-09-26, review 5325616543 on `cefad96`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 `invite_candidate` trusted a stale candidate instance | The candidate profile row is locked and re-read inside the invitation transaction (order employer → job → candidate → invitation rows); eligibility (discoverable, active account) is decided on that row and the caller's instance is synchronised so the response is rendered from current state. Tests: discoverable invited and duplicates still refused, non-discoverable refused without a card, prior applicant readable but not invitable, stale instance refused, threaded opt-out vs invitation (an invitation exists only if it won). |
+| P2 TalentDetail offered Invite to non-invitable candidates | `TalentDetailSerializer.can_invite` (computed: currently discoverable and active) is exposed; the page shows Invite only with `talent.invite` and `can_invite` true (missing → hidden), while the detail stays readable. OpenAPI regenerated for the new field. |
+| P2 JobEditor Applicants link ignored the read gate | The link renders only for a VERIFIED, recruitment-ACTIVE organisation with `jobs.application_review` (any member, matching the backend's read semantics; VIEWER included); loading or missing summary hides it. |
+| P2 ApplicantsPage composer ignored `recruitment.messaging` | The page loads the billing summary; actions need `jobs.application_review`, the thread is shown to OWNER/RECRUITER with it, and the composer (`MessagesThread canSend`) only with `recruitment.messaging` as well; the seeker side is unchanged. |
+
+Backend tests 671, web tests 228, no migration, OpenAPI regenerated (`can_invite` on the talent detail).
 
 ## Known Problems
 
