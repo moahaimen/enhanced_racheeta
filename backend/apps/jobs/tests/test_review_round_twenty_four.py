@@ -3,6 +3,7 @@ date range is re-validated on the locked row with the submitted fields
 applied, so concurrent partial PATCHes never commit end_date < start_date."""
 
 import threading
+from types import SimpleNamespace
 
 import pytest
 from django.db import IntegrityError, connection
@@ -82,8 +83,10 @@ def test_stale_request_is_refused_on_the_locked_row(seeker, experience):
     serializer = WorkExperienceSerializer(stale, data={"end_date": "2021-01-01"}, partial=True)
     assert serializer.is_valid(), serializer.errors
     assert _patch(seeker, experience, {"start_date": "2024-01-01"}).status_code == 200
+    view = MyExperienceDetailView()
+    view.request = SimpleNamespace(job_seeker=seeker)  # the locked re-read is scoped to the caller
     with pytest.raises(Exception) as exc:
-        MyExperienceDetailView().perform_update(serializer)
+        view.perform_update(serializer)
     assert "end_date" in getattr(exc.value, "detail", {})
     row = WorkExperience.objects.get(pk=experience.pk)
     assert (str(row.start_date), str(row.end_date)) == ("2024-01-01", "2025-01-01")

@@ -336,7 +336,17 @@ def _child_views(model, ser, related: str, tag_summary: str):
             # with the same field error, never committed.
             try:
                 with transaction.atomic():
-                    locked = model.objects.select_for_update().get(pk=serializer.instance.pk)
+                    # The authoritative row is re-read through the SAME scoped
+                    # queryset as the initial lookup: a row deleted (or moved
+                    # out of scope) between the lookup and this lock is the
+                    # endpoint's ordinary not-found, never a 500, and nothing
+                    # about rows outside the caller's profile is revealed.
+                    try:
+                        locked = (
+                            self.get_queryset().select_for_update().get(pk=serializer.instance.pk)
+                        )
+                    except model.DoesNotExist as exc:
+                        raise NotFound from exc
                     serializer.instance.__dict__.update(
                         {k: v for k, v in locked.__dict__.items() if k != "_state"}
                     )
