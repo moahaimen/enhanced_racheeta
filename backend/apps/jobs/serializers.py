@@ -540,6 +540,7 @@ class TalentDetailSerializer(TalentCardSerializer):
     desired_governorate = GovernorateSerializer(read_only=True)
     is_saved = serializers.SerializerMethodField()
     saved_candidate_id = serializers.SerializerMethodField()
+    can_invite = serializers.SerializerMethodField()
 
     class Meta(TalentCardSerializer.Meta):
         fields = TalentCardSerializer.Meta.fields + (
@@ -554,6 +555,7 @@ class TalentDetailSerializer(TalentCardSerializer):
             "credentials",
             "is_saved",
             "saved_candidate_id",
+            "can_invite",
         )
         read_only_fields = fields
 
@@ -574,6 +576,12 @@ class TalentDetailSerializer(TalentCardSerializer):
 
     def get_is_saved(self, obj) -> bool:
         return self._own_saved_id(obj) is not None
+
+    def get_can_invite(self, obj) -> bool:
+        """Current invitation eligibility, the rule `invite_candidate` enforces:
+        a candidate visible through a past application is readable but can be
+        invited only while currently discoverable. Computed, never stored."""
+        return bool(obj.discoverable_by_employers and obj.account.is_active)
 
     @extend_schema_field(serializers.UUIDField(allow_null=True))
     def get_saved_candidate_id(self, obj):

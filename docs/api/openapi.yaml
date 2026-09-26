@@ -7859,8 +7859,16 @@ components:
           format: uuid
           nullable: true
           readOnly: true
+        can_invite:
+          type: boolean
+          description: |-
+            Current invitation eligibility, the rule `invite_candidate` enforces:
+            a candidate visible through a past application is readable but can be
+            invited only while currently discoverable. Computed, never stored.
+          readOnly: true
       required:
       - availability
+      - can_invite
       - city
       - credentials
       - degree

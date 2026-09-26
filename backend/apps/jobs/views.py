@@ -1164,7 +1164,7 @@ class TalentDetailView(APIView):
         qs = _visible_candidates(request.employer)
         profile = get_object_or_404(
             qs.select_related(
-                "general_specialty", "governorate", "city", "desired_governorate"
+                "account", "general_specialty", "governorate", "city", "desired_governorate"
             ).prefetch_related("skills", "languages", "experiences", "education", "credentials"),
             pk=pk,
         )

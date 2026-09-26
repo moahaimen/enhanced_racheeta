@@ -1080,7 +1080,16 @@ def invite_candidate(
     _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
-    if not profile.discoverable_by_employers or not profile.account.is_active:
+    # Lock order continues employer → job → candidate profile → invitation rows.
+    # Eligibility is decided on the LOCKED profile row, never on the instance
+    # the view loaded: an opt-out that committed meanwhile refuses the
+    # invitation, and the caller's instance is synchronised so any response is
+    # rendered from current state.
+    fresh = (
+        JobSeekerProfile.objects.select_for_update().select_related("account").get(pk=profile.pk)
+    )
+    profile.__dict__.update({k: v for k, v in fresh.__dict__.items() if k != "_state"})
+    if not fresh.discoverable_by_employers or not fresh.account.is_active:
         raise JobsError("This candidate is not discoverable.", code="not_found")
     if detector.categories(message):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
