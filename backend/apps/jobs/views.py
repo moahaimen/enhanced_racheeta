@@ -1113,6 +1113,16 @@ def _require_talent_access(request, key: str | None) -> None:
         services.employer_entitlements(request.employer).require(key)
 
 
+def _authoritative_talent_read(request, key: str) -> None:
+    """Round-28: candidate-data reads decide on committed state. Must run
+    inside the transaction that also evaluates the queryset and builds the
+    serializer data (see services.authoritative_talent_access)."""
+    try:
+        services.authoritative_talent_access(request.employer, request.user, key)
+    except services.JobsError as exc:  # revoked membership / suspended organisation
+        raise_api(exc)
+
+
 def _visible_candidates(employer):
     """THE candidate visibility rule for one employer, shared by talent detail
     and the saved-candidates list: an active account that is currently
@@ -1198,17 +1208,23 @@ class TalentDetailView(APIView):
 
     @extend_schema(responses={200: TalentDetailSerializer})
     def get(self, request, pk):
-        _require_talent_access(request, Keys.TALENT_SEARCH)
-        qs = _visible_candidates(request.employer)
-        profile = get_object_or_404(
-            qs.select_related(
-                "account", "general_specialty", "governorate", "city", "desired_governorate"
-            ).prefetch_related("skills", "languages", "experiences", "education", "credentials"),
-            pk=pk,
-        )
-        return Response(
-            TalentDetailSerializer(profile, context={"employer": request.employer}).data
-        )
+        _require_talent_access(request, Keys.TALENT_SEARCH)  # pre-check
+        # The authoritative decision and the disclosure are one transaction:
+        # employer, membership and billing-account locks are held until the
+        # profile has been serialised, so nothing is returned on revoked access.
+        with transaction.atomic():
+            _authoritative_talent_read(request, Keys.TALENT_SEARCH)
+            qs = _visible_candidates(request.employer)
+            profile = get_object_or_404(
+                qs.select_related(
+                    "account", "general_specialty", "governorate", "city", "desired_governorate"
+                ).prefetch_related(
+                    "skills", "languages", "experiences", "education", "credentials"
+                ),
+                pk=pk,
+            )
+            data = TalentDetailSerializer(profile, context={"employer": request.employer}).data
+        return Response(data)
 
 
 @extend_schema(tags=["talent"])
@@ -1243,7 +1259,10 @@ class SavedCandidateListView(generics.ListCreateAPIView):
 
     @extend_schema(summary="My organisation's saved candidates (paginated, newest first)")
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        # Locks held through pagination and serialisation (see TalentDetailView).
+        with transaction.atomic():
+            _authoritative_talent_read(request, Keys.TALENT_SAVE)
+            return super().get(request, *args, **kwargs)
 
     @extend_schema(
         request=SaveCandidateSerializer,
@@ -1327,7 +1346,10 @@ class InvitationListView(_ThrottledOnWrite, generics.ListCreateAPIView):
 
     @extend_schema(summary="Invitations sent by my organisation (paginated, newest first)")
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        # Locks held through pagination and serialisation (see TalentDetailView).
+        with transaction.atomic():
+            _authoritative_talent_read(request, Keys.TALENT_INVITE)
+            return super().get(request, *args, **kwargs)
 
     @extend_schema(
         request=InviteSerializer,

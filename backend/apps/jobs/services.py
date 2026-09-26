@@ -1099,17 +1099,34 @@ def search_signature(params: dict) -> str:
 
 
 @transaction.atomic
-def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
-    """Authorises AND charges a talent search: candidate data is disclosed and
-    quota consumed, so it is serialised like a protected write (order employer
-    → actor membership → billing account → search/usage rows). Returns True
-    when a unit was charged (a repeated identical search the same day is free)."""
+def authoritative_talent_access(
+    employer: Employer, actor, key: str | None = None
+) -> tuple[Employer, billing.EntitlementService]:
+    """THE access decision for candidate data, taken on committed state inside
+    the caller's transaction (order employer → actor membership → billing
+    account): the employer row is locked and re-read, the actor's membership
+    re-read under lock and its role checked, the organisation must still be
+    able to recruit, and the entitlement `key` is resolved on the locked
+    billing account. Callers keep the transaction open until the response
+    data is built, so a revocation that committed first refuses the read and
+    one that comes later waits. Reads consume nothing; talent search charges
+    through the returned service."""
     employer = _lock_employer(employer)
     _require_member_role(employer, actor)
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
     ent = employer_entitlements(employer, lock=True)
-    ent.require(Keys.TALENT_SEARCH)
+    if key is not None:
+        ent.require(key)
+    return employer, ent
+
+
+def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
+    """Authorises AND charges a talent search: candidate data is disclosed and
+    quota consumed, so it is serialised like a protected write (order employer
+    → actor membership → billing account → search/usage rows). Returns True
+    when a unit was charged (a repeated identical search the same day is free)."""
+    employer, ent = authoritative_talent_access(employer, actor, Keys.TALENT_SEARCH)
     signature = search_signature(params)
     day = timezone.localdate()
     # get_or_create is race-safe (savepoint + re-read), so two identical
