@@ -134,8 +134,12 @@ class AdminSubscriptionActivateView(_AdminSubscriptionAction):
                 {"non_field_errors": [str(exc)]}, code="invalid_transition"
             ) from exc
         if data.get("payment"):
+            # Server-authoritative: the payment behind a successful activation is VERIFIED.
             PaymentRecord.objects.create(
-                subscription=sub, recorded_by=request.user, **data["payment"]
+                subscription=sub,
+                recorded_by=request.user,
+                **data["payment"],
+                status=PaymentStatus.VERIFIED,
             )
         elif data.get("reference"):
             # Minimal bookkeeping: the off-platform payment the administrator verified.

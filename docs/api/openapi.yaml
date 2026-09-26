@@ -3494,7 +3494,31 @@ components:
           default: ''
           maxLength: 500
         payment:
-          $ref: '#/components/schemas/PaymentRecordRequest'
+          $ref: '#/components/schemas/ActivationPaymentRequest'
+    ActivationPaymentRequest:
+      type: object
+      description: |-
+        The payment an administrator verified before activating. Its status is
+        not an input: activation succeeds only for a verified payment, so the
+        server records VERIFIED (see ActivateSerializer.validate).
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        reference:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 500
     AdminDecisionRequest:
       type: object
       properties:
@@ -6655,28 +6679,6 @@ components:
       required:
       - created_at
       - id
-    PaymentRecordRequest:
-      type: object
-      properties:
-        amount:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          nullable: true
-        currency:
-          type: string
-          minLength: 1
-          maxLength: 3
-        method:
-          $ref: '#/components/schemas/MethodEnum'
-        reference:
-          type: string
-          maxLength: 120
-        status:
-          $ref: '#/components/schemas/PaymentStatusEnum'
-        note:
-          type: string
-          maxLength: 500
     PaymentStatusEnum:
       enum:
       - RECORDED

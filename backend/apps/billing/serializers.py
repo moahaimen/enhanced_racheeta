@@ -147,11 +147,40 @@ class AdminSubscriptionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ActivationPaymentSerializer(serializers.ModelSerializer):
+    """The payment an administrator verified before activating. Its status is
+    not an input: activation succeeds only for a verified payment, so the
+    server records VERIFIED (see ActivateSerializer.validate)."""
+
+    class Meta:
+        model = PaymentRecord
+        fields = ("amount", "currency", "method", "reference", "note")
+
+
 class ActivateSerializer(serializers.Serializer):
     term_days = serializers.IntegerField(required=False, min_value=1, max_value=3660)
     reference = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
-    payment = PaymentRecordSerializer(required=False)
+    payment = ActivationPaymentSerializer(required=False)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        # Nested serializers see no raw input, so the refusal lives here: a
+        # client never chooses the verification status of an activation payment.
+        payment = (getattr(self, "initial_data", None) or {}).get("payment")
+        if isinstance(payment, dict) and "status" in payment:
+            raise serializers.ValidationError(
+                {
+                    "payment": {
+                        "status": [
+                            serializers.ErrorDetail(
+                                "This field cannot be set by a client.", code="field_not_allowed"
+                            )
+                        ]
+                    }
+                }
+            )
+        return attrs
 
 
 class ReasonSerializer(serializers.Serializer):

@@ -90,6 +90,15 @@ class PlanAdmin(admin.ModelAdmin):
         # The default plan is what every unsubscribed account resolves to.
         return obj is None or not obj.is_default
 
+    def get_deleted_objects(self, objs, request):
+        # Bulk `delete_selected` checks model permissions, not the per-object
+        # rule above: a selection that contains a default plan is reported as
+        # protected, so the action refuses the WHOLE selection and deletes
+        # nothing. The model's pre_delete guard stays the last line.
+        deleted, counts, perms_needed, protected = super().get_deleted_objects(objs, request)
+        defaults = [f"{p} — default plan of its audience" for p in objs if p.is_default]
+        return deleted, counts, perms_needed, [*protected, *defaults]
+
 
 # Lifecycle state is owned by apps.billing.services (request → activate /
 # reject / suspend / cancel / expire, each locked, evented and audited). The

@@ -5,7 +5,9 @@ Prices are administrator-set and deliberately unset in seeds."""
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 from apps.core.models import BaseModel
 
@@ -99,6 +101,19 @@ class Plan(BaseModel):
                         )
                 return super().save(*args, **kwargs)
         return super().save(*args, **kwargs)
+
+
+@receiver(pre_delete, sender=Plan)
+def _refuse_default_plan_deletion(sender, instance: Plan, **kwargs) -> None:
+    """The default plan of an audience is what every unsubscribed account
+    resolves to. Refused for every ORM path (instance and queryset deletes,
+    including admin bulk actions); the surrounding delete transaction rolls
+    back, so a mixed selection deletes nothing."""
+    if instance.is_default:
+        raise ProtectedError(
+            f"'{instance.code}' is the default plan of its audience and cannot be deleted.",
+            {instance},
+        )
 
 
 class PlanEntitlement(BaseModel):
