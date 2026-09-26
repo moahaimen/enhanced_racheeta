@@ -570,6 +570,8 @@
     "inviteJob": "Job",
     "inviteMessage": "Invitation message (no contact data)",
     "sendInvite": "Send invitation",
+    "saveNotIncluded": "Your current plan does not include saving candidates.",
+    "inviteNotIncluded": "Your current plan does not include invitations.",
     "invited": "Invitation sent.",
     "savedList": "Saved candidates",
     "invitations": "Sent invitations",

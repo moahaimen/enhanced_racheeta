@@ -7,7 +7,7 @@ import * as authApi from '../../api/endpoints/auth'
 import * as jobsApi from '../../api/endpoints/jobs'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
-import { makeJobEmployer, makeTalentCard, makeTalentDetail, paginated } from '../../test/jobFixtures'
+import { makeBilling, makeJobEmployer, makeTalentCard, makeTalentDetail, paginated } from '../../test/jobFixtures'
 import { baghdad, cardiology } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
@@ -22,6 +22,12 @@ describe('Talent search', () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'MEDICAL_COMPANY' }))
     vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
     vi.mocked(referenceApi.listSpecialties).mockResolvedValue([cardiology])
+    // The detail page gates Save/Invite on the plan: give these tests every talent capability.
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(
+      makeBilling({
+        entitlements: ['talent.search', 'talent.save_candidate', 'talent.invite'].map((key) => ({ key, kind: 'BOOLEAN' as const, enabled: true, limit: null, period: 'NONE' as const, used: 0, credits: 0, remaining: null })),
+      }),
+    )
   })
 
   it('lists candidates with professional facts only and explains the billing rule', async () => {

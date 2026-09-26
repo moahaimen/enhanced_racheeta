@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
 import { ApiError, jobs as jobsApi } from '../../api'
-import type { JobEmployer, Paginated, TalentDetail } from '../../api'
+import type { BillingSummary, JobEmployer, Paginated, TalentDetail } from '../../api'
 import { Alert, ApiActionButton, AsyncPage, Badge, Container, FormActions, Icon, PageHeader, PageStack, SectionCard, Select, Textarea, TextField, useFormErrors } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
@@ -16,8 +16,8 @@ export function TalentDetailPage() {
   const { id = '' } = useParams()
   const load = async (signal: AbortSignal) => {
     try {
-      const [candidate, jobs] = await Promise.all([jobsApi.getTalent(id, signal), jobsApi.listEmployerJobs('PUBLISHED', 1, signal)])
-      return [candidate, jobs] as [TalentDetail, Paginated<JobEmployer>]
+      const [candidate, jobs, billing] = await Promise.all([jobsApi.getTalent(id, signal), jobsApi.listEmployerJobs('PUBLISHED', 1, signal), jobsApi.getEmployerBilling(signal)])
+      return [candidate, jobs, billing] as [TalentDetail, Paginated<JobEmployer>, BillingSummary]
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) throw new ApiError(404, 'not_found', t('talent.notFound'))
       throw e
@@ -26,14 +26,23 @@ export function TalentDetailPage() {
   return (
     <Container width="xl">
       <AsyncPage load={load} deps={[id]}>
-        {([candidate, jobs], reload) => <Detail candidate={candidate} firstPage={jobs} reload={reload} />}
+        {([candidate, jobs, billing], reload) => <Detail candidate={candidate} firstPage={jobs} billing={billing} reload={reload} />}
       </AsyncPage>
     </Container>
   )
 }
 
-function Detail({ candidate: c, firstPage, reload }: { candidate: TalentDetail; firstPage: Paginated<JobEmployer>; reload: () => void }) {
+/** A capability is granted only by an explicit `enabled: true` row; missing or unknown fails closed. */
+function entitled(billing: BillingSummary, key: string): boolean {
+  return billing?.entitlements?.find((e) => e.key === key)?.enabled === true
+}
+
+function Detail({ candidate: c, firstPage, billing, reload }: { candidate: TalentDetail; firstPage: Paginated<JobEmployer>; billing: BillingSummary; reload: () => void }) {
   const { t, i18n } = useTranslation()
+  // Mirrors the backend gates: saving needs talent.save_candidate, inviting needs talent.invite —
+  // both independent of talent.search, which only opens the profile itself.
+  const canSave = entitled(billing, 'talent.save_candidate')
+  const canInvite = entitled(billing, 'talent.invite')
   const name = useLocalizedName()
   const [saveNote, setSaveNote] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -158,7 +167,9 @@ function Detail({ candidate: c, firstPage, reload }: { candidate: TalentDetail; 
               </SectionCard>
               <SectionCard title={t('talent.save')} headingLevel={2}>
                 {saveError ? <Alert kind="error">{saveError}</Alert> : null}
-                {c.is_saved && c.saved_candidate_id ? (
+                {!canSave ? (
+                  <p className="text-muted" data-testid="save-not-included">{t('talent.saveNotIncluded')}</p>
+                ) : c.is_saved && c.saved_candidate_id ? (
                   <div className="cluster" data-testid="saved-state">
                     <Badge tone="success">{t('talent.saved')}</Badge>
                     <ApiActionButton
@@ -185,7 +196,9 @@ function Detail({ candidate: c, firstPage, reload }: { candidate: TalentDetail; 
                 )}
               </SectionCard>
               <SectionCard title={t('talent.invite')} headingLevel={2}>
-                {invited ? (
+                {!canInvite ? (
+                  <p className="text-muted" data-testid="invite-not-included">{t('talent.inviteNotIncluded')}</p>
+                ) : invited ? (
                   <Alert kind="success">{t('talent.invited')}</Alert>
                 ) : jobs.length === 0 ? (
                   <p className="text-muted">{t('employer.noJobs')}</p>
