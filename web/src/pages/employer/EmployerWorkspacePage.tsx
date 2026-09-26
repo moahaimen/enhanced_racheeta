@@ -9,6 +9,7 @@ import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { ClientValidationError } from '../validation'
 import { EmployerForm } from './EmployerForm'
 import styles from './EmployerWorkspacePage.module.css'
+import { entitled } from './entitlements'
 
 type Loaded = [EmployerOwner | null, Governorate[]]
 
@@ -65,6 +66,9 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
   // Mirrors the backend CanRecruit rule (OWNER or RECRUITER). VIEWER is read-only; an unknown role gets nothing.
   const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
   const canRecruit = employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE'
+  // Plan capabilities from the billing summary this page already loads; unknown while loading → hidden.
+  const canSearchTalent = entitled(billing.data, 'talent.search')
+  const canReviewApplicants = entitled(billing.data, 'jobs.application_review')
 
   return (
     <>
@@ -74,7 +78,7 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
         description={t('employer.intro')}
         actions={
           <>
-            {canRecruit && canWrite ? (
+            {canRecruit && canWrite && canSearchTalent ? (
               <LinkButton to="/employer/talent" variant="secondary" leading={<Icon name="search" size={18} />}>
                 {t('employer.nav.talent')}
               </LinkButton>
@@ -139,9 +143,11 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
                     </div>
                     <JobStatusBadge status={job.status} />
                     <div className={styles.rowActions}>
-                      <LinkButton to={`/employer/jobs/${job.id}/applications`} variant="ghost" size="sm">
-                        {t('employer.applicants')}
-                      </LinkButton>
+                      {canReviewApplicants ? (
+                        <LinkButton to={`/employer/jobs/${job.id}/applications`} variant="ghost" size="sm">
+                          {t('employer.applicants')}
+                        </LinkButton>
+                      ) : null}
                     </div>
                   </li>
                 ))}

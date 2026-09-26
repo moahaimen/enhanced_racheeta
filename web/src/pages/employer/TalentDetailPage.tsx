@@ -8,6 +8,7 @@ import { Alert, ApiActionButton, AsyncPage, Badge, Container, FormActions, Icon,
 import { toErrorMessage } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError } from '../validation'
+import { entitled } from './entitlements'
 import styles from './EmployerWorkspacePage.module.css'
 
 /** /employer/talent/:id — professional profile (no contact data), save and invite actions. */
@@ -30,11 +31,6 @@ export function TalentDetailPage() {
       </AsyncPage>
     </Container>
   )
-}
-
-/** A capability is granted only by an explicit `enabled: true` row; missing or unknown fails closed. */
-function entitled(billing: BillingSummary, key: string): boolean {
-  return billing?.entitlements?.find((e) => e.key === key)?.enabled === true
 }
 
 function Detail({ candidate: c, firstPage, billing, reload }: { candidate: TalentDetail; firstPage: Paginated<JobEmployer>; billing: BillingSummary; reload: () => void }) {

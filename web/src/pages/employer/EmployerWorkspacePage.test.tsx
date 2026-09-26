@@ -17,6 +17,18 @@ vi.mock('../../api/endpoints/jobs')
 vi.mock('../../api/endpoints/providers')
 vi.mock('../../api/endpoints/reference')
 
+/** A billing summary whose plan carries the given capabilities (every other key absent → disabled). */
+function billingWith(keys: string[], overrides: Parameters<typeof makeBilling>[0] = {}) {
+  const base = makeBilling()
+  return makeBilling({
+    entitlements: [
+      ...base.entitlements.filter((e) => !keys.includes(e.key)),
+      ...keys.map((key) => ({ key, kind: 'BOOLEAN' as const, enabled: true, limit: null, period: 'NONE' as const, used: 0, credits: 0, remaining: null })),
+    ],
+    ...overrides,
+  })
+}
+
 describe('EmployerWorkspacePage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -58,6 +70,7 @@ describe('EmployerWorkspacePage', () => {
 
   it('shows jobs, usage meters and lets the owner request a plan', async () => {
     vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['talent.search', 'jobs.application_review']))
     vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([makeJobEmployer({ status: 'PUBLISHED', applications_count: 3 })]))
     vi.mocked(jobsApi.requestPlan).mockResolvedValue({ id: 'sub-1', plan: makePlan({ code: 'PROFESSIONAL' }), status: 'PENDING', requester_note: '', starts_at: null, ends_at: null, created_at: '2026-09-22T00:00:00Z' })
     renderApp('/employer')
@@ -257,12 +270,51 @@ describe('EmployerWorkspacePage', () => {
   })
 
   describe('write controls by role', () => {
-    it.each(['OWNER', 'RECRUITER'] as const)('shows New Job to a %s', async (role) => {
+    it.each(['OWNER', 'RECRUITER'] as const)('shows New Job and talent search to a %s whose plan includes it', async (role) => {
       vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['talent.search']))
       renderApp('/employer')
       await screen.findByRole('heading', { level: 1, name: 'مستشفى الأمل' })
       expect(screen.getAllByRole('link', { name: /وظيفة جديدة|New job/i }).length).toBeGreaterThan(0)
-      expect(screen.getByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeInTheDocument()
+    })
+
+    it.each(['OWNER', 'RECRUITER'] as const)('hides talent search from a %s whose plan does not include it (seeded TRIAL)', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      // makeBilling() mirrors TRIAL: talent.search present but disabled.
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(makeBilling())
+      renderApp('/employer')
+      await screen.findByTestId('usage-meters')
+      expect(screen.queryByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeNull()
+      // unrelated controls stay
+      expect(screen.getAllByRole('link', { name: /وظيفة جديدة|New job/i }).length).toBeGreaterThan(0)
+    })
+
+    it('hides talent search from a VIEWER even when the plan includes it', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['talent.search']))
+      renderApp('/employer')
+      await screen.findByTestId('usage-meters')
+      expect(screen.queryByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeNull()
+    })
+
+    it('hides talent search and applicant links until the capabilities are known', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.getEmployerBilling).mockReturnValue(new Promise(() => undefined))
+      vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([makeJobEmployer({ status: 'PUBLISHED' })]))
+      renderApp('/employer')
+      const row = await screen.findByTestId('employer-job-row')
+      expect(screen.queryByRole('link', { name: /البحث عن الكوادر|Talent search/i })).toBeNull()
+      expect(within(row).queryByRole('link', { name: /المتقدمون|Applicants/i })).toBeNull()
+    })
+
+    it('shows applicant links only when the plan includes applicant review', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([makeJobEmployer({ status: 'PUBLISHED' })]))
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.application_review']))
+      renderApp('/employer')
+      const row = await screen.findByTestId('employer-job-row')
+      expect(await within(row).findByRole('link', { name: /المتقدمون|Applicants/i })).toHaveAttribute('href', '/employer/jobs/j-1/applications')
     })
 
     it('hides New Job and talent search from a VIEWER without changing the rest of the page', async () => {
