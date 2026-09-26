@@ -103,15 +103,27 @@ class ContactLeak(JobsError):
     code = "contact_information_not_allowed"
 
 
-class JobFieldsInvalid(JobsError):
-    """A cross-field rule broken by the RESULTING job (e.g. two concurrent
-    partial edits that were each valid against the row they read)."""
+class FieldsInvalid(JobsError):
+    """A cross-field rule broken by the RESULTING row (e.g. two concurrent
+    partial edits that were each valid against the row they read). Views map
+    `errors` to the same field-error shape the serializers use."""
 
     code = "validation_error"
 
     def __init__(self, errors: dict[str, list[str]]):
         super().__init__("; ".join(m for msgs in errors.values() for m in msgs))
         self.errors = errors
+
+
+JobFieldsInvalid = FieldsInvalid
+
+
+def _require_location_invariant(row) -> None:
+    """Shared by employers and jobs: a city belongs to the selected governorate.
+    Evaluated on the locked row with the edit applied, never on the instance
+    the request validated against."""
+    if row.city_id is not None and row.city.governorate_id != row.governorate_id:
+        raise FieldsInvalid({"city": ["This city does not belong to the selected governorate."]})
 
 
 # ---- billing helpers ------------------------------------------------------
@@ -215,6 +227,7 @@ def update_employer(employer: Employer, fields: dict, *, actor) -> Employer:
             raise IdentityLocked(changed)
     for key, value in fields.items():
         setattr(locked, key, value)
+    _require_location_invariant(locked)  # resulting state, not the pre-lock instance
     locked.save(update_fields=[*fields, "updated_at"])
     employer.__dict__.update({k: v for k, v in locked.__dict__.items() if k != "_state"})
     return employer
@@ -493,17 +506,13 @@ def _require_job_field_invariants(job: JobPost) -> None:
     """The serializer's cross-field rules, re-run on the locked row with the
     edit applied: a concurrent edit to the other half of a pair (salary bounds,
     governorate/city) commits between this request's validation and its lock."""
-    errors: dict[str, list[str]] = {}
     if (
         job.salary_min is not None
         and job.salary_max is not None
         and job.salary_min > job.salary_max
     ):
-        errors["salary_max"] = ["Maximum salary must be at least the minimum."]
-    if job.city_id is not None and job.city.governorate_id != job.governorate_id:
-        errors["city"] = ["This city does not belong to the selected governorate."]
-    if errors:
-        raise JobFieldsInvalid(errors)
+        raise FieldsInvalid({"salary_max": ["Maximum salary must be at least the minimum."]})
+    _require_location_invariant(job)
 
 
 def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
