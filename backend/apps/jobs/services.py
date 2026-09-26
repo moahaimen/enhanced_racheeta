@@ -1126,21 +1126,53 @@ def authoritative_talent_access(
 
 
 def lock_candidates(ids) -> dict:
-    """Locks the candidate profile rows that may be disclosed, in primary-key
-    order (deterministic across concurrent readers), and returns them by pk.
-    The row lock is what a privacy opt-out (`update_seeker_profile`) contends
-    on: an opt-out that committed first is seen, one that comes later waits
-    until the disclosing transaction has built its response."""
+    """Lock and refresh every mutable row that decides or supplies a candidate card.
+
+    Lock order is candidate profiles by PK, then their Account rows by PK.
+    The returned profiles carry fresh scalar/FK state plus the card relations
+    used by TalentCardSerializer.  Account.is_active is taken from an
+    independently locked Account row, so account deactivation and candidate
+    profile edits serialize with disclosure instead of racing it.
+    """
     ids = sorted({pk for pk in ids if pk is not None})
     if not ids:
         return {}
-    rows = (
+
+    rows = list(
         JobSeekerProfile.objects.select_for_update(of=("self",))
-        .select_related("account")
+        .select_related(
+            "account",
+            "general_specialty",
+            "governorate",
+            "city",
+            "desired_governorate",
+        )
+        .prefetch_related("skills", "languages")
         .filter(pk__in=ids)
         .order_by("pk")
     )
+
+    account_ids = sorted({row.account_id for row in rows if row.account_id is not None})
+    locked_accounts = {
+        account.pk: account
+        for account in Account.objects.select_for_update()
+        .filter(pk__in=account_ids)
+        .order_by("pk")
+    }
+    for row in rows:
+        account = locked_accounts.get(row.account_id)
+        if account is not None:
+            row._state.fields_cache["account"] = account
+
     return {row.pk: row for row in rows}
+
+
+def sync_candidate_instance(target: JobSeekerProfile, fresh: JobSeekerProfile) -> JobSeekerProfile:
+    """Synchronise a pre-lock candidate object with the complete locked state."""
+    target.__dict__.update({k: v for k, v in fresh.__dict__.items() if k != "_state"})
+    target._state.fields_cache = fresh._state.fields_cache.copy()
+    target._prefetched_objects_cache = getattr(fresh, "_prefetched_objects_cache", {}).copy()
+    return target
 
 
 def visible_candidate_ids(locked_profiles, employer: Employer, *, allow_applicants: bool) -> set:
@@ -1213,10 +1245,10 @@ def save_candidate(
     # invitations). Eligibility is decided on the LOCKED profile, never on the
     # instance the view loaded, and that instance is synchronised so nothing
     # stale is rendered afterwards.
-    fresh = (
-        JobSeekerProfile.objects.select_for_update().select_related("account").get(pk=profile.pk)
-    )
-    profile.__dict__.update({k: v for k, v in fresh.__dict__.items() if k != "_state"})
+    fresh = lock_candidates([profile.pk]).get(profile.pk)
+    if fresh is None:
+        raise JobsError("This candidate is not discoverable.", code="not_found")
+    sync_candidate_instance(profile, fresh)
     if not fresh.account.is_active or (
         not fresh.discoverable_by_employers
         and not JobApplication.objects.filter(job__employer=employer, job_seeker=profile).exists()
@@ -1270,10 +1302,10 @@ def invite_candidate(
     # the view loaded: an opt-out that committed meanwhile refuses the
     # invitation, and the caller's instance is synchronised so any response is
     # rendered from current state.
-    fresh = (
-        JobSeekerProfile.objects.select_for_update().select_related("account").get(pk=profile.pk)
-    )
-    profile.__dict__.update({k: v for k, v in fresh.__dict__.items() if k != "_state"})
+    fresh = lock_candidates([profile.pk]).get(profile.pk)
+    if fresh is None:
+        raise JobsError("This candidate is not discoverable.", code="not_found")
+    sync_candidate_instance(profile, fresh)
     if not fresh.discoverable_by_employers or not fresh.account.is_active:
         raise JobsError("This candidate is not discoverable.", code="not_found")
     if detector.categories(message):
