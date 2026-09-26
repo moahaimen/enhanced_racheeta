@@ -270,8 +270,19 @@ class EntitlementService:
         return self.get(key)
 
 
-def entitlements_for(subject_type: str, subject_id, audience: str) -> EntitlementService:
-    return EntitlementService(get_or_create_billing_account(subject_type, subject_id, audience))
+def entitlements_for(
+    subject_type: str, subject_id, audience: str, *, lock: bool = False
+) -> EntitlementService:
+    """`lock=True` (inside a transaction, for a paid WRITE): the billing account
+    row is locked before anything is resolved, so the subscription, plan,
+    entitlement, quota and consumption are one decision on the committed
+    state. Every subscription lifecycle transition takes the same lock first,
+    so a revocation that committed earlier is seen, and one that comes later
+    waits for this write to finish. Reads keep resolving without a lock."""
+    account = get_or_create_billing_account(subject_type, subject_id, audience)
+    if lock:
+        account = BillingAccount.objects.select_for_update().get(pk=account.pk)
+    return EntitlementService(account)
 
 
 # ---- subscription lifecycle (administrator-controlled) ---------------------
@@ -423,6 +434,10 @@ def _transition(
     action: str,
     allowed_from: tuple[str, ...],
 ) -> Subscription:
+    # Lock order billing account → subscription (as activation and requests):
+    # the account row is the authority every paid write locks before it
+    # resolves its entitlement, so a revocation serialises with those writes.
+    BillingAccount.objects.select_for_update().get(pk=sub.billing_account_id)
     sub.status = (
         Subscription.objects.select_for_update()
         .filter(pk=sub.pk)

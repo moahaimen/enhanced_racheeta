@@ -114,6 +114,7 @@ STATUS_FOR_CODE = {
     "not_an_agency": status.HTTP_400_BAD_REQUEST,
     "application_closed": status.HTTP_409_CONFLICT,
     "not_found": status.HTTP_404_NOT_FOUND,
+    "membership_inactive": status.HTTP_403_FORBIDDEN,
 }
 
 
@@ -857,8 +858,12 @@ class EmployerJobListView(_ThrottledOnWrite, generics.ListCreateAPIView):
             raise PermissionDenied("Viewers cannot create jobs.")
         serializer = JobWriteSerializer(data=request.data, context={"employer": request.employer})
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
-            job = serializer.save(employer=request.employer, created_by=request.user)
+        try:
+            job = services.create_job(
+                request.employer, dict(serializer.validated_data), actor=request.user
+            )
+        except services.JobsError as exc:
+            raise_api(exc)
         return Response(
             JobEmployerSerializer(_employer_jobs(request).get(pk=job.pk)).data,
             status=status.HTTP_201_CREATED,

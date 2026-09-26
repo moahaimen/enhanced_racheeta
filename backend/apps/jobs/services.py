@@ -103,6 +103,13 @@ class ContactLeak(JobsError):
     code = "contact_information_not_allowed"
 
 
+class MembershipInactive(JobsError):
+    """The acting account's membership no longer allows this write (ended, or
+    its role changed) by the time the write took its locks."""
+
+    code = "membership_inactive"
+
+
 class FieldsInvalid(JobsError):
     """A cross-field rule broken by the RESULTING row (e.g. two concurrent
     partial edits that were each valid against the row they read). Views map
@@ -129,8 +136,13 @@ def _require_location_invariant(row) -> None:
 # ---- billing helpers ------------------------------------------------------
 
 
-def employer_entitlements(employer: Employer) -> billing.EntitlementService:
-    return billing.entitlements_for(SubjectType.ORGANIZATION, employer.pk, Audience.EMPLOYER)
+def employer_entitlements(employer: Employer, *, lock: bool = False) -> billing.EntitlementService:
+    """`lock=True` for every paid write inside a transaction (see
+    billing.entitlements_for): the decision is taken on the locked billing
+    account, never on a resolution cached before the transaction."""
+    return billing.entitlements_for(
+        SubjectType.ORGANIZATION, employer.pk, Audience.EMPLOYER, lock=lock
+    )
 
 
 def seeker_entitlements(profile: JobSeekerProfile) -> billing.EntitlementService:
@@ -321,6 +333,27 @@ def set_employer_recruitment_status(
     return employer
 
 
+RECRUITING_ROLES = (MemberRole.OWNER, MemberRole.RECRUITER)
+
+
+def _require_member_role(employer: Employer, actor, roles=RECRUITING_ROLES) -> EmployerMembership:
+    """Authoritative membership at commit time. Called inside every employer-
+    side write transaction right after the employer row lock (order: employer
+    → membership → …): the actor's ACTIVE membership row for this organisation
+    is locked and re-read, and its CURRENT role must allow the write. A
+    revocation (`end_membership`, which locks the same row) that committed
+    earlier is therefore seen; one that comes later waits for this write.
+    The permission layer's membership instance is never trusted here."""
+    membership = (
+        EmployerMembership.objects.select_for_update()
+        .filter(employer=employer, account=actor, status=MemberStatus.ACTIVE)
+        .first()
+    )
+    if membership is None or membership.role not in roles:
+        raise MembershipInactive("Your membership no longer allows this action.")
+    return membership
+
+
 def _lock_employer(employer: Employer) -> Employer:
     """Serialises every check-then-commit on a shared commercial resource of the
     organisation (active-job slots, featured slots, recruiter seats). Row lock
@@ -354,7 +387,7 @@ def _require_active_job_slot(employer: Employer, job: JobPost) -> None:
     count itself ignores elapsed PUBLISHED jobs, so capacity never depends on
     whether a listing happened to run."""
     expire_overdue_jobs(employer=employer)
-    ent = employer_entitlements(employer)
+    ent = employer_entitlements(employer, lock=True)
     ent.require(Keys.JOBS_POST)
     ent.check_concurrent(Keys.JOBS_ACTIVE_LIMIT, current=_active_job_count(employer, exclude=job))
 
@@ -391,7 +424,7 @@ def add_member(employer: Employer, account, role: str, *, actor) -> EmployerMemb
     if EmployerMembership.objects.filter(account=account, status=MemberStatus.ACTIVE).exists():
         raise JobsError("This account already belongs to an organisation.", code="already_member")
     seats = EmployerMembership.objects.filter(employer=employer, status=MemberStatus.ACTIVE).count()
-    employer_entitlements(employer).check_concurrent(Keys.RECRUITER_SEATS, current=seats)
+    employer_entitlements(employer, lock=True).check_concurrent(Keys.RECRUITER_SEATS, current=seats)
     membership = _create_active_membership(employer, account, role)
     audit.record(
         actor=actor,
@@ -488,6 +521,7 @@ def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
     cleanly) and only the edited fields are written, so lifecycle columns can
     never be overwritten by a stale instance."""
     employer = _lock_employer(job.employer)
+    _require_member_role(employer, actor)
     _lock_job(job)
     if job.status not in EDITABLE_JOB_STATUSES:
         raise JobsError(
@@ -515,6 +549,19 @@ def _require_job_field_invariants(job: JobPost) -> None:
     _require_location_invariant(job)
 
 
+@transaction.atomic
+def create_job(employer: Employer, fields: dict, *, actor) -> JobPost:
+    """Draft creation: the employer row is locked, the actor's membership is
+    re-read under lock and the agency invariant is checked on the locked
+    organisation before the row is written."""
+    employer = _lock_employer(employer)
+    _require_member_role(employer, actor)
+    job = JobPost(employer=employer, created_by=actor, **fields)
+    _require_agency_invariant(employer, job)
+    job.save()
+    return job
+
+
 def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
     """Employer: DRAFT/REJECTED → PENDING_ADMIN_REVIEW. Commercial gate + leak gate."""
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
@@ -536,12 +583,12 @@ def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
 @transaction.atomic
 def _submit_job(job: JobPost, *, actor) -> JobPost:
     employer = _lock_employer(job.employer)  # fresh row under lock
+    _require_member_role(employer, actor)
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be submitted.")
-    if contact_flags(
-        job
-    ):  # re-scanned on the locked row: a concurrent edit may have added contact data
+    # Re-scanned on the locked row: a concurrent edit may have added contact data.
+    if contact_flags(job):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
     _require_publication_eligibility(employer, job)  # on the locked rows, not the view's instance
     _job_transition(job, JobStatus.PENDING_ADMIN_REVIEW, actor=actor)
@@ -662,6 +709,7 @@ def restore_job(job: JobPost, *, admin, note: str = "") -> JobPost:
 
 @transaction.atomic
 def close_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
+    _require_member_role(_lock_employer(job.employer), actor)  # employer → membership → job
     _lock_job(job)
     if job.status not in (JobStatus.PUBLISHED, JobStatus.PENDING_ADMIN_REVIEW, JobStatus.EXPIRED):
         raise JobsError(f"A job in status {job.status} cannot be closed.")
@@ -674,6 +722,7 @@ def close_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
 
 @transaction.atomic
 def archive_job(job: JobPost, *, actor, reason: str = "") -> JobPost:
+    _require_member_role(_lock_employer(job.employer), actor)  # employer → membership → job
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.CLOSED, JobStatus.EXPIRED, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be archived.")
@@ -734,8 +783,9 @@ def _live_featured_count(employer: Employer, *, exclude: JobPost | None = None) 
 
 
 def _require_featured_slot(employer: Employer, job: JobPost) -> None:
-    """Current entitlement + current capacity, on the locked employer row."""
-    ent = employer_entitlements(employer)
+    """Current entitlement + current capacity, on the locked employer row and
+    the locked billing account."""
+    ent = employer_entitlements(employer, lock=True)
     ent.require(Keys.JOBS_FEATURED)
     ent.check_concurrent(
         Keys.JOBS_FEATURED_LIMIT, current=_live_featured_count(employer, exclude=job)
@@ -744,8 +794,9 @@ def _require_featured_slot(employer: Employer, job: JobPost) -> None:
 
 @transaction.atomic
 def set_featured(job: JobPost, featured: bool, *, actor, days: int = 30) -> JobPost:
+    employer = _lock_employer(job.employer)
+    _require_member_role(employer, actor)
     if featured:
-        employer = _lock_employer(job.employer)
         _lock_job(job)
         if job.status != JobStatus.PUBLISHED:
             raise JobsError("Only published jobs can be featured.")
@@ -851,7 +902,7 @@ def apply_to_job(
     return application
 
 
-def _require_recruitment_mutation(employer: Employer, *keys: str) -> Employer:
+def _require_recruitment_mutation(employer: Employer, actor, *keys: str) -> Employer:
     """Authoritative gate for every employer-side recruitment mutation
     (application transitions, interview requests, employer messages). The
     employer row is locked FIRST (established order: employer → application →
@@ -860,9 +911,10 @@ def _require_recruitment_mutation(employer: Employer, *keys: str) -> Employer:
     a plan change that committed after the view's pre-check still refuses the
     mutation before anything is written."""
     employer = _lock_employer(employer)
+    _require_member_role(employer, actor)  # the actor's membership, re-read under lock
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
-    ent = employer_entitlements(employer)
+    ent = employer_entitlements(employer, lock=True)  # on the locked billing account
     for key in keys:
         ent.require(key)
     return employer
@@ -919,7 +971,7 @@ def transition_application(
     application: JobApplication, to_status: str, *, actor, reason: str = ""
 ) -> JobApplication:
     _check_transition_text(reason)
-    _require_recruitment_mutation(application.job.employer, Keys.JOBS_APPLICATION_REVIEW)
+    _require_recruitment_mutation(application.job.employer, actor, Keys.JOBS_APPLICATION_REVIEW)
     _lock_application(application)
     allowed = EMPLOYER_APPLICATION_TRANSITIONS.get(application.status, ())
     if to_status not in allowed:
@@ -948,7 +1000,7 @@ def request_interview(
     location_text: str = "",
     note: str = "",
 ) -> InterviewRequest:
-    _require_recruitment_mutation(application.job.employer, Keys.JOBS_APPLICATION_REVIEW)
+    _require_recruitment_mutation(application.job.employer, actor, Keys.JOBS_APPLICATION_REVIEW)
     _lock_application(application)
     if application.status not in (ApplicationStatus.SHORTLISTED, ApplicationStatus.INTERVIEW):
         raise JobsError("Interviews can be requested for shortlisted candidates.")
@@ -1005,7 +1057,10 @@ def send_message(
         # Employer-side messaging is applicant review: same authoritative gate,
         # employer row first, then the application row.
         _require_recruitment_mutation(
-            application.job.employer, Keys.JOBS_APPLICATION_REVIEW, Keys.RECRUITMENT_MESSAGING
+            application.job.employer,
+            sender,
+            Keys.JOBS_APPLICATION_REVIEW,
+            Keys.RECRUITMENT_MESSAGING,
         )
     # Lock and refresh the application so a rejection or withdrawal that
     # commits first closes the thread before this message can be inserted.
@@ -1034,7 +1089,7 @@ def search_signature(params: dict) -> str:
 @transaction.atomic
 def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
     """Consumes one search only for a new (employer, signature, day). Returns True when charged."""
-    ent = employer_entitlements(employer)
+    ent = employer_entitlements(employer, lock=True)
     ent.require(Keys.TALENT_SEARCH)
     signature = search_signature(params)
     day = timezone.localdate()
@@ -1054,9 +1109,10 @@ def save_candidate(
     employer: Employer, profile: JobSeekerProfile, *, actor, note: str = ""
 ) -> SavedCandidate:
     _refresh_employer_status(employer)  # locked, fresh: a suspended organisation cannot save
+    _require_member_role(employer, actor)
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
-    employer_entitlements(employer).require(Keys.TALENT_SAVE)
+    employer_entitlements(employer, lock=True).require(Keys.TALENT_SAVE)
     # Lock order: employer row, then the candidate profile row (as for
     # invitations). Eligibility is decided on the LOCKED profile, never on the
     # instance the view loaded, and that instance is synchronised so nothing
@@ -1102,6 +1158,7 @@ def invite_candidate(
     if job.employer_id != employer.pk:
         raise JobsError("Job does not belong to this organisation.", code="not_found")
     job.employer = _lock_employer(employer)  # same lock order as applying: employer, then job
+    _require_member_role(job.employer, actor)
     _lock_job(job)
     if not job.is_open:
         raise NotOpen("This job is not open for applications.")
@@ -1134,7 +1191,12 @@ def invite_candidate(
         job=job, job_seeker=profile, status__in=ACTIVE_APPLICATION_STATUSES
     ).exists():
         raise AlreadyApplied("This candidate already applied to this job.")
-    ent = employer_entitlements(employer)
+    # The billing account is locked before the entitlement is resolved, so a
+    # suspension/cancellation that committed meanwhile is seen and one that
+    # comes later waits: entitlement, quota, consumption and the row are one
+    # decision on the committed state (order: … invitation rows → billing
+    # account → subscription → plan → usage rows).
+    ent = employer_entitlements(employer, lock=True)
     ent.require(Keys.TALENT_INVITE)
     try:
         with transaction.atomic():
@@ -1214,6 +1276,7 @@ def cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
 
 @transaction.atomic
 def _cancel_invitation(invitation: JobInvitation, *, actor) -> JobInvitation:
+    _require_member_role(_lock_employer(invitation.employer), actor)  # employer → membership → row
     _lock_invitation(invitation)
     if invitation.status == InvitationStatus.EXPIRED:
         raise JobsError("This invitation has expired.", code="invitation_expired")

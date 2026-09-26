@@ -245,7 +245,9 @@ def test_talent_search_query_count(
         s.skills.create(name=f"skill {i}")
     api_client.force_authenticate(user=owner_of(employer))
     api_client.get(TALENT)  # first call records the search
-    with django_assert_max_num_queries(12):
+    # +1 since round twenty-six: the charge resolves its entitlement on the
+    # locked billing account (one SELECT ... FOR UPDATE), never on a cached one.
+    with django_assert_max_num_queries(13):
         assert api_client.get(TALENT).json()["count"] == 8
 
 
