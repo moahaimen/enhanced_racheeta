@@ -88,11 +88,11 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **631 passed** (was 175): billing entitlements/admin API,
+- Backend: **650 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
-- Web: **196 passed** (was 87).
+- Web: **201 passed** (was 87).
 - Build: OK.
 
 ## Browser Walkthrough Results
@@ -459,6 +459,17 @@ Backend tests 609, web tests 191, no migration, OpenAPI regenerated (two fields 
 | P2 Save/Unsave shown without `talent.save_candidate` | `TalentDetailPage` loads the billing summary with the profile and shows Save/Unsave only when `talent.save_candidate` is enabled and Invite only when `talent.invite` is enabled (missing rows fail closed); the profile stays readable. Web tests cover both capabilities, saved state, disabled save, missing rows and a refused role. |
 
 Backend tests 631, web tests 196, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty (2026-09-26, review 5325002128 on `bf5edf4`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 default plan deletable in bulk | Verified that Django 5.2's `delete_selected` already refuses a selection containing a default plan through the per-object `has_delete_permission`; hardened anyway: `PlanAdmin.get_deleted_objects` reports default plans as protected (the whole selection is refused), and a `pre_delete` guard on `Plan` raises `ProtectedError` for every ORM path (instance and queryset deletes, which did bypass the admin rule). Tests: unused non-default plan deletes, default plan refused via admin, instance and queryset delete, default-only and mixed bulk selections delete nothing and keep entitlements, bulk delete of non-default plans works. |
+| P2 concurrent salary edits → 500 | `edit_job` re-runs the cross-field rules on the locked row with the edit applied (`_require_job_field_invariants`: salary range and city-in-governorate) and the PATCH view maps the typed `JobFieldsInvalid` to the serializer's field-error shape. Tests: single-bound and null-bound edits, invalid single request, stale opposite-bound and stale governorate/city edits refused, threaded opposite-bound PATCHes (one 200, one 400, valid row), unrelated IntegrityError propagates. |
+| P2 Talent action shown without `talent.search` | The workspace gates the Talent action on role + recruiting state + `talent.search`, and each job's Applicants link on `jobs.application_review`, from the billing summary it already loads (shared `entitled()` helper, fails closed while loading). Tests: OWNER/RECRUITER with and without the capability, TRIAL-shaped plan, VIEWER, unknown state, applicants link. |
+| P2 activation payment status chosen by the client | `ActivationPaymentSerializer` has no `status` input and a client-supplied one is refused (`field_not_allowed`); the view records the payment `VERIFIED` inside the activation transaction. Tests: full and minimal payment objects → VERIFIED, REJECTED/RECORDED/VERIFIED inputs refused with nothing written, reference-only still VERIFIED, retired-plan activation writes no payment, a payment failure rolls the activation back. |
+
+Backend tests 650, web tests 201, no migration, OpenAPI regenerated (activation `payment` request schema without `status`).
 
 ## Known Problems
 
