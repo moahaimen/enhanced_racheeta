@@ -308,13 +308,29 @@ describe('EmployerWorkspacePage', () => {
       expect(within(row).queryByRole('link', { name: /المتقدمون|Applicants/i })).toBeNull()
     })
 
-    it('shows applicant links only when the plan includes applicant review', async () => {
-      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+    it.each(['OWNER', 'RECRUITER', 'VIEWER'] as const)('shows applicant links to a %s of a recruiting organisation whose plan includes applicant review', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
       vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([makeJobEmployer({ status: 'PUBLISHED' })]))
       vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.application_review']))
       renderApp('/employer')
       const row = await screen.findByTestId('employer-job-row')
       expect(await within(row).findByRole('link', { name: /المتقدمون|Applicants/i })).toHaveAttribute('href', '/employer/jobs/j-1/applications')
+    })
+
+    it.each([
+      ['unverified', () => makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }), () => billingWith(['jobs.application_review'])],
+      ['recruitment suspended', () => makeEmployerOwner({ recruitment_status: 'SUSPENDED' }), () => billingWith(['jobs.application_review'])],
+      ['entitlement disabled', () => makeEmployerOwner(), () => makeBilling()],
+      ['entitlement missing', () => makeEmployerOwner(), () => makeBilling({ entitlements: [] })],
+    ])('hides applicant links when the backend would refuse the list (%s)', async (_label, employer, billing) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(employer())
+      vi.mocked(jobsApi.listEmployerJobs).mockResolvedValue(paginated([makeJobEmployer({ status: 'PUBLISHED' })]))
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      renderApp('/employer')
+      const row = await screen.findByTestId('employer-job-row')
+      await screen.findByTestId('usage-meters')
+      expect(within(row).queryByRole('link', { name: /المتقدمون|Applicants/i })).toBeNull()
+      expect(within(row).getByRole('link', { name: 'ممرض قسم الطوارئ' })).toBeInTheDocument() // the job itself stays reachable
     })
 
     it('hides New Job and talent search from a VIEWER without changing the rest of the page', async () => {

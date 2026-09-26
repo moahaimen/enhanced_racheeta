@@ -68,7 +68,8 @@ function Workspace({ employer: initial, governorates, reload }: { employer: Empl
   const canRecruit = employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE'
   // Plan capabilities from the billing summary this page already loads; unknown while loading → hidden.
   const canSearchTalent = entitled(billing.data, 'talent.search')
-  const canReviewApplicants = entitled(billing.data, 'jobs.application_review')
+  // Applicant review is a READ gate (any member) on a recruiting organisation with jobs.application_review.
+  const canReviewApplicants = canRecruit && entitled(billing.data, 'jobs.application_review')
 
   return (
     <>
