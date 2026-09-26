@@ -273,7 +273,11 @@ class MySeekerProfileView(APIView):
         profile = _own_seeker(request)
         serializer = JobSeekerProfileWriteSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            # Only the submitted fields, on the locked row: never a stale instance.
+            services.update_seeker_profile(profile, dict(serializer.validated_data))
+        except services.FieldsInvalid as exc:
+            raise ValidationError(exc.errors) from exc
         return Response(JobSeekerProfileSerializer(_own_seeker(request)).data)
 
 
@@ -324,8 +328,14 @@ def _child_views(model, ser, related: str, tag_summary: str):
         def perform_update(self, serializer):
             # Two renames to the same value pass the serializer check together;
             # the constraint decides, and the loser gets the typed duplicate.
+            # The row is locked and refreshed first so the save writes the
+            # submitted fields over the COMMITTED row, never over a stale copy.
             try:
                 with transaction.atomic():
+                    locked = model.objects.select_for_update().get(pk=serializer.instance.pk)
+                    serializer.instance.__dict__.update(
+                        {k: v for k, v in locked.__dict__.items() if k != "_state"}
+                    )
                     serializer.save()
             except IntegrityError as exc:
                 _duplicate_or_raise(exc, model)

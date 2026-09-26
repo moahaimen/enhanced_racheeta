@@ -1057,8 +1057,16 @@ def save_candidate(
     if not employer.can_recruit:
         raise OrganizationNotVerified("The organisation must be verified and active.")
     employer_entitlements(employer).require(Keys.TALENT_SAVE)
-    if not profile.account.is_active or (
-        not profile.discoverable_by_employers
+    # Lock order: employer row, then the candidate profile row (as for
+    # invitations). Eligibility is decided on the LOCKED profile, never on the
+    # instance the view loaded, and that instance is synchronised so nothing
+    # stale is rendered afterwards.
+    fresh = (
+        JobSeekerProfile.objects.select_for_update().select_related("account").get(pk=profile.pk)
+    )
+    profile.__dict__.update({k: v for k, v in fresh.__dict__.items() if k != "_state"})
+    if not fresh.account.is_active or (
+        not fresh.discoverable_by_employers
         and not JobApplication.objects.filter(job__employer=employer, job_seeker=profile).exists()
     ):
         raise JobsError("This candidate is not discoverable.", code="not_found")
@@ -1068,6 +1076,23 @@ def save_candidate(
     if not created:
         raise JobsError("Candidate already saved.", code="already_saved")
     return saved
+
+
+@transaction.atomic
+def update_seeker_profile(profile: JobSeekerProfile, fields: dict) -> JobSeekerProfile:
+    """Owner PATCH of a professional profile. The row is locked and re-read,
+    ONLY the submitted fields are applied to that locked row, the cross-field
+    rules are re-run on the result and only those columns are written, so a
+    request that read the profile earlier can never write back a column it
+    did not submit (e.g. restore `discoverable_by_employers` after a concurrent
+    opt-out). The caller's instance is synchronised afterwards."""
+    locked = JobSeekerProfile.objects.select_for_update().get(pk=profile.pk)
+    for key, value in fields.items():
+        setattr(locked, key, value)
+    _require_location_invariant(locked)  # resulting state, not the pre-lock instance
+    locked.save(update_fields=[*fields, "updated_at"])
+    profile.__dict__.update({k: v for k, v in locked.__dict__.items() if k != "_state"})
+    return profile
 
 
 @transaction.atomic
