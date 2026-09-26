@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **754 passed** (was 175): billing entitlements/admin API,
+- Backend: **775 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -555,6 +555,18 @@ Note on quota semantics (unchanged): consumption under an unlimited paid entitle
 Lock order per flow: talent search employer → membership → billing account → search/usage rows; unsave employer → membership → billing account → saved row; apply employer → job → seeker billing account → application → invitation rows → usage rows. The seeker and employer billing accounts are distinct rows, and no path takes a billing account before an employer or job row.
 
 Backend tests 754, web tests 239, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-eight (2026-09-26, review 5326498001 on `62c36e2`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 candidate-data reads used stale request-time authorisation | `services.authoritative_talent_access(employer, actor, key)` is the one access decision for candidate data (employer row → actor membership → recruiting state → billing account → entitlement `key`), shared by talent search (which also charges through it) and, via `_authoritative_talent_read`, by `TalentDetailView`, `SavedCandidateListView` and `InvitationListView`. Each read runs it inside a transaction that also evaluates the queryset, pagination and serializer `.data`, so the locks are held until the response data exists and a revocation that committed first refuses with the existing typed error (membership → `membership_inactive`, suspension → `organization_not_verified`, revoked plan → `entitlement_required`) while a later one waits. Reads consume nothing; policy, visibility rules and response shapes are unchanged. Tests, parameterised over the three endpoints: active recruiter reads, committed membership revocation / employer suspension / subscription suspension or cancellation disclose nothing, read-wins-first, privacy rules, threaded revocation vs detail read, search charging unchanged. |
+
+Sibling audit: the three endpoints above are the only candidate-data reads behind the `CanRecruit` / `_require_talent_access` pattern. The applicant list and detail views read applicant snapshots behind a different gate (`_require_application_review`, any member including VIEWER) and were not changed here.
+
+Lock order (unchanged): employer → actor membership → billing account → candidate/saved/invitation rows; no path takes them in reverse.
+
+Backend tests 775, web tests 239, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
