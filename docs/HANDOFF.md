@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **689 passed** (was 175): billing entitlements/admin API,
+- Backend: **699 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -521,6 +521,14 @@ Backend tests 681, web tests 234, no migration, OpenAPI unchanged.
 | P2 concurrent work-experience date PATCHes could commit `end_date < start_date` | The generic child-row update locks and refreshes the row, then re-runs the serializer's cross-field `validate()` on that row with the submitted fields applied before saving, so the loser of an opposite-bound race gets the existing `end_date` error. Sibling audit: WorkExperience is the only child model with a two-field rule (education years carry no rule today; skills, languages and credentials are single-field), so nothing else changed. Tests: single and simultaneous date edits, invalid single request, open-ended employment, unrelated fields and omitted fields, stale request refused on the locked row, threaded races in both orders, unrelated IntegrityError propagates. |
 
 Backend tests 689, web tests 234, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-five (2026-09-26, review 5326119103 on `3e29f13`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 child-row PATCH losing a race against DELETE → 500 | The generic child-row update re-reads the row through the SAME scoped queryset as the initial lookup, under `select_for_update`; a missing row (deleted meanwhile, or outside the caller's profile) raises the endpoint's ordinary `NotFound` (404). Only `DoesNotExist` is handled; IntegrityError keeps its typed-duplicate mapping and other database errors propagate. The round-24 locked-row re-validation is unchanged. DELETE already answers 404 for missing and out-of-scope rows. Covers WorkExperience, Education, Skill, LanguageSkill and Credential (one shared path). Tests: every child model with a vanished row, out-of-scope row, threaded PATCH vs DELETE (204 + 200/404, row stays deleted), DELETE path, unrelated DatabaseError propagates, round-24 date rule still holds. |
+
+Backend tests 699, web tests 234, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
