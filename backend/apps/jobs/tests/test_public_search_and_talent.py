@@ -252,7 +252,9 @@ def test_talent_search_query_count(
     # committed state.
     # Round twenty-nine: +1, the page's candidate rows are locked (PK order) and
     # re-checked before the cards are built.
-    with django_assert_max_num_queries(18):
+    # Round thirty: +3 for fresh skills/languages relation caches and the
+    # deterministic Account-row lock whose is_active flag controls visibility.
+    with django_assert_max_num_queries(21):
         assert api_client.get(TALENT).json()["count"] == 8
 
 
