@@ -88,7 +88,7 @@ make check   # ruff, django check, migrations check, pytest; tsc, oxlint, vitest
 
 ## Test Results
 
-- Backend: **736 passed** (was 175): billing entitlements/admin API,
+- Backend: **754 passed** (was 175): billing entitlements/admin API,
   moderation detector, employers/memberships, job lifecycle and gating,
   seeker profile and applications, public search and talent, privacy
   assertions, race regression.
@@ -541,6 +541,20 @@ Backend tests 699, web tests 234, no migration, OpenAPI unchanged.
 Lock order (single, deterministic): employer → actor membership → job → candidate profile → invitation rows → billing account → subscription → plan → usage/credit rows; application/interview rows are taken after the billing account in the recruitment-mutation gate, and no path takes them the other way round. Membership ending locks only the membership row; billing lifecycle transitions lock account → subscription → plan.
 
 Backend tests 736, web tests 239, no migration, OpenAPI unchanged.
+
+## PR #4 review, round twenty-seven (2026-09-26, review 5326375376 on `b7e88bb`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 talent search used stale employer/membership authorisation | `record_talent_search` is serialised like a write: employer row → actor membership (round-26 guard) → recruiting state → billing account → `talent.search` → charge, and the view runs the charge and the result listing in one transaction so a revocation that commits first refuses the search (typed 403) and one that comes later waits. Tests: recruiter searches and is charged once, VIEWER denied, revoked recruiter gets no cards and no charge, suspended employer refused on the locked row, threaded revocation vs search. |
+| P2 saved-candidate delete bypassed the guards | New `unsave_candidate` service: employer → membership → recruiting state → billing account (`talent.save_candidate`) → saved row (`select_for_update`, scoped to the organisation, typed `not_found` otherwise). Policy unchanged. Tests: recruiter removes, revoked membership 403 and row kept, suspended employer, suspended/cancelled subscription applies the current entitlement, unentitled/foreign/missing rows, threaded revocation vs removal. |
+| P2 seeker application consumed under stale paid entitlement | `seeker_entitlements(profile, lock=True)` locks the seeker's billing account before the application row is written; the effective plan (paid, or the default after a revocation) and its quota are resolved on the committed state and the same locked resolution consumes. Order employer → job → seeker billing account → application → invitation rows → usage rows. Tests: active paid seeker applies once, duplicates unchanged, revoked paid plan falls back to the current FREE quota (exhausted refuses, capacity allows, plan resolves to FREE), application before revocation completes, threaded suspension vs application. |
+
+Note on quota semantics (unchanged): consumption under an unlimited paid entitlement records the usage event but does not increment the plan counter, so only units used on a limited plan count toward that plan's bucket.
+
+Lock order per flow: talent search employer → membership → billing account → search/usage rows; unsave employer → membership → billing account → saved row; apply employer → job → seeker billing account → application → invitation rows → usage rows. The seeker and employer billing accounts are distinct rows, and no path takes a billing account before an employer or job row.
+
+Backend tests 754, web tests 239, no migration, OpenAPI unchanged.
 
 ## Known Problems
 
