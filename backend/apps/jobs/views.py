@@ -1162,8 +1162,9 @@ def _disclosable(rows, employer, candidate_of, *, allow_applicants: bool):
         locked.values(), employer, allow_applicants=allow_applicants
     )
     for pk, profile in profiles.items():
-        if pk in locked:
-            profile.discoverable_by_employers = locked[pk].discoverable_by_employers
+        fresh = locked.get(pk)
+        if fresh is not None:
+            services.sync_candidate_instance(profile, fresh)
     return [
         row for row in rows if candidate_of(row) is not None and candidate_of(row).pk in visible
     ]
