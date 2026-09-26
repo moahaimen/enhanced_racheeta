@@ -145,8 +145,15 @@ def employer_entitlements(employer: Employer, *, lock: bool = False) -> billing.
     )
 
 
-def seeker_entitlements(profile: JobSeekerProfile) -> billing.EntitlementService:
-    return billing.entitlements_for(SubjectType.ACCOUNT, profile.account_id, Audience.JOB_SEEKER)
+def seeker_entitlements(
+    profile: JobSeekerProfile, *, lock: bool = False
+) -> billing.EntitlementService:
+    """`lock=True` for the paid write (applying): the seeker's billing account
+    is locked before the effective plan is resolved, so a revoked paid plan
+    falls back to the current default plan and its quota at commit time."""
+    return billing.entitlements_for(
+        SubjectType.ACCOUNT, profile.account_id, Audience.JOB_SEEKER, lock=lock
+    )
 
 
 # ---- employers -------------------------------------------------------------
@@ -861,6 +868,13 @@ def apply_to_job(
         raise AlreadyApplied("You have already applied to this job.")
     if detector.categories(cover_text):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
+    # The seeker's billing account is locked BEFORE the row is written (order
+    # employer → job → seeker billing account → application → invitation rows →
+    # usage rows): the effective plan (paid, or the default after a revocation)
+    # and its quota are resolved on the committed state, and the consumption
+    # below uses that same locked resolution; a limit reached rolls the
+    # application back with it.
+    ent = seeker_entitlements(profile, lock=True)
     try:
         with transaction.atomic():
             application = JobApplication.objects.create(
@@ -875,9 +889,7 @@ def apply_to_job(
     # application after a withdrawal is a new attempt and consumes a new unit.
     # An HTTP retry is stopped above by the active-application check and a
     # concurrent duplicate by the unique constraint, so nothing double-charges.
-    seeker_entitlements(profile).consume(
-        Keys.APPLICATIONS_LIMIT, reference=f"apply:{application.pk}"
-    )
+    ent.consume(Keys.APPLICATIONS_LIMIT, reference=f"apply:{application.pk}")
     JobApplicationTransition.objects.create(
         application=application,
         from_status="",
@@ -1088,7 +1100,14 @@ def search_signature(params: dict) -> str:
 
 @transaction.atomic
 def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
-    """Consumes one search only for a new (employer, signature, day). Returns True when charged."""
+    """Authorises AND charges a talent search: candidate data is disclosed and
+    quota consumed, so it is serialised like a protected write (order employer
+    → actor membership → billing account → search/usage rows). Returns True
+    when a unit was charged (a repeated identical search the same day is free)."""
+    employer = _lock_employer(employer)
+    _require_member_role(employer, actor)
+    if not employer.can_recruit:
+        raise OrganizationNotVerified("The organisation must be verified and active.")
     ent = employer_entitlements(employer, lock=True)
     ent.require(Keys.TALENT_SEARCH)
     signature = search_signature(params)
@@ -1102,6 +1121,26 @@ def record_talent_search(employer: Employer, params: dict, *, actor) -> bool:
         return False
     ent.consume(Keys.TALENT_SEARCH_LIMIT, reference=f"talent:{employer.pk}:{day}:{signature}")
     return True
+
+
+@transaction.atomic
+def unsave_candidate(employer: Employer, saved_id, *, actor) -> None:
+    """Removing a saved candidate is a recruitment write under the same policy
+    as saving (order employer → actor membership → billing account → saved
+    row): current recruitment state, current membership and the current
+    `talent.save_candidate` entitlement decide at commit time, never the
+    request's cached state."""
+    employer = _lock_employer(employer)
+    _require_member_role(employer, actor)
+    if not employer.can_recruit:
+        raise OrganizationNotVerified("The organisation must be verified and active.")
+    employer_entitlements(employer, lock=True).require(Keys.TALENT_SAVE)
+    saved = (
+        SavedCandidate.objects.select_for_update().filter(employer=employer, pk=saved_id).first()
+    )
+    if saved is None:  # never reveals other organisations' rows
+        raise JobsError("Saved candidate not found.", code="not_found")
+    saved.delete()
 
 
 @transaction.atomic

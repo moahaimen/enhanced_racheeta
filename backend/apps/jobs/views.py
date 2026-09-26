@@ -1171,10 +1171,18 @@ class TalentSearchView(_Throttled, generics.ListAPIView):
         )
         if not filterset.is_valid():
             raise ValidationError(filterset.errors)
-        services.record_talent_search(
-            request.employer, dict(request.query_params.items()), actor=request.user
-        )
-        return super().list(request, *args, **kwargs)
+        # Authorisation, charge and disclosure are one transaction: the locks
+        # taken by record_talent_search (employer, membership, billing account)
+        # are held while the cards are built, so a revocation that commits
+        # first refuses the search and one that comes later waits for it.
+        with transaction.atomic():
+            try:
+                services.record_talent_search(
+                    request.employer, dict(request.query_params.items()), actor=request.user
+                )
+            except services.JobsError as exc:  # revoked membership / suspended organisation
+                raise_api(exc)
+            return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         return _talent_queryset()
@@ -1265,11 +1273,11 @@ class SavedCandidateDeleteView(APIView):
     serializer_class = None
 
     def delete(self, request, pk):
-        _require_talent_access(
-            request, Keys.TALENT_SAVE
-        )  # suspended: lists and actions closed alike
-        saved = get_object_or_404(SavedCandidate.objects.filter(employer=request.employer), pk=pk)
-        saved.delete()
+        _require_talent_access(request, Keys.TALENT_SAVE)  # pre-check; the service decides
+        try:
+            services.unsave_candidate(request.employer, pk, actor=request.user)
+        except services.JobsError as exc:
+            raise_api(exc)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
