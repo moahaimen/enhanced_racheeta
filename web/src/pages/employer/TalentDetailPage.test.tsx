@@ -79,4 +79,34 @@ describe('TalentDetailPage', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: SAVE })).toBeNull()
   })
+
+  describe('invite follows current eligibility', () => {
+    it('hides the invite form for a prior applicant who is no longer discoverable, even with the entitlement', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith({ 'talent.search': true, 'talent.save_candidate': true, 'talent.invite': true }))
+      vi.mocked(jobsApi.getTalent).mockResolvedValue(makeTalentDetail({ can_invite: false }))
+      renderApp('/employer/talent/sp-1')
+      expect(await screen.findByTestId('invite-not-eligible')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: SEND_INVITE })).toBeNull()
+      expect(screen.getByText('ممرضة عناية مركزة')).toBeInTheDocument() // detail still readable
+      expect(screen.getByRole('button', { name: SAVE })).toBeInTheDocument()
+    })
+
+    it('hides the invite form without the entitlement even for an eligible candidate', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith({ 'talent.search': true, 'talent.save_candidate': true, 'talent.invite': false }))
+      vi.mocked(jobsApi.getTalent).mockResolvedValue(makeTalentDetail({ can_invite: true }))
+      renderApp('/employer/talent/sp-1')
+      expect(await screen.findByTestId('invite-not-included')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: SEND_INVITE })).toBeNull()
+    })
+
+    it('fails closed when the eligibility flag is missing', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith({ 'talent.search': true, 'talent.invite': true }))
+      const detail = makeTalentDetail()
+      delete (detail as Partial<typeof detail>).can_invite
+      vi.mocked(jobsApi.getTalent).mockResolvedValue(detail)
+      renderApp('/employer/talent/sp-1')
+      expect(await screen.findByTestId('invite-not-eligible')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: SEND_INVITE })).toBeNull()
+    })
+  })
 })

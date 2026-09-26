@@ -1,17 +1,25 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../../api/client'
 import * as authApi from '../../api/endpoints/auth'
 import * as jobsApi from '../../api/endpoints/jobs'
 import { tokenStore } from '../../api/tokens'
-import { makeApplicationEmployer, makeEmployerOwner, makeJobEmployer, paginated } from '../../test/jobFixtures'
+import { makeApplicationEmployer, makeBilling, makeEmployerOwner, makeJobEmployer, paginated } from '../../test/jobFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/jobs')
 
 const VIEWER_NOTE = /دورك في المؤسسة|Your role in this organisation/
+const SEND = /^إرسال$|^Send$/i
+
+function billingWith(keys: string[]) {
+  return makeBilling({
+    entitlements: keys.map((key) => ({ key, kind: 'BOOLEAN' as const, enabled: true, limit: null, period: 'NONE' as const, used: 0, credits: 0, remaining: null })),
+  })
+}
 
 describe('ApplicantsPage', () => {
   beforeEach(() => {
@@ -21,6 +29,7 @@ describe('ApplicantsPage', () => {
     vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(makeJobEmployer())
     vi.mocked(jobsApi.listJobApplications).mockResolvedValue(paginated([makeApplicationEmployer({ status: 'SHORTLISTED' })]))
     vi.mocked(jobsApi.listMessages).mockResolvedValue([])
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.application_review', 'recruitment.messaging']))
   })
 
   it.each(['OWNER', 'RECRUITER'] as const)('shows %s the recruiter actions and the message composer', async (role) => {
@@ -70,5 +79,54 @@ describe('ApplicantsPage', () => {
     pending.reject(new ApiError(500, 'server_error', 'boom'))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByTestId('applicant-card')).toBeNull()
+  })
+
+  describe('messaging follows recruitment.messaging', () => {
+    it('shows the composer and sends when both capabilities are present', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'RECRUITER' }))
+      vi.mocked(jobsApi.sendMessage).mockResolvedValue({ id: 'm-1', sender_side: 'EMPLOYER', body: 'Hello', created_at: '2026-09-25T00:00:00Z' })
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      const user = userEvent.setup()
+      await user.type(within(card).getByRole('textbox', { name: /الرسائل|Messages/i }), 'Hello')
+      await user.click(within(card).getByRole('button', { name: SEND }))
+      await waitFor(() => expect(jobsApi.sendMessage).toHaveBeenCalledWith('a-1', 'Hello'))
+    })
+
+    it.each([
+      ['messaging disabled', () => billingWith(['jobs.application_review'])],
+      ['messaging row missing', () => makeBilling({ entitlements: [] })],
+    ])('keeps the history but hides the composer (%s)', async (_label, billing) => {
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      if (_label === 'messaging disabled') {
+        expect(within(card).getByTestId('messages-thread')).toBeInTheDocument() // read history
+        expect(within(card).getByRole('button', { name: /^قبول$|^Accept$/ })).toBeInTheDocument()
+      } else {
+        expect(within(card).queryByTestId('messages-thread')).toBeNull() // no application_review either
+      }
+      expect(within(card).queryByRole('button', { name: SEND })).toBeNull()
+      expect(within(card).queryByRole('textbox', { name: /الرسائل|Messages/i })).toBeNull()
+      expect(within(card).getByText('أرغب بالانضمام.')).toBeInTheDocument()
+    })
+
+    it('exposes no composer while the billing summary is still loading', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockReturnValue(new Promise(() => undefined))
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+      renderApp('/employer/jobs/j-1/applications')
+      await waitFor(() => expect(jobsApi.getEmployerBilling).toHaveBeenCalled())
+      expect(screen.queryByRole('button', { name: SEND })).toBeNull()
+      expect(screen.queryByTestId('applicant-card')).toBeNull()
+    })
+
+    it('never shows the composer to a VIEWER even when the plan allows messaging', async () => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'VIEWER' }))
+      renderApp('/employer/jobs/j-1/applications')
+      const card = await screen.findByTestId('applicant-card')
+      expect(within(card).queryByRole('button', { name: SEND })).toBeNull()
+      expect(within(card).queryByTestId('messages-thread')).toBeNull()
+    })
   })
 })

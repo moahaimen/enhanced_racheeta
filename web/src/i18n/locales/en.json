@@ -572,6 +572,7 @@
     "sendInvite": "Send invitation",
     "saveNotIncluded": "Your current plan does not include saving candidates.",
     "inviteNotIncluded": "Your current plan does not include invitations.",
+    "inviteNotEligible": "This candidate is not currently accepting invitations.",
     "invited": "Invitation sent.",
     "savedList": "Saved candidates",
     "invitations": "Sent invitations",

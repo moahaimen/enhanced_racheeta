@@ -292,6 +292,8 @@ export interface TalentDetail extends TalentCard {
   is_saved: boolean
   /** The requesting employer's own saved-candidate record, or null. Needed to unsave. */
   saved_candidate_id: string | null
+  /** Server-authoritative: the candidate is currently discoverable, so a new invitation is possible. */
+  can_invite: boolean
 }
 
 export interface TalentParams {

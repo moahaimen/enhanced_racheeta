@@ -124,7 +124,8 @@ function ApplicationCard({ application, reload }: { application: ApplicationSeek
 }
 
 /** Text-only recruitment thread scoped to one application (shared by both sides). */
-export function MessagesThread({ applicationId, mySide, closed }: { applicationId: string; mySide: 'CANDIDATE' | 'EMPLOYER'; closed: boolean }) {
+/** `canSend` separates reading the history from sending: the employer side needs recruitment.messaging to send. */
+export function MessagesThread({ applicationId, mySide, closed, canSend = true }: { applicationId: string; mySide: 'CANDIDATE' | 'EMPLOYER'; closed: boolean; canSend?: boolean }) {
   const { t, i18n } = useTranslation()
   const messages = useAsyncData((signal) => jobsApi.listMessages(applicationId, signal), [applicationId])
   const [body, setBody] = useState('')
@@ -150,7 +151,7 @@ export function MessagesThread({ applicationId, mySide, closed }: { applicationI
           ))}
         </ul>
       )}
-      {!closed ? (
+      {!closed && canSend ? (
         <form noValidate onSubmit={(e) => e.preventDefault()} className={styles.composer}>
           {error ? <Alert kind="error">{error}</Alert> : null}
           <Textarea label={t('applications.messages')} placeholder={t('applications.messagePlaceholder')} rows={2} value={body} onChange={(e) => setBody(e.target.value)} />

@@ -169,6 +169,7 @@ export function makeTalentDetail(overrides: Partial<TalentDetail> = {}): TalentD
     credentials: [],
     is_saved: false,
     saved_candidate_id: null,
+    can_invite: true,
     ...overrides,
   }
 }

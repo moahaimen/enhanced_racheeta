@@ -38,7 +38,9 @@ function Detail({ candidate: c, firstPage, billing, reload }: { candidate: Talen
   // Mirrors the backend gates: saving needs talent.save_candidate, inviting needs talent.invite —
   // both independent of talent.search, which only opens the profile itself.
   const canSave = entitled(billing, 'talent.save_candidate')
-  const canInvite = entitled(billing, 'talent.invite')
+  const inviteEntitled = entitled(billing, 'talent.invite')
+  // Historical visibility (a past applicant) is not invitation eligibility: the server says whether a new invitation is possible now.
+  const canInvite = inviteEntitled && c.can_invite === true
   const name = useLocalizedName()
   const [saveNote, setSaveNote] = useState('')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -192,8 +194,10 @@ function Detail({ candidate: c, firstPage, billing, reload }: { candidate: Talen
                 )}
               </SectionCard>
               <SectionCard title={t('talent.invite')} headingLevel={2}>
-                {!canInvite ? (
+                {!inviteEntitled ? (
                   <p className="text-muted" data-testid="invite-not-included">{t('talent.inviteNotIncluded')}</p>
+                ) : !canInvite ? (
+                  <p className="text-muted" data-testid="invite-not-eligible">{t('talent.inviteNotEligible')}</p>
                 ) : invited ? (
                   <Alert kind="success">{t('talent.invited')}</Alert>
                 ) : jobs.length === 0 ? (

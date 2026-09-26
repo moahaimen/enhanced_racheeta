@@ -9,6 +9,7 @@ import { toErrorMessage } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { MessagesThread } from '../jobs/MyApplicationsPage'
 import styles from './EmployerWorkspacePage.module.css'
+import { entitled } from './entitlements'
 
 const STATUSES: ApplicationStatus[] = ['SUBMITTED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN']
 
@@ -21,11 +22,14 @@ export function ApplicantsPage() {
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
   return (
     <Container width="xl">
-      <AsyncPage load={(signal) => Promise.all([jobsApi.getMyEmployer(signal), jobsApi.getEmployerJob(id, signal), jobsApi.listJobApplications(id, status, page, signal)])} deps={[id, status, page]}>
-        {([employer, job, applications], reload) => {
-          // Mirrors the backend CanRecruit rule (OWNER or RECRUITER): VIEWER reads applicants but
-          // gets no transition, interview or messaging control. An unknown role fails closed.
-          const canWrite = employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER'
+      <AsyncPage load={(signal) => Promise.all([jobsApi.getMyEmployer(signal), jobsApi.getEmployerJob(id, signal), jobsApi.listJobApplications(id, status, page, signal), jobsApi.getEmployerBilling(signal)])} deps={[id, status, page]}>
+        {([employer, job, applications, billing], reload) => {
+          // Mirrors the backend gates: OWNER/RECRUITER act on applicants (VIEWER reads), every action
+          // needs jobs.application_review, and sending a message additionally needs recruitment.messaging.
+          // Unknown roles and missing capabilities fail closed.
+          const canReview = entitled(billing, 'jobs.application_review')
+          const canWrite = (employer.my_role === 'OWNER' || employer.my_role === 'RECRUITER') && canReview
+          const canMessage = canWrite && entitled(billing, 'recruitment.messaging')
           return (
           <>
             <PageHeader
@@ -54,7 +58,7 @@ export function ApplicantsPage() {
                   <EmptyState icon="users" title={t('applicants.empty')} testId="applicants-empty" />
                 </div>
               ) : (
-                applications.results.map((a) => <ApplicantCard key={a.id} application={a} canWrite={canWrite} reload={reload} />)
+                applications.results.map((a) => <ApplicantCard key={a.id} application={a} canWrite={canWrite} canMessage={canMessage} reload={reload} />)
               )}
               <Pagination page={page} total={Math.max(1, Math.ceil(applications.count / 20))} hasNext={applications.next !== null} hasPrevious={applications.previous !== null} onChange={(p) => setParams({ ...(status ? { status } : {}), page: String(p) })} />
             </PageStack>
@@ -66,7 +70,7 @@ export function ApplicantsPage() {
   )
 }
 
-function ApplicantCard({ application, canWrite, reload }: { application: ApplicationEmployer; canWrite: boolean; reload: () => void }) {
+function ApplicantCard({ application, canWrite, canMessage, reload }: { application: ApplicationEmployer; canWrite: boolean; canMessage: boolean; reload: () => void }) {
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const [error, setError] = useState<string | null>(null)
@@ -172,7 +176,7 @@ function ApplicantCard({ application, canWrite, reload }: { application: Applica
           ) : null}
         </div>
         {/* Employer-side messaging is part of applicant review (CanRecruit on read and write): a VIEWER is not a party. */}
-        {canWrite ? <MessagesThread applicationId={application.id} mySide="EMPLOYER" closed={s === 'WITHDRAWN' || s === 'REJECTED'} /> : null}
+        {canWrite ? <MessagesThread applicationId={application.id} mySide="EMPLOYER" closed={s === 'WITHDRAWN' || s === 'REJECTED'} canSend={canMessage} /> : null}
       </div>
     </SectionCard>
   )

@@ -53,6 +53,8 @@ function Editor({ job, employer, governorates, specialties, billing, reload }: {
   // premium state (unfeature) needs no entitlement, so an already-featured job keeps that action.
   const canFeature = entitled(billing, 'jobs.featured')
   const canPost = entitled(billing, 'jobs.post')
+  // The applicant list is a READ gate (any member) on a recruiting organisation with jobs.application_review.
+  const canReviewApplicants = employer.verification_status === 'VERIFIED' && employer.recruitment_status === 'ACTIVE' && entitled(billing, 'jobs.application_review')
   const editable = canWrite && (job === null || job.status === 'DRAFT' || job.status === 'REJECTED')
   // Agency-only values kept by a job whose organisation is no longer an agency.
   // Only worth saying while the job can actually be saved (the save clears them).
@@ -188,9 +190,11 @@ function Editor({ job, employer, governorates, specialties, billing, reload }: {
                   {t('jobEditor.archive')}
                 </ApiActionButton>
               ) : null}
-              <LinkButton to={`/employer/jobs/${job.id}/applications`} variant="ghost">
-                {t('jobEditor.applicants')} ({job.applications_count})
-              </LinkButton>
+              {canReviewApplicants ? (
+                <LinkButton to={`/employer/jobs/${job.id}/applications`} variant="ghost">
+                  {t('jobEditor.applicants')} ({job.applications_count})
+                </LinkButton>
+              ) : null}
             </div>
             {job.transitions.length > 0 ? (
               <ol className="text-caption" style={{ marginBlockStart: 'var(--space-3)', paddingInlineStart: 'var(--space-5)' }}>

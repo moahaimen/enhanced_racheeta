@@ -28,6 +28,7 @@ function seededPlan(code: 'TRIAL' | 'BASIC') {
     entitlements: [
       { key: 'jobs.post', kind: 'BOOLEAN', enabled: true, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },
       { key: 'jobs.featured', kind: 'BOOLEAN', enabled: false, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },
+      { key: 'jobs.application_review', kind: 'BOOLEAN', enabled: true, limit: null, period: 'NONE', used: 0, credits: 0, remaining: null },
       { key: 'jobs.active_limit', kind: 'LIMIT', enabled: true, limit: code === 'TRIAL' ? 1 : 3, period: 'NONE', used: 0, credits: 0, remaining: 1 },
     ],
   })
@@ -42,7 +43,7 @@ describe('JobEditorPage', () => {
     vi.mocked(referenceApi.listSpecialties).mockResolvedValue([cardiology])
     vi.mocked(referenceApi.listCities).mockResolvedValue([])
     vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
-    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.post', 'jobs.featured']))
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billingWith(['jobs.post', 'jobs.featured', 'jobs.application_review']))
   })
 
   it('creates a draft after client validation and moves to the job page', async () => {
@@ -202,7 +203,7 @@ describe('JobEditorPage', () => {
     })
 
     it.each([
-      ['jobs.featured=false', () => billingWith(['jobs.post'])],
+      ['jobs.featured=false', () => billingWith(['jobs.post', 'jobs.application_review'])],
       ['TRIAL plan', () => seededPlan('TRIAL')],
       ['BASIC plan', () => seededPlan('BASIC')],
       ['missing rows', () => makeBilling({ entitlements: [] })],
@@ -212,7 +213,7 @@ describe('JobEditorPage', () => {
       renderApp('/employer/jobs/j-1')
       expect(await screen.findByRole('button', { name: /إغلاق|^Close$/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: FEATURE })).toBeNull()
-      expect(screen.getByRole('link', { name: /المتقدمون|Applicants/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /إغلاق|^Close$/i })).toBeInTheDocument()
     })
 
     it('hides Feature while the billing summary cannot be loaded', async () => {
@@ -253,6 +254,40 @@ describe('JobEditorPage', () => {
       await screen.findByLabelText(/المسمى الوظيفي|Job title/i)
       expect(screen.queryByRole('button', { name: /إرسال للمراجعة|Submit for review/i })).toBeNull()
       expect(screen.getByRole('button', { name: /حفظ المسودة|Save draft/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('applicants link follows the read gate', () => {
+    const APPLICANTS = /المتقدمون|Applicants/i
+    const published = () => makeJobEmployer({ status: 'PUBLISHED', applications_count: 2 })
+
+    it.each(['OWNER', 'RECRUITER', 'VIEWER'] as const)('shows the link to a %s of a recruiting organisation with jobs.application_review', async (role) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: role }))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      expect(await screen.findByRole('link', { name: APPLICANTS })).toHaveAttribute('href', '/employer/jobs/j-1/applications')
+    })
+
+    it.each([
+      ['unverified', () => makeEmployerOwner({ verification_status: 'UNVERIFIED', is_verified: false }), () => billingWith(['jobs.post', 'jobs.application_review'])],
+      ['recruitment suspended', () => makeEmployerOwner({ recruitment_status: 'SUSPENDED' }), () => billingWith(['jobs.post', 'jobs.application_review'])],
+      ['entitlement disabled', () => makeEmployerOwner(), () => billingWith(['jobs.post'])],
+      ['entitlement missing', () => makeEmployerOwner(), () => makeBilling({ entitlements: [] })],
+    ])('hides the link when the backend would refuse the list (%s)', async (_label, employer, billing) => {
+      vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(employer())
+      vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing())
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      await screen.findByLabelText(/المسمى الوظيفي|Job title/i)
+      expect(screen.queryByRole('link', { name: APPLICANTS })).toBeNull()
+    })
+
+    it('hides the link while the billing summary is unavailable', async () => {
+      vi.mocked(jobsApi.getEmployerBilling).mockRejectedValue(new ApiError(500, 'server_error', 'boom'))
+      vi.mocked(jobsApi.getEmployerJob).mockResolvedValue(published())
+      renderApp('/employer/jobs/j-1')
+      await screen.findByLabelText(/المسمى الوظيفي|Job title/i)
+      expect(screen.queryByRole('link', { name: APPLICANTS })).toBeNull()
     })
   })
 })
