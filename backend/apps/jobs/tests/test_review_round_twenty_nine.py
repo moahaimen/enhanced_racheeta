@@ -442,3 +442,85 @@ def test_lifecycles_are_unchanged(s):
     assert _call(s, "invite", s.recruiter).status_code == 201
     assert _call(s, "invite", s.recruiter).status_code == 409  # already_invited
     time.sleep(0)  # keep the import used on platforms where the writer helper is skipped
+
+
+# ---- round thirty: complete locked card state + account activity ----------------------------
+
+
+def _find_card(body, candidate_id):
+    if isinstance(body, dict):
+        if (
+            body.get("id") == str(candidate_id)
+            and "professional_title" in body
+            and "skills" in body
+        ):
+            return body
+        for value in body.values():
+            found = _find_card(value, candidate_id)
+            if found is not None:
+                return found
+    elif isinstance(body, list):
+        for value in body:
+            found = _find_card(value, candidate_id)
+            if found is not None:
+                return found
+    return None
+
+
+@pytest.mark.parametrize("name", ["search", "saved_list", "invitation_list"])
+def test_list_rows_serialize_the_complete_locked_candidate_state(s, name, monkeypatch):
+    """A profile edit committed after page evaluation but before the candidate
+    lock must be reflected in every serialized card field, not only the
+    discoverability flag."""
+    real = services.lock_candidates
+    changed = {"done": False}
+    new_title = "Updated after pagination"
+
+    def update_then_lock(ids):
+        ids = list(ids)
+        if not changed["done"] and s.candidate.pk in ids:
+            JobSeekerProfile.objects.filter(pk=s.candidate.pk).update(
+                professional_title=new_title
+            )
+            changed["done"] = True
+        return real(ids)
+
+    monkeypatch.setattr(services, "lock_candidates", update_then_lock)
+    resp = _call(s, name, s.recruiter)
+    assert resp.status_code == 200, resp.content
+    card = _find_card(resp.json(), s.candidate.pk)
+    assert card is not None
+    assert card["professional_title"] == new_title
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.parametrize("name", ["search", "detail", "saved_list", "invitation_list", "cancel"])
+def test_account_deactivation_waits_until_candidate_response_is_materialized(
+    employer_factory, account_factory, job_factory, seeker_factory, name, monkeypatch
+):
+    """Account.is_active participates in candidate visibility, so an admin-like
+    deactivation UPDATE must wait on the Account row lock until serializer.data
+    has been fully materialized."""
+    employer = employer_factory(plan_code="PROFESSIONAL")
+    s = Setup(employer, account_factory, job_factory, seeker_factory)
+    state: dict[str, object] = {}
+    real = serializers.TalentCardSerializer.to_representation
+
+    def deactivate():
+        from apps.accounts.models import Account
+
+        Account.objects.filter(pk=s.candidate.account_id).update(is_active=False)
+
+    def hooked(self, instance):
+        if instance.pk == s.candidate.pk and "thread" not in state:
+            state["thread"], state["blocked"], state["errors"] = _blocked_writer(deactivate)
+        return real(self, instance)
+
+    monkeypatch.setattr(serializers.TalentCardSerializer, "to_representation", hooked)
+    resp = _call(s, name, s.recruiter)
+    state["thread"].join(timeout=30)
+
+    assert resp.status_code == 200, resp.content
+    assert str(s.candidate.pk) in _cards(resp.json())
+    assert state["blocked"] is True and not state["errors"], state
+    assert s.candidate.account.__class__.objects.get(pk=s.candidate.account_id).is_active is False
