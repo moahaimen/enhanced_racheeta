@@ -99,7 +99,7 @@ describe('Reservations pages', () => {
     expect(await screen.findByText('Dr Booking')).toBeInTheDocument()
     const cancel = screen.getByRole('button', { name: /إلغاء الحجز|cancel reservation/i })
     await userEvent.click(cancel)
-    await waitFor(() => expect(reservationsApi.cancelMyReservation).toHaveBeenCalledWith(patientReservation.id, ''))
+    await waitFor(() => expect(reservationsApi.cancelMyReservation).toHaveBeenCalledWith(patientReservation.id))
   })
 
   it('lets a provider create availability and manage a pending reservation', async () => {
