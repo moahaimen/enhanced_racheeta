@@ -57,9 +57,7 @@ def transition_as_provider(
     reason: str = "",
 ) -> Reservation:
     reservation = (
-        Reservation.objects.select_for_update()
-        .select_related("provider")
-        .get(pk=reservation_id)
+        Reservation.objects.select_for_update().select_related("provider").get(pk=reservation_id)
     )
     if reservation.provider_id != provider.pk:
         raise NotAParty
@@ -91,9 +89,7 @@ def cancel_as_patient(
         ReservationStatus.PENDING,
         ReservationStatus.CONFIRMED,
     }:
-        raise InvalidTransition(
-            f"Reservation cannot be cancelled from {reservation.status}."
-        )
+        raise InvalidTransition(f"Reservation cannot be cancelled from {reservation.status}.")
     return _apply_transition(
         reservation,
         target_status=ReservationStatus.CANCELLED,
