@@ -1047,7 +1047,7 @@ Avoid architecture that prevents moving from Railway later.
 - Contact-leak detection on all recruitment text (`MODERATION.md`).
 - Super Admin control plane and audit log.
 
-## Phase 4 — Reservations (LATER, FREE)
+## Phase 4 — Reservations (CURRENT — implementation complete, review pending)
 
 - Reservation model.
 - Reservation state machine.

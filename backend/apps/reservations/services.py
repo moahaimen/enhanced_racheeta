@@ -10,6 +10,7 @@ from apps.audit import services as audit_services
 from apps.providers.models import ProviderProfile, ServiceOffering
 from apps.providers.types import VerificationStatus
 
+from . import hooks
 from .models import AvailabilitySlot, Reservation, ReservationTransition
 from .types import PROVIDER_TRANSITIONS, ReservationStatus
 
@@ -74,6 +75,7 @@ def _apply_transition(
         summary=f"{previous} -> {target_status}",
         data={"from_status": previous, "to_status": target_status},
     )
+    hooks.emit_status_changed(reservation, previous_status=previous, actor=actor)
     return reservation
 
 
@@ -221,6 +223,7 @@ def create_reservation(
         summary="Reservation created",
         data={"status": ReservationStatus.PENDING},
     )
+    hooks.emit_created(reservation)
     return reservation
 
 
