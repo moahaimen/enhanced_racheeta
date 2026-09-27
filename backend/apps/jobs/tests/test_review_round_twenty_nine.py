@@ -479,9 +479,7 @@ def test_list_rows_serialize_the_complete_locked_candidate_state(s, name, monkey
     def update_then_lock(ids):
         ids = list(ids)
         if not changed["done"] and s.candidate.pk in ids:
-            JobSeekerProfile.objects.filter(pk=s.candidate.pk).update(
-                professional_title=new_title
-            )
+            JobSeekerProfile.objects.filter(pk=s.candidate.pk).update(professional_title=new_title)
             changed["done"] = True
         return real(ids)
 
