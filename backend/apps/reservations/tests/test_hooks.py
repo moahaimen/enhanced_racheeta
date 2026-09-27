@@ -6,8 +6,10 @@ from apps.reservations.types import ReservationStatus
 from .test_state_machine import _setup
 
 
-@pytest.mark.django_db(transaction=True)
-def test_reservation_status_hook_fires_after_commit(account_factory):
+@pytest.mark.django_db
+def test_reservation_status_hook_fires_after_commit(
+    account_factory, django_capture_on_commit_callbacks
+):
     provider, provider_account, _, reservation = _setup(account_factory)
     received = []
 
@@ -16,12 +18,13 @@ def test_reservation_status_hook_fires_after_commit(account_factory):
 
     hooks.reservation_status_changed.connect(receiver)
     try:
-        services.transition_as_provider(
-            reservation.pk,
-            provider=provider,
-            actor=provider_account,
-            target_status=ReservationStatus.CONFIRMED,
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            services.transition_as_provider(
+                reservation.pk,
+                provider=provider,
+                actor=provider_account,
+                target_status=ReservationStatus.CONFIRMED,
+            )
     finally:
         hooks.reservation_status_changed.disconnect(receiver)
 
