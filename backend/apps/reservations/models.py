@@ -9,6 +9,45 @@ from apps.providers.models import ProviderProfile, ServiceOffering
 from .types import ReservationStatus
 
 
+class AvailabilitySlot(BaseModel):
+    provider = models.ForeignKey(
+        ProviderProfile,
+        on_delete=models.CASCADE,
+        related_name="availability_slots",
+    )
+    service = models.ForeignKey(
+        ServiceOffering,
+        on_delete=models.CASCADE,
+        related_name="availability_slots",
+    )
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "reservations_availability_slot"
+        ordering = ["starts_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(ends_at__gt=F("starts_at")),
+                name="reservations_slot_end_after_start",
+            ),
+            models.UniqueConstraint(
+                fields=["provider", "starts_at"],
+                name="reservations_slot_provider_start_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["provider", "is_active", "starts_at"],
+                name="reservations_slot_lookup_idx",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.provider_id}: {self.starts_at.isoformat()}"
+
+
 class Reservation(BaseModel):
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -24,6 +63,13 @@ class Reservation(BaseModel):
     )
     service = models.ForeignKey(
         ServiceOffering,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reservations",
+    )
+    availability_slot = models.ForeignKey(
+        AvailabilitySlot,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -57,6 +103,14 @@ class Reservation(BaseModel):
             models.CheckConstraint(
                 condition=Q(duration_minutes_snapshot__gt=0),
                 name="reservations_duration_positive",
+            ),
+            models.UniqueConstraint(
+                fields=["availability_slot"],
+                condition=Q(
+                    availability_slot__isnull=False,
+                    status__in=["PENDING", "CONFIRMED"],
+                ),
+                name="reservations_one_live_per_slot",
             ),
         ]
         indexes = [

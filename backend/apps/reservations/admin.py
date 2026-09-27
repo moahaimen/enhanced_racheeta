@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import Reservation, ReservationTransition
+from .models import AvailabilitySlot, Reservation, ReservationTransition
+
+
+@admin.register(AvailabilitySlot)
+class AvailabilitySlotAdmin(admin.ModelAdmin):
+    list_display = ("provider", "service", "starts_at", "ends_at", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("provider__display_name", "service__title")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Reservation)
