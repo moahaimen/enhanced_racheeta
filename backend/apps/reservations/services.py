@@ -57,7 +57,9 @@ def transition_as_provider(
     reason: str = "",
 ) -> Reservation:
     reservation = (
-        Reservation.objects.select_for_update().select_related("provider").get(pk=reservation_id)
+        Reservation.objects.select_for_update(of=("self",))
+        .select_related("provider")
+        .get(pk=reservation_id)
     )
     if reservation.provider_id != provider.pk:
         raise NotAParty
