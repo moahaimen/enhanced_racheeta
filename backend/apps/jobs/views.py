@@ -1156,15 +1156,16 @@ def _disclosable(rows, employer, candidate_of, *, allow_applicants: bool):
     for row in rows:
         profile = candidate_of(row)
         if profile is not None:
-            profiles[profile.pk] = profile
+            profiles.setdefault(profile.pk, []).append(profile)
     locked = services.lock_candidates(profiles)
     visible = services.visible_candidate_ids(
         locked.values(), employer, allow_applicants=allow_applicants
     )
-    for pk, profile in profiles.items():
+    for pk, instances in profiles.items():
         fresh = locked.get(pk)
         if fresh is not None:
-            services.sync_candidate_instance(profile, fresh)
+            for profile in instances:
+                services.sync_candidate_instance(profile, fresh)
     return [
         row for row in rows if candidate_of(row) is not None and candidate_of(row).pk in visible
     ]
