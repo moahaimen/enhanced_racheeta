@@ -64,12 +64,14 @@ export function Button({
 export interface LinkButtonProps extends ButtonBaseProps {
   to: string
   replace?: boolean
+  /** Router state, e.g. `{ from }` so the login page can return here. */
+  state?: unknown
 }
 
 /** A router link styled as a button (navigation, never a backend action). */
-export function LinkButton({ to, replace, variant, size, block, className, leading, trailing, children }: LinkButtonProps) {
+export function LinkButton({ to, replace, state, variant, size, block, className, leading, trailing, children }: LinkButtonProps) {
   return (
-    <Link to={to} replace={replace} className={buttonClassName({ variant, size, block, className })}>
+    <Link to={to} replace={replace} state={state} className={buttonClassName({ variant, size, block, className })}>
       <span className={styles.content}>
         {leading}
         <span>{children}</span>

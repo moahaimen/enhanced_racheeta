@@ -51,6 +51,24 @@
 
 No weakening of earlier decisions was needed to make tests pass.
 
+## Phase 3 security review (2026-09-24)
+
+| Topic | Finding | Status |
+| --- | --- | --- |
+| Client-supplied IDs | Every employer route resolves the organisation from the caller's ACTIVE membership (`request.employer`); jobs, applications, invitations and saved candidates are filtered by that employer, seeker routes by `request.user`; foreign ids → 404. | covered by tests |
+| Contact-data exfiltration | All recruitment text validated by `ContactLeakDetector` at write time (Arabic/Persian digits, separators, WhatsApp/Telegram words, `@handles`, links); jobs re-scanned at submit with flags for the admin; messages text-only. | covered (`apps/moderation/tests`, jobs tests) |
+| Identity leakage | Public/employer serializers expose no e-mail, phone, Firebase id, staff flag or permissions; talent responses carry the profile id only; application snapshots hold professional facts only; tests assert absence. | covered |
+| Commercial bypass | Gating lives in the service layer (`submit_job`, `set_featured`, `record_talent_search`, `invite_candidate`, `add_member`, `apply_to_job`), not in views; consumption is atomic under `select_for_update`; idempotent references stop double-charging; limits are re-checked on approve/restore. | covered (`apps/billing/tests`) |
+| Privilege boundaries | Admin routes require `is_staff` (role ADMIN alone is not enough); VIEWER members cannot write; only OWNER edits the organisation, members and plan requests; seekers cannot transition applications; employers cannot withdraw. | covered |
+| Admin abuse trail | Every verification, moderation, subscription and credit decision writes an `AuditEvent` with actor and reason. | covered |
+| Abuse throttles | Scoped throttles: job creation 30/h, applications 20/h, talent search 60/min, invitations 30/h, messages 60/h. | configured |
+| Invalid input | django-filter/serializers return 400 with typed codes; unknown enum values, negative limits and malformed UUIDs never reach the ORM. | covered |
+| Query amplification | List endpoints use `select_related`/`prefetch_related`; applicant and job lists are paginated (20). | reviewed |
+| Storage/attack surface | No uploads, no external services, no new infrastructure; payments recorded as plain rows. | by design (owner decisions 5–9, 14–15) |
+| Web guards | `RequireAuth`/`RequireStaff` are UX only; every data call still fails with 401/403 server-side. | covered |
+
+No weakening of earlier decisions was needed to make tests pass.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

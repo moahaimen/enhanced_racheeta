@@ -4,6 +4,276 @@ info:
   version: 1.0.0
   description: Racheeta 2.0 — canonical API consumed by web, mobile and dashboards.
 paths:
+  /api/v1/admin/audit:
+    get:
+      operationId: admin_audit_list
+      summary: Audit history (administrators)
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+      - in: query
+        name: action__startswith
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: target_id
+        schema:
+          type: string
+      - in: query
+        name: target_type
+        schema:
+          type: string
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEventList'
+          description: ''
+  /api/v1/admin/billing/accounts/{id}:
+    get:
+      operationId: admin_billing_accounts_retrieve
+      summary: Entitlement state of a billing account (administrators)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSummary'
+          description: ''
+  /api/v1/admin/billing/credits:
+    post:
+      operationId: admin_billing_credits_create
+      summary: Grant or revoke extra credits for an entitlement key
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditGrantRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreditGrantRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditBalance'
+          description: ''
+  /api/v1/admin/billing/subscriptions:
+    get:
+      operationId: admin_billing_subscriptions_list
+      summary: Subscriptions (administrators)
+      parameters:
+      - in: query
+        name: billing_account__subject_type
+        schema:
+          type: string
+          enum:
+          - account
+          - organization
+        description: |-
+          * `organization` - Organisation
+          * `account` - Account
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: plan__code
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - EXPIRED
+          - PENDING
+          - REJECTED
+          - SUSPENDED
+        description: |-
+          * `PENDING` - Pending administrator approval
+          * `ACTIVE` - Active
+          * `SUSPENDED` - Suspended
+          * `CANCELLED` - Cancelled
+          * `EXPIRED` - Expired
+          * `REJECTED` - Rejected
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminSubscriptionList'
+          description: ''
+  /api/v1/admin/billing/subscriptions/{id}/activate:
+    post:
+      operationId: admin_billing_subscriptions_activate_create
+      summary: Activate a subscription after verifying payment manually
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActivateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSubscription'
+          description: ''
+  /api/v1/admin/billing/subscriptions/{id}/cancel:
+    post:
+      operationId: admin_billing_subscriptions_cancel_create
+      summary: Cancel a subscription
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSubscription'
+          description: ''
+  /api/v1/admin/billing/subscriptions/{id}/reject:
+    post:
+      operationId: admin_billing_subscriptions_reject_create
+      summary: Reject a pending subscription request
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSubscription'
+          description: ''
+  /api/v1/admin/billing/subscriptions/{id}/suspend:
+    post:
+      operationId: admin_billing_subscriptions_suspend_create
+      summary: Suspend an active subscription
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSubscription'
+          description: ''
   /api/v1/admin/providers/{id}/verification:
     post:
       operationId: admin_providers_verification_create
@@ -34,6 +304,362 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProviderOwner'
+          description: ''
+  /api/v1/admin/recruitment/employers:
+    get:
+      operationId: admin_recruitment_employers_list
+      summary: Employers (administrators)
+      parameters:
+      - in: query
+        name: organization_type
+        schema:
+          type: string
+          enum:
+          - BEAUTY_CENTER
+          - CLINIC
+          - HEALTHCARE_INSTITUTION
+          - HOSPITAL
+          - LABORATORY
+          - MEDICAL_CENTER
+          - MEDICAL_COMPANY
+          - OTHER
+          - PHARMACY
+          - RECRUITMENT_AGENCY
+          - UNIVERSITY
+        description: |-
+          * `HOSPITAL` - Hospital
+          * `MEDICAL_CENTER` - Medical center
+          * `CLINIC` - Clinic
+          * `PHARMACY` - Pharmacy
+          * `LABORATORY` - Laboratory
+          * `BEAUTY_CENTER` - Beauty center
+          * `MEDICAL_COMPANY` - Medical company
+          * `HEALTHCARE_INSTITUTION` - Healthcare institution
+          * `UNIVERSITY` - University / college
+          * `RECRUITMENT_AGENCY` - Recruitment agency
+          * `OTHER` - Other approved healthcare organisation
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: recruitment_status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - SUSPENDED
+        description: |-
+          * `ACTIVE` - Active
+          * `SUSPENDED` - Suspended
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      - in: query
+        name: verification_status
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - REJECTED
+          - SUSPENDED
+          - UNVERIFIED
+          - VERIFIED
+        description: |-
+          * `UNVERIFIED` - Unverified
+          * `PENDING` - Pending review
+          * `VERIFIED` - Verified
+          * `REJECTED` - Rejected
+          * `SUSPENDED` - Suspended
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmployerAdminList'
+          description: ''
+  /api/v1/admin/recruitment/employers/{id}/recruitment/{status_value}:
+    post:
+      operationId: admin_recruitment_employers_recruitment_create
+      summary: Suspend or reactivate an employer's recruitment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: ACTIVE or SUSPENDED
+      - in: path
+        name: status_value
+        schema:
+          type: string
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerAdmin'
+          description: ''
+  /api/v1/admin/recruitment/employers/{id}/verification:
+    post:
+      operationId: admin_recruitment_employers_verification_create
+      summary: Set an employer's verification status
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployerVerificationDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmployerVerificationDecisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerAdmin'
+          description: ''
+  /api/v1/admin/recruitment/jobs:
+    get:
+      operationId: admin_recruitment_jobs_list
+      summary: Jobs for review (administrators)
+      parameters:
+      - in: query
+        name: employer
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ARCHIVED
+          - CLOSED
+          - DRAFT
+          - EXPIRED
+          - PENDING_ADMIN_REVIEW
+          - PUBLISHED
+          - REJECTED
+          - SUSPENDED
+        description: |-
+          * `DRAFT` - Draft
+          * `PENDING_ADMIN_REVIEW` - Pending administrator review
+          * `PUBLISHED` - Published
+          * `CLOSED` - Closed
+          * `EXPIRED` - Expired
+          * `REJECTED` - Rejected
+          * `SUSPENDED` - Suspended
+          * `ARCHIVED` - Archived
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJobAdminList'
+          description: ''
+  /api/v1/admin/recruitment/jobs/{id}:
+    get:
+      operationId: admin_recruitment_jobs_retrieve
+      summary: Job details for review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAdmin'
+          description: ''
+  /api/v1/admin/recruitment/jobs/{id}/approve:
+    post:
+      operationId: admin_recruitment_jobs_approve_create
+      summary: Approve a pending job (publishes it)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminDecisionRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAdmin'
+          description: ''
+  /api/v1/admin/recruitment/jobs/{id}/reject:
+    post:
+      operationId: admin_recruitment_jobs_reject_create
+      summary: Reject a pending job with a reason
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAdmin'
+          description: ''
+  /api/v1/admin/recruitment/jobs/{id}/restore:
+    post:
+      operationId: admin_recruitment_jobs_restore_create
+      summary: Restore a suspended job
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminDecisionRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAdmin'
+          description: ''
+  /api/v1/admin/recruitment/jobs/{id}/suspend:
+    post:
+      operationId: admin_recruitment_jobs_suspend_create
+      summary: Suspend a published job with a reason
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAdmin'
           description: ''
   /api/v1/auth/email-verification/confirm:
     post:
@@ -259,6 +885,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegisterResponse'
           description: ''
+  /api/v1/billing/plans:
+    get:
+      operationId: billing_plans_list
+      summary: Public plan catalogue
+      parameters:
+      - in: query
+        name: audience
+        schema:
+          type: string
+      tags:
+      - billing
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+          description: ''
+  /api/v1/employers/{id}:
+    get:
+      operationId: employers_retrieve
+      summary: Public employer page
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - jobs
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerPublic'
+          description: ''
   /api/v1/geo/cities:
     get:
       operationId: geo_cities_list
@@ -322,6 +992,1610 @@ paths:
                 items:
                   $ref: '#/components/schemas/Governorate'
           description: ''
+  /api/v1/jobs:
+    get:
+      operationId: jobs_list
+      summary: Public job search (published jobs of verified employers)
+      parameters:
+      - in: query
+        name: city
+        schema:
+          type: string
+      - in: query
+        name: degree
+        schema:
+          type: string
+      - in: query
+        name: detailed_specialty
+        schema:
+          type: string
+      - in: query
+        name: employer
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: employment_type
+        schema:
+          type: string
+      - in: query
+        name: governorate
+        schema:
+          type: string
+      - in: query
+        name: max_experience
+        schema:
+          type: integer
+      - in: query
+        name: min_experience
+        schema:
+          type: integer
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: '-published_at (default: featured first, then newest)'
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: profession
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: salary_available
+        schema:
+          type: boolean
+      - in: query
+        name: shift_type
+        schema:
+          type: string
+      - in: query
+        name: specialty
+        schema:
+          type: string
+      - in: query
+        name: work_mode
+        schema:
+          type: string
+      tags:
+      - jobs
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJobCardList'
+          description: ''
+  /api/v1/jobs/{id}:
+    get:
+      operationId: jobs_retrieve
+      summary: Public job details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - jobs
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPublic'
+          description: ''
+  /api/v1/jobs/{id}/apply:
+    post:
+      operationId: jobs_apply_create
+      summary: Apply to an open job
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplyRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSeeker'
+          description: ''
+  /api/v1/jobs/employer:
+    get:
+      operationId: jobs_employer_retrieve
+      summary: My organisation
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerOwner'
+          description: ''
+    post:
+      operationId: jobs_employer_create
+      summary: Create my organisation (becoming its owner)
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployerWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmployerWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerOwner'
+          description: ''
+    patch:
+      operationId: jobs_employer_partial_update
+      summary: Update my organisation (owner)
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEmployerWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEmployerWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerOwner'
+          description: ''
+  /api/v1/jobs/employer/applications/{id}:
+    get:
+      operationId: jobs_employer_applications_retrieve
+      summary: One applicant (my organisation's jobs only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationEmployer'
+          description: ''
+  /api/v1/jobs/employer/applications/{id}/interviews:
+    post:
+      operationId: jobs_employer_applications_interviews_create
+      summary: Request an interview (shortlisted applicants)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InterviewCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewRequest'
+          description: ''
+  /api/v1/jobs/employer/applications/{id}/transition:
+    post:
+      operationId: jobs_employer_applications_transition_create
+      summary: Move an applicant to REVIEWING / SHORTLISTED / ACCEPTED / REJECTED
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationTransitionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplicationTransitionRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationEmployer'
+          description: ''
+  /api/v1/jobs/employer/billing:
+    get:
+      operationId: jobs_employer_billing_retrieve
+      summary: My organisation's plan, subscription and usage
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingSummary'
+          description: ''
+  /api/v1/jobs/employer/billing/request:
+    post:
+      operationId: jobs_employer_billing_request_create
+      summary: Request a plan (owner). Activation is a manual administrator step.
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/v1/jobs/employer/jobs:
+    get:
+      operationId: jobs_employer_jobs_list
+      summary: My organisation's jobs (all statuses)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ARCHIVED
+          - CLOSED
+          - DRAFT
+          - EXPIRED
+          - PENDING_ADMIN_REVIEW
+          - PUBLISHED
+          - REJECTED
+          - SUSPENDED
+        description: |-
+          * `DRAFT` - Draft
+          * `PENDING_ADMIN_REVIEW` - Pending administrator review
+          * `PUBLISHED` - Published
+          * `CLOSED` - Closed
+          * `EXPIRED` - Expired
+          * `REJECTED` - Rejected
+          * `SUSPENDED` - Suspended
+          * `ARCHIVED` - Archived
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJobEmployerList'
+          description: ''
+    post:
+      operationId: jobs_employer_jobs_create
+      summary: Create a job draft (owner/recruiter)
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}:
+    get:
+      operationId: jobs_employer_jobs_retrieve
+      summary: One of my organisation's jobs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+    patch:
+      operationId: jobs_employer_jobs_partial_update
+      summary: Edit a job (DRAFT/REJECTED, or PUBLISHED for owner/recruiter)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedJobWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedJobWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}/applications:
+    get:
+      operationId: jobs_employer_jobs_applications_list
+      summary: Applicants of one of my jobs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: job_seeker__degree
+        schema:
+          type: string
+          enum:
+          - BACHELOR
+          - BOARD
+          - DIPLOMA
+          - HIGHER_DIPLOMA
+          - MASTER
+          - OTHER
+          - PHD
+        description: |-
+          * `DIPLOMA` - Diploma
+          * `BACHELOR` - Bachelor
+          * `HIGHER_DIPLOMA` - Higher diploma
+          * `MASTER` - Master
+          * `PHD` - PhD
+          * `BOARD` - Board certification
+          * `OTHER` - Other
+      - in: query
+        name: job_seeker__governorate
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: job_seeker__profession
+        schema:
+          type: string
+          enum:
+          - ADMINISTRATIVE
+          - ANESTHESIA_TECHNICIAN
+          - DENTIST
+          - DOCTOR
+          - LAB_TECHNICIAN
+          - MEDICAL_ASSISTANT
+          - MIDWIFE
+          - NURSE
+          - NUTRITIONIST
+          - OTHER
+          - PHARMACIST
+          - PHYSIOTHERAPIST
+          - PSYCHOLOGIST
+          - RADIOLOGY_TECHNICIAN
+        description: |-
+          * `DOCTOR` - Physician
+          * `DENTIST` - Dentist
+          * `PHARMACIST` - Pharmacist
+          * `NURSE` - Nurse
+          * `MIDWIFE` - Midwife
+          * `LAB_TECHNICIAN` - Laboratory technician
+          * `RADIOLOGY_TECHNICIAN` - Radiology technician
+          * `ANESTHESIA_TECHNICIAN` - Anaesthesia technician
+          * `PHYSIOTHERAPIST` - Physiotherapist
+          * `NUTRITIONIST` - Nutritionist
+          * `PSYCHOLOGIST` - Psychologist
+          * `MEDICAL_ASSISTANT` - Medical assistant
+          * `ADMINISTRATIVE` - Administrative / reception
+          * `OTHER` - Other healthcare profession
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApplicationEmployerList'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}/archive:
+    post:
+      operationId: jobs_employer_jobs_archive_create
+      summary: Archive a draft/closed/expired/rejected job
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_NoBodyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/_NoBodyRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}/close:
+    post:
+      operationId: jobs_employer_jobs_close_create
+      summary: Close a job
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}/feature:
+    post:
+      operationId: jobs_employer_jobs_feature_create
+      summary: Feature / unfeature a published job (entitlement-gated)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeaturedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FeaturedRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/jobs/{id}/submit:
+    post:
+      operationId: jobs_employer_jobs_submit_create
+      summary: Submit a draft for administrator review (commercial + contact-leak
+        gates)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_NoBodyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/_NoBodyRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobEmployer'
+          description: ''
+  /api/v1/jobs/employer/members:
+    get:
+      operationId: jobs_employer_members_list
+      summary: Members of my organisation
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployerMember'
+          description: ''
+    post:
+      operationId: jobs_employer_members_create
+      summary: Add a recruiter/viewer by email (owner; seat-limited)
+      tags:
+      - employer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberAddRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberAddRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerMember'
+          description: ''
+  /api/v1/jobs/employer/members/{id}/end:
+    post:
+      operationId: jobs_employer_members_end_create
+      summary: End a membership (owner)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerMember'
+          description: ''
+  /api/v1/jobs/employer/verification/request:
+    post:
+      operationId: jobs_employer_verification_request_create
+      summary: Request verification of my organisation (owner)
+      tags:
+      - employer
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerOwner'
+          description: ''
+  /api/v1/jobs/me/applications:
+    get:
+      operationId: jobs_me_applications_list
+      summary: My applications
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApplicationSeekerList'
+          description: ''
+  /api/v1/jobs/me/applications/{id}:
+    get:
+      operationId: jobs_me_applications_retrieve
+      summary: One of my applications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSeeker'
+          description: ''
+  /api/v1/jobs/me/applications/{id}/withdraw:
+    post:
+      operationId: jobs_me_applications_withdraw_create
+      summary: Withdraw my application
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecruitmentReasonRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSeeker'
+          description: ''
+  /api/v1/jobs/me/interviews/{id}/respond:
+    post:
+      operationId: jobs_me_interviews_respond_create
+      summary: Respond to an interview request
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewResponseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InterviewResponseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewRequest'
+          description: ''
+  /api/v1/jobs/me/invitations:
+    get:
+      operationId: jobs_me_invitations_list
+      summary: Invitations I received
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInvitationSeekerList'
+          description: ''
+  /api/v1/jobs/me/invitations/{id}/respond:
+    post:
+      operationId: jobs_me_invitations_respond_create
+      summary: Accept or decline an invitation (accepting does not apply automatically)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationResponseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvitationResponseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationSeeker'
+          description: ''
+  /api/v1/jobs/me/profile:
+    get:
+      operationId: jobs_me_profile_retrieve
+      summary: My professional profile (structured résumé)
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSeekerProfile'
+          description: ''
+    post:
+      operationId: jobs_me_profile_create
+      summary: Create my professional profile
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobSeekerProfileWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JobSeekerProfileWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSeekerProfile'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_partial_update
+      summary: Update my professional profile
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedJobSeekerProfileWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedJobSeekerProfileWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSeekerProfile'
+          description: ''
+  /api/v1/jobs/me/profile/credentials:
+    get:
+      operationId: jobs_me_profile_credentials_list
+      summary: My licences and certifications
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Credential'
+          description: ''
+    post:
+      operationId: jobs_me_profile_credentials_create
+      summary: My licences and certifications
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CredentialRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+          description: ''
+  /api/v1/jobs/me/profile/credentials/{id}:
+    get:
+      operationId: jobs_me_profile_credentials_retrieve
+      summary: One of my licences and certifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_credentials_partial_update
+      summary: One of my licences and certifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCredentialRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCredentialRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+          description: ''
+    delete:
+      operationId: jobs_me_profile_credentials_destroy
+      summary: One of my licences and certifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/jobs/me/profile/education:
+    get:
+      operationId: jobs_me_profile_education_list
+      summary: My education records
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Education'
+          description: ''
+    post:
+      operationId: jobs_me_profile_education_create
+      summary: My education records
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EducationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EducationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Education'
+          description: ''
+  /api/v1/jobs/me/profile/education/{id}:
+    get:
+      operationId: jobs_me_profile_education_retrieve
+      summary: One of my education records
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Education'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_education_partial_update
+      summary: One of my education records
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEducationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEducationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Education'
+          description: ''
+    delete:
+      operationId: jobs_me_profile_education_destroy
+      summary: One of my education records
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/jobs/me/profile/experiences:
+    get:
+      operationId: jobs_me_profile_experiences_list
+      summary: My work experience
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkExperience'
+          description: ''
+    post:
+      operationId: jobs_me_profile_experiences_create
+      summary: My work experience
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkExperienceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkExperienceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkExperience'
+          description: ''
+  /api/v1/jobs/me/profile/experiences/{id}:
+    get:
+      operationId: jobs_me_profile_experiences_retrieve
+      summary: One of my work experience
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkExperience'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_experiences_partial_update
+      summary: One of my work experience
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkExperienceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkExperienceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkExperience'
+          description: ''
+    delete:
+      operationId: jobs_me_profile_experiences_destroy
+      summary: One of my work experience
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/jobs/me/profile/languages:
+    get:
+      operationId: jobs_me_profile_languages_list
+      summary: My languages
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LanguageSkill'
+          description: ''
+    post:
+      operationId: jobs_me_profile_languages_create
+      summary: My languages
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageSkillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LanguageSkillRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageSkill'
+          description: ''
+  /api/v1/jobs/me/profile/languages/{id}:
+    get:
+      operationId: jobs_me_profile_languages_retrieve
+      summary: One of my languages
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageSkill'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_languages_partial_update
+      summary: One of my languages
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLanguageSkillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLanguageSkillRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageSkill'
+          description: ''
+    delete:
+      operationId: jobs_me_profile_languages_destroy
+      summary: One of my languages
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/jobs/me/profile/skills:
+    get:
+      operationId: jobs_me_profile_skills_list
+      summary: My skills
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+          description: ''
+    post:
+      operationId: jobs_me_profile_skills_create
+      summary: My skills
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SkillRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+          description: ''
+  /api/v1/jobs/me/profile/skills/{id}:
+    get:
+      operationId: jobs_me_profile_skills_retrieve
+      summary: One of my skills
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+          description: ''
+    patch:
+      operationId: jobs_me_profile_skills_partial_update
+      summary: One of my skills
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSkillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSkillRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+          description: ''
+    delete:
+      operationId: jobs_me_profile_skills_destroy
+      summary: One of my skills
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - job-seeker
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/me:
     get:
       operationId: me_retrieve
@@ -761,6 +3035,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderOwner'
           description: ''
+  /api/v1/recruitment/applications/{id}/messages:
+    get:
+      operationId: recruitment_applications_messages_list
+      summary: Messages of an application (parties only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - recruitment
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+          description: ''
+    post:
+      operationId: recruitment_applications_messages_create
+      summary: Send a text-only recruitment message
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - recruitment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
   /api/v1/specialties:
     get:
       operationId: specialties_list
@@ -791,6 +3119,277 @@ paths:
                 items:
                   $ref: '#/components/schemas/Specialty'
           description: ''
+  /api/v1/talent:
+    get:
+      operationId: talent_list
+      summary: Talent search (entitled employers). One distinct filter set per day
+        counts as one search; paging is free.
+      parameters:
+      - in: query
+        name: availability
+        schema:
+          type: string
+      - in: query
+        name: city
+        schema:
+          type: string
+      - in: query
+        name: degree
+        schema:
+          type: string
+        description: minimum degree
+      - in: query
+        name: detailed_specialty
+        schema:
+          type: string
+      - in: query
+        name: employment_type
+        schema:
+          type: string
+      - in: query
+        name: governorate
+        schema:
+          type: string
+      - in: query
+        name: language
+        schema:
+          type: string
+      - in: query
+        name: language_level
+        schema:
+          type: string
+      - in: query
+        name: max_experience
+        schema:
+          type: integer
+      - in: query
+        name: min_experience
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: profession
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: skill
+        schema:
+          type: string
+      - in: query
+        name: specialty
+        schema:
+          type: string
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTalentCardList'
+          description: ''
+  /api/v1/talent/{id}:
+    get:
+      operationId: talent_retrieve
+      summary: Candidate professional profile (discoverable, or applied to one of
+        my jobs)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TalentDetail'
+          description: ''
+  /api/v1/talent/invitations:
+    get:
+      operationId: talent_invitations_list
+      description: |-
+        Invitations sent by my organisation, newest first, on the standard
+        paginated envelope. The rows stay stored when a candidate hides their
+        profile; a row is listed (and its candidate card serialised) only while the
+        shared visibility rule `_visible_candidates` allows it, so `count` is the
+        number of rows the employer may actually see.
+      summary: Invitations sent by my organisation (paginated, newest first)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInvitationList'
+          description: ''
+    post:
+      operationId: talent_invitations_create
+      description: |-
+        Invitations sent by my organisation, newest first, on the standard
+        paginated envelope. The rows stay stored when a candidate hides their
+        profile; a row is listed (and its candidate card serialised) only while the
+        shared visibility rule `_visible_candidates` allows it, so `count` is the
+        number of rows the employer may actually see.
+      summary: Invite a discoverable candidate to apply to one of my open jobs (quota-consuming)
+      tags:
+      - talent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InviteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+          description: ''
+  /api/v1/talent/invitations/{id}/cancel:
+    post:
+      operationId: talent_invitations_cancel_create
+      summary: Cancel a pending invitation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+          description: ''
+  /api/v1/talent/saved:
+    get:
+      operationId: talent_saved_list
+      description: |-
+        Saved candidates, newest first, on the standard paginated envelope.
+        The relation stays stored when a candidate hides their profile; the
+        professional card is returned only while `_visible_candidates` allows it.
+      summary: My organisation's saved candidates (paginated, newest first)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSavedCandidateList'
+          description: ''
+    post:
+      operationId: talent_saved_create
+      description: |-
+        Saved candidates, newest first, on the standard paginated envelope.
+        The relation stays stored when a candidate hides their profile; the
+        professional card is returned only while `_visible_candidates` allows it.
+      summary: Save a candidate (private note never shown to the candidate)
+      tags:
+      - talent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveCandidateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SaveCandidateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedCandidate'
+          description: ''
+  /api/v1/talent/saved/{id}:
+    delete:
+      operationId: talent_saved_destroy
+      summary: Remove a saved candidate
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - talent
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
 components:
   schemas:
     Account:
@@ -879,6 +3478,410 @@ components:
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
         * `ADMIN` - Racheeta administrator
+    ActivateRequest:
+      type: object
+      properties:
+        term_days:
+          type: integer
+          maximum: 3660
+          minimum: 1
+        reference:
+          type: string
+          default: ''
+          maxLength: 120
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+        payment:
+          $ref: '#/components/schemas/ActivationPaymentRequest'
+    ActivationPaymentRequest:
+      type: object
+      description: |-
+        The payment an administrator verified before activating. Its status is
+        not an input: activation succeeds only for a verified payment, so the
+        server records VERIFIED (see ActivateSerializer.validate).
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        reference:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 500
+    AdminDecisionRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+    AdminSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        billing_account_id:
+          type: string
+          format: uuid
+          readOnly: true
+        subject_type:
+          type: string
+          readOnly: true
+        subject_id:
+          type: string
+          format: uuid
+          readOnly: true
+        plan:
+          allOf:
+          - $ref: '#/components/schemas/Plan'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SubscriptionStatusEnum'
+          readOnly: true
+        requested_by_email:
+          type: string
+          format: email
+          readOnly: true
+        requester_note:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_reference:
+          type: string
+          readOnly: true
+          description: External payment/agreement reference
+        admin_note:
+          type: string
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionEvent'
+          readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentRecord'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_note
+      - admin_reference
+      - billing_account_id
+      - created_at
+      - ends_at
+      - events
+      - id
+      - payments
+      - plan
+      - requested_by_email
+      - requester_note
+      - starts_at
+      - status
+      - subject_id
+      - subject_type
+    ApplicationEmployer:
+      type: object
+      description: |-
+        Employer's view of an applicant: snapshot + current professional profile.
+        Never contact data.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job_id:
+          type: string
+          format: uuid
+          readOnly: true
+        job_title:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ApplicationStatusEnum'
+          readOnly: true
+        cover_text:
+          type: string
+          readOnly: true
+        snapshot:
+          readOnly: true
+          description: Professional summary frozen at application time (no contact
+            data)
+        candidate:
+          allOf:
+          - $ref: '#/components/schemas/TalentCard'
+          readOnly: true
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationTransition'
+          readOnly: true
+        interviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewRequest'
+          readOnly: true
+      required:
+      - candidate
+      - cover_text
+      - id
+      - interviews
+      - job_id
+      - job_title
+      - snapshot
+      - status
+      - submitted_at
+      - transitions
+    ApplicationSeeker:
+      type: object
+      description: Job seeker's own application.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job:
+          allOf:
+          - $ref: '#/components/schemas/JobCard'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ApplicationStatusEnum'
+          readOnly: true
+        cover_text:
+          type: string
+          readOnly: true
+        snapshot:
+          readOnly: true
+          description: Professional summary frozen at application time (no contact
+            data)
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationTransition'
+          readOnly: true
+        interviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewRequest'
+          readOnly: true
+      required:
+      - cover_text
+      - id
+      - interviews
+      - job
+      - snapshot
+      - status
+      - submitted_at
+      - transitions
+    ApplicationStatusEnum:
+      enum:
+      - SUBMITTED
+      - REVIEWING
+      - SHORTLISTED
+      - INTERVIEW
+      - ACCEPTED
+      - REJECTED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `SUBMITTED` - Submitted
+        * `REVIEWING` - Reviewing
+        * `SHORTLISTED` - Shortlisted
+        * `INTERVIEW` - Interview
+        * `ACCEPTED` - Accepted
+        * `REJECTED` - Rejected
+        * `WITHDRAWN` - Withdrawn
+    ApplicationTransition:
+      type: object
+      properties:
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - from_status
+      - reason
+      - to_status
+    ApplicationTransitionRequestRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ApplicationTransitionRequestStatusEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - status
+    ApplicationTransitionRequestStatusEnum:
+      enum:
+      - REVIEWING
+      - SHORTLISTED
+      - ACCEPTED
+      - REJECTED
+      type: string
+      description: |-
+        * `REVIEWING` - Reviewing
+        * `SHORTLISTED` - Shortlisted
+        * `ACCEPTED` - Accepted
+        * `REJECTED` - Rejected
+    ApplyRequest:
+      type: object
+      properties:
+        cover_text:
+          type: string
+          default: ''
+          maxLength: 2000
+    AudienceEnum:
+      enum:
+      - EMPLOYER
+      - JOB_SEEKER
+      type: string
+      description: |-
+        * `EMPLOYER` - Employer organisation
+        * `JOB_SEEKER` - Job seeker
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        action:
+          type: string
+          readOnly: true
+          description: dotted code, e.g. billing.subscription.activated
+        target_type:
+          type: string
+          readOnly: true
+        target_id:
+          type: string
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+        data:
+          readOnly: true
+        actor_email:
+          type: string
+          format: email
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor_email
+      - created_at
+      - data
+      - id
+      - summary
+      - target_id
+      - target_type
+    AvailabilityEnum:
+      enum:
+      - IMMEDIATE
+      - WITHIN_MONTH
+      - WITHIN_3_MONTHS
+      - NOT_AVAILABLE
+      type: string
+      description: |-
+        * `IMMEDIATE` - Immediately
+        * `WITHIN_MONTH` - Within a month
+        * `WITHIN_3_MONTHS` - Within three months
+        * `NOT_AVAILABLE` - Not currently available
+    BillingPeriodEnum:
+      enum:
+      - NONE
+      - MONTHLY
+      - QUARTERLY
+      - YEARLY
+      type: string
+      description: |-
+        * `NONE` - No renewal (default / trial)
+        * `MONTHLY` - Monthly
+        * `QUARTERLY` - Quarterly
+        * `YEARLY` - Yearly
+    BillingSummary:
+      type: object
+      description: What a subject sees about its own commercial state. No admin notes.
+      properties:
+        plan:
+          allOf:
+          - $ref: '#/components/schemas/Plan'
+          nullable: true
+        subscription:
+          allOf:
+          - $ref: '#/components/schemas/Subscription'
+          nullable: true
+        pending_subscription:
+          allOf:
+          - $ref: '#/components/schemas/Subscription'
+          nullable: true
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entitlement'
+        requestable_plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+      required:
+      - entitlements
+      - pending_subscription
+      - plan
+      - requestable_plans
+      - subscription
+    BlankEnum:
+      enum:
+      - ''
     City:
       type: object
       properties:
@@ -928,6 +3931,110 @@ components:
       - id
       - name_ar
       - name_en
+    Credential:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/CredentialKindEnum'
+        name:
+          type: string
+          maxLength: 150
+        issuer:
+          type: string
+          maxLength: 150
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+      required:
+      - id
+      - kind
+      - name
+    CredentialKindEnum:
+      enum:
+      - LICENSE
+      - CERTIFICATION
+      type: string
+      description: |-
+        * `LICENSE` - Professional licence
+        * `CERTIFICATION` - Training / certification
+    CredentialRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/CredentialKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        issuer:
+          type: string
+          maxLength: 150
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+      required:
+      - kind
+      - name
+    CreditBalance:
+      type: object
+      properties:
+        key:
+          type: string
+          readOnly: true
+        balance:
+          type: integer
+          readOnly: true
+      required:
+      - balance
+      - key
+    CreditGrantRequest:
+      type: object
+      properties:
+        billing_account:
+          type: string
+          format: uuid
+        key:
+          type: string
+          minLength: 1
+          maxLength: 60
+        amount:
+          type: integer
+          maximum: 100000
+          minimum: -100000
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - amount
+      - billing_account
+      - key
+    DegreeEnum:
+      enum:
+      - DIPLOMA
+      - BACHELOR
+      - HIGHER_DIPLOMA
+      - MASTER
+      - PHD
+      - BOARD
+      - OTHER
+      type: string
+      description: |-
+        * `DIPLOMA` - Diploma
+        * `BACHELOR` - Bachelor
+        * `HIGHER_DIPLOMA` - Higher diploma
+        * `MASTER` - Master
+        * `PHD` - PhD
+        * `BOARD` - Board certification
+        * `OTHER` - Other
     Detail:
       type: object
       properties:
@@ -936,6 +4043,63 @@ components:
           readOnly: true
       required:
       - detail
+    Education:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        degree:
+          $ref: '#/components/schemas/DegreeEnum'
+        field_of_study:
+          type: string
+          maxLength: 150
+        institution_name:
+          type: string
+          maxLength: 150
+        start_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        end_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+      required:
+      - degree
+      - field_of_study
+      - id
+      - institution_name
+    EducationRequest:
+      type: object
+      properties:
+        degree:
+          $ref: '#/components/schemas/DegreeEnum'
+        field_of_study:
+          type: string
+          minLength: 1
+          maxLength: 150
+        institution_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        start_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        end_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+      required:
+      - degree
+      - field_of_study
+      - institution_name
     EmailVerificationConfirmRequest:
       type: object
       properties:
@@ -950,6 +4114,372 @@ components:
       required:
       - token
       - uid
+    EmployerAdmin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: Recruitment display name
+        organization_type:
+          allOf:
+          - $ref: '#/components/schemas/OrganizationTypeEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        is_recruitment_agency:
+          type: boolean
+          readOnly: true
+        is_verified:
+          type: boolean
+          readOnly: true
+        provider_profile_id:
+          type: string
+          format: uuid
+          readOnly: true
+        active_jobs:
+          type: integer
+          readOnly: true
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          readOnly: true
+        verification_note:
+          type: string
+          readOnly: true
+        verification_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recruitment_status:
+          allOf:
+          - $ref: '#/components/schemas/RecruitmentStatusEnum'
+          readOnly: true
+        is_discoverable:
+          type: boolean
+          readOnly: true
+          description: Show the organisation page publicly
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by_email:
+          type: string
+          format: email
+          readOnly: true
+        provider_profile:
+          allOf:
+          - $ref: '#/components/schemas/ProviderReference'
+          readOnly: true
+      required:
+      - active_jobs
+      - city
+      - created_at
+      - created_by_email
+      - description
+      - governorate
+      - id
+      - is_discoverable
+      - is_recruitment_agency
+      - is_verified
+      - name
+      - organization_type
+      - provider_profile
+      - provider_profile_id
+      - recruitment_status
+      - verification_note
+      - verification_requested_at
+      - verification_status
+      - verified_at
+    EmployerMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/EmployerMemberRoleEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MemberStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - full_name
+      - id
+      - role
+      - status
+    EmployerMemberRoleEnum:
+      enum:
+      - OWNER
+      - RECRUITER
+      - VIEWER
+      type: string
+      description: |-
+        * `OWNER` - Owner
+        * `RECRUITER` - Recruiter
+        * `VIEWER` - Viewer
+    EmployerOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: Recruitment display name
+        organization_type:
+          allOf:
+          - $ref: '#/components/schemas/OrganizationTypeEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        is_recruitment_agency:
+          type: boolean
+          readOnly: true
+        is_verified:
+          type: boolean
+          readOnly: true
+        provider_profile_id:
+          type: string
+          format: uuid
+          readOnly: true
+        active_jobs:
+          type: integer
+          readOnly: true
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          readOnly: true
+        verification_note:
+          type: string
+          readOnly: true
+        verification_requested_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recruitment_status:
+          allOf:
+          - $ref: '#/components/schemas/RecruitmentStatusEnum'
+          readOnly: true
+        is_discoverable:
+          type: boolean
+          readOnly: true
+          description: Show the organisation page publicly
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_jobs
+      - city
+      - created_at
+      - description
+      - governorate
+      - id
+      - is_discoverable
+      - is_recruitment_agency
+      - is_verified
+      - name
+      - organization_type
+      - provider_profile_id
+      - recruitment_status
+      - verification_note
+      - verification_requested_at
+      - verification_status
+      - verified_at
+    EmployerPublic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: Recruitment display name
+        organization_type:
+          allOf:
+          - $ref: '#/components/schemas/OrganizationTypeEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        is_recruitment_agency:
+          type: boolean
+          readOnly: true
+        is_verified:
+          type: boolean
+          readOnly: true
+        provider_profile_id:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+      - city
+      - description
+      - governorate
+      - id
+      - is_recruitment_agency
+      - is_verified
+      - name
+      - organization_type
+      - provider_profile_id
+    EmployerVerificationDecisionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/VerificationDecisionEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - status
+    EmployerWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        organization_type:
+          $ref: '#/components/schemas/OrganizationTypeEnum'
+        description:
+          type: string
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        provider_profile:
+          type: string
+          format: uuid
+          nullable: true
+        is_recruitment_agency:
+          type: boolean
+        is_discoverable:
+          type: boolean
+          description: Show the organisation page publicly
+      required:
+      - governorate
+      - name
+      - organization_type
+    EmploymentTypeEnum:
+      enum:
+      - FULL_TIME
+      - PART_TIME
+      - CONTRACT
+      - TEMPORARY
+      - INTERNSHIP
+      - LOCUM
+      type: string
+      description: |-
+        * `FULL_TIME` - Full time
+        * `PART_TIME` - Part time
+        * `CONTRACT` - Contract
+        * `TEMPORARY` - Temporary
+        * `INTERNSHIP` - Internship / residency
+        * `LOCUM` - Locum
+    Entitlement:
+      type: object
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+        enabled:
+          type: boolean
+        limit:
+          type: integer
+          nullable: true
+        period:
+          type: string
+        used:
+          type: integer
+        credits:
+          type: integer
+        remaining:
+          type: integer
+          nullable: true
+      required:
+      - credits
+      - enabled
+      - key
+      - kind
+      - limit
+      - period
+      - remaining
+      - used
+    FeaturedRequest:
+      type: object
+      properties:
+        featured:
+          type: boolean
+        days:
+          type: integer
+          maximum: 90
+          minimum: 1
+          default: 30
+      required:
+      - featured
     FirebaseExchangeRequest:
       type: object
       properties:
@@ -1023,6 +4553,1206 @@ components:
       description: |-
         * `PRACTITIONER` - Practitioner
         * `FACILITY` - Facility
+    InterviewCreateRequest:
+      type: object
+      properties:
+        proposed_at:
+          type: string
+          format: date-time
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+        location_text:
+          type: string
+          default: ''
+          maxLength: 255
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - mode
+      - proposed_at
+    InterviewRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        proposed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          readOnly: true
+        location_text:
+          type: string
+          readOnly: true
+        employer_note:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InterviewStatusEnum'
+          readOnly: true
+        candidate_response:
+          type: string
+          readOnly: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - candidate_response
+      - created_at
+      - employer_note
+      - id
+      - location_text
+      - mode
+      - proposed_at
+      - responded_at
+      - status
+    InterviewResponseRequest:
+      type: object
+      properties:
+        accept:
+          type: boolean
+        response:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - accept
+    InterviewStatusEnum:
+      enum:
+      - PROPOSED
+      - ACCEPTED
+      - DECLINED
+      - CANCELLED
+      type: string
+      description: |-
+        * `PROPOSED` - Proposed
+        * `ACCEPTED` - Accepted
+        * `DECLINED` - Declined
+        * `CANCELLED` - Cancelled
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job:
+          allOf:
+          - $ref: '#/components/schemas/JobCard'
+          readOnly: true
+        candidate:
+          allOf:
+          - $ref: '#/components/schemas/TalentCard'
+          readOnly: true
+          nullable: true
+        message:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvitationStatusEnum'
+          readOnly: true
+          default: PENDING
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - candidate
+      - created_at
+      - expires_at
+      - id
+      - job
+      - message
+      - responded_at
+      - status
+    InvitationResponseRequest:
+      type: object
+      properties:
+        accept:
+          type: boolean
+      required:
+      - accept
+    InvitationSeeker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        job:
+          allOf:
+          - $ref: '#/components/schemas/JobCard'
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvitationStatusEnum'
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - expires_at
+      - id
+      - job
+      - message
+      - status
+    InvitationStatusEnum:
+      enum:
+      - PENDING
+      - ACCEPTED
+      - DECLINED
+      - EXPIRED
+      - CANCELLED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `ACCEPTED` - Accepted
+        * `DECLINED` - Declined
+        * `EXPIRED` - Expired
+        * `CANCELLED` - Cancelled
+    InviteRequest:
+      type: object
+      properties:
+        job:
+          type: string
+          format: uuid
+        job_seeker:
+          type: string
+          format: uuid
+        message:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - job
+      - job_seeker
+    JobAdmin:
+      type: object
+      description: 'Employer view: real salary values, status, moderation, counts.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerAdmin'
+          readOnly: true
+        hiring_employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+          nullable: true
+        hiring_organization_name:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        employment_type:
+          allOf:
+          - $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        work_mode:
+          allOf:
+          - $ref: '#/components/schemas/WorkModeEnum'
+          readOnly: true
+        shift_type:
+          allOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          readOnly: true
+        minimum_degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        minimum_experience_years:
+          type: integer
+          readOnly: true
+        salary_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        salary_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        salary_currency:
+          type: string
+          readOnly: true
+        salary_visible:
+          type: boolean
+          readOnly: true
+        is_featured:
+          type: boolean
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        application_deadline:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          readOnly: true
+        responsibilities:
+          type: string
+          readOnly: true
+        requirements:
+          type: string
+          readOnly: true
+        workplace_text:
+          type: string
+          readOnly: true
+        number_of_openings:
+          type: integer
+          readOnly: true
+        is_open:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/JobStatusEnum'
+          readOnly: true
+        moderation_note:
+          type: string
+          readOnly: true
+        moderation_flags:
+          readOnly: true
+          description: Contact-leak findings at submission
+        featured_until:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        applications_count:
+          type: integer
+          readOnly: true
+          default: 0
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobTransition'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        contact_findings:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+      required:
+      - application_deadline
+      - applications_count
+      - city
+      - closed_at
+      - contact_findings
+      - created_at
+      - description
+      - detailed_specialty
+      - employer
+      - employment_type
+      - featured_until
+      - general_specialty
+      - governorate
+      - hiring_employer
+      - hiring_organization_name
+      - id
+      - is_featured
+      - is_open
+      - minimum_degree
+      - minimum_experience_years
+      - moderation_flags
+      - moderation_note
+      - number_of_openings
+      - profession
+      - published_at
+      - requirements
+      - responsibilities
+      - salary_currency
+      - salary_max
+      - salary_min
+      - salary_visible
+      - shift_type
+      - status
+      - submitted_at
+      - title
+      - transitions
+      - updated_at
+      - work_mode
+      - workplace_text
+    JobCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+        hiring_employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+          nullable: true
+        hiring_organization_name:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        employment_type:
+          allOf:
+          - $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        work_mode:
+          allOf:
+          - $ref: '#/components/schemas/WorkModeEnum'
+          readOnly: true
+        shift_type:
+          allOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          readOnly: true
+        minimum_degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        minimum_experience_years:
+          type: integer
+          readOnly: true
+        salary_min:
+          type: string
+          nullable: true
+          readOnly: true
+        salary_max:
+          type: string
+          nullable: true
+          readOnly: true
+        salary_currency:
+          type: string
+          readOnly: true
+        salary_visible:
+          type: boolean
+          readOnly: true
+        is_featured:
+          type: boolean
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        application_deadline:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+      required:
+      - application_deadline
+      - city
+      - detailed_specialty
+      - employer
+      - employment_type
+      - general_specialty
+      - governorate
+      - hiring_employer
+      - hiring_organization_name
+      - id
+      - is_featured
+      - minimum_degree
+      - minimum_experience_years
+      - profession
+      - published_at
+      - salary_currency
+      - salary_max
+      - salary_min
+      - salary_visible
+      - shift_type
+      - title
+      - work_mode
+    JobEmployer:
+      type: object
+      description: 'Employer view: real salary values, status, moderation, counts.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+        hiring_employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+          nullable: true
+        hiring_organization_name:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        employment_type:
+          allOf:
+          - $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        work_mode:
+          allOf:
+          - $ref: '#/components/schemas/WorkModeEnum'
+          readOnly: true
+        shift_type:
+          allOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          readOnly: true
+        minimum_degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        minimum_experience_years:
+          type: integer
+          readOnly: true
+        salary_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        salary_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        salary_currency:
+          type: string
+          readOnly: true
+        salary_visible:
+          type: boolean
+          readOnly: true
+        is_featured:
+          type: boolean
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        application_deadline:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          readOnly: true
+        responsibilities:
+          type: string
+          readOnly: true
+        requirements:
+          type: string
+          readOnly: true
+        workplace_text:
+          type: string
+          readOnly: true
+        number_of_openings:
+          type: integer
+          readOnly: true
+        is_open:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/JobStatusEnum'
+          readOnly: true
+        moderation_note:
+          type: string
+          readOnly: true
+        moderation_flags:
+          readOnly: true
+          description: Contact-leak findings at submission
+        featured_until:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        applications_count:
+          type: integer
+          readOnly: true
+          default: 0
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobTransition'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - application_deadline
+      - applications_count
+      - city
+      - closed_at
+      - created_at
+      - description
+      - detailed_specialty
+      - employer
+      - employment_type
+      - featured_until
+      - general_specialty
+      - governorate
+      - hiring_employer
+      - hiring_organization_name
+      - id
+      - is_featured
+      - is_open
+      - minimum_degree
+      - minimum_experience_years
+      - moderation_flags
+      - moderation_note
+      - number_of_openings
+      - profession
+      - published_at
+      - requirements
+      - responsibilities
+      - salary_currency
+      - salary_max
+      - salary_min
+      - salary_visible
+      - shift_type
+      - status
+      - submitted_at
+      - title
+      - transitions
+      - updated_at
+      - work_mode
+      - workplace_text
+    JobPublic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+        hiring_employer:
+          allOf:
+          - $ref: '#/components/schemas/EmployerPublic'
+          readOnly: true
+          nullable: true
+        hiring_organization_name:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        employment_type:
+          allOf:
+          - $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        work_mode:
+          allOf:
+          - $ref: '#/components/schemas/WorkModeEnum'
+          readOnly: true
+        shift_type:
+          allOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          readOnly: true
+        minimum_degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        minimum_experience_years:
+          type: integer
+          readOnly: true
+        salary_min:
+          type: string
+          nullable: true
+          readOnly: true
+        salary_max:
+          type: string
+          nullable: true
+          readOnly: true
+        salary_currency:
+          type: string
+          readOnly: true
+        salary_visible:
+          type: boolean
+          readOnly: true
+        is_featured:
+          type: boolean
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        application_deadline:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          readOnly: true
+        responsibilities:
+          type: string
+          readOnly: true
+        requirements:
+          type: string
+          readOnly: true
+        workplace_text:
+          type: string
+          readOnly: true
+        number_of_openings:
+          type: integer
+          readOnly: true
+        is_open:
+          type: boolean
+          readOnly: true
+      required:
+      - application_deadline
+      - city
+      - description
+      - detailed_specialty
+      - employer
+      - employment_type
+      - general_specialty
+      - governorate
+      - hiring_employer
+      - hiring_organization_name
+      - id
+      - is_featured
+      - is_open
+      - minimum_degree
+      - minimum_experience_years
+      - number_of_openings
+      - profession
+      - published_at
+      - requirements
+      - responsibilities
+      - salary_currency
+      - salary_max
+      - salary_min
+      - salary_visible
+      - shift_type
+      - title
+      - work_mode
+      - workplace_text
+    JobSeekerProfile:
+      type: object
+      description: 'Owner view: full structured résumé, no contact data (that lives
+        on /me).'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        professional_title:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        institution_name:
+          type: string
+          readOnly: true
+        graduation_year:
+          type: integer
+          readOnly: true
+          nullable: true
+        years_of_experience:
+          type: integer
+          readOnly: true
+        professional_summary:
+          type: string
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        desired_governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        employment_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        salary_expectation_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        salary_currency:
+          type: string
+          readOnly: true
+        discoverable_by_employers:
+          type: boolean
+          readOnly: true
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExperience'
+          readOnly: true
+        education:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+          readOnly: true
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+          readOnly: true
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageSkill'
+          readOnly: true
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credential'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability
+      - city
+      - created_at
+      - credentials
+      - degree
+      - desired_governorate
+      - detailed_specialty
+      - discoverable_by_employers
+      - education
+      - employment_preferences
+      - experiences
+      - general_specialty
+      - governorate
+      - graduation_year
+      - id
+      - institution_name
+      - languages
+      - profession
+      - professional_summary
+      - professional_title
+      - salary_currency
+      - salary_expectation_min
+      - skills
+      - updated_at
+      - years_of_experience
+    JobSeekerProfileWriteRequest:
+      type: object
+      properties:
+        professional_title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        profession:
+          $ref: '#/components/schemas/ProfessionEnum'
+        general_specialty:
+          type: string
+          format: uuid
+          nullable: true
+        detailed_specialty:
+          type: string
+          maxLength: 150
+        degree:
+          $ref: '#/components/schemas/DegreeEnum'
+        institution_name:
+          type: string
+          maxLength: 150
+        graduation_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        years_of_experience:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        professional_summary:
+          type: string
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        desired_governorate:
+          type: string
+          format: uuid
+          nullable: true
+        employment_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentTypeEnum'
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        salary_expectation_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        discoverable_by_employers:
+          type: boolean
+      required:
+      - degree
+      - governorate
+      - profession
+      - professional_title
+    JobStatusEnum:
+      enum:
+      - DRAFT
+      - PENDING_ADMIN_REVIEW
+      - PUBLISHED
+      - CLOSED
+      - EXPIRED
+      - REJECTED
+      - SUSPENDED
+      - ARCHIVED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `PENDING_ADMIN_REVIEW` - Pending administrator review
+        * `PUBLISHED` - Published
+        * `CLOSED` - Closed
+        * `EXPIRED` - Expired
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
+        * `ARCHIVED` - Archived
+    JobTransition:
+      type: object
+      properties:
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - from_status
+      - reason
+      - to_status
+    JobWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        profession:
+          $ref: '#/components/schemas/ProfessionEnum'
+        general_specialty:
+          type: string
+          format: uuid
+          nullable: true
+        detailed_specialty:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          minLength: 1
+        responsibilities:
+          type: string
+        requirements:
+          type: string
+        minimum_degree:
+          oneOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        minimum_experience_years:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        workplace_text:
+          type: string
+          maxLength: 150
+        employment_type:
+          $ref: '#/components/schemas/EmploymentTypeEnum'
+        work_mode:
+          $ref: '#/components/schemas/WorkModeEnum'
+        shift_type:
+          oneOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        salary_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        salary_visible:
+          type: boolean
+        number_of_openings:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        application_deadline:
+          type: string
+          format: date
+          nullable: true
+        hiring_employer:
+          type: string
+          format: uuid
+          nullable: true
+        hiring_organization_name:
+          type: string
+          maxLength: 150
+      required:
+      - description
+      - employment_type
+      - governorate
+      - profession
+      - title
+    LanguageSkill:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        language:
+          type: string
+          description: e.g. Arabic, English, Kurdish
+          maxLength: 40
+        level:
+          $ref: '#/components/schemas/LevelEnum'
+      required:
+      - id
+      - language
+      - level
+    LanguageSkillRequest:
+      type: object
+      properties:
+        language:
+          type: string
+          minLength: 1
+          description: e.g. Arabic, English, Kurdish
+          maxLength: 40
+        level:
+          $ref: '#/components/schemas/LevelEnum'
+      required:
+      - language
+      - level
+    LevelEnum:
+      enum:
+      - BASIC
+      - INTERMEDIATE
+      - ADVANCED
+      - NATIVE
+      type: string
+      description: |-
+        * `BASIC` - Basic
+        * `INTERMEDIATE` - Intermediate
+        * `ADVANCED` - Advanced
+        * `NATIVE` - Native
     LoginRequest:
       type: object
       description: Email + password -> access/refresh pair. Registered via SIMPLE_JWT.
@@ -1047,6 +5777,34 @@ components:
           minLength: 1
       required:
       - refresh
+    MemberAddRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        role:
+          $ref: '#/components/schemas/MemberAddRoleEnum'
+      required:
+      - email
+      - role
+    MemberAddRoleEnum:
+      enum:
+      - RECRUITER
+      - VIEWER
+      type: string
+      description: |-
+        * `RECRUITER` - Recruiter
+        * `VIEWER` - Viewer
+    MemberStatusEnum:
+      enum:
+      - ACTIVE
+      - ENDED
+      type: string
+      description: |-
+        * `ACTIVE` - Active
+        * `ENDED` - Ended
     Membership:
       type: object
       properties:
@@ -1064,7 +5822,7 @@ components:
           readOnly: true
         status:
           allOf:
-          - $ref: '#/components/schemas/MembershipStatusEnum'
+          - $ref: '#/components/schemas/ProviderMembershipStatusEnum'
           readOnly: true
           default: PENDING
         initiated_by:
@@ -1128,18 +5886,314 @@ components:
           maxLength: 100
       required:
       - counterpart
-    MembershipStatusEnum:
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sender_side:
+          allOf:
+          - $ref: '#/components/schemas/SenderSideEnum'
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - id
+      - sender_side
+    MessageCreateRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - body
+    MethodEnum:
       enum:
-      - PENDING
-      - ACTIVE
-      - REJECTED
-      - ENDED
+      - BANK_TRANSFER
+      - CASH
+      - EXCHANGE_OFFICE
+      - OTHER
       type: string
       description: |-
-        * `PENDING` - Pending
-        * `ACTIVE` - Active
-        * `REJECTED` - Rejected
-        * `ENDED` - Ended
+        * `BANK_TRANSFER` - Bank transfer
+        * `CASH` - Cash
+        * `EXCHANGE_OFFICE` - Exchange office
+        * `OTHER` - Other
+    ModeEnum:
+      enum:
+      - IN_PERSON
+      - ONLINE
+      type: string
+      description: |-
+        * `IN_PERSON` - In person
+        * `ONLINE` - Online (details shared inside Racheeta)
+    OrganizationTypeEnum:
+      enum:
+      - HOSPITAL
+      - MEDICAL_CENTER
+      - CLINIC
+      - PHARMACY
+      - LABORATORY
+      - BEAUTY_CENTER
+      - MEDICAL_COMPANY
+      - HEALTHCARE_INSTITUTION
+      - UNIVERSITY
+      - RECRUITMENT_AGENCY
+      - OTHER
+      type: string
+      description: |-
+        * `HOSPITAL` - Hospital
+        * `MEDICAL_CENTER` - Medical center
+        * `CLINIC` - Clinic
+        * `PHARMACY` - Pharmacy
+        * `LABORATORY` - Laboratory
+        * `BEAUTY_CENTER` - Beauty center
+        * `MEDICAL_COMPANY` - Medical company
+        * `HEALTHCARE_INSTITUTION` - Healthcare institution
+        * `UNIVERSITY` - University / college
+        * `RECRUITMENT_AGENCY` - Recruitment agency
+        * `OTHER` - Other approved healthcare organisation
+    PaginatedAdminSubscriptionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSubscription'
+    PaginatedApplicationEmployerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationEmployer'
+    PaginatedApplicationSeekerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationSeeker'
+    PaginatedAuditEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+    PaginatedEmployerAdminList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployerAdmin'
+    PaginatedInvitationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invitation'
+    PaginatedInvitationSeekerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvitationSeeker'
+    PaginatedJobAdminList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobAdmin'
+    PaginatedJobCardList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCard'
+    PaginatedJobEmployerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobEmployer'
     PaginatedProviderCardList:
       type: object
       required:
@@ -1163,6 +6217,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProviderCard'
+    PaginatedSavedCandidateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedCandidate'
+    PaginatedTalentCardList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TalentCard'
     PasswordResetConfirmRequest:
       type: object
       properties:
@@ -1205,6 +6305,223 @@ components:
           maxLength: 32
         preferred_language:
           $ref: '#/components/schemas/PreferredLanguageEnum'
+    PatchedCredentialRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/CredentialKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        issuer:
+          type: string
+          maxLength: 150
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+    PatchedEducationRequest:
+      type: object
+      properties:
+        degree:
+          $ref: '#/components/schemas/DegreeEnum'
+        field_of_study:
+          type: string
+          minLength: 1
+          maxLength: 150
+        institution_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        start_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        end_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+    PatchedEmployerWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        organization_type:
+          $ref: '#/components/schemas/OrganizationTypeEnum'
+        description:
+          type: string
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        provider_profile:
+          type: string
+          format: uuid
+          nullable: true
+        is_recruitment_agency:
+          type: boolean
+        is_discoverable:
+          type: boolean
+          description: Show the organisation page publicly
+    PatchedJobSeekerProfileWriteRequest:
+      type: object
+      properties:
+        professional_title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        profession:
+          $ref: '#/components/schemas/ProfessionEnum'
+        general_specialty:
+          type: string
+          format: uuid
+          nullable: true
+        detailed_specialty:
+          type: string
+          maxLength: 150
+        degree:
+          $ref: '#/components/schemas/DegreeEnum'
+        institution_name:
+          type: string
+          maxLength: 150
+        graduation_year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        years_of_experience:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        professional_summary:
+          type: string
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        desired_governorate:
+          type: string
+          format: uuid
+          nullable: true
+        employment_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentTypeEnum'
+        availability:
+          $ref: '#/components/schemas/AvailabilityEnum'
+        salary_expectation_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        discoverable_by_employers:
+          type: boolean
+    PatchedJobWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        profession:
+          $ref: '#/components/schemas/ProfessionEnum'
+        general_specialty:
+          type: string
+          format: uuid
+          nullable: true
+        detailed_specialty:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          minLength: 1
+        responsibilities:
+          type: string
+        requirements:
+          type: string
+        minimum_degree:
+          oneOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        minimum_experience_years:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        workplace_text:
+          type: string
+          maxLength: 150
+        employment_type:
+          $ref: '#/components/schemas/EmploymentTypeEnum'
+        work_mode:
+          $ref: '#/components/schemas/WorkModeEnum'
+        shift_type:
+          oneOf:
+          - $ref: '#/components/schemas/ShiftTypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        salary_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_max:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        salary_currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        salary_visible:
+          type: boolean
+        number_of_openings:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        application_deadline:
+          type: string
+          format: date
+          nullable: true
+        hiring_employer:
+          type: string
+          format: uuid
+          nullable: true
+        hiring_organization_name:
+          type: string
+          maxLength: 150
+    PatchedLanguageSkillRequest:
+      type: object
+      properties:
+        language:
+          type: string
+          minLength: 1
+          description: e.g. Arabic, English, Kurdish
+          maxLength: 40
+        level:
+          $ref: '#/components/schemas/LevelEnum'
     PatchedProviderWriteRequest:
       type: object
       description: Create (POST) and partial update (PATCH) by the owner.
@@ -1297,6 +6614,196 @@ components:
           nullable: true
         is_active:
           type: boolean
+    PatchedSkillRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+    PatchedWorkExperienceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        organization_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        governorate:
+          type: string
+          format: uuid
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        is_current:
+          type: boolean
+        description:
+          type: string
+    PaymentRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        currency:
+          type: string
+          maxLength: 3
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        reference:
+          type: string
+          maxLength: 120
+        status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        note:
+          type: string
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+    PaymentStatusEnum:
+      enum:
+      - RECORDED
+      - VERIFIED
+      - REJECTED
+      type: string
+      description: |-
+        * `RECORDED` - Recorded
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+    PeriodEnum:
+      enum:
+      - NONE
+      - DAILY
+      - MONTHLY
+      - SUBSCRIPTION
+      type: string
+      description: |-
+        * `NONE` - Concurrent count (not consumed)
+        * `DAILY` - Per day
+        * `MONTHLY` - Per calendar month
+        * `SUBSCRIPTION` - Per subscription term
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        audience:
+          allOf:
+          - $ref: '#/components/schemas/AudienceEnum'
+          readOnly: true
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        description_ar:
+          type: string
+          readOnly: true
+        description_en:
+          type: string
+          readOnly: true
+        billing_period:
+          allOf:
+          - $ref: '#/components/schemas/BillingPeriodEnum'
+          readOnly: true
+        term_days:
+          type: integer
+          readOnly: true
+          description: Length of one subscription term
+        price_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        price_currency:
+          type: string
+          readOnly: true
+        is_default:
+          type: boolean
+          readOnly: true
+          description: Applies to subjects of this audience with no active subscription
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanEntitlement'
+          readOnly: true
+      required:
+      - audience
+      - billing_period
+      - code
+      - description_ar
+      - description_en
+      - entitlements
+      - id
+      - is_default
+      - name_ar
+      - name_en
+      - price_amount
+      - price_currency
+      - term_days
+    PlanEntitlement:
+      type: object
+      properties:
+        key:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/PlanEntitlementKindEnum'
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        limit:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: 'LIMIT kind: null = unlimited'
+        period:
+          allOf:
+          - $ref: '#/components/schemas/PeriodEnum'
+          readOnly: true
+      required:
+      - enabled
+      - key
+      - kind
+      - limit
+      - period
+    PlanEntitlementKindEnum:
+      enum:
+      - BOOLEAN
+      - LIMIT
+      type: string
+      description: |-
+        * `BOOLEAN` - Capability on/off
+        * `LIMIT` - Numeric limit
     PreferredLanguageEnum:
       enum:
       - ar
@@ -1305,6 +6812,38 @@ components:
       description: |-
         * `ar` - Arabic
         * `en` - English
+    ProfessionEnum:
+      enum:
+      - DOCTOR
+      - DENTIST
+      - PHARMACIST
+      - NURSE
+      - MIDWIFE
+      - LAB_TECHNICIAN
+      - RADIOLOGY_TECHNICIAN
+      - ANESTHESIA_TECHNICIAN
+      - PHYSIOTHERAPIST
+      - NUTRITIONIST
+      - PSYCHOLOGIST
+      - MEDICAL_ASSISTANT
+      - ADMINISTRATIVE
+      - OTHER
+      type: string
+      description: |-
+        * `DOCTOR` - Physician
+        * `DENTIST` - Dentist
+        * `PHARMACIST` - Pharmacist
+        * `NURSE` - Nurse
+        * `MIDWIFE` - Midwife
+        * `LAB_TECHNICIAN` - Laboratory technician
+        * `RADIOLOGY_TECHNICIAN` - Radiology technician
+        * `ANESTHESIA_TECHNICIAN` - Anaesthesia technician
+        * `PHYSIOTHERAPIST` - Physiotherapist
+        * `NUTRITIONIST` - Nutritionist
+        * `PSYCHOLOGIST` - Psychologist
+        * `MEDICAL_ASSISTANT` - Medical assistant
+        * `ADMINISTRATIVE` - Administrative / reception
+        * `OTHER` - Other healthcare profession
     ProviderCard:
       type: object
       description: 'List item for discovery. No ratings: reviews arrive in Phase 4.'
@@ -1349,6 +6888,18 @@ components:
       - kind
       - provider_type
       - specialties
+    ProviderMembershipStatusEnum:
+      enum:
+      - PENDING
+      - ACTIVE
+      - REJECTED
+      - ENDED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `ACTIVE` - Active
+        * `REJECTED` - Rejected
+        * `ENDED` - Ended
     ProviderOwner:
       type: object
       description: 'What the owner sees: everything, admin fields read-only.'
@@ -1574,6 +7125,33 @@ components:
       - specialties
       - verified_at
       - website
+    ProviderReference:
+      type: object
+      description: |-
+        Read-only reference to the linked facility profile for administrator
+        review: what the reviewer is about to freeze as the organisation's identity.
+        No contact data, no owner identity.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        provider_type:
+          allOf:
+          - $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - provider_type
+      - verification_status
     ProviderTypeEnum:
       enum:
       - DOCTOR
@@ -1698,6 +7276,28 @@ components:
       - price
       - specialty
       - title
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    RecruitmentReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    RecruitmentStatusEnum:
+      enum:
+      - ACTIVE
+      - SUSPENDED
+      type: string
+      description: |-
+        * `ACTIVE` - Active
+        * `SUSPENDED` - Suspended
     Refresh:
       type: object
       description: Rotation with a defined answer for a token whose account no longer
@@ -1795,6 +7395,41 @@ components:
       - image_url
       - kind
       - provider_type
+    SaveCandidateRequest:
+      type: object
+      properties:
+        job_seeker:
+          type: string
+          format: uuid
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - job_seeker
+    SavedCandidate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        candidate:
+          allOf:
+          - $ref: '#/components/schemas/TalentCard'
+          readOnly: true
+        note:
+          type: string
+          description: Private to the employer; never shown to the candidate
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - candidate
+      - created_at
+      - id
     SelfRegistrationRoleEnum:
       enum:
       - PATIENT
@@ -1807,6 +7442,14 @@ components:
         * `PROVIDER` - Healthcare provider
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    SenderSideEnum:
+      enum:
+      - EMPLOYER
+      - CANDIDATE
+      type: string
+      description: |-
+        * `EMPLOYER` - Employer
+        * `CANDIDATE` - Candidate
     ServiceOffering:
       type: object
       description: Owner view of a service (read + write).
@@ -1884,6 +7527,42 @@ components:
       required:
       - price
       - title
+    ShiftTypeEnum:
+      enum:
+      - DAY
+      - NIGHT
+      - ROTATING
+      - FLEXIBLE
+      - ON_CALL
+      type: string
+      description: |-
+        * `DAY` - Day
+        * `NIGHT` - Night
+        * `ROTATING` - Rotating
+        * `FLEXIBLE` - Flexible
+        * `ON_CALL` - On call
+    Skill:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+      required:
+      - id
+      - name
+    SkillRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+      required:
+      - name
     Specialty:
       type: object
       properties:
@@ -1912,6 +7591,307 @@ components:
       - name_en
       - parent
       - slug
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        plan:
+          allOf:
+          - $ref: '#/components/schemas/Plan'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SubscriptionStatusEnum'
+          readOnly: true
+        requester_note:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - ends_at
+      - id
+      - plan
+      - requester_note
+      - starts_at
+      - status
+    SubscriptionEvent:
+      type: object
+      properties:
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
+        actor_email:
+          type: string
+          format: email
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor_email
+      - created_at
+      - from_status
+      - reason
+      - to_status
+    SubscriptionRequestRequest:
+      type: object
+      properties:
+        plan:
+          type: string
+          minLength: 1
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - plan
+    SubscriptionStatusEnum:
+      enum:
+      - PENDING
+      - ACTIVE
+      - SUSPENDED
+      - CANCELLED
+      - EXPIRED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Pending administrator approval
+        * `ACTIVE` - Active
+        * `SUSPENDED` - Suspended
+        * `CANCELLED` - Cancelled
+        * `EXPIRED` - Expired
+        * `REJECTED` - Rejected
+    TalentCard:
+      type: object
+      description: What an entitled employer sees in talent search. No identity/contact
+        data.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        professional_title:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        years_of_experience:
+          type: integer
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        employment_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        skills:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageSkill'
+          readOnly: true
+      required:
+      - availability
+      - city
+      - degree
+      - detailed_specialty
+      - employment_preferences
+      - general_specialty
+      - governorate
+      - id
+      - languages
+      - profession
+      - professional_title
+      - skills
+      - years_of_experience
+    TalentDetail:
+      type: object
+      description: What an entitled employer sees in talent search. No identity/contact
+        data.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        professional_title:
+          type: string
+          readOnly: true
+        profession:
+          allOf:
+          - $ref: '#/components/schemas/ProfessionEnum'
+          readOnly: true
+        general_specialty:
+          allOf:
+          - $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        detailed_specialty:
+          type: string
+          readOnly: true
+        degree:
+          allOf:
+          - $ref: '#/components/schemas/DegreeEnum'
+          readOnly: true
+        years_of_experience:
+          type: integer
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        employment_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmploymentTypeEnum'
+          readOnly: true
+        skills:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageSkill'
+          readOnly: true
+        institution_name:
+          type: string
+          readOnly: true
+        graduation_year:
+          type: integer
+          readOnly: true
+          nullable: true
+        professional_summary:
+          type: string
+          readOnly: true
+        desired_governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        salary_expectation_min:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        salary_currency:
+          type: string
+          readOnly: true
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkExperience'
+          readOnly: true
+        education:
+          type: array
+          items:
+            $ref: '#/components/schemas/Education'
+          readOnly: true
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credential'
+          readOnly: true
+        is_saved:
+          type: boolean
+          readOnly: true
+        saved_candidate_id:
+          type: string
+          format: uuid
+          nullable: true
+          readOnly: true
+        can_invite:
+          type: boolean
+          description: |-
+            Current invitation eligibility, the rule `invite_candidate` enforces:
+            a candidate visible through a past application is readable but can be
+            invited only while currently discoverable. Computed, never stored.
+          readOnly: true
+      required:
+      - availability
+      - can_invite
+      - city
+      - credentials
+      - degree
+      - desired_governorate
+      - detailed_specialty
+      - education
+      - employment_preferences
+      - experiences
+      - general_specialty
+      - governorate
+      - graduation_year
+      - id
+      - institution_name
+      - is_saved
+      - languages
+      - profession
+      - professional_summary
+      - professional_title
+      - salary_currency
+      - salary_expectation_min
+      - saved_candidate_id
+      - skills
+      - years_of_experience
     TokenPair:
       type: object
       properties:
@@ -1924,18 +7904,7 @@ components:
       required:
       - access
       - refresh
-    VerificationDecisionRequest:
-      type: object
-      properties:
-        status:
-          $ref: '#/components/schemas/VerificationDecisionStatusEnum'
-        note:
-          type: string
-          default: ''
-          maxLength: 2000
-      required:
-      - status
-    VerificationDecisionStatusEnum:
+    VerificationDecisionEnum:
       enum:
       - VERIFIED
       - REJECTED
@@ -1947,6 +7916,17 @@ components:
         * `REJECTED` - Rejected
         * `SUSPENDED` - Suspended
         * `UNVERIFIED` - Unverified
+    VerificationDecisionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/VerificationDecisionEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - status
     VerificationStatusEnum:
       enum:
       - UNVERIFIED
@@ -1961,6 +7941,86 @@ components:
         * `VERIFIED` - Verified
         * `REJECTED` - Rejected
         * `SUSPENDED` - Suspended
+    WorkExperience:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 150
+        organization_name:
+          type: string
+          maxLength: 150
+        governorate:
+          type: string
+          format: uuid
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        is_current:
+          type: boolean
+        description:
+          type: string
+      required:
+      - id
+      - organization_name
+      - start_date
+      - title
+    WorkExperienceRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        organization_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        governorate:
+          type: string
+          format: uuid
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        is_current:
+          type: boolean
+        description:
+          type: string
+      required:
+      - organization_name
+      - start_date
+      - title
+    WorkModeEnum:
+      enum:
+      - ON_SITE
+      - REMOTE
+      - HYBRID
+      type: string
+      description: |-
+        * `ON_SITE` - On site
+        * `REMOTE` - Remote
+        * `HYBRID` - Hybrid
+    _NoBodyRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
   securitySchemes:
     jwtAuth:
       type: http

@@ -51,3 +51,17 @@ export function RequireRole({ roles }: { roles: AccountRole[] }) {
   }
   return <Outlet />
 }
+
+/** Inside RequireAuth: Racheeta staff only (the account's is_staff flag, not a role). */
+export function RequireStaff() {
+  const { account } = useAuth()
+  const { t } = useTranslation()
+  if (!account?.is_staff) {
+    return (
+      <div role="alert" data-testid="staff-denied">
+        <ErrorState title={t('errors.staffOnly')} error={null} />
+      </div>
+    )
+  }
+  return <Outlet />
+}

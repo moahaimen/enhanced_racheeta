@@ -12,6 +12,31 @@ vi.mock('../api/endpoints/auth')
 vi.mock('../api/endpoints/providers')
 vi.mock('../api/endpoints/reference')
 
+describe('HomePage jobs section', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    tokenStore.clear()
+    vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
+    vi.mocked(providersApi.listProviders).mockResolvedValue({ count: 0, next: null, previous: null, results: [] })
+  })
+
+  it('offers "find a job" to everyone and routes anonymous "find talent" through login', async () => {
+    renderApp('/')
+    const section = await screen.findByTestId('home-jobs')
+    expect(within(section).getByRole('link', { name: /ابحث عن وظيفة|Find a job/i })).toHaveAttribute('href', '/jobs')
+    expect(within(section).getByRole('link', { name: /ابحث عن كوادر|Find talent/i })).toHaveAttribute('href', '/login')
+    expect(screen.queryByText(/الوظائف الطبية.*قريباً/)).toBeNull()
+  })
+
+  it('sends a signed-in user straight to talent search', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'MEDICAL_COMPANY' }))
+    renderApp('/')
+    const section = await screen.findByTestId('home-jobs')
+    await waitFor(() => expect(within(section).getByRole('link', { name: /ابحث عن كوادر|Find talent/i })).toHaveAttribute('href', '/employer/talent'))
+  })
+})
+
 describe('HomePage provider call-to-action', () => {
   beforeEach(() => {
     vi.resetAllMocks()

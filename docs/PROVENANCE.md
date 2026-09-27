@@ -43,3 +43,10 @@ or token file is copied into this repository.
 - Code review rejects contributions that reference or resemble legacy files.
 - New engineers or AI assistants read this file (linked from `HANDOFF.md`)
   before touching UI or API code.
+
+## Phase 3 statement
+
+The billing, moderation, audit and jobs modules and every Phase 3 web page
+were written from the Phase 3 brief and this repository's own conventions. No
+code, schema, copy or asset was copied from the legacy Racheeta project or
+from AKAD. The contact-leak patterns were authored for this repository.

@@ -81,6 +81,10 @@ INSTALLED_APPS = [
     "apps.geography",
     "apps.specialties",
     "apps.providers",
+    "apps.audit",
+    "apps.billing",
+    "apps.moderation",
+    "apps.jobs",
 ]
 
 MIDDLEWARE = [
@@ -173,6 +177,11 @@ REST_FRAMEWORK = {
         "auth": "10/min",
         "password_reset": "5/min",
         "email_verification": "3/min",
+        "jobs_create": "30/hour",
+        "jobs_apply": "20/hour",
+        "talent_search": "60/min",
+        "talent_invite": "30/hour",
+        "recruitment_messages": "60/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -209,6 +218,19 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
+        "ProviderMembershipStatusEnum": "apps.providers.types.MembershipStatus.choices",
+        "VerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
+        "VerificationDecisionEnum": "apps.jobs.serializers.VERIFICATION_DECISION_CHOICES",
+        "JobStatusEnum": "apps.jobs.types.JobStatus.choices",
+        "ApplicationStatusEnum": "apps.jobs.types.ApplicationStatus.choices",
+        "InvitationStatusEnum": "apps.jobs.types.InvitationStatus.choices",
+        "InterviewStatusEnum": "apps.jobs.types.InterviewStatus.choices",
+        "MemberStatusEnum": "apps.jobs.types.MemberStatus.choices",
+        "RecruitmentStatusEnum": "apps.jobs.types.RecruitmentStatus.choices",
+        "DegreeEnum": "apps.jobs.types.Degree.choices",
+        "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
+        "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
+        "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",
     },
 }
 

@@ -1,11 +1,11 @@
 """Settings used by pytest only. Keep differences from production minimal."""
 
 import os
-
-from django.core.management.utils import get_random_secret_key
+import secrets
 
 # Tests never need a real secret; generate one per run if none is provided.
-os.environ.setdefault("SECRET_KEY", get_random_secret_key())
+# (token_urlsafe never starts with "$", which django-environ would treat as a reference.)
+os.environ.setdefault("SECRET_KEY", secrets.token_urlsafe(50))
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("ALLOWED_HOSTS", "testserver,localhost")
 # Not used to send anything: pytest swaps in the locmem backend at runtime. It
@@ -25,6 +25,11 @@ REST_FRAMEWORK = {  # noqa: F405
         "auth": "10000/min",
         "password_reset": "10000/min",
         "email_verification": "10000/min",
+        "jobs_create": "10000/min",
+        "jobs_apply": "10000/min",
+        "talent_search": "10000/min",
+        "talent_invite": "10000/min",
+        "recruitment_messages": "10000/min",
     },
 }
 # No collectstatic in tests: serve admin/DRF assets straight from app finders.

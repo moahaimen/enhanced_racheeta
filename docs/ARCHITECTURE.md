@@ -101,8 +101,12 @@ avoid circular imports between business modules — put shared logic in `core`.
 | `accounts` | Account model, roles, register/login/refresh/logout, `/me`, password reset, email verification, Firebase exchange adapter (disabled until configured) — done. |
 | `geography` | Country/Governorate/City with bilingual names; Iraq seeded by migration; public read endpoints — done. |
 | `specialties` | Bilingual specialties with optional parent; seeded; public read endpoint — done. |
-| `providers` | ProviderProfile (practitioner/facility types), admin-controlled verification, memberships, service offerings, public discovery, owner self-management — done. Availability/booking is Phase 3. |
-| everything in master plan §8 | **(planned)** |
+| `providers` | ProviderProfile (practitioner/facility types), admin-controlled verification, memberships, service offerings, public discovery, owner self-management — done. Availability/booking is Phase 4. |
+| `audit` | `AuditEvent` + `services.record(actor, action, target, summary, data)`; admin read endpoint — done (Phase 3). |
+| `billing` | Plans, entitlements by capability key, subscriptions (manual activation), credits, atomic usage counters; `EntitlementService.require/check_concurrent/consume`; imports nothing from feature modules — done (Phase 3, `BILLING.md`). |
+| `moderation` | `ContactLeakDetector` + `validate_no_contact_info` used by every recruitment serializer — done (Phase 3, `MODERATION.md`). |
+| `jobs` | Employers/memberships, job-seeker résumé, job posts with admin review, applications, interviews, messages, talent search, saved candidates, invitations, admin control plane — done (Phase 3, `JOBS.md`). |
+| reservations, reviews/offers, marketplace, real estate, advertising, chat/notifications, dashboards | **(planned)** |
 
 ## Accounts and roles
 
@@ -161,6 +165,17 @@ Account (role=PROVIDER)
 - **Registration vs onboarding**: account registration collects account
   fields only; the professional profile is created afterwards through
   `POST /api/v1/providers/me` (web: `/provider/profile`).
+
+## Commercial gating (Phase 3)
+
+Feature modules never check plans themselves. They call
+`apps.billing.services.entitlements_for(subject_type, subject_id, audience)`
+and use `require` (boolean capability), `check_concurrent` (live count against
+a limit) or `consume` (periodic usage, atomic, idempotent by reference). The
+billing app knows subjects only as `(subject_type, subject_id)`, so marketplace
+or advertising can reuse it unchanged. Typed exceptions become
+`subscription_required` / `entitlement_required` / `usage_limit_reached` with
+`meta` in the error envelope.
 
 ## Web
 

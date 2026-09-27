@@ -141,8 +141,19 @@ Sending `verification_status`, `verification_note`, `verified_at`,
 | --- | --- | --- |
 | POST | `/api/v1/admin/providers/{id}/verification` | `{status: VERIFIED|REJECTED|SUSPENDED|UNVERIFIED, note?}` |
 
+### Phase 3 — jobs, talent, billing, audit
+
+The full route list is in `JOBS.md` (public, seeker, employer, admin groups)
+and `BILLING.md` (plans, admin subscription actions, credits). `GET
+/api/v1/admin/audit` lists audit events (filters `action`, `target_type`,
+`target_id`, `actor`). New error codes: `subscription_required`,
+`entitlement_required`, `usage_limit_reached` (402, with `meta`),
+`organization_not_verified`, `job_not_open`, `already_applied`,
+`already_invited`, `already_saved`, `invalid_transition`, `already_member`,
+`contact_information_not_allowed` (validation, under `codes.<field>`).
+
 ## Planned (not implemented)
 
-Reservations/availability (Phase 3), reviews and offers (Phase 4) and the
+Reservations/availability (Phase 4, free), reviews and offers (Phase 5) and the
 remaining modules of the master plan. Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.

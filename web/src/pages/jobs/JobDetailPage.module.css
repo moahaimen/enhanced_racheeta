@@ -1,0 +1,75 @@
+.hero {
+  padding: var(--space-6);
+  border-radius: var(--radius-hero);
+  background:
+    radial-gradient(40rem 16rem at 100% 0%, var(--color-primary-100), transparent 60%),
+    var(--surface-primary);
+  border: var(--border-width) solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: var(--space-8);
+  }
+}
+
+.hero h1 {
+  font-size: var(--text-h1);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.employer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  color: var(--text-secondary);
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: start;
+  }
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+  font-size: var(--text-body-sm);
+}
+
+.facts dt {
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.salary {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-bold);
+  color: var(--text-brand);
+}
+
+.sticky {
+  position: sticky;
+  inset-block-start: calc(var(--header-height) + var(--space-4));
+}

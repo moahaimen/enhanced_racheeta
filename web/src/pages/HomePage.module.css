@@ -217,3 +217,45 @@
   padding-inline: var(--space-3);
   padding-block: var(--space-1);
 }
+
+.jobs {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-7) var(--space-6);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--color-brand-50), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+
+.jobs h2 {
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-2xl);
+}
+
+.jobs p {
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+}
+
+.jobsActions {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.jobsActions > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.jobsActions a {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 900px) {
+  .jobs {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: center;
+  }
+}

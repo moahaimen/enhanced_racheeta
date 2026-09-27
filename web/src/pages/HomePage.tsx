@@ -28,7 +28,6 @@ import styles from './HomePage.module.css'
 const UPCOMING_MODULES = [
   { key: 'reservations', icon: 'calendar' },
   { key: 'offers', icon: 'tag' },
-  { key: 'jobs', icon: 'briefcase' },
   { key: 'marketplace', icon: 'cart' },
   { key: 'realEstate', icon: 'home' },
 ] as const
@@ -107,6 +106,17 @@ export function HomePage() {
           >
             {t('home.services.providers')}
           </FeatureCard>
+          <FeatureCard
+            icon={<Icon name="briefcase" size={22} />}
+            title={t('modules.jobs')}
+            action={
+              <LinkButton to="/jobs" variant="subtle" size="sm" trailing={<Icon name="arrowForward" size={16} flipInRtl />}>
+                {t('common.browse')}
+              </LinkButton>
+            }
+          >
+            {t('home.services.jobs')}
+          </FeatureCard>
           {UPCOMING_MODULES.map((m) => (
             <FeatureCard
               key={m.key}
@@ -117,6 +127,33 @@ export function HomePage() {
               {t(`home.services.${m.key}`)}
             </FeatureCard>
           ))}
+        </div>
+      </Container>
+
+      <Container width="xl" section="tight" as="section" aria-labelledby="jobs-title">
+        <div className={styles.jobs} data-testid="home-jobs">
+          <div>
+            <span className={styles.eyebrow}>
+              <Icon name="briefcase" size={16} />
+              {t('modules.jobs')}
+            </span>
+            <h2 id="jobs-title">{t('home.jobsTitle')}</h2>
+            <p>{t('home.jobsBody')}</p>
+          </div>
+          <div className={styles.jobsActions}>
+            <div>
+              <LinkButton to="/jobs" size="lg" trailing={<Icon name="arrowForward" size={18} flipInRtl />}>
+                {t('home.jobsSeek')}
+              </LinkButton>
+              <p className="text-caption">{t('home.jobsSeekHint')}</p>
+            </div>
+            <div>
+              <LinkButton to={status === 'authenticated' ? '/employer/talent' : '/login'} state={status === 'authenticated' ? undefined : { from: '/employer' }} size="lg" variant="secondary" trailing={<Icon name="users" size={18} />}>
+                {t('home.jobsHire')}
+              </LinkButton>
+              <p className="text-caption">{t('home.jobsHireHint')}</p>
+            </div>
+          </div>
         </div>
       </Container>
 
