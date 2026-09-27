@@ -26,7 +26,6 @@ import { useLocalizedName } from '../i18n/localized'
 import styles from './HomePage.module.css'
 
 const UPCOMING_MODULES = [
-  { key: 'reservations', icon: 'calendar' },
   { key: 'offers', icon: 'tag' },
   { key: 'marketplace', icon: 'cart' },
   { key: 'realEstate', icon: 'home' },
@@ -105,6 +104,17 @@ export function HomePage() {
             }
           >
             {t('home.services.providers')}
+          </FeatureCard>
+          <FeatureCard
+            icon={<Icon name="calendar" size={22} />}
+            title={t('modules.reservations')}
+            action={
+              <LinkButton to="/providers" variant="subtle" size="sm" trailing={<Icon name="arrowForward" size={16} flipInRtl />}>
+                {t('common.browse')}
+              </LinkButton>
+            }
+          >
+            {t('home.services.reservations')}
           </FeatureCard>
           <FeatureCard
             icon={<Icon name="briefcase" size={22} />}

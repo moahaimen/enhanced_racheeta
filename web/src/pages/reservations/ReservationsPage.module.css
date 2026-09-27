@@ -1,0 +1,70 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title {
+  font-weight: var(--weight-semibold);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-body-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.history {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.history li {
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+}
+
+.formGrid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 760px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}

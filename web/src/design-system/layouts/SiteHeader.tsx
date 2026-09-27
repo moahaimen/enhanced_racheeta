@@ -72,11 +72,23 @@ export function SiteHeader() {
         <Icon name="briefcase" size={18} />
         {t('nav.jobs')}
       </NavLink>
-      {status === 'authenticated' && account?.role === 'PROVIDER' ? (
-        <NavLink to="/provider/profile" className={styles.link}>
-          <Icon name="briefcase" size={18} />
-          {t('nav.providerProfile')}
+      {status === 'authenticated' && account?.role === 'PATIENT' ? (
+        <NavLink to="/reservations" className={styles.link}>
+          <Icon name="calendar" size={18} />
+          {t('nav.myReservations')}
         </NavLink>
+      ) : null}
+      {status === 'authenticated' && account?.role === 'PROVIDER' ? (
+        <>
+          <NavLink to="/provider/profile" className={styles.link}>
+            <Icon name="briefcase" size={18} />
+            {t('nav.providerProfile')}
+          </NavLink>
+          <NavLink to="/provider/reservations" className={styles.link}>
+            <Icon name="calendar" size={18} />
+            {t('nav.providerReservations')}
+          </NavLink>
+        </>
       ) : null}
       {status === 'authenticated' ? (
         <NavLink to="/employer" className={styles.link}>

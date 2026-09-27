@@ -1,13 +1,31 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
-import { ApiError, providers as providersApi } from '../../api'
+import { ApiError, providers as providersApi, reservations as reservationsApi } from '../../api'
 import type { ProviderPublic } from '../../api'
-import { AsyncPage, Avatar, Badge, buttonClassName, Container, Icon, LinkButton, PageStack, PROVIDER_TYPE_ICON, SectionCard } from '../../design-system'
+import { useAuth } from '../../auth/useAuth'
+import {
+  Alert,
+  ApiActionButton,
+  AsyncPage,
+  Avatar,
+  Badge,
+  buttonClassName,
+  Container,
+  EmptyState,
+  ErrorState,
+  Icon,
+  LinkButton,
+  LoadingState,
+  PageStack,
+  PROVIDER_TYPE_ICON,
+  SectionCard,
+} from '../../design-system'
+import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import styles from './ProviderDetailPage.module.css'
 
-/** Public provider profile. Everything shown comes from GET /providers/{id}. */
 export function ProviderDetailPage() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
@@ -41,9 +59,7 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
       <section className={styles.hero} aria-labelledby="provider-title">
         <Avatar src={provider.image_url || null} name={provider.display_name} size="xl" fallback={<Icon name={PROVIDER_TYPE_ICON[provider.provider_type]} size={40} />} />
         <div className={styles.heroText}>
-          <h1 id="provider-title" className={styles.heroTitle}>
-            {provider.display_name}
-          </h1>
+          <h1 id="provider-title" className={styles.heroTitle}>{provider.display_name}</h1>
           <div className={styles.heroMeta}>
             <Badge tone="brand">{t(`providerTypes.${provider.provider_type}`)}</Badge>
             <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
@@ -83,39 +99,36 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
               <p className="text-muted">{t('providerDetail.noServices')}</p>
             ) : (
               <ul className={styles.services}>
-                {provider.services.map((s) => (
-                  <li key={s.id} className={styles.service}>
+                {provider.services.map((service) => (
+                  <li key={service.id} className={styles.service}>
                     <div className={styles.serviceText}>
-                      <div className={styles.serviceTitle}>{s.title}</div>
-                      {s.specialty ? <div className="text-caption">{name(s.specialty)}</div> : null}
-                      {s.description ? <p className="text-secondary prewrap">{s.description}</p> : null}
-                      {s.duration_minutes ? (
+                      <div className={styles.serviceTitle}>{service.title}</div>
+                      {service.specialty ? <div className="text-caption">{name(service.specialty)}</div> : null}
+                      {service.description ? <p className="text-secondary prewrap">{service.description}</p> : null}
+                      {service.duration_minutes ? (
                         <div className="text-caption cluster" style={{ marginBlockStart: 'var(--space-1)' }}>
-                          <Icon name="clock" size={14} /> {t('providerDetail.duration', { minutes: s.duration_minutes })}
+                          <Icon name="clock" size={14} /> {t('providerDetail.duration', { minutes: service.duration_minutes })}
                         </div>
                       ) : null}
                     </div>
                     <span className={`${styles.servicePrice} ltr`}>
-                      {Number(s.price).toLocaleString(i18n.language)} {s.currency}
+                      {Number(service.price).toLocaleString(i18n.language)} {service.currency}
                     </span>
                   </li>
                 ))}
               </ul>
             )}
-            <p className={styles.slot} style={{ marginBlockStart: 'var(--space-4)' }}>
-              <Icon name="calendar" size={14} /> {t('providerDetail.bookingSoon')}
-            </p>
           </SectionCard>
+
+          <BookingSection provider={provider} />
         </PageStack>
 
         <PageStack>
           {provider.specialties.length > 0 ? (
             <SectionCard title={t('providerDetail.specialties')} headingLevel={2}>
               <ul className={styles.chips}>
-                {provider.specialties.map((s) => (
-                  <li key={s.id}>
-                    <Badge tone="outline">{name(s)}</Badge>
-                  </li>
+                {provider.specialties.map((specialty) => (
+                  <li key={specialty.id}><Badge tone="outline">{name(specialty)}</Badge></li>
                 ))}
               </ul>
             </SectionCard>
@@ -124,52 +137,11 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
           {hasContact ? (
             <SectionCard title={t('providerDetail.contact')} headingLevel={2}>
               <dl className={styles.facts}>
-                {provider.phone ? (
-                  <>
-                    <dt>
-                      <Icon name="phone" size={14} /> {t('providerDetail.phone')}
-                    </dt>
-                    <dd className="ltr">{provider.phone}</dd>
-                  </>
-                ) : null}
-                {provider.public_email ? (
-                  <>
-                    <dt>
-                      <Icon name="mail" size={14} /> {t('providerDetail.email')}
-                    </dt>
-                    <dd className="ltr">{provider.public_email}</dd>
-                  </>
-                ) : null}
-                {provider.website ? (
-                  <>
-                    <dt>
-                      <Icon name="link" size={14} /> {t('providerDetail.website')}
-                    </dt>
-                    <dd className="ltr">
-                      <a href={provider.website} rel="noopener noreferrer" target="_blank">
-                        {provider.website}
-                      </a>
-                    </dd>
-                  </>
-                ) : null}
-                {provider.address ? (
-                  <>
-                    <dt>
-                      <Icon name="mapPin" size={14} /> {t('providerDetail.address')}
-                    </dt>
-                    <dd>{provider.address}</dd>
-                  </>
-                ) : null}
-                {provider.latitude && provider.longitude ? (
-                  <>
-                    <dt>
-                      <Icon name="globe" size={14} /> {t('providerDetail.location')}
-                    </dt>
-                    <dd className="ltr">
-                      {provider.latitude}, {provider.longitude}
-                    </dd>
-                  </>
-                ) : null}
+                {provider.phone ? <><dt><Icon name="phone" size={14} /> {t('providerDetail.phone')}</dt><dd className="ltr">{provider.phone}</dd></> : null}
+                {provider.public_email ? <><dt><Icon name="mail" size={14} /> {t('providerDetail.email')}</dt><dd className="ltr">{provider.public_email}</dd></> : null}
+                {provider.website ? <><dt><Icon name="link" size={14} /> {t('providerDetail.website')}</dt><dd className="ltr"><a href={provider.website} rel="noopener noreferrer" target="_blank">{provider.website}</a></dd></> : null}
+                {provider.address ? <><dt><Icon name="mapPin" size={14} /> {t('providerDetail.address')}</dt><dd>{provider.address}</dd></> : null}
+                {provider.latitude && provider.longitude ? <><dt><Icon name="globe" size={14} /> {t('providerDetail.location')}</dt><dd className="ltr">{provider.latitude}, {provider.longitude}</dd></> : null}
               </dl>
             </SectionCard>
           ) : null}
@@ -177,12 +149,12 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
           {provider.related_providers.length > 0 ? (
             <SectionCard title={provider.kind === 'PRACTITIONER' ? t('providerDetail.worksAt') : t('providerDetail.team')} headingLevel={2}>
               <ul className={styles.related}>
-                {provider.related_providers.map((r) => (
-                  <li key={r.id} className={styles.relatedItem}>
-                    <Avatar src={r.image_url || null} name={r.display_name} size="sm" fallback={<Icon name={PROVIDER_TYPE_ICON[r.provider_type]} size={18} />} />
+                {provider.related_providers.map((related) => (
+                  <li key={related.id} className={styles.relatedItem}>
+                    <Avatar src={related.image_url || null} name={related.display_name} size="sm" fallback={<Icon name={PROVIDER_TYPE_ICON[related.provider_type]} size={18} />} />
                     <div>
-                      <Link to={`/providers/${r.id}`}>{r.display_name}</Link>
-                      <div className="text-caption">{t(`providerTypes.${r.provider_type}`)}</div>
+                      <Link to={`/providers/${related.id}`}>{related.display_name}</Link>
+                      <div className="text-caption">{t(`providerTypes.${related.provider_type}`)}</div>
                     </div>
                   </li>
                 ))}
@@ -192,5 +164,64 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
         </PageStack>
       </div>
     </PageStack>
+  )
+}
+
+function BookingSection({ provider }: { provider: ProviderPublic }) {
+  const { t, i18n } = useTranslation()
+  const { status, account } = useAuth()
+  const slots = useAsyncData((signal) => reservationsApi.listAvailability(provider.id, {}, signal), [provider.id])
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  return (
+    <SectionCard title={t('reservations.bookTitle')} description={t('reservations.bookIntro')} headingLevel={2}>
+      {success ? <Alert kind="success">{t('reservations.booked')}</Alert> : null}
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      {slots.loading ? (
+        <LoadingState />
+      ) : slots.error ? (
+        <ErrorState error={slots.error} onRetry={slots.reload} />
+      ) : (slots.data ?? []).length === 0 ? (
+        <EmptyState icon="calendar" title={t('reservations.noAvailability')} />
+      ) : (
+        <ul className={styles.services}>
+          {(slots.data ?? []).map((slot) => (
+            <li key={slot.id} className={styles.service} data-testid="availability-slot">
+              <div className={styles.serviceText}>
+                <div className={styles.serviceTitle}>{slot.service.title}</div>
+                <div className="text-caption cluster">
+                  <Icon name="calendar" size={14} /> {new Date(slot.starts_at).toLocaleString(i18n.language)}
+                </div>
+                <div className="text-caption cluster">
+                  <Icon name="clock" size={14} /> {t('providerDetail.duration', { minutes: slot.service.duration_minutes ?? 0 })}
+                </div>
+              </div>
+              {status === 'anonymous' ? (
+                <LinkButton to="/login" state={{ from: `/providers/${provider.id}` }} size="sm">
+                  {t('reservations.loginToBook')}
+                </LinkButton>
+              ) : account?.role === 'PATIENT' ? (
+                <ApiActionButton
+                  size="sm"
+                  action={() => reservationsApi.createReservation(slot.id)}
+                  onSuccess={() => {
+                    setSuccess(true)
+                    setError(null)
+                    slots.reload()
+                  }}
+                  onError={(err) => setError(toErrorMessage(err))}
+                  pendingLabel={t('reservations.booking')}
+                >
+                  {t('reservations.book')}
+                </ApiActionButton>
+              ) : (
+                <Badge tone="outline">{t('reservations.patientOnly')}</Badge>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
   )
 }
