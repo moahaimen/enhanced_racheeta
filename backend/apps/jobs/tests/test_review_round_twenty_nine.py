@@ -491,7 +491,6 @@ def test_list_rows_serialize_the_complete_locked_candidate_state(s, name, monkey
     assert card["professional_title"] == new_title
 
 
-
 def test_invitation_history_refreshes_every_candidate_instance(s, monkeypatch):
     """Two historical invitation rows for the same candidate carry distinct
     select_related profile objects.  Every instance must be synchronized from
