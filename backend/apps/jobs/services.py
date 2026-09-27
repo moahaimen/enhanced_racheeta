@@ -1155,9 +1155,7 @@ def lock_candidates(ids) -> dict:
     account_ids = sorted({row.account_id for row in rows if row.account_id is not None})
     locked_accounts = {
         account.pk: account
-        for account in Account.objects.select_for_update()
-        .filter(pk__in=account_ids)
-        .order_by("pk")
+        for account in Account.objects.select_for_update().filter(pk__in=account_ids).order_by("pk")
     }
     for row in rows:
         account = locked_accounts.get(row.account_id)
