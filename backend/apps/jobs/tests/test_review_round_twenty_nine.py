@@ -491,6 +491,50 @@ def test_list_rows_serialize_the_complete_locked_candidate_state(s, name, monkey
     assert card["professional_title"] == new_title
 
 
+
+def test_invitation_history_refreshes_every_candidate_instance(s, monkeypatch):
+    """Two historical invitation rows for the same candidate carry distinct
+    select_related profile objects.  Every instance must be synchronized from
+    the one authoritative locked profile before the list is serialized."""
+    services.cancel_invitation(s.invitation, actor=s.owner)
+    services.invite_candidate(s.employer, s.job, s.candidate, actor=s.owner)
+
+    real = services.lock_candidates
+    changed = {"done": False}
+    new_title = "Updated across invitation history"
+
+    def update_then_lock(ids):
+        ids = list(ids)
+        if not changed["done"] and s.candidate.pk in ids:
+            JobSeekerProfile.objects.filter(pk=s.candidate.pk).update(professional_title=new_title)
+            changed["done"] = True
+        return real(ids)
+
+    monkeypatch.setattr(services, "lock_candidates", update_then_lock)
+    resp = _call(s, "invitation_list", s.recruiter)
+
+    assert resp.status_code == 200, resp.content
+    cards = []
+
+    def collect(node):
+        if isinstance(node, dict):
+            if (
+                node.get("id") == str(s.candidate.pk)
+                and "professional_title" in node
+                and "skills" in node
+            ):
+                cards.append(node)
+            for value in node.values():
+                collect(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect(value)
+
+    collect(resp.json())
+    assert len(cards) == 2
+    assert {card["professional_title"] for card in cards} == {new_title}
+
+
 @pytest.mark.django_db(transaction=True, serialized_rollback=True)
 @pytest.mark.parametrize("name", ["search", "detail", "saved_list", "invitation_list", "cancel"])
 def test_account_deactivation_waits_until_candidate_response_is_materialized(
