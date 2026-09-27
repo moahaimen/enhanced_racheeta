@@ -82,19 +82,14 @@ class PublicAvailabilityView(APIView):
             ProviderProfile.objects.discoverable(),
             pk=provider_id,
         )
-        query = AvailabilityQuerySerializer(
-            data={
-                "service": request.query_params.get("service")
-                if "service" in request.query_params
-                else None,
-                "from_at": request.query_params.get("from")
-                if "from" in request.query_params
-                else None,
-                "to_at": request.query_params.get("to")
-                if "to" in request.query_params
-                else None,
-            }
-        )
+        query_data = {}
+        if "service" in request.query_params:
+            query_data["service"] = request.query_params["service"]
+        if "from" in request.query_params:
+            query_data["from_at"] = request.query_params["from"]
+        if "to" in request.query_params:
+            query_data["to_at"] = request.query_params["to"]
+        query = AvailabilityQuerySerializer(data=query_data)
         query.is_valid(raise_exception=True)
         data = query.validated_data
 
