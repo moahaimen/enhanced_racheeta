@@ -3,18 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../../api/client'
 import * as providersApi from '../../api/endpoints/providers'
+import * as reservationsApi from '../../api/endpoints/reservations'
 import { tokenStore } from '../../api/tokens'
 import { makePublic } from '../../test/providerFixtures'
 import { deferred, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/providers')
+vi.mock('../../api/endpoints/reservations')
 vi.mock('../../api/endpoints/reference')
 
 describe('ProviderDetailPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     tokenStore.clear()
+    vi.mocked(reservationsApi.listAvailability).mockResolvedValue([])
   })
 
   it('shows loading then only real API data', async () => {
