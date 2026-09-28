@@ -2635,6 +2635,74 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
+  /api/v1/offers/provider:
+    get:
+      operationId: offers_provider_retrieve
+      summary: My offers
+      tags:
+      - provider-offers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfferOwner'
+          description: ''
+    post:
+      operationId: offers_provider_create
+      summary: Create an offer
+      tags:
+      - provider-offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferOwner'
+          description: ''
+  /api/v1/offers/provider/{id}:
+    patch:
+      operationId: offers_provider_partial_update
+      summary: Update or deactivate one of my offers
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferOwner'
+          description: ''
   /api/v1/providers:
     get:
       operationId: providers_list
@@ -2758,6 +2826,88 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+  /api/v1/providers/{provider_id}/offers:
+    get:
+      operationId: providers_offers_list
+      summary: Public active offers for a provider
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - in: path
+        name: provider_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - offers
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicOffer'
+          description: ''
+  /api/v1/providers/{provider_id}/reviews:
+    get:
+      operationId: providers_reviews_list
+      summary: Public reviews for a provider
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: path
+        name: provider_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - reviews
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPublicReviewList'
           description: ''
   /api/v1/providers/me:
     get:
@@ -3393,6 +3543,70 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/reviews:
+    post:
+      operationId: reviews_create
+      summary: Create a review for a completed reservation
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyReview'
+          description: ''
+  /api/v1/reviews/me:
+    get:
+      operationId: reviews_me_list
+      summary: My submitted reviews
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - reviews
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMyReviewList'
+          description: ''
   /api/v1/specialties:
     get:
       operationId: specialties_list
@@ -6292,6 +6506,143 @@ components:
       description: |-
         * `IN_PERSON` - In person
         * `ONLINE` - Online (details shared inside Racheeta)
+    MyReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_name_snapshot:
+          type: string
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+        comment:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reservation_id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+      required:
+      - comment
+      - created_at
+      - id
+      - provider_id
+      - provider_name_snapshot
+      - rating
+      - reservation_id
+      - service_title_snapshot
+    OfferCreateRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          default: ''
+          maxLength: 1000
+        offer_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+      required:
+      - ends_at
+      - offer_price
+      - service
+      - starts_at
+      - title
+    OfferOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        original_price_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        offer_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        currency_snapshot:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        service_id:
+          type: string
+          format: uuid
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - currency_snapshot
+      - description
+      - ends_at
+      - id
+      - is_active
+      - offer_price
+      - original_price_snapshot
+      - service_id
+      - service_title_snapshot
+      - starts_at
+      - title
+      - updated_at
     OrganizationTypeEnum:
       enum:
       - HOSPITAL
@@ -6570,6 +6921,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JobEmployer'
+    PaginatedMyReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyReview'
+    PaginatedOfferOwner:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferOwner'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedProviderCardList:
       type: object
       required:
@@ -6593,6 +6989,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProviderCard'
+    PaginatedPublicReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicReview'
     PaginatedReservationPatientList:
       type: object
       required:
@@ -6944,6 +7363,28 @@ components:
           maxLength: 40
         level:
           $ref: '#/components/schemas/LevelEnum'
+    PatchedOfferUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 1000
+        offer_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
     PatchedProviderWriteRequest:
       type: object
       description: Create (POST) and partial update (PATCH) by the owner.
@@ -7281,7 +7722,7 @@ components:
         * `OTHER` - Other healthcare profession
     ProviderCard:
       type: object
-      description: 'List item for discovery. No ratings: reviews arrive in Phase 4.'
+      description: List item for discovery with public rating summary.
       properties:
         id:
           type: string
@@ -7314,7 +7755,16 @@ components:
           type: string
           format: uri
           readOnly: true
+        average_rating:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        review_count:
+          type: integer
+          readOnly: true
       required:
+      - average_rating
       - city
       - display_name
       - governorate
@@ -7322,6 +7772,7 @@ components:
       - image_url
       - kind
       - provider_type
+      - review_count
       - specialties
     ProviderMembershipStatusEnum:
       enum:
@@ -7497,6 +7948,14 @@ components:
           type: string
           format: uri
           readOnly: true
+        average_rating:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        review_count:
+          type: integer
+          readOnly: true
         about:
           type: string
           readOnly: true
@@ -7544,6 +8003,7 @@ components:
       required:
       - about
       - address
+      - average_rating
       - city
       - display_name
       - governorate
@@ -7556,6 +8016,7 @@ components:
       - provider_type
       - public_email
       - related_providers
+      - review_count
       - services
       - specialties
       - verified_at
@@ -7699,6 +8160,83 @@ components:
       - display_name
       - governorate
       - provider_type
+    PublicOffer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        original_price_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        offer_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        currency_snapshot:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - currency_snapshot
+      - description
+      - ends_at
+      - id
+      - offer_price
+      - original_price_snapshot
+      - service_title_snapshot
+      - starts_at
+      - title
+    PublicReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_name_snapshot:
+          type: string
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          readOnly: true
+        comment:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - comment
+      - created_at
+      - id
+      - provider_name_snapshot
+      - rating
+      - service_title_snapshot
     PublicService:
       type: object
       properties:
@@ -7934,6 +8472,9 @@ components:
           items:
             $ref: '#/components/schemas/ReservationTransition'
           readOnly: true
+        review_id:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -7949,6 +8490,7 @@ components:
       - price_snapshot
       - provider_id
       - provider_name_snapshot
+      - review_id
       - service_id
       - service_title_snapshot
       - starts_at
@@ -8019,6 +8561,9 @@ components:
           items:
             $ref: '#/components/schemas/ReservationTransition'
           readOnly: true
+        review_id:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -8035,6 +8580,7 @@ components:
       - price_snapshot
       - provider_id
       - provider_name_snapshot
+      - review_id
       - service_id
       - service_title_snapshot
       - starts_at
@@ -8080,6 +8626,23 @@ components:
       - from_status
       - reason
       - to_status
+    ReviewCreateRequest:
+      type: object
+      properties:
+        reservation:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comment:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - rating
+      - reservation
     SaveCandidateRequest:
       type: object
       properties:
