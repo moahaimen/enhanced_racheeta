@@ -22,7 +22,8 @@ class PublicOfferSerializer(serializers.ModelSerializer):
 
 
 class OfferOwnerSerializer(PublicOfferSerializer):
-    service_id = serializers.UUIDField(read_only=True)
+    # SET_NULL: a historical offer keeps its snapshots after its service is deleted.
+    service_id = serializers.UUIDField(read_only=True, allow_null=True)
 
     class Meta(PublicOfferSerializer.Meta):
         fields = PublicOfferSerializer.Meta.fields + (

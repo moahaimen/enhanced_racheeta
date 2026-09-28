@@ -23,6 +23,20 @@ class OfferNotFound(OfferError):
     code = "not_found"
 
 
+def _locked_valid_service(provider: ProviderProfile, service_id) -> ServiceOffering:
+    """THE definition of a service an offer may be linked to or (re)activated
+    on, decided on the locked row: it exists, belongs to this provider and is
+    active. Shared by creation and activation so both agree."""
+    try:
+        return ServiceOffering.objects.select_for_update(of=("self",)).get(
+            pk=service_id,
+            provider=provider,
+            is_active=True,
+        )
+    except ServiceOffering.DoesNotExist as exc:
+        raise ServiceUnavailable("The selected service is unavailable.") from exc
+
+
 def _validate_window(*, starts_at, ends_at):
     if ends_at <= starts_at:
         raise InvalidOffer("Offer end time must be after its start time.")
@@ -42,14 +56,7 @@ def create_offer(
     ends_at,
 ) -> Offer:
     provider = ProviderProfile.objects.select_for_update(of=("self",)).get(pk=provider.pk)
-    try:
-        service = ServiceOffering.objects.select_for_update(of=("self",)).get(
-            pk=service_id,
-            provider=provider,
-            is_active=True,
-        )
-    except ServiceOffering.DoesNotExist as exc:
-        raise ServiceUnavailable("The selected service is unavailable.") from exc
+    service = _locked_valid_service(provider, service_id)
 
     _validate_window(starts_at=starts_at, ends_at=ends_at)
     if offer_price >= service.price:
@@ -95,6 +102,15 @@ def update_offer(provider: ProviderProfile, *, offer_id, changes: dict) -> Offer
 
     if is_active:
         _validate_window(starts_at=starts_at, ends_at=ends_at)
+        # An active offer must point at a service that still exists, is still
+        # this provider's and is still active — decided on the locked service
+        # row, never on the snapshots. Otherwise the owner would see
+        # is_active=true for an offer the public can never see. Deactivating
+        # (or editing while inactive) stays possible for a stale offer, which
+        # remains as history.
+        if offer.service_id is None:
+            raise ServiceUnavailable("The offer's service no longer exists.")
+        _locked_valid_service(provider, offer.service_id)
     elif ends_at <= starts_at:
         raise InvalidOffer("Offer end time must be after its start time.")
     if offer_price >= offer.original_price_snapshot:

@@ -2838,6 +2838,18 @@ paths:
         description: أي حقل يجب استخدامه عند ترتيب النتائج.
         schema:
           type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
       - in: path
         name: provider_id
         schema:
@@ -2859,9 +2871,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PublicOffer'
+                $ref: '#/components/schemas/PaginatedPublicOfferList'
           description: ''
   /api/v1/providers/{provider_id}/reviews:
     get:
@@ -6618,6 +6628,7 @@ components:
           type: string
           format: uuid
           readOnly: true
+          nullable: true
         is_active:
           type: boolean
           readOnly: true
@@ -6989,6 +7000,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProviderCard'
+    PaginatedPublicOfferList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicOffer'
     PaginatedPublicReviewList:
       type: object
       required:
@@ -8474,6 +8508,8 @@ components:
           readOnly: true
         review_id:
           type: string
+          format: uuid
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -8563,6 +8599,8 @@ components:
           readOnly: true
         review_id:
           type: string
+          format: uuid
+          nullable: true
           readOnly: true
         created_at:
           type: string

@@ -57,7 +57,9 @@ def test_provider_creates_offer_and_public_sees_active_window(api_client, accoun
     public = api_client.get(f"/api/v1/providers/{provider.pk}/offers")
 
     assert public.status_code == 200
-    assert [row["id"] for row in public.json()] == [offer_id]
+    body = public.json()  # the standard paginated envelope, never a raw array
+    assert set(body) == {"count", "next", "previous", "results"}
+    assert body["count"] == 1 and [row["id"] for row in body["results"]] == [offer_id]
 
 
 @pytest.mark.django_db
@@ -105,12 +107,12 @@ def test_expired_inactive_or_hidden_provider_offer_is_not_public(api_client, acc
         ends_at=now - timedelta(days=1),
     )
 
-    assert api_client.get(f"/api/v1/providers/{provider.pk}/offers").json() == []
+    assert api_client.get(f"/api/v1/providers/{provider.pk}/offers").json()["count"] == 0
 
     offer.ends_at = now + timedelta(days=1)
     offer.is_active = False
     offer.save(update_fields=["ends_at", "is_active", "updated_at"])
-    assert api_client.get(f"/api/v1/providers/{provider.pk}/offers").json() == []
+    assert api_client.get(f"/api/v1/providers/{provider.pk}/offers").json()["count"] == 0
 
     provider.is_visible = False
     provider.save(update_fields=["is_visible", "updated_at"])

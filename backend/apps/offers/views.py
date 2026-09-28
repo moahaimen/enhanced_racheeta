@@ -43,7 +43,7 @@ class PublicProviderOfferListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     serializer_class = PublicOfferSerializer
-    pagination_class = None
+    # Standard pagination (20 per page): a provider may hold many current offers.
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -59,7 +59,7 @@ class PublicProviderOfferListView(generics.ListAPIView):
             is_active=True,
             starts_at__lte=now,
             ends_at__gt=now,
-        ).order_by("ends_at")
+        ).order_by("ends_at", "id")  # deterministic across pages
 
 
 @extend_schema(tags=["provider-offers"])
