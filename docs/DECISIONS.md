@@ -233,6 +233,11 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Decision:** A PATIENT may review only a reservation they own whose status is COMPLETED and whose provider still resolves. `Review.reservation` is one-to-one and protected; rating is 1–5 with both serializer/model/database validation. Provider/service names are snapshotted.
 **Consequences:** Ratings represent verified completed interactions rather than arbitrary public submissions. Provider aggregates are real persisted data and may be safely shown in discovery/detail.
 
+## ADR-044 — The medical marketplace is B2B with system-controlled, category-driven audiences
+**Date:** 2026-09-28
+**Decision:** Phase 6 is business-to-business: verified medical companies publish products; only PROVIDER accounts with a VERIFIED provider profile browse them (public `is_visible` is not required). Categories and their audience rules (`ProductAudience`: provider type and/or specialty, never empty) are administrator reference data; a company chooses only a category, and the backend derives the audience from that category's active rules. Product payloads that carry any targeting or state field are refused. One queryset (`ProductQuerySet.targeted_for`) decides list and detail; activation re-checks the locked company and category. Product images are deferred until production media storage exists; campaigns, advertising and payments remain Phase 8.
+**Consequences:** No request parameter, guessed id or company payload can expose a product to an audience the rules do not allow. Taxonomy and targeting change through the admin without code. Products have no images yet and there is no paid placement.
+
 ## ADR-043 — Offers are service-scoped snapshots with server-controlled visibility windows
 **Date:** 2026-09-28
 **Decision:** A provider offer must reference an owned active service at creation. Original service title/price/currency are snapshotted; offer price must be non-negative and below the original price. Public visibility requires the provider to be discoverable, the service active, `is_active=true`, and server time inside `[starts_at, ends_at)`.

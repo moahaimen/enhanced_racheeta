@@ -1,13 +1,26 @@
 # Current State
 
 Date: 2026-09-28
-AI/Engineer: ChatGPT (GPT-5.6 Sol)
-Branch: `feat/phase5-reviews-offers`
-Base: Phase 4 merged to `main` at `919bfe924736f4adfb38340ae742f181f0e825b5`; documentation cleanup followed on `main`.
-Pull Request: not opened yet
-Last Commit SHA: updated by the Phase 5 documentation checkpoint commit
+AI/Engineer: Claude (Opus 5.5)
+Branch: `feat/phase6-medical-marketplace`
+Base: `main` at `34e3f4c981e1fc2ce3a0d0dc0185d2aa4bf39341` (Phase 5 merged via PR #6; post-merge CI #180 green; final Codex review on `6e09328` reported no major issues)
+Pull Request: Phase 6 draft PR (see below)
+Last Commit SHA: see `git log`; recorded in the final report of this session
 
-## Goal of This Work Session
+## Phase 6 — Medical Marketplace (this session)
+
+- New `apps/marketplace`: `MedicalCompany` (admin-verified, one per MEDICAL_COMPANY account), `ProductCategory` and `ProductAudience` (administrator reference data; rules are provider type and/or specialty, never empty), `Product` (nullable price ≥ 0, IQD/USD, inactive until published). Migration `marketplace/0001_initial`.
+- Targeting: `ProductQuerySet.targeted_for(provider)` — one queryset for list and detail; a verified company, active category and an active matching rule are all required. Browsing needs a PROVIDER with a VERIFIED profile (`is_visible` not required).
+- Publication: `services.update_product` re-checks the locked company and category on every activation; payloads carrying targeting/state fields are refused.
+- APIs, permissions (`marketplace.view_targeted_products` added to PROVIDER), OpenAPI regenerated, web `/marketplace`, `/marketplace/products/:id`, `/company`, header links and live home card, ar/en.
+- Deferred: product images (no media storage), ProductCampaign/ads/payments (Phase 8). See `MARKETPLACE.md`, ADR-044.
+- Tests: backend 927 passed, web 263 passed.
+
+## Next step
+
+Wait for green push and pull_request CI on the Phase 6 head, then run the Phase 6 acceptance review. Do not start Phase 7.
+
+## Previous session (Phase 5)
 
 Continue Phase 5 — Reviews & Offers — without rebuilding existing work. Keep reviews tied to verified interactions, offers tied to provider-owned services, and avoid new payment/background infrastructure.
 

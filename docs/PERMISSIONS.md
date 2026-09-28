@@ -26,16 +26,18 @@ Django's `auth.Permission` / `Group` tables are used only by the admin site.
 | Role | Capabilities |
 | --- | --- |
 | PATIENT | accounts.view_self, accounts.edit_self, providers.search, reservations.create_own, reviews.create_own |
-| PROVIDER | accounts.view_self, accounts.edit_self, providers.search, providers.manage_own_profile, reservations.manage_received, offers.manage_own, jobs.manage_own |
+| PROVIDER | accounts.view_self, accounts.edit_self, providers.search, providers.manage_own_profile, reservations.manage_received, offers.manage_own, jobs.manage_own, marketplace.view_targeted_products |
 | MEDICAL_COMPANY | accounts.view_self, accounts.edit_self, marketplace.manage_own_products, advertising.manage_own_campaigns |
 | REAL_ESTATE_SELLER | accounts.view_self, accounts.edit_self, real_estate.manage_own_listings |
 | ADMIN | accounts.view_self, accounts.edit_self, admin.access, admin.manage_accounts, admin.verify_providers, admin.moderate_content |
 
 `is_staff` adds `admin.access`; `is_superuser` adds every ADMIN capability.
 
-These codes are forward-looking labels for modules that do not exist yet. They
-are not enforced anywhere until the module ships. Keep this table, the
-`ROLE_CAPABILITIES` dict, and the module's permission classes in sync.
+Codes for modules that do not exist yet are forward-looking labels, enforced
+only once the module ships. `marketplace.manage_own_products` and
+`marketplace.view_targeted_products` are enforced since Phase 6 (see below).
+Keep this table, the `ROLE_CAPABILITIES` dict, and the module's permission
+classes in sync.
 
 ## Self-registration roles
 
@@ -58,6 +60,17 @@ class OfferViewSet(...):
 
 Default for every endpoint is `IsAuthenticated` (`REST_FRAMEWORK` settings);
 public endpoints opt out explicitly with `AllowAny`.
+
+## Marketplace permissions (`apps/marketplace/permissions.py`, Phase 6)
+
+| Class | Grants |
+| --- | --- |
+| `IsMedicalCompanyAccount` | `role == MEDICAL_COMPANY` (`marketplace.manage_own_products`) — may create its company profile |
+| `HasMedicalCompany` | company account with a profile — own products, verification request, dashboard; ownership comes from `request.user.medical_company`, never a client id |
+| `CanBrowseMarketplace` | `role == PROVIDER` with a VERIFIED provider profile (`marketplace.view_targeted_products`); `is_visible` is not required. Which products are visible is decided per request by `ProductQuerySet.targeted_for` |
+| `IsAdminAccount` | company verification decisions and the company list |
+
+Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false.
 
 ## Provider permissions (`apps/providers/permissions.py`)
 

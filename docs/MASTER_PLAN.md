@@ -1057,7 +1057,7 @@ Avoid architecture that prevents moving from Railway later.
 - Notification hooks.
 - Free for patients and providers (owner decision); no entitlement gating.
 
-## Phase 5 — Reviews and Offers (CURRENT)
+## Phase 5 — Reviews and Offers (done — merged via PR #6)
 
 - Reviews.
 - Ratings.
@@ -1065,7 +1065,7 @@ Avoid architecture that prevents moving from Railway later.
 - Expiry.
 - Provider management.
 
-## Phase 6 — Medical Marketplace
+## Phase 6 — Medical Marketplace (CURRENT)
 
 - Medical companies.
 - Categories.
