@@ -9,8 +9,8 @@ Phases from `MASTER_PLAN.md` §28. Status: `done` · `partial` · `not started`.
 | 2 — Providers & Medical Services | **done** | Geography (Iraq seeded) and specialties reference data, ProviderProfile with controlled types and admin-only verification, memberships workflow, service offerings, public discovery with filters/pagination, owner self-management API, web search/detail/self-management pages, permissions and query-count tests. Deferred by design: distance search (needs PostGIS decision), media uploads for logos (media module), notifications on membership events (Phase 9), invitation UX by name search, admin dashboard UI (Phase 10). |
 | 2.5 — Web Design System & Premium UI | **done** | Owned design system (tokens, CSS modules, icons, IBM Plex Sans Arabic), premium shell (header, mobile nav, footer), redesigned home, auth pages, profile, provider discovery/detail/workspace, 404. Loading rules preserved through `ApiActionButton`/`AsyncPage`. Deferred: Modal/Drawer/Dropdown/Tooltip/Toast/Breadcrumb (no page needs them yet), self-hosted font, dark theme. |
 | 3 — Billing & Entitlements + Medical Jobs & Talent Marketplace | **done** | Reusable billing foundation (plans, entitlements, manual subscription activation, credits, atomic usage), employer organisations with admin verification and seat-limited memberships, structured job-seeker résumé (no uploads), job state machine with admin review, public job search, applications with snapshots, entitlement-gated talent search (one billable search per filter set per day), saved candidates, invitations, interviews, text-only messaging, contact-leak detection, admin console, audit log. Web: jobs search/detail/apply, my applications, seeker profile, employer workspace/job editor/applicants/talent, admin console, home Jobs section. Deferred: recruitment notifications (Phase 9), analytics, saved searches, seeker pricing, scheduled expiry job. |
-| 4 — Reservations (free) | not started | Next. Owner decision: stays free. |
-| 5 — Reviews & Offers | not started | |
+| 4 — Reservations (free) | **done** | Concrete availability slots, patient booking, provider management, lifecycle/audit history, concurrency protections, notification hooks, Arabic/English web UX, pagination and OpenAPI contract. Free for patients/providers; no entitlement gating. |
+| 5 — Reviews & Offers | **partial** | Reviews/ratings and provider offers are implemented on `feat/phase5-reviews-offers`; current acceptance work is fixing CI and validating the API/UI contract. |
 | 6 — Medical Marketplace | not started | |
 | 7 — Medical Real Estate | not started | |
 | 8 — Advertising & Payments | not started | Gateway choice is the owner's decision. |
@@ -74,3 +74,7 @@ Implementation complete on `feat/phase4-reservations`; acceptance review pending
 - Reservation creation/status changes emit post-commit Django signals as Phase 9 notification hooks.
 - Arabic/English web UI, loading/error states, navigation and active home-page reservation card.
 - No subscription/entitlement/payment gating; no new infrastructure.
+
+- **2026-09-28** — Phase 4 complete and merged via PR #5. Final head before merge: `b8dfbd1229fc890a88bc78bc9aa38f49b9ed14b0`; merge commit on `main`: `919bfe924736f4adfb38340ae742f181f0e825b5`. Final Codex acceptance: no major issues. Post-merge CI #148 passed. Reservations remain free; notification delivery is deferred to Phase 9.
+
+- **2026-09-28** — Phase 5 Reviews & Offers implementation checkpoint on `feat/phase5-reviews-offers`: reservation-backed patient reviews/ratings, provider rating aggregates, server-windowed provider offers, public/provider APIs, Arabic/English web UX and tests implemented. Current work is CI/acceptance hardening before PR.

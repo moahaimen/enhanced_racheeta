@@ -106,8 +106,10 @@ avoid circular imports between business modules — put shared logic in `core`.
 | `billing` | Plans, entitlements by capability key, subscriptions (manual activation), credits, atomic usage counters; `EntitlementService.require/check_concurrent/consume`; imports nothing from feature modules — done (Phase 3, `BILLING.md`). |
 | `moderation` | `ContactLeakDetector` + `validate_no_contact_info` used by every recruitment serializer — done (Phase 3, `MODERATION.md`). |
 | `jobs` | Employers/memberships, job-seeker résumé, job posts with admin review, applications, interviews, messages, talent search, saved candidates, invitations, admin control plane — done (Phase 3, `JOBS.md`). |
-| `reservations` | Free appointment availability + patient booking + provider management + transition history + post-commit notification hooks — implemented in Phase 4 (`RESERVATIONS.md`). |
-| reviews/offers, marketplace, real estate, advertising, chat/notifications, dashboards | **(planned)** |
+| `reservations` | Free appointment availability + patient booking + provider management + transition history + post-commit notification hooks — done in Phase 4 (`RESERVATIONS.md`). |
+| `reviews` | Reservation-backed 1–5 patient reviews, one per completed reservation; public provider review feed and provider rating aggregates — Phase 5 in progress (`REVIEWS_OFFERS.md`). |
+| `offers` | Provider-owned service offers with price snapshots, server-controlled validity windows, public active-offer feed and provider management — Phase 5 in progress (`REVIEWS_OFFERS.md`). |
+| marketplace, real estate, advertising, chat/notifications, dashboards | **(planned)** |
 
 ## Accounts and roles
 
