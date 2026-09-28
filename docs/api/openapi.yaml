@@ -2722,7 +2722,7 @@ paths:
           description: ''
   /api/v1/providers/{provider_id}/availability:
     get:
-      operationId: providers_availability_retrieve
+      operationId: providers_availability_list
       summary: Public available appointment slots
       parameters:
       - in: query
@@ -2755,7 +2755,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvailabilitySlot'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilitySlot'
           description: ''
   /api/v1/providers/me:
     get:
@@ -3348,7 +3350,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvailabilitySlot'
+                $ref: '#/components/schemas/PaginatedAvailabilitySlot'
           description: ''
     post:
       operationId: reservations_provider_availability_create
@@ -6408,6 +6410,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditEvent'
+    PaginatedAvailabilitySlot:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlot'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedEmployerAdminList:
       type: object
       required:
