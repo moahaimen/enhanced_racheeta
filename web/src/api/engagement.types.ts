@@ -36,3 +36,4 @@ export interface ProviderOffer extends PublicOffer {
 export type PaginatedReviews = Paginated<PublicReview>
 export type PaginatedMyReviews = Paginated<MyReview>
 export type PaginatedProviderOffers = Paginated<ProviderOffer>
+export type PaginatedPublicOffers = Paginated<PublicOffer>

@@ -245,4 +245,28 @@ describe('Reservations pages', () => {
     expect(await screen.findByText(/تم تقييم هذا الموعد|already been reviewed/i)).toBeInTheDocument()
   })
 
+  it('keeps a completed reservation whose provider was deleted visible, without a review form', async () => {
+    const orphaned = {
+      ...patientReservation,
+      status: 'COMPLETED' as const,
+      provider_id: null,
+      review_id: null,
+    }
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
+    vi.mocked(reservationsApi.listMyReservations).mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orphaned],
+    })
+
+    renderApp('/reservations')
+
+    expect(await screen.findByText(orphaned.provider_name_snapshot)).toBeInTheDocument()
+    expect(screen.getByText(orphaned.service_title_snapshot)).toBeInTheDocument()
+    expect(screen.queryByText(/قيّم هذا الموعد|review this appointment/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: /إرسال التقييم|submit review/i })).toBeNull()
+    expect(screen.queryByText(/تم تقييم هذا الموعد|already been reviewed/i)).toBeNull()
+    expect(reviewsApi.createReview).not.toHaveBeenCalled()
+  })
 })

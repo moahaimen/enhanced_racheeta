@@ -119,7 +119,9 @@ function ReservationCard({ reservation, reload }: { reservation: ReservationPati
       {reservation.status === 'COMPLETED' && reservation.review_id ? (
         <Badge tone="outline">{t('reviews.alreadyReviewed')}</Badge>
       ) : null}
-      {reservation.status === 'COMPLETED' && !reservation.review_id ? (
+      {reservation.status === 'COMPLETED' && !reservation.review_id && reservation.provider_id ? (
+        // A review needs a provider to attach to: a completed reservation whose provider
+        // was deleted stays visible through its snapshots, but cannot be reviewed.
         <ReviewForm reservationId={reservation.id} reload={reload} setError={setError} />
       ) : null}
       {canCancel ? (

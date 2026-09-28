@@ -1,5 +1,5 @@
 import { apiRequest } from '../client'
-import type { PaginatedProviderOffers, ProviderOffer, PublicOffer } from '../engagement.types'
+import type { PaginatedProviderOffers, PaginatedPublicOffers, ProviderOffer } from '../engagement.types'
 
 export interface OfferCreate {
   service: string
@@ -19,9 +19,13 @@ export interface OfferUpdate {
   is_active?: boolean
 }
 
-export function listPublicOffers(providerId: string, signal?: AbortSignal): Promise<PublicOffer[]> {
-  return apiRequest<PublicOffer[]>(
-    `/api/v1/providers/${encodeURIComponent(providerId)}/offers`,
+export function listPublicOffers(
+  providerId: string,
+  page = 1,
+  signal?: AbortSignal,
+): Promise<PaginatedPublicOffers> {
+  return apiRequest<PaginatedPublicOffers>(
+    `/api/v1/providers/${encodeURIComponent(providerId)}/offers?page=${page}`,
     { auth: false, signal },
   )
 }

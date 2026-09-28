@@ -243,7 +243,12 @@ function BookingSection({ provider }: { provider: ProviderPublic }) {
 
 function PublicOffersSection({ providerId }: { providerId: string }) {
   const { t, i18n } = useTranslation()
-  const offers = useAsyncData((signal) => offersApi.listPublicOffers(providerId, signal), [providerId])
+  // Server-paginated (20 per page), same pattern as the public reviews below.
+  const [page, setPage] = useState(1)
+  const offers = useAsyncData(
+    (signal) => offersApi.listPublicOffers(providerId, page, signal),
+    [providerId, page],
+  )
 
   return (
     <SectionCard title={t('offers.publicTitle')} description={t('offers.publicIntro')} headingLevel={2}>
@@ -251,11 +256,11 @@ function PublicOffersSection({ providerId }: { providerId: string }) {
         <LoadingState />
       ) : offers.error ? (
         <ErrorState error={offers.error} onRetry={offers.reload} />
-      ) : (offers.data ?? []).length === 0 ? (
+      ) : (offers.data?.results ?? []).length === 0 ? (
         <EmptyState icon="tag" title={t('offers.empty')} />
       ) : (
         <ul className={styles.services}>
-          {(offers.data ?? []).map((offer) => (
+          {(offers.data?.results ?? []).map((offer) => (
             <li key={offer.id} className={styles.service}>
               <div className={styles.serviceText}>
                 <div className={styles.serviceTitle}>{offer.title}</div>
@@ -274,6 +279,15 @@ function PublicOffersSection({ providerId }: { providerId: string }) {
           ))}
         </ul>
       )}
+      {offers.data ? (
+        <Pagination
+          page={page}
+          total={Math.max(1, Math.ceil(offers.data.count / 20))}
+          hasNext={offers.data.next !== null}
+          hasPrevious={offers.data.previous !== null}
+          onChange={setPage}
+        />
+      ) : null}
     </SectionCard>
   )
 }
