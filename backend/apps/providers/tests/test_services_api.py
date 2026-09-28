@@ -136,9 +136,7 @@ def test_cannot_delete_service_used_by_reservation(provider_client, account_fact
     assert reservation.availability_slot_id == slot.pk
 
 
-def test_service_delete_database_conflict_returns_409(
-    provider_client, monkeypatch
-):
+def test_service_delete_database_conflict_returns_409(provider_client, monkeypatch):
     client, profile = provider_client
     service = ServiceOffering.objects.create(
         provider=profile,
