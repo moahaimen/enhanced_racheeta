@@ -8,6 +8,7 @@ from .types import VerificationStatus
 class ServiceInline(admin.TabularInline):
     model = ServiceOffering
     extra = 0
+    can_delete = False
     fields = ("title", "specialty", "price", "currency", "duration_minutes", "is_active")
 
 
@@ -88,3 +89,8 @@ class ServiceOfferingAdmin(admin.ModelAdmin):
         if obj is not None:
             return ("provider",)
         return ()
+
+    def has_delete_permission(self, request, obj=None):
+        # Service deletion must go through the owner API so reservation-slot
+        # protection and conflict handling cannot be bypassed.
+        return False

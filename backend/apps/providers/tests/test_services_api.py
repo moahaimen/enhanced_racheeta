@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.accounts.roles import AccountRole
@@ -133,3 +134,25 @@ def test_cannot_delete_service_used_by_reservation(provider_client, account_fact
     assert AvailabilitySlot.objects.filter(pk=slot.pk).exists()
     reservation.refresh_from_db()
     assert reservation.availability_slot_id == slot.pk
+
+
+def test_service_delete_database_conflict_returns_409(
+    provider_client, monkeypatch
+):
+    client, profile = provider_client
+    service = ServiceOffering.objects.create(
+        provider=profile,
+        title="Concurrent delete",
+        price="1000.00",
+        duration_minutes=15,
+    )
+
+    def conflict(*args, **kwargs):
+        raise IntegrityError("simulated concurrent reservation")
+
+    monkeypatch.setattr(ServiceOffering, "delete", conflict)
+
+    response = client.delete(f"{SERVICES}/{service.id}")
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "service_has_reservations"

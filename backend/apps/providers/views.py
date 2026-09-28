@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
@@ -234,8 +234,16 @@ class MyServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         try:
             with transaction.atomic():
-                instance.delete()
-        except ProtectedError as exc:
+                # Booking locks the slot first. Taking the same locks here
+                # serializes service deletion against concurrent bookings.
+                list(
+                    instance.availability_slots.select_for_update()
+                    .order_by("pk")
+                    .values_list("pk", flat=True)
+                )
+                locked = ServiceOffering.objects.select_for_update().get(pk=instance.pk)
+                locked.delete()
+        except (ProtectedError, IntegrityError) as exc:
             raise ServiceDeletionConflict from exc
 
 
