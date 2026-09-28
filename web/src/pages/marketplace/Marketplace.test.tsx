@@ -53,6 +53,7 @@ function company(overrides: Partial<MedicalCompany> = {}): MedicalCompany {
     verification_changed_at: null,
     verified_at: '2026-09-28T00:00:00Z',
     can_publish: true,
+    identity_locked: true,
     created_at: '2026-09-28T00:00:00Z',
     updated_at: '2026-09-28T00:00:00Z',
     ...overrides,
@@ -243,4 +244,27 @@ describe('Company workspace', () => {
     expect(await screen.findByTestId('role-denied')).toHaveTextContent(/الشركات الطبية|medical company accounts/i)
     expect(marketplaceApi.getMyCompany).not.toHaveBeenCalled()
   })
+
+  it('locks the verified identity fields and sends only editable ones', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company({ identity_locked: true }))
+    vi.mocked(marketplaceApi.updateMyCompany).mockResolvedValue(company({ identity_locked: true }))
+    renderApp('/company')
+    const name = await screen.findByLabelText(/اسم الشركة|company name/i)
+    expect(name).toBeDisabled()
+    expect(screen.getByLabelText(/الموقع الإلكتروني|website/i)).toBeDisabled()
+    expect(screen.getByText(/مقفلة أثناء مراجعة التوثيق|locked while verification/i)).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/الهاتف|phone/i), '+9647700000000')
+    await user.click(screen.getByRole('button', { name: /حفظ الملف|save profile/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyCompany).toHaveBeenCalledTimes(1))
+    const payload = vi.mocked(marketplaceApi.updateMyCompany).mock.calls[0]![0]
+    expect(Object.keys(payload).sort()).toEqual(['description', 'phone', 'public_email'])
+  })
+
+  it('leaves identity editable before verification is requested', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company({ verification_status: 'UNVERIFIED', can_publish: false, identity_locked: false }))
+    renderApp('/company')
+    expect(await screen.findByLabelText(/اسم الشركة|company name/i)).toBeEnabled()
+  })
 })
+

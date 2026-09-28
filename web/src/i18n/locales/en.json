@@ -377,7 +377,8 @@
     "activeNo": "Inactive",
     "requestTitlePractitioner": "Request to join a facility",
     "requestTitleFacility": "Invite a practitioner",
-    "counterpartHint": "Copy the id from the other party's public profile link (/providers/…)."
+    "counterpartHint": "Copy the id from the other party's public profile link (/providers/…).",
+    "specialtiesLocked": "Specialties are locked while verification is pending or granted. Ask Racheeta administration to change them."
   },
   "modules": {
     "providers": "Medical providers",
@@ -1116,6 +1117,7 @@
     "email": "Public email",
     "website": "Website",
     "create": "Create company profile",
-    "save": "Save profile"
+    "save": "Save profile",
+    "identityLocked": "Your company name, location and website are locked while verification is pending or granted. Ask Racheeta administration to change them."
   }
 }

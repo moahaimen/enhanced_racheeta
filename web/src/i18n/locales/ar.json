@@ -385,7 +385,8 @@
     "pendingMemberships_zero": "لا طلبات بانتظار الرد",
     "pendingMemberships_two": "طلبان بانتظار الرد",
     "pendingMemberships_few": "{{count}} طلبات بانتظار الرد",
-    "pendingMemberships_many": "{{count}} طلباً بانتظار الرد"
+    "pendingMemberships_many": "{{count}} طلباً بانتظار الرد",
+    "specialtiesLocked": "التخصّصات مقفلة أثناء مراجعة التوثيق أو بعد منحه. تواصل مع إدارة رشيتة لتغييرها."
   },
   "modules": {
     "providers": "مقدّمو الخدمات الطبية",
@@ -1148,6 +1149,7 @@
     "email": "البريد العام",
     "website": "الموقع الإلكتروني",
     "create": "إنشاء ملف الشركة",
-    "save": "حفظ الملف"
+    "save": "حفظ الملف",
+    "identityLocked": "اسم شركتك وموقعها وموقعها الإلكتروني مقفلة أثناء مراجعة التوثيق أو بعد منحه. تواصل مع إدارة رشيتة لتغييرها."
   }
 }

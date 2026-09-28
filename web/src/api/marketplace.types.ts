@@ -38,6 +38,8 @@ export interface MedicalCompany {
   verified_at: string | null
   /** Backend-computed: verified company with an active account. */
   can_publish: boolean
+  /** Name, location and website are frozen while verification is pending or granted (ADR-045). */
+  identity_locked: boolean
   created_at: string
   updated_at: string
 }

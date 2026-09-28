@@ -221,6 +221,8 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
   })
   const errors = useFormErrors(['name', 'description', 'phone', 'public_email', 'website', 'governorate', 'address'] as const)
   const set = (key: keyof typeof f, value: string) => setF((prev) => ({ ...prev, [key]: value }))
+  // Backend rule (identity_locked): what the administrator reviews is frozen while review is pending or granted.
+  const identityLocked = company?.identity_locked === true
   const submit = async () => {
     const next: Record<string, string> = {}
     if (!f.name.trim()) next.name = t('validation.required')
@@ -229,16 +231,20 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
       errors.setFieldErrors(next)
       throw new ClientValidationError()
     }
-    const payload = { ...f, name: f.name.trim(), description: f.description.trim(), address: f.address.trim() }
+    const editable = { description: f.description.trim(), phone: f.phone, public_email: f.public_email }
+    const payload = identityLocked
+      ? editable
+      : { ...editable, name: f.name.trim(), governorate: f.governorate, address: f.address.trim(), website: f.website }
     return company ? marketplaceApi.updateMyCompany(payload) : marketplaceApi.createMyCompany(payload)
   }
   return (
     <form noValidate onSubmit={(e) => e.preventDefault()}>
       {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
-      <TextField label={t('company.name')} value={f.name} onChange={(e) => set('name', e.target.value)} error={errors.fieldErrors.name} required />
+      {identityLocked ? <Alert kind="info">{t('company.identityLocked')}</Alert> : null}
+      <TextField label={t('company.name')} value={f.name} onChange={(e) => set('name', e.target.value)} error={errors.fieldErrors.name} required disabled={identityLocked} />
       <Textarea label={t('company.description')} optional rows={3} value={f.description} onChange={(e) => set('description', e.target.value)} error={errors.fieldErrors.description} />
       <div className="grid-2">
-        <Select label={t('company.governorate')} value={f.governorate} onChange={(e) => set('governorate', e.target.value)} error={errors.fieldErrors.governorate} required>
+        <Select label={t('company.governorate')} value={f.governorate} onChange={(e) => set('governorate', e.target.value)} error={errors.fieldErrors.governorate} required disabled={identityLocked}>
           <option value="">{t('company.chooseGovernorate')}</option>
           {governorates.map((g) => (
             <option key={g.id} value={g.id}>
@@ -246,13 +252,13 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
             </option>
           ))}
         </Select>
-        <TextField label={t('company.address')} optional value={f.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} />
+        <TextField label={t('company.address')} optional value={f.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} disabled={identityLocked} />
       </div>
       <div className="grid-2">
         <TextField label={t('company.phone')} optional dir="ltr" value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
         <TextField label={t('company.email')} optional dir="ltr" type="email" value={f.public_email} onChange={(e) => set('public_email', e.target.value)} error={errors.fieldErrors.public_email} />
       </div>
-      <TextField label={t('company.website')} optional dir="ltr" value={f.website} onChange={(e) => set('website', e.target.value)} error={errors.fieldErrors.website} />
+      <TextField label={t('company.website')} optional dir="ltr" value={f.website} onChange={(e) => set('website', e.target.value)} error={errors.fieldErrors.website} disabled={identityLocked} />
       <FormActions>
         <ApiActionButton type="submit" action={submit} onSuccess={() => onSaved()} onError={(e) => { if (!(e instanceof ClientValidationError)) errors.applyApiError(e) }} pendingLabel={t('common.saving')}>
           {company ? t('company.save') : t('company.create')}
