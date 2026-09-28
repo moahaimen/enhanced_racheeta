@@ -67,10 +67,10 @@ public endpoints opt out explicitly with `AllowAny`.
 | --- | --- |
 | `IsMedicalCompanyAccount` | `role == MEDICAL_COMPANY` (`marketplace.manage_own_products`) — may create its company profile |
 | `HasMedicalCompany` | company account with a profile — own products, verification request, dashboard; ownership comes from `request.user.medical_company`, never a client id |
-| `CanBrowseMarketplace` | `role == PROVIDER` with a VERIFIED provider profile (`marketplace.view_targeted_products`); `is_visible` is not required. Which products are visible is decided per request by `ProductQuerySet.targeted_for`, whose inputs (provider type and specialties) are frozen while the profile is PENDING or VERIFIED (ADR-045) |
+| `CanBrowseMarketplace` | early answer only: `current_verified_provider(account)` — an active PROVIDER whose profile, re-read from the database, is VERIFIED (`marketplace.view_targeted_products`); `is_visible` is not required. The catalogue views re-read it when building the queryset, and `ProductQuerySet.targeted_for` re-checks verification, type and specialties inside the SQL statement; those inputs are frozen while PENDING or VERIFIED (ADR-045) |
 | `IsAdminAccount` | company verification decisions and the company list |
 
-Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields.
+Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields. Administrators can grant VERIFIED only to a PENDING company or provider (`invalid_transition` otherwise), so the approved identity is always the one frozen by the review request.
 
 Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false.
 

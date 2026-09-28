@@ -35,10 +35,13 @@ Exposure and targeting rest only on identity an administrator reviewed:
   returns only after re-verification.
 
 Both checks run on the **locked** row inside the write's transaction, and the
-administrator's verification decision locks the same row, so an identity edit
-and a decision can never cross: either the edit commits first (and is what the
-administrator decides on) or it sees PENDING/VERIFIED and is refused. The web
-forms disable the frozen fields and never send them.
+administrator's verification decision locks the same row. **VERIFIED is
+granted only from PENDING** — the owner's review request is what freezes the
+identity — so the re-review path is: edit while UNVERIFIED/REJECTED/SUSPENDED →
+request verification (PENDING, identity frozen) → administrator decides.
+UNVERIFIED/REJECTED/SUSPENDED → VERIFIED is refused (`invalid_transition`),
+for companies and providers alike. The web forms disable the frozen fields and
+never send them.
 
 ## Targeting algorithm (`ProductQuerySet.targeted_for(provider)`)
 
@@ -60,7 +63,13 @@ detail answers the standard 404 whatever the client sends. State changes
 deactivation) take effect on the next request; there is no scheduled worker.
 
 **Who may browse** (`marketplace.view_targeted_products`): a `PROVIDER`
-account whose provider profile is `VERIFIED`. The provider's public
+account whose provider profile is `VERIFIED`, decided by
+`current_verified_provider(account)`, which re-reads the profile from the
+database when the catalogue queryset is built (the permission check is only an
+early answer). `targeted_for` then reads the provider's verification, type and
+specialties through subqueries in the same SQL statement that returns the
+products, so a provider suspended or unverified mid-request gets 403 or no rows,
+and specialties it could edit once unlocked are never matched. The provider's public
 `is_visible` flag is **not** required — hiding a practice from patient search
 does not remove its B2B access. Unverified providers, patients, companies and
 anonymous users are refused (403 / 401).
