@@ -69,9 +69,9 @@ class ProviderOfferListView(generics.GenericAPIView):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Offer.objects.none()
-        return Offer.objects.filter(
-            provider=self.request.user.provider_profile
-        ).order_by("-starts_at", "-created_at")
+        return Offer.objects.filter(provider=self.request.user.provider_profile).order_by(
+            "-starts_at", "-created_at"
+        )
 
     @extend_schema(summary="My offers")
     def get(self, request):
