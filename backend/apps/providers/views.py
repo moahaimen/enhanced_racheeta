@@ -1,6 +1,6 @@
 from django.db import transaction
-from django.db.models.deletion import ProtectedError
 from django.db.models import Prefetch
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
