@@ -92,7 +92,17 @@ export function SiteHeader() {
             <Icon name="tag" size={18} />
             {t('nav.providerOffers')}
           </NavLink>
+          <NavLink to="/marketplace" className={styles.link}>
+            <Icon name="cart" size={18} />
+            {t('nav.marketplace')}
+          </NavLink>
         </>
+      ) : null}
+      {status === 'authenticated' && account?.role === 'MEDICAL_COMPANY' ? (
+        <NavLink to="/company" className={styles.link}>
+          <Icon name="cart" size={18} />
+          {t('nav.companyWorkspace')}
+        </NavLink>
       ) : null}
       {status === 'authenticated' ? (
         <NavLink to="/employer" className={styles.link}>

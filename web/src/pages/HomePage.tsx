@@ -27,7 +27,6 @@ import styles from './HomePage.module.css'
 
 const UPCOMING_MODULES = [
   { key: 'offers', icon: 'tag' },
-  { key: 'marketplace', icon: 'cart' },
   { key: 'realEstate', icon: 'home' },
 ] as const
 
@@ -126,6 +125,22 @@ export function HomePage() {
             }
           >
             {t('home.services.jobs')}
+          </FeatureCard>
+          <FeatureCard
+            icon={<Icon name="cart" size={22} />}
+            title={t('modules.marketplace')}
+            action={
+              <LinkButton
+                to={account?.role === 'MEDICAL_COMPANY' ? '/company' : '/marketplace'}
+                variant="subtle"
+                size="sm"
+                trailing={<Icon name="arrowForward" size={16} flipInRtl />}
+              >
+                {account?.role === 'MEDICAL_COMPANY' ? t('company.open') : t('common.browse')}
+              </LinkButton>
+            }
+          >
+            {t('home.services.marketplace')}
           </FeatureCard>
           {UPCOMING_MODULES.map((m) => (
             <FeatureCard
