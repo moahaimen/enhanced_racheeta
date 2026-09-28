@@ -89,6 +89,17 @@ Latest failing checkpoint `7a14fe17...`: 872 backend tests passed, 3 failed; web
 The three failures were corrected in commit `d3ca7b9f3965601f8bb41eabc82cb2359794684d`.
 Current-head CI must finish before the Phase 5 PR is opened.
 
+## PR #6 Phase 5 acceptance review (2026-09-28, on `a387bc7`)
+
+| Finding | Fix |
+| --- | --- |
+| P2 #1 stale-service offers could be (re)activated | `update_offer` re-validates the linked service on the locked row whenever the result is active (`_locked_valid_service`, shared with creation: exists, same provider, active); `service_unavailable` (409) otherwise, nothing partially applied, no audit event. Deactivation of a stale offer and owner history are preserved. |
+| P2 #2 unbounded anonymous public offers | `PublicProviderOfferListView` uses the repository's standard pagination (20/page, `ends_at, id` ordering); the web client, types and the provider-detail section paginate with the shared control. |
+| P2 #3 review form for a deleted provider | `ReviewForm` renders only for COMPLETED, unreviewed reservations with a `provider_id`; the reservation stays visible through its snapshots. |
+| P2 #4 / #5 nullable UUID contracts | `review_id` is annotated `UUIDField(allow_null=True)`; `OfferOwner.service_id` is `allow_null=True`; OpenAPI regenerated. |
+
+Backend tests 886, web tests 249, no migration, OpenAPI regenerated (paginated public offers, nullable `review_id` and `service_id`).
+
 ## Known Problems
 
 - Persistent notification delivery remains Phase 9.

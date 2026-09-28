@@ -40,11 +40,11 @@ Public visibility is server-controlled. A public offer is returned only when:
 - the offer is marked active;
 - `starts_at <= now < ends_at`.
 
-The provider workspace can list, create, edit and deactivate its own offers. Expiry needs no background worker because visibility is evaluated against server time.
+The provider workspace can list, create, edit and deactivate its own offers. Expiry needs no background worker because visibility is evaluated against server time. An offer may be created on, or (re)activated for, only a service that currently exists, belongs to the same provider and is active — decided on the locked service row inside the offer transaction (`service_unavailable`, 409, nothing partially applied); a provider can always deactivate an offer whose service has since been deactivated or deleted, and such offers stay in the owner's history with their snapshots (`service_id` is `null` after a deletion, and the public list never shows them).
 
 ## Web
 
-- Provider detail shows rating/count, public reviews and currently valid offers.
+- Provider detail shows rating/count, public reviews and currently valid offers; both public lists use the standard paginated envelope (20 per page, offers ordered by `ends_at` ascending) with the shared Pagination control.
 - Patient reservation cards expose a review form only after COMPLETED reservations and hide it after the review exists.
 - Provider offers have a dedicated Arabic/English management workspace with loading/error/action states and pagination.
 
