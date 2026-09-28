@@ -131,4 +131,34 @@ describe('Reservations pages', () => {
     await userEvent.click(screen.getByRole('button', { name: /^قبول$|^accept$/i }))
     await waitFor(() => expect(reservationsApi.transitionProviderReservation).toHaveBeenCalledWith(providerReservation.id, 'CONFIRMED'))
   })
+  it('hides accept for a pending reservation after its appointment has started', async () => {
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
+    vi.mocked(reservationsApi.listProviderAvailability).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
+    vi.mocked(reservationsApi.listProviderReservations).mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [
+        {
+          ...providerReservation,
+          starts_at: '2020-01-01T09:00:00Z',
+          ends_at: '2020-01-01T09:30:00Z',
+          status: 'PENDING',
+        },
+      ],
+    })
+
+    renderApp('/provider/reservations')
+
+    expect(await screen.findByText('Patient One')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^قبول$|^accept$/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /^رفض$|^reject$/i })).toBeInTheDocument()
+  })
+
 })

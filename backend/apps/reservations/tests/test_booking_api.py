@@ -270,3 +270,22 @@ def test_provider_cannot_deactivate_booked_slot(api_client, account_factory):
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "slot_unavailable"
+
+
+@pytest.mark.django_db
+def test_public_availability_hides_slot_after_service_duration_changes(api_client, account_factory):
+    provider, service = _provider_and_service(account_factory)
+    starts_at = timezone.now() + timedelta(days=1)
+    AvailabilitySlot.objects.create(
+        provider=provider,
+        service=service,
+        starts_at=starts_at,
+        ends_at=starts_at + timedelta(minutes=30),
+    )
+    service.duration_minutes = 45
+    service.save(update_fields=["duration_minutes", "updated_at"])
+
+    response = api_client.get(f"/api/v1/providers/{provider.pk}/availability")
+
+    assert response.status_code == 200
+    assert response.json() == []

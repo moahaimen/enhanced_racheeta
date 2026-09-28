@@ -203,7 +203,9 @@ function ProviderReservationRow({ reservation, reload }: { reservation: Reservat
       <div className={styles.actions}>
         {reservation.status === 'PENDING' ? (
           <>
-            <TransitionButton label={t('common.accept')} action={transition('CONFIRMED')} reload={reload} setError={setError} />
+            {!hasStarted ? (
+              <TransitionButton label={t('common.accept')} action={transition('CONFIRMED')} reload={reload} setError={setError} />
+            ) : null}
             <TransitionButton label={t('common.reject')} action={transition('REJECTED')} reload={reload} setError={setError} variant="ghost" />
             <TransitionButton label={t('common.cancel')} action={transition('CANCELLED')} reload={reload} setError={setError} variant="ghost" />
           </>

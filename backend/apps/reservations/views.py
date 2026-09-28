@@ -116,7 +116,8 @@ class PublicAvailabilityView(APIView):
         if to_at := data.get("to_at"):
             qs = qs.filter(starts_at__lt=to_at)
 
-        return Response(AvailabilitySlotSerializer(qs, many=True).data)
+        slots = [slot for slot in qs if services.slot_matches_current_service(slot)]
+        return Response(AvailabilitySlotSerializer(slots, many=True).data)
 
 
 @extend_schema(tags=["provider-reservations"])

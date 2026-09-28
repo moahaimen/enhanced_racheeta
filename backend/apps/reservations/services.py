@@ -49,6 +49,15 @@ class ProviderUnavailable(ReservationError):
     code = "provider_unavailable"
 
 
+def slot_matches_current_service(slot: AvailabilitySlot) -> bool:
+    """A published slot must still match the service duration used to book it."""
+    duration = slot.service.duration_minutes
+    return bool(
+        duration
+        and slot.ends_at == slot.starts_at + timedelta(minutes=duration)
+    )
+
+
 def _apply_transition(
     reservation: Reservation,
     *,
@@ -185,8 +194,7 @@ def create_reservation(
     if (
         not service.is_active
         or service.provider_id != provider.pk
-        or not service.duration_minutes
-        or slot.ends_at != slot.starts_at + timedelta(minutes=service.duration_minutes)
+        or not slot_matches_current_service(slot)
     ):
         raise ServiceUnavailable("This service is not available for this appointment slot.")
 
