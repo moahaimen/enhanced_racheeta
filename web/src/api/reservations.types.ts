@@ -41,6 +41,7 @@ export interface ReservationPatient {
   status_changed_at: string
   patient_note: string
   transitions: ReservationTransition[]
+  review_id: string | null
   created_at: string
 }
 

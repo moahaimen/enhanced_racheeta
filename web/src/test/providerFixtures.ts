@@ -33,6 +33,8 @@ export function makeCard(overrides: Partial<ProviderCard> = {}): ProviderCard {
     city: null,
     specialties: [cardiology],
     image_url: '',
+    average_rating: null,
+    review_count: 0,
     ...overrides,
   }
 }
