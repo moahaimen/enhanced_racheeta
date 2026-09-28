@@ -234,14 +234,21 @@ class MyServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         try:
             with transaction.atomic():
-                # Booking locks the slot first. Taking the same locks here
-                # serializes service deletion against concurrent bookings.
+                # Canonical lock prefix shared with availability creation and booking:
+                # provider -> service -> slots. Locking the provider first prevents a
+                # new slot from appearing after the slot scan; locking the service
+                # before its slots avoids a service/slot deadlock with bookings.
+                ProviderProfile.objects.select_for_update(of=("self",)).get(
+                    pk=instance.provider_id
+                )
+                locked = ServiceOffering.objects.select_for_update(of=("self",)).get(
+                    pk=instance.pk
+                )
                 list(
-                    instance.availability_slots.select_for_update()
+                    locked.availability_slots.select_for_update()
                     .order_by("pk")
                     .values_list("pk", flat=True)
                 )
-                locked = ServiceOffering.objects.select_for_update().get(pk=instance.pk)
                 locked.delete()
         except (ProtectedError, IntegrityError) as exc:
             raise ServiceDeletionConflict from exc

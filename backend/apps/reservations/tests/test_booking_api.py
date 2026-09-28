@@ -312,3 +312,38 @@ def test_public_availability_hides_slot_if_service_moves_to_another_provider(
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.django_db
+def test_patient_account_delete_is_protected_when_reservation_exists(account_factory):
+    from django.db.models.deletion import ProtectedError
+
+    provider, service = _provider_and_service(account_factory)
+    starts_at = timezone.now() + timedelta(days=1)
+    slot = AvailabilitySlot.objects.create(
+        provider=provider,
+        service=service,
+        starts_at=starts_at,
+        ends_at=starts_at + timedelta(minutes=30),
+    )
+    patient = account_factory(role=AccountRole.PATIENT)
+    reservation = Reservation.objects.create(
+        patient=patient,
+        provider=provider,
+        service=service,
+        availability_slot=slot,
+        provider_name_snapshot=provider.display_name,
+        service_title_snapshot=service.title,
+        price_snapshot=service.price,
+        currency_snapshot=service.currency,
+        duration_minutes_snapshot=30,
+        starts_at=slot.starts_at,
+        ends_at=slot.ends_at,
+        status=ReservationStatus.PENDING,
+    )
+
+    with pytest.raises(ProtectedError):
+        patient.delete()
+
+    assert Reservation.objects.filter(pk=reservation.pk).exists()
+    assert AvailabilitySlot.objects.filter(pk=slot.pk).exists()

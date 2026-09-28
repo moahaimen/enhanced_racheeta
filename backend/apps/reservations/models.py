@@ -51,7 +51,7 @@ class AvailabilitySlot(BaseModel):
 class Reservation(BaseModel):
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="reservations",
     )
     provider = models.ForeignKey(

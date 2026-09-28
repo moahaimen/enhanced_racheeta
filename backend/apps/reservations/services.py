@@ -160,6 +160,24 @@ def create_reservation(
     patient_note: str = "",
 ) -> Reservation:
     try:
+        slot_ref = AvailabilitySlot.objects.only("provider_id", "service_id").get(pk=slot_id)
+    except AvailabilitySlot.DoesNotExist as exc:
+        raise SlotUnavailable("This appointment slot is unavailable.") from exc
+
+    # Canonical reservation lock order: provider -> provider account -> service -> slot.
+    # Service deletion and availability creation use the same provider -> service prefix,
+    # preventing cycles and phantom slots during concurrent booking/deletion.
+    provider = ProviderProfile.objects.select_for_update(of=("self",)).get(
+        pk=slot_ref.provider_id
+    )
+    account = Account.objects.select_for_update().get(pk=provider.account_id)
+    try:
+        service = ServiceOffering.objects.select_for_update(of=("self",)).get(
+            pk=slot_ref.service_id
+        )
+    except ServiceOffering.DoesNotExist as exc:
+        raise ServiceUnavailable("The selected service is unavailable.") from exc
+    try:
         slot = (
             AvailabilitySlot.objects.select_for_update(of=("self",))
             .select_related("provider", "service")
@@ -168,12 +186,8 @@ def create_reservation(
     except AvailabilitySlot.DoesNotExist as exc:
         raise SlotUnavailable("This appointment slot is unavailable.") from exc
 
-    provider = ProviderProfile.objects.select_for_update(of=("self",)).get(pk=slot.provider_id)
-    account = Account.objects.select_for_update().get(pk=provider.account_id)
-    try:
-        service = ServiceOffering.objects.select_for_update(of=("self",)).get(pk=slot.service_id)
-    except ServiceOffering.DoesNotExist as exc:
-        raise ServiceUnavailable("The selected service is unavailable.") from exc
+    if slot.provider_id != provider.pk or slot.service_id != service.pk:
+        raise SlotUnavailable("This appointment slot is unavailable.")
 
     if (
         not slot.is_active
