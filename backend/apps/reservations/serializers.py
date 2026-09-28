@@ -70,6 +70,11 @@ class ReservationPatientSerializer(serializers.ModelSerializer):
     service_id = serializers.UUIDField(read_only=True)
     availability_slot_id = serializers.UUIDField(read_only=True)
     transitions = ReservationTransitionSerializer(many=True, read_only=True)
+    review_id = serializers.SerializerMethodField()
+
+    def get_review_id(self, obj):
+        review = getattr(obj, "review", None)
+        return review.pk if review is not None else None
 
     class Meta:
         model = Reservation
@@ -89,6 +94,7 @@ class ReservationPatientSerializer(serializers.ModelSerializer):
             "status_changed_at",
             "patient_note",
             "transitions",
+            "review_id",
             "created_at",
         )
         read_only_fields = fields
