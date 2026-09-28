@@ -305,7 +305,8 @@ def test_public_availability_hides_slot_if_service_moves_to_another_provider(
         ends_at=starts_at + timedelta(minutes=30),
     )
     service.provider = other
-    service.save(update_fields=["provider", "updated_at"])
+    service.title = "Moved consultation"
+    service.save(update_fields=["provider", "title", "updated_at"])
 
     response = api_client.get(f"/api/v1/providers/{provider.pk}/availability")
 
