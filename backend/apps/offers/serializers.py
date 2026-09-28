@@ -34,6 +34,13 @@ class OfferOwnerSerializer(PublicOfferSerializer):
         read_only_fields = fields
 
 
+class PaginatedOfferOwnerSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = OfferOwnerSerializer(many=True)
+
+
 class OfferCreateSerializer(serializers.Serializer):
     service = serializers.UUIDField()
     title = serializers.CharField(max_length=150)

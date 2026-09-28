@@ -43,7 +43,7 @@ describe('ProviderDetailPage', () => {
     expect(screen.getByText('Consultation')).toBeInTheDocument()
     expect(screen.getAllByText(/\+9647700000000/).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'City Hospital' })).toHaveAttribute('href', '/providers/p-h')
-    expect(screen.getByText(/لا توجد تقييمات|no reviews yet/i)).toBeInTheDocument()
+    expect(await screen.findByText(/لا توجد تقييمات|no reviews yet/i)).toBeInTheDocument()
   })
 
   it('shows the empty services message', async () => {
@@ -95,8 +95,8 @@ describe('ProviderDetailPage', () => {
     renderApp('/providers/p-1')
 
     expect(await screen.findByText(/★ 4\.5/)).toBeInTheDocument()
-    expect(screen.getByText('September offer')).toBeInTheDocument()
-    expect(screen.getByText('Excellent care')).toBeInTheDocument()
+    expect(await screen.findByText('September offer')).toBeInTheDocument()
+    expect(await screen.findByText('Excellent care')).toBeInTheDocument()
   })
 
 })

@@ -16,6 +16,7 @@ from .serializers import (
     OfferCreateSerializer,
     OfferOwnerSerializer,
     OfferUpdateSerializer,
+    PaginatedOfferOwnerSerializer,
     PublicOfferSerializer,
 )
 
@@ -73,7 +74,7 @@ class ProviderOfferListView(generics.GenericAPIView):
             "-starts_at", "-created_at"
         )
 
-    @extend_schema(summary="My offers")
+    @extend_schema(summary="My offers", responses={200: PaginatedOfferOwnerSerializer})
     def get(self, request):
         qs = self.get_queryset()
         page = self.paginate_queryset(qs)
