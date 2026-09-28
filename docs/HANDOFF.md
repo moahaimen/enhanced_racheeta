@@ -73,8 +73,10 @@ OpenAPI and web TypeScript/lint/Vitest/build.
 
 ## Test Results
 
-The web implementation checkpoint passed all web checks on exact HEAD before
-this docs/hooks commit. Run the final CI on this commit before acceptance.
+Phase 4 final branch CI passed on exact head `b8dfbd1229fc890a88bc78bc9aa38f49b9ed14b0` (runs #146/#147).
+Final Codex acceptance reported no major issues.
+PR #5 was merged to `main` as `919bfe924736f4adfb38340ae742f181f0e825b5`.
+Post-merge CI #148 passed.
 
 ## Known Problems
 
@@ -82,14 +84,10 @@ this docs/hooks commit. Run the final CI on this commit before acceptance.
   records, FCM and realtime delivery.
 - Provider availability currently uses explicit concrete slots rather than
   recurring weekly templates.
-- Provider availability and reservation management pages currently show the
-  first API page; pagination controls can be added before volume reaches the
-  default page size.
 
 ## Incomplete Work
 
-Acceptance review only. Do not start Phase 5 until current-head CI is green and
-the Phase 4 P1/P2 review gate is clean.
+None for Phase 4. Phase 5 — Reviews & Offers — is the next planned feature phase.
 
 ## Required Manual Actions
 
@@ -106,13 +104,13 @@ payment gateway or environment variable.
 
 ## Exact Next Step
 
-1. Confirm CI green on the exact current HEAD.
-2. Request final Phase 4 review limited to P1/P2 production blockers.
-3. Fix only current-head P1/P2 findings and re-run CI.
-4. When the acceptance gate is clean, mark PR #5 ready and merge only after
-   explicit owner approval.
-5. After merge/main CI, begin Phase 5.
+1. Create `feat/phase5-reviews-offers` from current `main`.
+2. Define backend-controlled review eligibility/rating/moderation rules.
+3. Implement reviews/ratings with tests and OpenAPI.
+4. Implement provider offers with server-controlled activation/expiry and tests.
+5. Add Arabic/English web management and patient-facing UX.
+6. Run CI and a P1/P2 acceptance review before merge.
 
 ## Recommended Next Prompt
 
-`Check Phase 4 final CI and Codex acceptance review. Report only P1/P2 blockers.`
+`Continue Phase 5 — Reviews & Offers from docs/HANDOFF.md. Start with backend review eligibility and data model.`
