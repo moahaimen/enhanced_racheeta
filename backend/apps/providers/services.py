@@ -10,6 +10,7 @@ from django.utils import timezone
 from .models import ProviderMembership, ProviderProfile
 from .types import (
     ADMIN_VERIFICATION_TARGETS,
+    IDENTITY_LOCKED_STATUSES,
     VERIFICATION_REQUESTABLE_FROM,
     MembershipSide,
     MembershipStatus,
@@ -23,6 +24,14 @@ class InvalidTransition(Exception):
     pass
 
 
+class IdentityLocked(Exception):
+    """The owner tried to change verified identity (see IDENTITY_FIELDS)."""
+
+    def __init__(self, fields: list[str]):
+        super().__init__(", ".join(fields))
+        self.fields = fields
+
+
 class NotAParty(Exception):
     pass
 
@@ -34,7 +43,46 @@ class DuplicateMembership(Exception):
 # ---- verification ----------------------------------------------------------
 
 
+def _lock_profile_status(profile: ProviderProfile) -> None:
+    """Row lock + status refresh: owner identity edits and verification
+    decisions serialise on the profile row, so a decision always applies to
+    the identity committed while it holds the lock."""
+    profile.verification_status = (
+        ProviderProfile.objects.select_for_update()
+        .filter(pk=profile.pk)
+        .values_list("verification_status", flat=True)
+        .get()
+    )
+
+
+@transaction.atomic
+def require_identity_unchanged(profile: ProviderProfile, validated: dict) -> None:
+    """Refuses an owner edit that would change verified identity while the
+    profile is PENDING or VERIFIED, decided on the LOCKED row (the caller saves
+    inside the same transaction). Sending the current value is not a change."""
+    _lock_profile_status(profile)
+    if profile.verification_status not in IDENTITY_LOCKED_STATUSES:
+        return
+    changed = []
+    if "provider_type" in validated:
+        current = (
+            ProviderProfile.objects.filter(pk=profile.pk)
+            .values_list("provider_type", flat=True)
+            .get()
+        )
+        if validated["provider_type"] != current:
+            changed.append("provider_type")
+    if "specialties" in validated:
+        current_ids = set(profile.specialties.values_list("pk", flat=True))
+        if {s.pk for s in validated["specialties"]} != current_ids:
+            changed.append("specialty_ids")
+    if changed:
+        raise IdentityLocked(changed)
+
+
+@transaction.atomic
 def request_verification(profile: ProviderProfile) -> ProviderProfile:
+    _lock_profile_status(profile)
     if profile.verification_status not in VERIFICATION_REQUESTABLE_FROM:
         raise InvalidTransition(
             f"Verification cannot be requested from status {profile.verification_status}."
@@ -55,12 +103,15 @@ def request_verification(profile: ProviderProfile) -> ProviderProfile:
     return profile
 
 
+@transaction.atomic
 def set_verification(
     profile: ProviderProfile, status: str, note: str = "", *, by
 ) -> ProviderProfile:
-    """Administrator decision. `by` is the acting account (for the log / future audit)."""
+    """Administrator decision, on the locked row (the same lock owner identity
+    edits take), so it never crosses a concurrent identity change."""
     if status not in ADMIN_VERIFICATION_TARGETS:
         raise InvalidTransition(f"{status} is not an administrator-settable status.")
+    _lock_profile_status(profile)
     now = timezone.now()
     profile.verification_status = status
     profile.verification_note = note

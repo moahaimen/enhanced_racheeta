@@ -117,15 +117,14 @@ def test_image_url_must_be_https(api_client, account_factory, baghdad):
 # ---- update ------------------------------------------------------------------
 
 
-def test_owner_can_update_allowed_fields(provider_client, basra, dentistry):
-    client, profile = provider_client
+def test_owner_can_update_allowed_fields(provider_client, basra):
+    client, profile = provider_client  # VERIFIED: ordinary fields stay editable
     response = client.patch(
         ME,
         {
             "display_name": "Renamed",
             "governorate": str(basra.id),
             "city": None,
-            "specialty_ids": [str(dentistry.id)],
             "is_visible": False,
         },
     )
@@ -133,10 +132,18 @@ def test_owner_can_update_allowed_fields(provider_client, basra, dentistry):
     body = response.json()
     assert body["display_name"] == "Renamed"
     assert body["governorate"]["slug"] == "basra"
-    assert body["specialties"][0]["slug"] == "dentistry"
     assert body["is_visible"] is False
     profile.refresh_from_db()
     assert profile.display_name == "Renamed"
+
+
+def test_unverified_owner_can_set_specialties(api_client, provider_factory, dentistry):
+    # ADR-045: specialties are verified identity; an unverified provider edits them freely.
+    profile = provider_factory(verification_status=VerificationStatus.UNVERIFIED)
+    api_client.force_authenticate(user=profile.account)
+    response = api_client.patch(ME, {"specialty_ids": [str(dentistry.id)]})
+    assert response.status_code == 200, response.content
+    assert response.json()["specialties"][0]["slug"] == "dentistry"
 
 
 @pytest.mark.parametrize(

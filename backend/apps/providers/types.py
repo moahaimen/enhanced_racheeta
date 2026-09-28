@@ -57,6 +57,12 @@ class VerificationStatus(models.TextChoices):
 VERIFICATION_REQUESTABLE_FROM = frozenset(
     {VerificationStatus.UNVERIFIED, VerificationStatus.REJECTED}
 )
+# Verified identity (ADR-045): what an administrator reviews and what security-
+# sensitive targeting (the medical marketplace) trusts. Frozen for the owner
+# while review is under way or granted; changing it needs an administrator to
+# move the profile back to UNVERIFIED first.
+IDENTITY_FIELDS = ("provider_type", "specialties")
+IDENTITY_LOCKED_STATUSES = frozenset({VerificationStatus.PENDING, VerificationStatus.VERIFIED})
 # Admin-settable targets (from any state).
 ADMIN_VERIFICATION_TARGETS = frozenset(
     {

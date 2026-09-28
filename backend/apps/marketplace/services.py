@@ -10,6 +10,8 @@ from apps.geography.models import City
 from .models import MedicalCompany, Product, ProductCategory
 from .types import (
     ADMIN_VERIFICATION_TARGETS,
+    COMPANY_IDENTITY_FIELDS,
+    IDENTITY_LOCKED_STATUSES,
     VERIFICATION_REQUESTABLE_FROM,
     CompanyVerificationStatus,
 )
@@ -33,6 +35,14 @@ class CompanyNotVerified(MarketplaceError):
 
 class CategoryUnavailable(MarketplaceError):
     code = "category_unavailable"
+
+
+class IdentityLocked(MarketplaceError):
+    code = "identity_locked"
+
+    def __init__(self, fields: list[str]):
+        super().__init__("Verified company identity cannot be changed: " + ", ".join(fields))
+        self.fields = fields
 
 
 class InvalidProduct(MarketplaceError):
@@ -90,6 +100,15 @@ def create_company(account, fields: dict) -> MedicalCompany:
 @transaction.atomic
 def update_company(company: MedicalCompany, fields: dict) -> MedicalCompany:
     locked = MedicalCompany.objects.select_for_update().get(pk=company.pk)
+    # Identity under review or verified is frozen, decided on the LOCKED row
+    # (the row the administrator's decision locks too). Sending the current
+    # value is not a change.
+    if locked.verification_status in IDENTITY_LOCKED_STATUSES:
+        changed = [
+            f for f in COMPANY_IDENTITY_FIELDS if f in fields and fields[f] != getattr(locked, f)
+        ]
+        if changed:
+            raise IdentityLocked(changed)
     for key, value in fields.items():
         if key in COMPANY_FIELDS:
             setattr(locked, key, value)

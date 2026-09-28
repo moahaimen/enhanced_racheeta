@@ -5,7 +5,13 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    ErrorDetail,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -157,6 +163,21 @@ class MyProviderView(APIView):
         serializer = ProviderWriteSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
+            # Verified identity (type, specialties) is decided on the locked row,
+            # in the same transaction as the write (ADR-045).
+            try:
+                services.require_identity_unchanged(profile, serializer.validated_data)
+            except services.IdentityLocked as exc:
+                raise ValidationError(
+                    {
+                        field: ErrorDetail(
+                            "This field is locked while verification is pending or granted. "
+                            "Ask Racheeta administration to change it.",
+                            code="type_locked" if field == "provider_type" else "identity_locked",
+                        )
+                        for field in exc.fields
+                    }
+                ) from exc
             serializer.save()
         return Response(ProviderOwnerSerializer(_own_profile(request)).data)
 

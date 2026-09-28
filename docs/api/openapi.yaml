@@ -4931,6 +4931,11 @@ components:
         can_publish:
           type: boolean
           readOnly: true
+        identity_locked:
+          type: boolean
+          description: Name, location and website are frozen while review is pending
+            or granted.
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -4952,6 +4957,7 @@ components:
       - description
       - governorate
       - id
+      - identity_locked
       - name
       - phone
       - public_email
@@ -5045,6 +5051,11 @@ components:
         can_publish:
           type: boolean
           readOnly: true
+        identity_locked:
+          type: boolean
+          description: Name, location and website are frozen while review is pending
+            or granted.
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -5061,6 +5072,7 @@ components:
       - description
       - governorate
       - id
+      - identity_locked
       - name
       - phone
       - public_email
@@ -8848,6 +8860,11 @@ components:
         can_change_type:
           type: boolean
           readOnly: true
+        identity_locked:
+          type: boolean
+          description: Type and specialties are frozen while review is pending or
+            granted.
+          readOnly: true
         display_name:
           type: string
           readOnly: true
@@ -8939,6 +8956,7 @@ components:
       - display_name
       - governorate
       - id
+      - identity_locked
       - image_url
       - is_visible
       - kind

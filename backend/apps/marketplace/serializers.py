@@ -5,7 +5,7 @@ from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 
 from .models import MedicalCompany, Product, ProductCategory
-from .types import VERIFICATION_DECISION_CHOICES
+from .types import IDENTITY_LOCKED_STATUSES, VERIFICATION_DECISION_CHOICES
 
 # Keys a company must never be able to send: targeting is derived from the
 # category by the backend, publication goes through the activate/deactivate
@@ -85,6 +85,11 @@ class CompanyOwnerSerializer(serializers.ModelSerializer):
     governorate = GovernorateSerializer(read_only=True)
     city = CitySerializer(read_only=True, allow_null=True)
     can_publish = serializers.BooleanField(read_only=True)
+    identity_locked = serializers.SerializerMethodField()
+
+    def get_identity_locked(self, obj) -> bool:
+        """Name, location and website are frozen while review is pending or granted."""
+        return obj.verification_status in IDENTITY_LOCKED_STATUSES
 
     class Meta:
         model = MedicalCompany
@@ -104,6 +109,7 @@ class CompanyOwnerSerializer(serializers.ModelSerializer):
             "verification_changed_at",
             "verified_at",
             "can_publish",
+            "identity_locked",
             "created_at",
             "updated_at",
         )

@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
-from rest_framework.exceptions import APIException, NotFound
+from rest_framework.exceptions import APIException, ErrorDetail, NotFound, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -110,6 +110,17 @@ class MyCompanyView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             services.update_company(company, dict(serializer.validated_data))
+        except services.IdentityLocked as exc:
+            raise ValidationError(
+                {
+                    field: ErrorDetail(
+                        "This field is locked while verification is pending or granted. "
+                        "Ask Racheeta administration to change it.",
+                        code="identity_locked",
+                    )
+                    for field in exc.fields
+                }
+            ) from exc
         except services.MarketplaceError as exc:
             raise_api(exc)
         return Response(CompanyOwnerSerializer(_own_company(request)).data)
