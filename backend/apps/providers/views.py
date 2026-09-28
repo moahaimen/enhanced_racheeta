@@ -1,10 +1,11 @@
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -204,6 +205,12 @@ class MyServiceListView(generics.ListCreateAPIView):
         return super().post(request, *args, **kwargs)
 
 
+class ServiceDeletionConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "This service cannot be deleted while reservation history uses its slots."
+    default_code = "service_has_reservations"
+
+
 @extend_schema(tags=["provider-self"])
 class MyServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [HasProviderProfile]
@@ -223,6 +230,13 @@ class MyServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
         if not getattr(self, "swagger_fake_view", False):
             ctx["provider"] = self.request.user.provider_profile
         return ctx
+
+    def perform_destroy(self, instance):
+        try:
+            with transaction.atomic():
+                instance.delete()
+        except ProtectedError as exc:
+            raise ServiceDeletionConflict from exc
 
 
 @extend_schema(tags=["provider-self"])

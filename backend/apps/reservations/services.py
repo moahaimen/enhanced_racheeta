@@ -52,7 +52,11 @@ class ProviderUnavailable(ReservationError):
 def slot_matches_current_service(slot: AvailabilitySlot) -> bool:
     """A published slot must still match the service duration used to book it."""
     duration = slot.service.duration_minutes
-    return bool(duration and slot.ends_at == slot.starts_at + timedelta(minutes=duration))
+    return bool(
+        duration
+        and slot.service.provider_id == slot.provider_id
+        and slot.ends_at == slot.starts_at + timedelta(minutes=duration)
+    )
 
 
 def _apply_transition(

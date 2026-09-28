@@ -289,3 +289,25 @@ def test_public_availability_hides_slot_after_service_duration_changes(api_clien
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.django_db
+def test_public_availability_hides_slot_if_service_moves_to_another_provider(
+    api_client, account_factory
+):
+    provider, service = _provider_and_service(account_factory)
+    other, _ = _provider_and_service(account_factory)
+    starts_at = timezone.now() + timedelta(days=1)
+    AvailabilitySlot.objects.create(
+        provider=provider,
+        service=service,
+        starts_at=starts_at,
+        ends_at=starts_at + timedelta(minutes=30),
+    )
+    service.provider = other
+    service.save(update_fields=["provider", "updated_at"])
+
+    response = api_client.get(f"/api/v1/providers/{provider.pk}/availability")
+
+    assert response.status_code == 200
+    assert response.json() == []
