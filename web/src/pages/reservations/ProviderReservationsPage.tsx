@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router'
 
 import { providers as providersApi, reservations as reservationsApi } from '../../api'
 import type { ReservationProvider, ReservationStatus, ServiceOffering } from '../../api'
@@ -15,12 +16,15 @@ import {
   LoadingState,
   PageHeader,
   PageStack,
+  Pagination,
   SectionCard,
   Select,
   TextField,
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import styles from './ReservationsPage.module.css'
+
+const PAGE_SIZE = 20
 
 function statusTone(status: ReservationStatus) {
   if (status === 'CONFIRMED' || status === 'COMPLETED') return 'success' as const
@@ -30,9 +34,25 @@ function statusTone(status: ReservationStatus) {
 
 export function ProviderReservationsPage() {
   const { t } = useTranslation()
+  const [params, setParams] = useSearchParams()
+  const availabilityPage = Math.max(1, Number(params.get('availabilityPage') ?? '1') || 1)
+  const reservationsPage = Math.max(1, Number(params.get('reservationsPage') ?? '1') || 1)
   const services = useAsyncData<ServiceOffering[]>((signal) => providersApi.listMyServices(signal), [])
-  const slots = useAsyncData((signal) => reservationsApi.listProviderAvailability(1, signal), [])
-  const reservations = useAsyncData((signal) => reservationsApi.listProviderReservations(1, signal), [])
+  const slots = useAsyncData(
+    (signal) => reservationsApi.listProviderAvailability(availabilityPage, signal),
+    [availabilityPage],
+  )
+  const reservations = useAsyncData(
+    (signal) => reservationsApi.listProviderReservations(reservationsPage, signal),
+    [reservationsPage],
+  )
+
+  const goToPage = (key: 'availabilityPage' | 'reservationsPage', next: number) => {
+    const updated = new URLSearchParams(params)
+    if (next > 1) updated.set(key, String(next))
+    else updated.delete(key)
+    setParams(updated)
+  }
 
   return (
     <Container width="xl">
@@ -42,8 +62,17 @@ export function ProviderReservationsPage() {
         description={t('providerReservations.intro')}
       />
       <PageStack>
-        <AvailabilityBlock services={services} slots={slots} />
-        <ReceivedReservationsBlock reservations={reservations} />
+        <AvailabilityBlock
+          services={services}
+          slots={slots}
+          page={availabilityPage}
+          onPageChange={(next) => goToPage('availabilityPage', next)}
+        />
+        <ReceivedReservationsBlock
+          reservations={reservations}
+          page={reservationsPage}
+          onPageChange={(next) => goToPage('reservationsPage', next)}
+        />
       </PageStack>
     </Container>
   )
@@ -52,9 +81,13 @@ export function ProviderReservationsPage() {
 function AvailabilityBlock({
   services,
   slots,
+  page,
+  onPageChange,
 }: {
   services: ReturnType<typeof useAsyncData<ServiceOffering[]>>
   slots: ReturnType<typeof useAsyncData<Awaited<ReturnType<typeof reservationsApi.listProviderAvailability>>>>
+  page: number
+  onPageChange: (page: number) => void
 }) {
   const { t, i18n } = useTranslation()
   const [service, setService] = useState('')
@@ -116,38 +149,51 @@ function AvailabilityBlock({
           <LoadingState />
         ) : slots.error ? (
           <ErrorState error={slots.error} onRetry={slots.reload} />
-        ) : (slots.data?.results ?? []).length === 0 ? (
-          <EmptyState icon="calendar" title={t('providerReservations.noSlots')} />
         ) : (
-          <ul className={styles.list}>
-            {(slots.data?.results ?? []).map((slot) => (
-              <li key={slot.id} className={styles.row}>
-                <div className={styles.rowHead}>
-                  <div>
-                    <div className={styles.title}>{slot.service.title}</div>
-                    <div className="text-caption">{new Date(slot.starts_at).toLocaleString(i18n.language)}</div>
-                  </div>
-                  <Badge tone={slot.is_active ? 'success' : 'neutral'}>
-                    {slot.is_active ? t('providerReservations.active') : t('providerReservations.inactive')}
-                  </Badge>
-                </div>
-                {slot.is_active ? (
-                  <div className={styles.actions}>
-                    <ApiActionButton
-                      size="sm"
-                      variant="ghost"
-                      action={() => reservationsApi.deleteProviderAvailability(slot.id)}
-                      onSuccess={() => slots.reload()}
-                      onError={(err) => setError(toErrorMessage(err))}
-                      pendingLabel={t('common.deleting')}
-                    >
-                      {t('providerReservations.deactivate')}
-                    </ApiActionButton>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <>
+            {(slots.data?.results ?? []).length === 0 ? (
+              <EmptyState icon="calendar" title={t('providerReservations.noSlots')} />
+            ) : (
+              <ul className={styles.list}>
+                {(slots.data?.results ?? []).map((slot) => (
+                  <li key={slot.id} className={styles.row}>
+                    <div className={styles.rowHead}>
+                      <div>
+                        <div className={styles.title}>{slot.service.title}</div>
+                        <div className="text-caption">{new Date(slot.starts_at).toLocaleString(i18n.language)}</div>
+                      </div>
+                      <Badge tone={slot.is_active ? 'success' : 'neutral'}>
+                        {slot.is_active ? t('providerReservations.active') : t('providerReservations.inactive')}
+                      </Badge>
+                    </div>
+                    {slot.is_active ? (
+                      <div className={styles.actions}>
+                        <ApiActionButton
+                          size="sm"
+                          variant="ghost"
+                          action={() => reservationsApi.deleteProviderAvailability(slot.id)}
+                          onSuccess={() => slots.reload()}
+                          onError={(err) => setError(toErrorMessage(err))}
+                          pendingLabel={t('common.deleting')}
+                        >
+                          {t('providerReservations.deactivate')}
+                        </ApiActionButton>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {slots.data ? (
+              <Pagination
+                page={page}
+                total={Math.max(1, Math.ceil(slots.data.count / PAGE_SIZE))}
+                hasNext={slots.data.next !== null}
+                hasPrevious={slots.data.previous !== null}
+                onChange={onPageChange}
+              />
+            ) : null}
+          </>
         )}
       </div>
     </SectionCard>
@@ -156,24 +202,38 @@ function AvailabilityBlock({
 
 function ReceivedReservationsBlock({
   reservations,
+  page,
+  onPageChange,
 }: {
   reservations: ReturnType<typeof useAsyncData<Awaited<ReturnType<typeof reservationsApi.listProviderReservations>>>>
+  page: number
+  onPageChange: (page: number) => void
 }) {
   const { t } = useTranslation()
   if (reservations.loading) return <LoadingState />
   if (reservations.error) return <ErrorState error={reservations.error} onRetry={reservations.reload} />
-  if ((reservations.data?.results ?? []).length === 0) {
-    return <SectionCard title={t('providerReservations.receivedTitle')} headingLevel={2}><EmptyState icon="calendar" title={t('providerReservations.noReservations')} /></SectionCard>
-  }
   return (
     <SectionCard title={t('providerReservations.receivedTitle')} description={t('providerReservations.receivedIntro')} headingLevel={2}>
-      <ul className={styles.list}>
-        {(reservations.data?.results ?? []).map((reservation) => (
-          <li key={reservation.id} className={styles.row}>
-            <ProviderReservationRow reservation={reservation} reload={reservations.reload} />
-          </li>
-        ))}
-      </ul>
+      {(reservations.data?.results ?? []).length === 0 ? (
+        <EmptyState icon="calendar" title={t('providerReservations.noReservations')} />
+      ) : (
+        <ul className={styles.list}>
+          {(reservations.data?.results ?? []).map((reservation) => (
+            <li key={reservation.id} className={styles.row}>
+              <ProviderReservationRow reservation={reservation} reload={reservations.reload} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {reservations.data ? (
+        <Pagination
+          page={page}
+          total={Math.max(1, Math.ceil(reservations.data.count / PAGE_SIZE))}
+          hasNext={reservations.data.next !== null}
+          hasPrevious={reservations.data.previous !== null}
+          onChange={onPageChange}
+        />
+      ) : null}
     </SectionCard>
   )
 }

@@ -161,4 +161,44 @@ describe('Reservations pages', () => {
     expect(screen.getByRole('button', { name: /^رفض$|^reject$/i })).toBeInTheDocument()
   })
 
+  it('paginates provider availability and received reservations independently', async () => {
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
+    vi.mocked(reservationsApi.listProviderAvailability).mockImplementation(async (page = 1) => ({
+      count: 21,
+      next: page === 1 ? 'http://test/api/v1/reservations/provider/availability?page=2' : null,
+      previous: page === 2 ? 'http://test/api/v1/reservations/provider/availability?page=1' : null,
+      results: [{ ...slot, id: page === 1 ? slot.id : '66666666-6666-4666-8666-666666666666' }],
+    }))
+    vi.mocked(reservationsApi.listProviderReservations).mockImplementation(async (page = 1) => ({
+      count: 21,
+      next: page === 1 ? 'http://test/api/v1/reservations/provider?page=2' : null,
+      previous: page === 2 ? 'http://test/api/v1/reservations/provider?page=1' : null,
+      results: [
+        {
+          ...providerReservation,
+          id: page === 1 ? providerReservation.id : '77777777-7777-4777-8777-777777777777',
+        },
+      ],
+    }))
+
+    renderApp('/provider/reservations')
+
+    expect(await screen.findByText('Patient One')).toBeInTheDocument()
+    const nextButtons = screen.getAllByRole('button', { name: /التالي|next/i })
+    expect(nextButtons).toHaveLength(2)
+
+    await userEvent.click(nextButtons[0])
+    await waitFor(() =>
+      expect(reservationsApi.listProviderAvailability).toHaveBeenCalledWith(2, expect.anything()),
+    )
+    expect(reservationsApi.listProviderReservations).not.toHaveBeenCalledWith(2, expect.anything())
+
+    const updatedNextButtons = screen.getAllByRole('button', { name: /التالي|next/i })
+    await userEvent.click(updatedNextButtons[1])
+    await waitFor(() =>
+      expect(reservationsApi.listProviderReservations).toHaveBeenCalledWith(2, expect.anything()),
+    )
+  })
+
 })
