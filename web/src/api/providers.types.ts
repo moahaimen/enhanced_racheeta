@@ -67,6 +67,8 @@ export interface ProviderCard {
   city: City | null
   specialties: Specialty[]
   image_url: string
+  average_rating: number | null
+  review_count: number
 }
 
 export interface PublicService {

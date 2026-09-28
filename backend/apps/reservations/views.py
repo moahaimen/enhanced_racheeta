@@ -58,6 +58,7 @@ def reservation_queryset():
             "provider",
             "service",
             "availability_slot",
+            "review",
         )
         .prefetch_related("transitions")
         .order_by("-starts_at")

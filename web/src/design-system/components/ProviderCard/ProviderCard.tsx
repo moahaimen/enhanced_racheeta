@@ -63,6 +63,11 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
         </ul>
       ) : null}
       <div className={styles.footer}>
+        {provider.review_count > 0 && provider.average_rating !== null ? (
+          <span className="text-caption">
+            ★ {provider.average_rating.toFixed(1)} · {t('reviews.count', { count: provider.review_count })}
+          </span>
+        ) : null}
         <span className={styles.cta} aria-hidden="true">
           {t('providers.viewProfile')}
           <Icon name="arrowForward" size={16} flipInRtl />

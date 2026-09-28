@@ -78,7 +78,8 @@
     "myApplications": "My applications",
     "adminConsole": "Admin console",
     "myReservations": "My reservations",
-    "providerReservations": "Appointments & reservations"
+    "providerReservations": "Appointments & reservations",
+    "providerOffers": "Offers"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -536,7 +537,10 @@
     "slot_unavailable": "This appointment is no longer available.",
     "service_unavailable": "The selected service is unavailable.",
     "provider_unavailable": "This provider is not currently available for new reservations.",
-    "invalid_availability": "The appointment time is invalid."
+    "invalid_availability": "The appointment time is invalid.",
+    "reservation_not_reviewable": "Only completed appointments can be reviewed.",
+    "already_reviewed": "This appointment has already been reviewed.",
+    "invalid_offer": "The offer details or time window are invalid."
   },
   "jobs": {
     "featured": "Featured",
@@ -1007,5 +1011,40 @@
     "noReservations": "No reservations received yet.",
     "complete": "Complete",
     "noShow": "No show"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "latest": "Latest reviews",
+    "empty": "No reviews yet.",
+    "rating": "Rating",
+    "comment": "Your comment",
+    "leaveReview": "Review this appointment",
+    "submit": "Submit review",
+    "submitted": "Your review was submitted.",
+    "alreadyReviewed": "This appointment has already been reviewed.",
+    "count_one": "1 review",
+    "count_other": "{{count}} reviews"
+  },
+  "offers": {
+    "manageTitle": "Manage offers",
+    "manageIntro": "Create time-limited offers for your active services. They expire automatically at the configured time.",
+    "createTitle": "Create offer",
+    "service": "Service",
+    "title": "Offer title",
+    "description": "Description",
+    "offerPrice": "Offer price",
+    "startsAt": "Starts at",
+    "endsAt": "Ends at",
+    "create": "Create offer",
+    "myOffers": "My offers",
+    "empty": "No offers yet.",
+    "expired": "Expired",
+    "active": "Active",
+    "inactive": "Inactive",
+    "deactivate": "Deactivate offer",
+    "invalidWindow": "The offer end time must be after the start time.",
+    "publicTitle": "Current offers",
+    "publicIntro": "Active time-limited offers from this provider.",
+    "ends": "Ends {{date}}"
   }
 }

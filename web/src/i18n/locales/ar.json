@@ -78,7 +78,8 @@
     "myApplications": "طلباتي",
     "adminConsole": "لوحة الإدارة",
     "myReservations": "حجوزاتي",
-    "providerReservations": "المواعيد والحجوزات"
+    "providerReservations": "المواعيد والحجوزات",
+    "providerOffers": "العروض"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -545,7 +546,10 @@
     "slot_unavailable": "هذا الموعد لم يعد متاحاً للحجز.",
     "service_unavailable": "الخدمة المختارة غير متاحة.",
     "provider_unavailable": "مقدّم الخدمة غير متاح حالياً للحجوزات الجديدة.",
-    "invalid_availability": "وقت الموعد غير صالح."
+    "invalid_availability": "وقت الموعد غير صالح.",
+    "reservation_not_reviewable": "يمكن تقييم المواعيد المكتملة فقط.",
+    "already_reviewed": "تم تقييم هذا الموعد مسبقًا.",
+    "invalid_offer": "بيانات العرض أو مدته غير صالحة."
   },
   "jobs": {
     "featured": "مميّزة",
@@ -1039,5 +1043,40 @@
     "noReservations": "لا توجد حجوزات واردة بعد.",
     "complete": "إكمال",
     "noShow": "لم يحضر"
+  },
+  "reviews": {
+    "title": "التقييمات",
+    "latest": "أحدث التقييمات",
+    "empty": "لا توجد تقييمات حتى الآن.",
+    "rating": "التقييم",
+    "comment": "ملاحظتك",
+    "leaveReview": "قيّم هذا الموعد",
+    "submit": "إرسال التقييم",
+    "submitted": "تم إرسال تقييمك.",
+    "alreadyReviewed": "تم تقييم هذا الموعد.",
+    "count_one": "تقييم واحد",
+    "count_other": "{{count}} تقييمات"
+  },
+  "offers": {
+    "manageTitle": "إدارة العروض",
+    "manageIntro": "أنشئ عروضًا مؤقتة على خدماتك الفعّالة. تنتهي تلقائيًا في الوقت المحدد.",
+    "createTitle": "إنشاء عرض",
+    "service": "الخدمة",
+    "title": "عنوان العرض",
+    "description": "الوصف",
+    "offerPrice": "سعر العرض",
+    "startsAt": "يبدأ في",
+    "endsAt": "ينتهي في",
+    "create": "إنشاء العرض",
+    "myOffers": "عروضي",
+    "empty": "لا توجد عروض بعد.",
+    "expired": "منتهي",
+    "active": "فعّال",
+    "inactive": "متوقف",
+    "deactivate": "إيقاف العرض",
+    "invalidWindow": "وقت نهاية العرض يجب أن يكون بعد وقت البداية.",
+    "publicTitle": "العروض الحالية",
+    "publicIntro": "عروض فعّالة ومحددة المدة من مقدم الخدمة.",
+    "ends": "ينتهي {{date}}"
   }
 }

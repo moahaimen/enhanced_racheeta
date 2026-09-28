@@ -20,6 +20,7 @@ import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { ProviderDetailPage } from '../pages/providers/ProviderDetailPage'
 import { ProviderProfilePage } from '../pages/providers/ProviderProfilePage'
+import { ProviderOffersPage } from '../pages/offers/ProviderOffersPage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
 import { ProviderReservationsPage } from '../pages/reservations/ProviderReservationsPage'
 import { ProvidersPage } from '../pages/providers/ProvidersPage'
@@ -79,6 +80,7 @@ export const routes: RouteObject[] = [
             children: [
               { path: 'provider/profile', element: <ProviderProfilePage /> },
               { path: 'provider/reservations', element: <ProviderReservationsPage /> },
+              { path: 'provider/offers', element: <ProviderOffersPage /> },
             ],
           },
         ],

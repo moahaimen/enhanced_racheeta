@@ -116,9 +116,11 @@ class PublicServiceSerializer(serializers.ModelSerializer):
 
 
 class ProviderCardSerializer(serializers.ModelSerializer):
-    """List item for discovery. No ratings: reviews arrive in Phase 4."""
+    """List item for discovery with public rating summary."""
 
     kind = serializers.CharField(read_only=True)
+    average_rating = serializers.FloatField(read_only=True, allow_null=True)
+    review_count = serializers.IntegerField(read_only=True)
     governorate = GovernorateSerializer(read_only=True)
     city = CitySerializer(read_only=True)
     specialties = SpecialtySerializer(many=True, read_only=True)
@@ -134,6 +136,8 @@ class ProviderCardSerializer(serializers.ModelSerializer):
             "city",
             "specialties",
             "image_url",
+            "average_rating",
+            "review_count",
         )
         read_only_fields = fields
 

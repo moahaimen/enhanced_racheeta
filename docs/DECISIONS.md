@@ -221,3 +221,19 @@ Append-only log. Newest at the bottom. Format: context → decision → conseque
 **Date:** 2026-09-24
 **Decision:** Periodic usage (`applications.limit`, `talent.invite_limit`) is consumed with a reference that names the created record (`apply:<application id>`, `invite:<invitation id>`), never the `(job, seeker)` pair; duplicates are stopped before consumption by the one-active-record constraints. Concurrent limits (`jobs.active_limit`, `jobs.featured_limit`, `recruiter.seats`) are checked and committed under `SELECT … FOR UPDATE` on the `jobs_employer` row; `restore` uses the same gate as `submit`. Featured status is authoritative only while `featured_until > now`, normalised at read time. `request_subscription` expires elapsed ACTIVE rows itself under a billing-account row lock.
 **Consequences:** Withdraw-and-reapply and re-invite are billed as new attempts; retries and races cannot double-charge or exceed a limit; no scheduler or Redis is needed. Found by the PR #4 Codex review.
+
+
+## ADR-041 — Reservations use concrete slots and remain free
+**Date:** 2026-09-28
+**Decision:** Phase 4 reservations use concrete provider/service availability slots, transaction locking plus a partial uniqueness constraint for one live booking per slot, immutable reservation snapshots, controlled lifecycle transitions and post-commit notification hooks. Reservations do not consult billing/entitlements.
+**Consequences:** Booking correctness is enforced in PostgreSQL/Django without Redis or a worker. Recurring templates and persistent notification delivery remain later additive features.
+
+## ADR-042 — Reviews require a completed reservation and are one-per-interaction
+**Date:** 2026-09-28
+**Decision:** A PATIENT may review only a reservation they own whose status is COMPLETED and whose provider still resolves. `Review.reservation` is one-to-one and protected; rating is 1–5 with both serializer/model/database validation. Provider/service names are snapshotted.
+**Consequences:** Ratings represent verified completed interactions rather than arbitrary public submissions. Provider aggregates are real persisted data and may be safely shown in discovery/detail.
+
+## ADR-043 — Offers are service-scoped snapshots with server-controlled visibility windows
+**Date:** 2026-09-28
+**Decision:** A provider offer must reference an owned active service at creation. Original service title/price/currency are snapshotted; offer price must be non-negative and below the original price. Public visibility requires the provider to be discoverable, the service active, `is_active=true`, and server time inside `[starts_at, ends_at)`.
+**Consequences:** Clients cannot activate expired/future offers by manipulating UI state. No scheduler is required for expiry; time validity is evaluated on reads. Images remain deferred until the media/storage phase.

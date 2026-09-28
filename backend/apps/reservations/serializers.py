@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import Account
@@ -70,6 +71,12 @@ class ReservationPatientSerializer(serializers.ModelSerializer):
     service_id = serializers.UUIDField(read_only=True)
     availability_slot_id = serializers.UUIDField(read_only=True)
     transitions = ReservationTransitionSerializer(many=True, read_only=True)
+    review_id = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_review_id(self, obj):
+        review = getattr(obj, "review", None)
+        return review.pk if review is not None else None
 
     class Meta:
         model = Reservation
@@ -89,6 +96,7 @@ class ReservationPatientSerializer(serializers.ModelSerializer):
             "status_changed_at",
             "patient_note",
             "transitions",
+            "review_id",
             "created_at",
         )
         read_only_fields = fields

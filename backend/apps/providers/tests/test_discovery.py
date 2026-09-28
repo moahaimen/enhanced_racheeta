@@ -25,8 +25,11 @@ def test_list_is_public_and_paginated(api_client, provider_factory):
         "city",
         "specialties",
         "image_url",
+        "average_rating",
+        "review_count",
     }
-    assert "rating" not in card  # Phase 4: never fabricated
+    assert card["average_rating"] is None
+    assert card["review_count"] == 0
 
 
 def test_only_verified_visible_active_providers_are_listed(

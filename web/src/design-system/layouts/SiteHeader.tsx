@@ -88,6 +88,10 @@ export function SiteHeader() {
             <Icon name="calendar" size={18} />
             {t('nav.providerReservations')}
           </NavLink>
+          <NavLink to="/provider/offers" className={styles.link}>
+            <Icon name="tag" size={18} />
+            {t('nav.providerOffers')}
+          </NavLink>
         </>
       ) : null}
       {status === 'authenticated' ? (
