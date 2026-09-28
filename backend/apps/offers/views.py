@@ -90,10 +90,13 @@ class ProviderOfferListView(generics.GenericAPIView):
     def post(self, request):
         serializer = OfferCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        service_id = data.pop("service")
         try:
             offer = services.create_offer(
                 request.user.provider_profile,
-                **serializer.validated_data,
+                service_id=service_id,
+                **data,
             )
         except services.OfferError as exc:
             raise_api(exc)
