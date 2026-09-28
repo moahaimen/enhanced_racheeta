@@ -238,12 +238,8 @@ class MyServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
                 # provider -> service -> slots. Locking the provider first prevents a
                 # new slot from appearing after the slot scan; locking the service
                 # before its slots avoids a service/slot deadlock with bookings.
-                ProviderProfile.objects.select_for_update(of=("self",)).get(
-                    pk=instance.provider_id
-                )
-                locked = ServiceOffering.objects.select_for_update(of=("self",)).get(
-                    pk=instance.pk
-                )
+                ProviderProfile.objects.select_for_update(of=("self",)).get(pk=instance.provider_id)
+                locked = ServiceOffering.objects.select_for_update(of=("self",)).get(pk=instance.pk)
                 list(
                     locked.availability_slots.select_for_update()
                     .order_by("pk")
