@@ -75,6 +75,10 @@ def test_completed_reservation_can_be_reviewed_once(api_client, account_factory)
     assert duplicate.json()["error"]["code"] == "already_reviewed"
     assert Review.objects.filter(reservation=reservation).count() == 1
 
+    mine = api_client.get("/api/v1/reservations/me")
+    assert mine.status_code == 200
+    assert mine.json()["results"][0]["review_id"] == created.json()["id"]
+
 
 @pytest.mark.django_db
 def test_non_completed_or_foreign_reservation_cannot_be_reviewed(api_client, account_factory):
