@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
-import { ApiError, providers as providersApi, reservations as reservationsApi } from '../../api'
+import {
+  ApiError,
+  offers as offersApi,
+  providers as providersApi,
+  reservations as reservationsApi,
+  reviews as reviewsApi,
+} from '../../api'
 import type { ProviderPublic } from '../../api'
 import { useAuth } from '../../auth/useAuth'
 import {
@@ -19,6 +25,7 @@ import {
   LinkButton,
   LoadingState,
   PageStack,
+  Pagination,
   PROVIDER_TYPE_ICON,
   SectionCard,
 } from '../../design-system'
@@ -67,6 +74,11 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
                 ? `${t('providerDetail.verifiedSince')} ${new Date(provider.verified_at).toLocaleDateString(i18n.language)}`
                 : t('verification.VERIFIED')}
             </Badge>
+            {provider.review_count > 0 && provider.average_rating !== null ? (
+              <Badge tone="outline">
+                ★ {provider.average_rating.toFixed(1)} · {t('reviews.count', { count: provider.review_count })}
+              </Badge>
+            ) : null}
           </div>
           <p className={styles.heroLocation}>
             <Icon name="mapPin" size={16} />
@@ -120,7 +132,9 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
             )}
           </SectionCard>
 
+          <PublicOffersSection providerId={provider.id} />
           <BookingSection provider={provider} />
+          <PublicReviewsSection providerId={provider.id} />
         </PageStack>
 
         <PageStack>
@@ -222,6 +236,87 @@ function BookingSection({ provider }: { provider: ProviderPublic }) {
           ))}
         </ul>
       )}
+    </SectionCard>
+  )
+}
+
+
+function PublicOffersSection({ providerId }: { providerId: string }) {
+  const { t, i18n } = useTranslation()
+  const offers = useAsyncData((signal) => offersApi.listPublicOffers(providerId, signal), [providerId])
+
+  return (
+    <SectionCard title={t('offers.publicTitle')} description={t('offers.publicIntro')} headingLevel={2}>
+      {offers.loading ? (
+        <LoadingState />
+      ) : offers.error ? (
+        <ErrorState error={offers.error} onRetry={offers.reload} />
+      ) : (offers.data ?? []).length === 0 ? (
+        <EmptyState icon="tag" title={t('offers.empty')} />
+      ) : (
+        <ul className={styles.services}>
+          {(offers.data ?? []).map((offer) => (
+            <li key={offer.id} className={styles.service}>
+              <div className={styles.serviceText}>
+                <div className={styles.serviceTitle}>{offer.title}</div>
+                <div className="text-caption">{offer.service_title_snapshot}</div>
+                {offer.description ? <p className="text-secondary prewrap">{offer.description}</p> : null}
+                <div className="text-caption">
+                  {t('offers.ends', { date: new Date(offer.ends_at).toLocaleString(i18n.language) })}
+                </div>
+              </div>
+              <span className={styles.servicePrice} dir="ltr">
+                <s>{Number(offer.original_price_snapshot).toLocaleString(i18n.language)}</s>
+                {' → '}
+                {Number(offer.offer_price).toLocaleString(i18n.language)} {offer.currency_snapshot}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
+  )
+}
+
+function PublicReviewsSection({ providerId }: { providerId: string }) {
+  const { t, i18n } = useTranslation()
+  const [page, setPage] = useState(1)
+  const reviews = useAsyncData(
+    (signal) => reviewsApi.listPublicReviews(providerId, page, signal),
+    [providerId, page],
+  )
+
+  return (
+    <SectionCard title={t('reviews.latest')} headingLevel={2}>
+      {reviews.loading ? (
+        <LoadingState />
+      ) : reviews.error ? (
+        <ErrorState error={reviews.error} onRetry={reviews.reload} />
+      ) : (reviews.data?.results ?? []).length === 0 ? (
+        <EmptyState icon="users" title={t('reviews.empty')} />
+      ) : (
+        <div className="stack">
+          {(reviews.data?.results ?? []).map((review) => (
+            <div key={review.id} className="card-block">
+              <div className="cluster">
+                <strong>★ {review.rating}/5</strong>
+                <span className="text-caption">{review.service_title_snapshot}</span>
+              </div>
+              {review.comment ? <p className="text-secondary prewrap">{review.comment}</p> : null}
+              <div className="text-caption">{new Date(review.created_at).toLocaleDateString(i18n.language)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {reviews.data ? (
+        <Pagination
+          page={page}
+          total={Math.max(1, Math.ceil(reviews.data.count / 20))}
+          hasNext={reviews.data.next !== null}
+          hasPrevious={reviews.data.previous !== null}
+          onChange={setPage}
+        />
+      ) : null}
     </SectionCard>
   )
 }
