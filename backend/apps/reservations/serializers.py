@@ -25,6 +25,13 @@ class AvailabilitySlotSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class PaginatedAvailabilitySlotSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = AvailabilitySlotSerializer(many=True)
+
+
 class AvailabilitySlotCreateSerializer(serializers.Serializer):
     service = serializers.UUIDField()
     starts_at = serializers.DateTimeField()

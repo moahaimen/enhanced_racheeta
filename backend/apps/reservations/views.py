@@ -18,6 +18,7 @@ from .serializers import (
     AvailabilityQuerySerializer,
     AvailabilitySlotCreateSerializer,
     AvailabilitySlotSerializer,
+    PaginatedAvailabilitySlotSerializer,
     ProviderTransitionSerializer,
     ReservationCancelSerializer,
     ReservationCreateSerializer,
@@ -77,6 +78,7 @@ class PublicAvailabilityView(APIView):
     authentication_classes = []
     serializer_class = AvailabilitySlotSerializer
 
+    @extend_schema(responses={200: AvailabilitySlotSerializer(many=True)})
     def get(self, request, provider_id):
         provider = get_object_or_404(
             ProviderProfile.objects.discoverable(),
@@ -132,7 +134,10 @@ class ProviderAvailabilityListView(generics.GenericAPIView):
             provider=self.request.user.provider_profile
         ).select_related("provider", "service", "service__specialty")
 
-    @extend_schema(summary="My appointment availability")
+    @extend_schema(
+        summary="My appointment availability",
+        responses={200: PaginatedAvailabilitySlotSerializer},
+    )
     def get(self, request):
         qs = self.get_queryset().order_by("starts_at")
         page = self.paginate_queryset(qs)
