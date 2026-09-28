@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
-import { reservations as reservationsApi } from '../../api'
+import { reservations as reservationsApi, reviews as reviewsApi } from '../../api'
 import type { ReservationPatient, ReservationStatus } from '../../api'
 import {
   Alert,
@@ -17,6 +17,8 @@ import {
   PageStack,
   Pagination,
   SectionCard,
+  Select,
+  Textarea,
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
 import styles from './ReservationsPage.module.css'
@@ -113,6 +115,12 @@ function ReservationCard({ reservation, reload }: { reservation: ReservationPati
           ))}
         </ol>
       ) : null}
+      {reservation.status === 'COMPLETED' && reservation.review_id ? (
+        <Badge tone="outline">{t('reviews.alreadyReviewed')}</Badge>
+      ) : null}
+      {reservation.status === 'COMPLETED' && !reservation.review_id ? (
+        <ReviewForm reservationId={reservation.id} reload={reload} setError={setError} />
+      ) : null}
       {canCancel ? (
         <div className={styles.actions}>
           <ApiActionButton
@@ -128,5 +136,53 @@ function ReservationCard({ reservation, reload }: { reservation: ReservationPati
         </div>
       ) : null}
     </SectionCard>
+  )
+}
+
+
+function ReviewForm({
+  reservationId,
+  reload,
+  setError,
+}: {
+  reservationId: string
+  reload: () => void
+  setError: (value: string | null) => void
+}) {
+  const { t } = useTranslation()
+  const [rating, setRating] = useState('5')
+  const [comment, setComment] = useState('')
+
+  return (
+    <div className="stack" style={{ marginBlockStart: 'var(--space-4)' }}>
+      <strong>{t('reviews.leaveReview')}</strong>
+      <div className="grid-2">
+        <Select label={t('reviews.rating')} value={rating} onChange={(event) => setRating(event.target.value)}>
+          {[5, 4, 3, 2, 1].map((value) => (
+            <option key={value} value={String(value)}>{value}/5</option>
+          ))}
+        </Select>
+        <Textarea
+          label={t('reviews.comment')}
+          optional
+          rows={2}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+        />
+      </div>
+      <FormActions>
+        <ApiActionButton
+          size="sm"
+          action={() => reviewsApi.createReview(reservationId, Number(rating), comment)}
+          onSuccess={() => {
+            setError(null)
+            reload()
+          }}
+          onError={(err) => setError(toErrorMessage(err))}
+        >
+          {t('reviews.submit')}
+        </ApiActionButton>
+      </FormActions>
+    </div>
   )
 }

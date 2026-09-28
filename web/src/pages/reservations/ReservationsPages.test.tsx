@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as authApi from '../../api/endpoints/auth'
 import * as providersApi from '../../api/endpoints/providers'
 import * as reservationsApi from '../../api/endpoints/reservations'
+import * as reviewsApi from '../../api/endpoints/reviews'
 import { tokenStore } from '../../api/tokens'
 import type { AvailabilitySlot, ReservationPatient, ReservationProvider, ServiceOffering } from '../../api'
 import { makeAccount, renderApp } from '../../test/renderApp'
@@ -12,6 +13,7 @@ import { makeAccount, renderApp } from '../../test/renderApp'
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/providers')
 vi.mock('../../api/endpoints/reservations')
+vi.mock('../../api/endpoints/reviews')
 
 const service: ServiceOffering = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -65,6 +67,7 @@ const patientReservation: ReservationPatient = {
   status: 'PENDING',
   status_changed_at: '2026-09-27T00:00:00Z',
   patient_note: '',
+  review_id: null,
   transitions: [
     {
       from_status: '',
@@ -199,6 +202,47 @@ describe('Reservations pages', () => {
     await waitFor(() =>
       expect(reservationsApi.listProviderReservations).toHaveBeenCalledWith(2, expect.anything()),
     )
+  })
+
+
+  it('lets a patient review a completed reservation once', async () => {
+    const completed = {
+      ...patientReservation,
+      status: 'COMPLETED' as const,
+      starts_at: '2026-09-20T09:00:00Z',
+      ends_at: '2026-09-20T09:30:00Z',
+      review_id: null,
+    }
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
+    vi.mocked(reservationsApi.listMyReservations)
+      .mockResolvedValueOnce({ count: 1, next: null, previous: null, results: [completed] })
+      .mockResolvedValue({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ ...completed, review_id: '88888888-8888-4888-8888-888888888888' }],
+      })
+    vi.mocked(reviewsApi.createReview).mockResolvedValue({
+      id: '88888888-8888-4888-8888-888888888888',
+      reservation_id: completed.id,
+      provider_id: completed.provider_id,
+      provider_name_snapshot: completed.provider_name_snapshot,
+      service_title_snapshot: completed.service_title_snapshot,
+      rating: 5,
+      comment: 'Excellent',
+      created_at: '2026-09-28T00:00:00Z',
+    })
+
+    renderApp('/reservations')
+
+    expect(await screen.findByText(/قيّم هذا الموعد|review this appointment/i)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/ملاحظتك|your comment/i), 'Excellent')
+    await userEvent.click(screen.getByRole('button', { name: /إرسال التقييم|submit review/i }))
+
+    await waitFor(() =>
+      expect(reviewsApi.createReview).toHaveBeenCalledWith(completed.id, 5, 'Excellent'),
+    )
+    expect(await screen.findByText(/تم تقييم هذا الموعد|already been reviewed/i)).toBeInTheDocument()
   })
 
 })
