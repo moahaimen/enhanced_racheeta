@@ -49,9 +49,7 @@ class OfferCreateSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["ends_at"] <= attrs["starts_at"]:
-            raise serializers.ValidationError(
-                {"ends_at": ["End time must be after start time."]}
-            )
+            raise serializers.ValidationError({"ends_at": ["End time must be after start time."]})
         if attrs["ends_at"] <= timezone.now():
             raise serializers.ValidationError({"ends_at": ["Offer must end in the future."]})
         return attrs
