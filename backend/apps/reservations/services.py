@@ -167,9 +167,7 @@ def create_reservation(
     # Canonical reservation lock order: provider -> provider account -> service -> slot.
     # Service deletion and availability creation use the same provider -> service prefix,
     # preventing cycles and phantom slots during concurrent booking/deletion.
-    provider = ProviderProfile.objects.select_for_update(of=("self",)).get(
-        pk=slot_ref.provider_id
-    )
+    provider = ProviderProfile.objects.select_for_update(of=("self",)).get(pk=slot_ref.provider_id)
     account = Account.objects.select_for_update().get(pk=provider.account_id)
     try:
         service = ServiceOffering.objects.select_for_update(of=("self",)).get(
