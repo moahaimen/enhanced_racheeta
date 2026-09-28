@@ -188,14 +188,14 @@ describe('Reservations pages', () => {
     const nextButtons = screen.getAllByRole('button', { name: /التالي|next/i })
     expect(nextButtons).toHaveLength(2)
 
-    await userEvent.click(nextButtons[0])
+    await userEvent.click(nextButtons[0]!)
     await waitFor(() =>
       expect(reservationsApi.listProviderAvailability).toHaveBeenCalledWith(2, expect.anything()),
     )
     expect(reservationsApi.listProviderReservations).not.toHaveBeenCalledWith(2, expect.anything())
 
     const updatedNextButtons = screen.getAllByRole('button', { name: /التالي|next/i })
-    await userEvent.click(updatedNextButtons[1])
+    await userEvent.click(updatedNextButtons[1]!)
     await waitFor(() =>
       expect(reservationsApi.listProviderReservations).toHaveBeenCalledWith(2, expect.anything()),
     )
