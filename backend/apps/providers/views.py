@@ -1,5 +1,5 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
+from django.db.models import Avg, Count, Prefetch
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -57,7 +57,11 @@ class ProviderListView(generics.ListAPIView):
     ordering = ["display_name"]
 
     def get_queryset(self):
-        return ProviderProfile.objects.discoverable().with_public_relations()
+        return (
+            ProviderProfile.objects.discoverable()
+            .with_public_relations()
+            .annotate(average_rating=Avg("reviews__rating"), review_count=Count("reviews"))
+        )
 
 
 @extend_schema(tags=["providers"], summary="Public provider profile")
@@ -70,6 +74,7 @@ class ProviderDetailView(generics.RetrieveAPIView):
         return (
             ProviderProfile.objects.discoverable()
             .with_public_relations()
+            .annotate(average_rating=Avg("reviews__rating"), review_count=Count("reviews"))
             .prefetch_related(
                 Prefetch(
                     "services",

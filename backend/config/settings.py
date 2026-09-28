@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "apps.moderation",
     "apps.jobs",
     "apps.reservations",
+    "apps.reviews",
 ]
 
 MIDDLEWARE = [
