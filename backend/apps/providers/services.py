@@ -112,6 +112,16 @@ def set_verification(
     if status not in ADMIN_VERIFICATION_TARGETS:
         raise InvalidTransition(f"{status} is not an administrator-settable status.")
     _lock_profile_status(profile)
+    # ADR-045: VERIFIED is granted only to a PENDING profile — the identity the
+    # provider froze by requesting review. From any other state the identity may
+    # have changed after the administrator looked at it.
+    if status == VerificationStatus.VERIFIED and profile.verification_status != (
+        VerificationStatus.PENDING
+    ):
+        raise InvalidTransition(
+            "Only a profile pending review can be verified; "
+            f"this one is {profile.verification_status}."
+        )
     now = timezone.now()
     profile.verification_status = status
     profile.verification_note = note

@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from . import services
 from .models import ProviderMembership, ProviderProfile, ServiceOffering
@@ -39,10 +39,20 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     inlines = [ServiceInline]
     actions = ["mark_verified", "mark_rejected", "mark_suspended"]
 
-    @admin.action(description="Mark selected providers VERIFIED")
+    @admin.action(description="Mark selected providers VERIFIED (pending review only)")
     def mark_verified(self, request, queryset):
+        skipped = 0
         for profile in queryset:
-            services.set_verification(profile, VerificationStatus.VERIFIED, by=request.user)
+            try:
+                services.set_verification(profile, VerificationStatus.VERIFIED, by=request.user)
+            except services.InvalidTransition:
+                skipped += 1  # ADR-045: only PENDING profiles can be verified
+        if skipped:
+            self.message_user(
+                request,
+                f"{skipped} profile(s) were not pending review and were left unchanged.",
+                level=messages.WARNING,
+            )
 
     @admin.action(description="Mark selected providers REJECTED")
     def mark_rejected(self, request, queryset):

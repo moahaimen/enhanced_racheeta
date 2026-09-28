@@ -306,6 +306,10 @@ def test_visibility_follows_current_server_state(
     company = catalog["lab"].company
     services.set_verification(company, CompanyVerificationStatus.SUSPENDED, admin=None)
     assert _visible(lab) == set()
+    # ADR-045: back to VERIFIED only through a fresh review (UNVERIFIED -> PENDING -> VERIFIED)
+    services.set_verification(company, CompanyVerificationStatus.UNVERIFIED, admin=None)
+    services.request_verification(company)
+    assert _visible(lab) == set()
     services.set_verification(company, CompanyVerificationStatus.VERIFIED, admin=None)
     assert _visible(lab) == {str(catalog["lab"].pk)}
     category = catalog["lab"].category

@@ -223,6 +223,8 @@ def test_identity_changed_only_after_leaving_verification_and_access_returns_on_
         == 200
     )
     assert client.get(CATALOG).status_code == 403  # no access until re-verified
+    provider_services.request_verification(ProviderProfile.objects.get(pk=provider.pk))
+    assert client.get(CATALOG).status_code == 403  # pending review: still no access
     provider_services.set_verification(
         ProviderProfile.objects.get(pk=provider.pk), VerificationStatus.VERIFIED, by=None
     )

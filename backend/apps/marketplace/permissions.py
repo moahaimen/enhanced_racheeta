@@ -5,6 +5,7 @@ views resolve `request.user.medical_company`, provider views resolve
 from rest_framework.permissions import BasePermission
 
 from apps.accounts.roles import AccountRole
+from apps.providers.models import ProviderProfile
 from apps.providers.types import VerificationStatus
 
 
@@ -30,20 +31,35 @@ class HasMedicalCompany(IsMedicalCompanyAccount):
         return hasattr(request.user, "medical_company")
 
 
-class CanBrowseMarketplace(BasePermission):
-    """Capability `marketplace.view_targeted_products`: a PROVIDER account with
-    a VERIFIED provider profile. Public visibility (`is_visible`) is NOT
-    required — hiding a provider from patient search does not remove its B2B
-    access. The targeting itself is decided per product by the queryset."""
+BROWSE_DENIED = "A verified provider profile is required to browse the marketplace."
 
-    message = "A verified provider profile is required to browse the marketplace."
+
+def current_verified_provider(account):
+    """THE authoritative browsing check (capability
+    `marketplace.view_targeted_products`): re-reads the provider profile from
+    the database — never a cached `account.provider_profile` — and returns it
+    only while the account is an active PROVIDER whose profile is VERIFIED.
+    Public visibility (`is_visible`) is NOT required: hiding a provider from
+    patient search does not remove its B2B access."""
+    if not (account and account.is_authenticated and account.role == AccountRole.PROVIDER):
+        return None
+    return (
+        ProviderProfile.objects.filter(
+            account_id=account.pk,
+            account__is_active=True,
+            verification_status=VerificationStatus.VERIFIED,
+        )
+        .prefetch_related("specialties")
+        .first()
+    )
+
+
+class CanBrowseMarketplace(BasePermission):
+    """Early rejection only (UX); the catalogue views re-read the provider
+    with `current_verified_provider` when they build the queryset, and the
+    targeting queryset re-checks it inside the SQL statement."""
+
+    message = BROWSE_DENIED
 
     def has_permission(self, request, view) -> bool:
-        user = request.user
-        if not (user and user.is_authenticated and user.role == AccountRole.PROVIDER):
-            return False
-        profile = getattr(user, "provider_profile", None)
-        if profile is None or profile.verification_status != VerificationStatus.VERIFIED:
-            return False
-        request.provider_profile = profile
-        return True
+        return current_verified_provider(request.user) is not None

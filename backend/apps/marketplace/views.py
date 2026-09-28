@@ -3,7 +3,13 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
-from rest_framework.exceptions import APIException, ErrorDetail, NotFound, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    ErrorDetail,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,7 +18,13 @@ from apps.accounts.permissions import IsAdminAccount
 
 from . import services
 from .models import MedicalCompany, Product, ProductCategory
-from .permissions import CanBrowseMarketplace, HasMedicalCompany, IsMedicalCompanyAccount
+from .permissions import (
+    BROWSE_DENIED,
+    CanBrowseMarketplace,
+    HasMedicalCompany,
+    IsMedicalCompanyAccount,
+    current_verified_provider,
+)
 from .serializers import (
     CompanyAdminSerializer,
     CompanyDashboardSerializer,
@@ -254,7 +266,13 @@ MyProductDeactivateView = _publication_view(False, "Deactivate one of my product
 
 
 def _targeted(request):
-    return Product.objects.targeted_for(request.provider_profile).select_related(
+    """List and detail share this: the provider is re-read from the database
+    here (not taken from the permission check), and `targeted_for` re-checks
+    its verification and identity inside the statement that returns products."""
+    provider = current_verified_provider(request.user)
+    if provider is None:
+        raise PermissionDenied(BROWSE_DENIED)
+    return Product.objects.targeted_for(provider).select_related(
         "category", "company", "company__governorate", "company__city"
     )
 

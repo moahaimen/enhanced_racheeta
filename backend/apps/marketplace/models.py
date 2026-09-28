@@ -172,10 +172,25 @@ class ProductQuerySet(models.QuerySet):
     def targeted_for(self, provider):
         """THE targeting decision (list and detail share it): the exposable
         products whose category carries at least one active rule matching this
-        provider — provider type equal (or unconstrained) AND specialty among
-        the provider's (or unconstrained). All rule conditions sit in one
-        filter() call so they apply to the same rule row."""
-        specialty_ids = list(provider.specialties.values_list("pk", flat=True))
+        provider. The provider's verification, type and specialties are read by
+        the SAME SQL statement that returns the products (subqueries on the
+        provider row), never from the Python object the caller holds, so a
+        provider suspended or unverified after the request started gets no rows,
+        and specialties it could edit once unlocked are never matched. All rule
+        conditions sit in one filter() call so they apply to the same rule row."""
+        from apps.providers.models import ProviderProfile
+        from apps.providers.types import VerificationStatus
+
+        verified = ProviderProfile.objects.filter(
+            pk=provider.pk,
+            verification_status=VerificationStatus.VERIFIED,
+            account__is_active=True,
+            account__role="PROVIDER",
+        )
+        verified_type = verified.values("provider_type")[:1]
+        verified_specialties = ProviderProfile.specialties.through.objects.filter(
+            providerprofile_id__in=verified.values("pk")
+        ).values("specialty_id")
         return (
             self.filter(
                 is_active=True,
@@ -183,14 +198,15 @@ class ProductQuerySet(models.QuerySet):
                 company__account__is_active=True,
                 category__is_active=True,
             )
+            .filter(models.Exists(verified))
             .filter(
                 Q(category__audiences__is_active=True)
                 & (
-                    Q(category__audiences__provider_type=provider.provider_type)
+                    Q(category__audiences__provider_type=models.Subquery(verified_type))
                     | Q(category__audiences__provider_type="")
                 )
                 & (
-                    Q(category__audiences__specialty__in=specialty_ids)
+                    Q(category__audiences__specialty__in=verified_specialties)
                     | Q(category__audiences__specialty__isnull=True)
                 )
             )

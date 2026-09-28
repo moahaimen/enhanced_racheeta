@@ -156,6 +156,15 @@ def set_verification(
     if status not in ADMIN_VERIFICATION_TARGETS:
         raise InvalidTransition(f"{status} is not an administrator-settable status.")
     locked = MedicalCompany.objects.select_for_update().get(pk=company.pk)
+    # ADR-045: VERIFIED is granted only to a PENDING company — the identity it
+    # froze by requesting review, decided on the locked row.
+    if status == CompanyVerificationStatus.VERIFIED and (
+        locked.verification_status != CompanyVerificationStatus.PENDING
+    ):
+        raise InvalidTransition(
+            "Only a company pending review can be verified; "
+            f"this one is {locked.verification_status}."
+        )
     now = timezone.now()
     locked.verification_status = status
     locked.verification_note = note

@@ -394,12 +394,17 @@ class AdminVerificationView(APIView):
         profile = get_object_or_404(ProviderProfile, pk=pk)
         serializer = VerificationDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        services.set_verification(
-            profile,
-            serializer.validated_data["status"],
-            serializer.validated_data.get("note", ""),
-            by=request.user,
-        )
+        try:
+            services.set_verification(
+                profile,
+                serializer.validated_data["status"],
+                serializer.validated_data.get("note", ""),
+                by=request.user,
+            )
+        except services.InvalidTransition as exc:
+            raise ValidationError(
+                {"status": [ErrorDetail(str(exc), code="invalid_transition")]}
+            ) from exc
         profile = (
             ProviderProfile.objects.select_related("governorate", "city")
             .prefetch_related("specialties")
