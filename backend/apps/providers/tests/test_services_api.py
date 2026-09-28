@@ -157,9 +157,7 @@ def test_service_delete_database_conflict_returns_409(provider_client, monkeypat
 
 
 @pytest.mark.django_db
-def test_service_delete_locks_provider_before_service_and_slots(
-    provider_client, monkeypatch
-):
+def test_service_delete_locks_provider_before_service_and_slots(provider_client, monkeypatch):
     client, profile = provider_client
     service = ServiceOffering.objects.create(
         provider=profile,
