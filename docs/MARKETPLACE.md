@@ -18,6 +18,28 @@ Companies and products are **inspection-only** in Django admin (their state
 changes go through the services, which lock, validate and audit). Categories
 and audience rules are editable there.
 
+## Verified identity (ADR-045)
+
+Exposure and targeting rest only on identity an administrator reviewed:
+
+- **Company**: `name`, `governorate`, `city`, `address`, `website` are frozen
+  while the company is PENDING or VERIFIED (typed `identity_locked`, 400, per
+  field). `description`, `phone` and `public_email` stay editable; resending
+  the current value is not a change. To change identity, an administrator moves
+  the company back to UNVERIFIED (products are hidden at once), the company
+  edits, then requests review again.
+- **Provider**: `provider_type` and `specialty_ids` are frozen while the
+  provider profile is PENDING or VERIFIED (same rule, same error code; the type
+  keeps its historical `type_locked` code). Only a VERIFIED provider browses, so
+  any specialty change happens outside verification and marketplace access
+  returns only after re-verification.
+
+Both checks run on the **locked** row inside the write's transaction, and the
+administrator's verification decision locks the same row, so an identity edit
+and a decision can never cross: either the edit commits first (and is what the
+administrator decides on) or it sees PENDING/VERIFIED and is refused. The web
+forms disable the frozen fields and never send them.
+
 ## Targeting algorithm (`ProductQuerySet.targeted_for(provider)`)
 
 A product is shown to a provider only when **all** hold:

@@ -14,7 +14,8 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - Publication: `services.update_product` re-checks the locked company and category on every activation; payloads carrying targeting/state fields are refused.
 - APIs, permissions (`marketplace.view_targeted_products` added to PROVIDER), OpenAPI regenerated, web `/marketplace`, `/marketplace/products/:id`, `/company`, header links and live home card, ar/en.
 - Deferred: product images (no media storage), ProductCampaign/ads/payments (Phase 8). See `MARKETPLACE.md`, ADR-044.
-- Tests: backend 927 passed, web 263 passed.
+- Tests: backend 927 passed, web 263 passed (initial Phase 6 head `0b32801`).
+- PR #7 acceptance review on `0b32801` (2 P1) fixed: verified identity is frozen while PENDING/VERIFIED on the locked row — company name/governorate/city/address/website, provider type/specialties — and admin decisions lock the same row (ADR-045). Tests: backend 951 passed, web 265 passed.
 
 ## Next step
 

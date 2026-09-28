@@ -67,8 +67,10 @@ public endpoints opt out explicitly with `AllowAny`.
 | --- | --- |
 | `IsMedicalCompanyAccount` | `role == MEDICAL_COMPANY` (`marketplace.manage_own_products`) — may create its company profile |
 | `HasMedicalCompany` | company account with a profile — own products, verification request, dashboard; ownership comes from `request.user.medical_company`, never a client id |
-| `CanBrowseMarketplace` | `role == PROVIDER` with a VERIFIED provider profile (`marketplace.view_targeted_products`); `is_visible` is not required. Which products are visible is decided per request by `ProductQuerySet.targeted_for` |
+| `CanBrowseMarketplace` | `role == PROVIDER` with a VERIFIED provider profile (`marketplace.view_targeted_products`); `is_visible` is not required. Which products are visible is decided per request by `ProductQuerySet.targeted_for`, whose inputs (provider type and specialties) are frozen while the profile is PENDING or VERIFIED (ADR-045) |
 | `IsAdminAccount` | company verification decisions and the company list |
+
+Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields.
 
 Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false.
 
