@@ -76,7 +76,9 @@
     "employer": "Employer workspace",
     "seekerProfile": "My résumé",
     "myApplications": "My applications",
-    "adminConsole": "Admin console"
+    "adminConsole": "Admin console",
+    "myReservations": "My reservations",
+    "providerReservations": "Appointments & reservations"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -301,7 +303,7 @@
     "duration": "{{minutes}} min",
     "notFound": "This provider does not exist or is not available.",
     "backToList": "Back to the list",
-    "bookingSoon": "Online appointment booking arrives in a later phase."
+    "bookingSoon": "Online booking is now available."
   },
   "providerProfile": {
     "title": "My provider profile",
@@ -529,7 +531,12 @@
     "identity_locked": "This field is locked after verification. Ask Racheeta administration to change it.",
     "invitation_unavailable": "This job is no longer open, so the invitation cannot be accepted.",
     "not_an_agency": "Only recruitment agencies can hire on behalf of another organisation; clear this field.",
-    "deadline_passed": "The application deadline has already passed; update the deadline first."
+    "deadline_passed": "The application deadline has already passed; update the deadline first.",
+    "slot_conflict": "This time overlaps another available appointment.",
+    "slot_unavailable": "This appointment is no longer available.",
+    "service_unavailable": "The selected service is unavailable.",
+    "provider_unavailable": "This provider is not currently available for new reservations.",
+    "invalid_availability": "The appointment time is invalid."
   },
   "jobs": {
     "featured": "Featured",
@@ -954,5 +961,51 @@
     "noLinkedProvider": "No linked facility",
     "verificationRequestedAt": "Verification requested",
     "city": "City"
+  },
+  "reservationStatus": {
+    "PENDING": "Pending confirmation",
+    "CONFIRMED": "Confirmed",
+    "COMPLETED": "Completed",
+    "REJECTED": "Rejected",
+    "CANCELLED": "Cancelled",
+    "NO_SHOW": "No show"
+  },
+  "reservations": {
+    "title": "My reservations",
+    "intro": "Track your medical appointments and each reservation status in one place.",
+    "findProvider": "Find a provider",
+    "empty": "You have no reservations yet.",
+    "emptyPage": "There are no reservations on this page.",
+    "count_one": "1 reservation",
+    "count_other": "{{count}} reservations",
+    "bookTitle": "Book an appointment",
+    "bookIntro": "Choose an available appointment. Booking has no subscription fee.",
+    "noAvailability": "No appointments are currently available.",
+    "loginToBook": "Log in to book",
+    "patientOnly": "Booking is available to patient accounts",
+    "book": "Book",
+    "booking": "Booking…",
+    "booked": "Reservation created successfully. You can follow it from My reservations.",
+    "cancel": "Cancel reservation",
+    "cancelling": "Cancelling…"
+  },
+  "providerReservations": {
+    "title": "Appointments & reservations",
+    "intro": "Create available times and manage reservations received from patients.",
+    "availabilityTitle": "Availability",
+    "availabilityIntro": "Choose an active service with a duration, then add a bookable time.",
+    "service": "Service",
+    "startsAt": "Appointment start",
+    "addSlot": "Add available time",
+    "invalidDate": "Enter a valid date and time.",
+    "noSlots": "No availability has been added yet.",
+    "active": "Available",
+    "inactive": "Inactive",
+    "deactivate": "Deactivate slot",
+    "receivedTitle": "Received reservations",
+    "receivedIntro": "Only the patient's name and appointment details are shown; status decisions remain server-authoritative.",
+    "noReservations": "No reservations received yet.",
+    "complete": "Complete",
+    "noShow": "No show"
   }
 }

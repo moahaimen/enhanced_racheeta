@@ -14,6 +14,7 @@ urlpatterns = [
     path("", include("apps.audit.urls")),
     path("", include("apps.billing.urls")),
     path("", include("apps.jobs.urls")),
+    path("", include("apps.reservations.urls")),
     # Must stay last: JSON 404 for anything unmatched under /api/v1/.
     re_path(r"^.*$", ApiNotFoundView.as_view(), name="api-not-found"),
 ]

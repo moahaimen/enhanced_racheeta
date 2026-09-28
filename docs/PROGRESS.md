@@ -57,3 +57,20 @@ Phases from `MASTER_PLAN.md` §28. Status: `done` · `partial` · `not started`.
 - **2026-09-26** — PR #4 Codex review round twenty-seven (3 findings): talent search and saved-candidate removal serialised on employer → membership → billing account; seeker applications resolve the effective plan on the locked seeker billing account. 754 backend tests, 239 web tests.
 - **2026-09-26** — PR #4 Codex review round twenty-eight (1 finding): talent detail, saved candidates and sent invitations decide access on committed state and build their response under the locks. 775 backend tests, 239 web tests.
 - **2026-09-26** — PR #4 Codex review round twenty-nine, disclosure closure (3 P1): one authoritative policy for all ten candidate-disclosing endpoints, page candidate rows locked in PK order, responses materialised under the locks, invitation lock order aligned. Candidate-data disclosure surface audited completely for Phase 3. 834 backend tests, 239 web tests.
+
+
+## Phase 4 — Reservations (2026-09-27)
+
+Implementation complete on `feat/phase4-reservations`; acceptance review pending.
+
+- Free reservation domain with immutable provider/service/price/duration snapshots.
+- Controlled states: PENDING, CONFIRMED, COMPLETED, REJECTED, CANCELLED, NO_SHOW.
+- Transition history records actor, prior/new state, time and optional reason.
+- Concrete provider/service availability slots; provider-row serialization prevents overlapping slot creation.
+- Slot-row locking + partial unique constraint prevent concurrent double booking.
+- Public availability exposes only verified/visible/active providers and active services.
+- Patient create/list/detail/cancel APIs and web “My reservations”.
+- Provider availability management and received-reservation state actions.
+- Reservation creation/status changes emit post-commit Django signals as Phase 9 notification hooks.
+- Arabic/English web UI, loading/error states, navigation and active home-page reservation card.
+- No subscription/entitlement/payment gating; no new infrastructure.

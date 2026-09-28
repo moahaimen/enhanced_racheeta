@@ -20,6 +20,8 @@ import { NotFoundPage } from '../pages/NotFoundPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { ProviderDetailPage } from '../pages/providers/ProviderDetailPage'
 import { ProviderProfilePage } from '../pages/providers/ProviderProfilePage'
+import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
+import { ProviderReservationsPage } from '../pages/reservations/ProviderReservationsPage'
 import { ProvidersPage } from '../pages/providers/ProvidersPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
@@ -56,6 +58,10 @@ export const routes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           { path: 'profile', element: <ProfilePage /> },
+          {
+            element: <RequireRole roles={['PATIENT']} />,
+            children: [{ path: 'reservations', element: <MyReservationsPage /> }],
+          },
           { path: 'jobs/profile', element: <SeekerProfilePage /> },
           { path: 'jobs/my-applications', element: <MyApplicationsPage /> },
           { path: 'employer', element: <EmployerWorkspacePage /> },
@@ -70,7 +76,10 @@ export const routes: RouteObject[] = [
           },
           {
             element: <RequireRole roles={['PROVIDER']} />,
-            children: [{ path: 'provider/profile', element: <ProviderProfilePage /> }],
+            children: [
+              { path: 'provider/profile', element: <ProviderProfilePage /> },
+              { path: 'provider/reservations', element: <ProviderReservationsPage /> },
+            ],
           },
         ],
       },

@@ -2720,6 +2720,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderPublic'
           description: ''
+  /api/v1/providers/{provider_id}/availability:
+    get:
+      operationId: providers_availability_list
+      summary: Public available appointment slots
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: UTC datetime lower bound
+      - in: path
+        name: provider_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: service
+        schema:
+          type: string
+        description: Service UUID
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: UTC datetime upper bound
+      tags:
+      - reservations
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
   /api/v1/providers/me:
     get:
       operationId: providers_me_retrieve
@@ -3089,6 +3128,271 @@ paths:
               schema:
                 $ref: '#/components/schemas/Message'
           description: ''
+  /api/v1/reservations:
+    post:
+      operationId: reservations_create
+      summary: Create a reservation from an available slot
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPatient'
+          description: ''
+  /api/v1/reservations/me:
+    get:
+      operationId: reservations_me_list
+      summary: My reservations
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationPatientList'
+          description: ''
+  /api/v1/reservations/me/{id}:
+    get:
+      operationId: reservations_me_retrieve
+      summary: One of my reservations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPatient'
+          description: ''
+  /api/v1/reservations/me/{id}/cancel:
+    post:
+      operationId: reservations_me_cancel_create
+      summary: Cancel one of my reservations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCancelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReservationCancelRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPatient'
+          description: ''
+  /api/v1/reservations/provider:
+    get:
+      operationId: reservations_provider_list
+      summary: Reservations received by my provider
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - provider-reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationProviderList'
+          description: ''
+  /api/v1/reservations/provider/{id}:
+    get:
+      operationId: reservations_provider_retrieve
+      summary: One reservation received by my provider
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationProvider'
+          description: ''
+  /api/v1/reservations/provider/{id}/transition:
+    post:
+      operationId: reservations_provider_transition_create
+      summary: Transition a received reservation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderTransitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProviderTransitionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationProvider'
+          description: ''
+  /api/v1/reservations/provider/availability:
+    get:
+      operationId: reservations_provider_availability_retrieve
+      summary: My appointment availability
+      tags:
+      - provider-reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAvailabilitySlot'
+          description: ''
+    post:
+      operationId: reservations_provider_availability_create
+      summary: Create an appointment slot
+      tags:
+      - provider-reservations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilitySlotCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AvailabilitySlotCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilitySlot'
+          description: ''
+  /api/v1/reservations/provider/availability/{id}:
+    delete:
+      operationId: reservations_provider_availability_destroy
+      summary: Deactivate an unbooked appointment slot
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - provider-reservations
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/specialties:
     get:
       operationId: specialties_list
@@ -3837,6 +4141,56 @@ components:
         * `WITHIN_MONTH` - Within a month
         * `WITHIN_3_MONTHS` - Within three months
         * `NOT_AVAILABLE` - Not currently available
+    AvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider:
+          allOf:
+          - $ref: '#/components/schemas/RelatedProvider'
+          readOnly: true
+        service:
+          allOf:
+          - $ref: '#/components/schemas/PublicService'
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - ends_at
+      - id
+      - is_active
+      - provider
+      - service
+      - starts_at
+    AvailabilitySlotCreateRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          format: uuid
+        starts_at:
+          type: string
+          format: date-time
+      required:
+      - service
+      - starts_at
     BillingPeriodEnum:
       enum:
       - NONE
@@ -6056,6 +6410,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditEvent'
+    PaginatedAvailabilitySlot:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilitySlot'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedEmployerAdminList:
       type: object
       required:
@@ -6217,6 +6593,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProviderCard'
+    PaginatedReservationPatientList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationPatient'
+    PaginatedReservationProviderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationProvider'
     PaginatedSavedCandidateList:
       type: object
       required:
@@ -6647,6 +7069,19 @@ components:
           type: boolean
         description:
           type: string
+    PatientSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - id
     PaymentRecord:
       type: object
       properties:
@@ -7152,6 +7587,31 @@ components:
       - id
       - provider_type
       - verification_status
+    ProviderTransitionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ProviderTransitionStatusEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - status
+    ProviderTransitionStatusEnum:
+      enum:
+      - CONFIRMED
+      - REJECTED
+      - CANCELLED
+      - COMPLETED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `CONFIRMED` - CONFIRMED
+        * `REJECTED` - REJECTED
+        * `CANCELLED` - CANCELLED
+        * `COMPLETED` - COMPLETED
+        * `NO_SHOW` - NO_SHOW
     ProviderTypeEnum:
       enum:
       - DOCTOR
@@ -7395,6 +7855,231 @@ components:
       - image_url
       - kind
       - provider_type
+    ReservationCancelRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    ReservationCreateRequest:
+      type: object
+      properties:
+        availability_slot:
+          type: string
+          format: uuid
+        patient_note:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - availability_slot
+    ReservationPatient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_name_snapshot:
+          type: string
+          readOnly: true
+        service_id:
+          type: string
+          format: uuid
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        availability_slot_id:
+          type: string
+          format: uuid
+          readOnly: true
+        price_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        currency_snapshot:
+          type: string
+          readOnly: true
+        duration_minutes_snapshot:
+          type: integer
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        patient_note:
+          type: string
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationTransition'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability_slot_id
+      - created_at
+      - currency_snapshot
+      - duration_minutes_snapshot
+      - ends_at
+      - id
+      - patient_note
+      - price_snapshot
+      - provider_id
+      - provider_name_snapshot
+      - service_id
+      - service_title_snapshot
+      - starts_at
+      - status
+      - status_changed_at
+      - transitions
+    ReservationProvider:
+      type: object
+      properties:
+        patient:
+          allOf:
+          - $ref: '#/components/schemas/PatientSummary'
+          readOnly: true
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider_name_snapshot:
+          type: string
+          readOnly: true
+        service_id:
+          type: string
+          format: uuid
+          readOnly: true
+        service_title_snapshot:
+          type: string
+          readOnly: true
+        availability_slot_id:
+          type: string
+          format: uuid
+          readOnly: true
+        price_snapshot:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        currency_snapshot:
+          type: string
+          readOnly: true
+        duration_minutes_snapshot:
+          type: integer
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        patient_note:
+          type: string
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationTransition'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability_slot_id
+      - created_at
+      - currency_snapshot
+      - duration_minutes_snapshot
+      - ends_at
+      - id
+      - patient
+      - patient_note
+      - price_snapshot
+      - provider_id
+      - provider_name_snapshot
+      - service_id
+      - service_title_snapshot
+      - starts_at
+      - status
+      - status_changed_at
+      - transitions
+    ReservationStatusEnum:
+      enum:
+      - PENDING
+      - CONFIRMED
+      - COMPLETED
+      - REJECTED
+      - CANCELLED
+      - NO_SHOW
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `CONFIRMED` - Confirmed
+        * `COMPLETED` - Completed
+        * `REJECTED` - Rejected
+        * `CANCELLED` - Cancelled
+        * `NO_SHOW` - No show
+    ReservationTransition:
+      type: object
+      properties:
+        from_status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        to_status:
+          allOf:
+          - $ref: '#/components/schemas/ReservationStatusEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - from_status
+      - reason
+      - to_status
     SaveCandidateRequest:
       type: object
       properties:

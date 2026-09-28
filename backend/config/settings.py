@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "apps.billing",
     "apps.moderation",
     "apps.jobs",
+    "apps.reservations",
 ]
 
 MIDDLEWARE = [
@@ -231,6 +232,7 @@ SPECTACULAR_SETTINGS = {
         "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
         "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
         "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",
+        "ReservationStatusEnum": "apps.reservations.types.ReservationStatus.choices",
     },
 }
 
