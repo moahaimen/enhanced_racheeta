@@ -9,7 +9,7 @@ browser can never choose, widen or inspect an audience.
 
 | Model | Owner | Notes |
 | --- | --- | --- |
-| `MedicalCompany` | the `MEDICAL_COMPANY` account (one-to-one) | name, description, contact, governorate/city/address; `verification_status` UNVERIFIED → PENDING (company request) → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED (administrator only). `can_publish` = VERIFIED and account active. |
+| `MedicalCompany` | the `MEDICAL_COMPANY` account (one-to-one) | name, description, contact, governorate/city/address; `verification_status` UNVERIFIED → PENDING (company request) → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED (administrator only). `can_publish` = VERIFIED **and** account active **and** account role still `MEDICAL_COMPANY` (`MedicalCompanyQuerySet.publishing()` is the queryset form; both are read from current database state). |
 | `ProductCategory` | administrators (Django admin) | bilingual names, unique slug, optional parent, sort order, `is_active`. **No taxonomy is seeded**; the Master Plan's list is examples only. Serialized with `can_publish` (read-only, backend-derived: active category with at least one active audience rule, annotated in SQL by `ProductCategoryQuerySet.with_publishability()`), so the company UI offers Publish only where the gate can succeed. UI guidance only: the publication gate below stays authoritative. |
 | `ProductAudience` | administrators (Django admin, inline on the category) | one targeting rule: `provider_type` and/or `specialty`. A rule with neither is refused (model validation + DB check constraint `marketplace_audience_meaningful`); duplicates are refused (`marketplace_audience_unique`). |
 | `Product` | the company | category, title, description, brand, model, `price` (nullable = price on request, ≥ 0, DB check), `currency` (settings allow-list IQD/USD), `is_active` (the company's publication switch; created inactive). |
@@ -50,7 +50,8 @@ never send them.
 A product is shown to a provider only when **all** hold:
 
 1. `product.is_active`;
-2. the company is `VERIFIED` and its account is active;
+2. the company is `VERIFIED` and its account is active with role `MEDICAL_COMPANY`
+   (a role moved elsewhere by staff withdraws exposure at once, like suspension);
 3. the category is active;
 4. at least one **active** audience rule of the category matches the provider:
    - `rule.provider_type` is empty **or** equals `provider.provider_type`; **and**
@@ -81,11 +82,16 @@ anonymous users are refused (403 / 401).
 Creating a product never publishes it. Activation (and any edit of an active
 product) re-checks, on locked rows (company → product → category):
 
-- the company can publish (`company_not_verified`, 403 otherwise);
+- the company can publish — VERIFIED, active account, role `MEDICAL_COMPANY`,
+  read from the company locked and re-read inside the transaction, never from
+  the request's snapshot (`company_not_verified`, 403 otherwise);
 - the category is active and has at least one active audience rule
   (`category_unavailable`, 409 otherwise). The same state is exposed to
   clients as the category's `can_publish` so the UI hides Publish where it
   would fail; a category closed after the page loaded is still refused here.
+  The product form likewise disables, for a **published** product, every other
+  category with `can_publish=false` (its current category stays selectable so
+  the form can show it) — guidance only; drafts may sit in any active category.
 
 An unverified, rejected or suspended company keeps and edits its drafts and
 history; deactivation is always possible. Exposure is derived at read time

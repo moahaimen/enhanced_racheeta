@@ -72,7 +72,7 @@ public endpoints opt out explicitly with `AllowAny`.
 
 Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields. Administrators can grant VERIFIED only to a PENDING company or provider (`invalid_transition` otherwise), so the approved identity is always the one frozen by the review request.
 
-Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false.
+Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false and, for a published product, disables moving it to a category not open for publication. Publisher eligibility itself is backend state: VERIFIED, active account, role still `MEDICAL_COMPANY` (`MedicalCompany.can_publish` / `publishing()`, `Product.objects.exposable()` / `targeted_for()`, the activation gate and the dashboard all require it).
 
 ## Provider permissions (`apps/providers/permissions.py`)
 

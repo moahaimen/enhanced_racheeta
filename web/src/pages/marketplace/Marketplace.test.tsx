@@ -16,7 +16,7 @@ vi.mock('../../api/endpoints/marketplace')
 vi.mock('../../api/endpoints/reference')
 
 const dental: ProductCategory = { id: 'cat-dental', slug: 'dental', name_ar: 'أجهزة الأسنان', name_en: 'Dental equipment', parent_id: null, sort_order: 0, can_publish: true }
-const noAudience: ProductCategory = { ...dental, id: 'cat-empty', slug: 'empty', name_en: 'No audience yet', can_publish: false }
+const noAudience: ProductCategory = { ...dental, id: 'cat-empty', slug: 'empty', name_ar: 'بلا جمهور بعد', name_en: 'No audience yet', can_publish: false }
 
 function product(id: string, title: string, overrides: Partial<MarketplaceProduct> = {}): MarketplaceProduct {
   return {
@@ -265,6 +265,71 @@ describe('Company workspace', () => {
     await waitFor(() => expect(marketplaceApi.setMyProductActive).toHaveBeenCalledWith('d-1', true))
     expect(await screen.findByRole('alert')).toHaveTextContent(/not available for publication/)
     expect(within(rows[0]!).getByRole('button', { name: /^نشر$|^publish$/i })).toBeInTheDocument() // still a draft; the user may retry
+  })
+
+  it('lets a draft choose a category that is not open for publication', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental, noAudience])
+    vi.mocked(marketplaceApi.updateMyProduct).mockResolvedValue({ ...ownProduct('d-1', 'Draft chair', false), category: noAudience })
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[0]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form = await screen.findByTestId('product-form')
+    const select = within(form).getByLabelText(/الفئة|category/i)
+    expect(within(select).getByRole('option', { name: /بلا جمهور بعد|No audience yet/ })).toBeEnabled()
+    expect(within(form).queryByText(/can only move to a category|لا يمكن نقل منتج منشور/)).not.toBeInTheDocument()
+    await user.selectOptions(select, 'cat-empty')
+    await user.click(within(form).getByRole('button', { name: /حفظ المنتج|save product/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenCalledWith('d-1', expect.objectContaining({ category: 'cat-empty' })))
+  })
+
+  it('offers a published product only categories open for publication, plus its own', async () => {
+    const closedCurrent: ProductCategory = { ...dental, id: 'cat-closed', slug: 'closed', name_ar: 'مغلقة الآن', name_en: 'Closed now', can_publish: false }
+    const surgical: ProductCategory = { ...dental, id: 'cat-surgical', slug: 'surgical', name_ar: 'جراحة', name_en: 'Surgical', can_publish: true }
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listCategories).mockResolvedValue([closedCurrent, noAudience, surgical])
+    vi.mocked(marketplaceApi.listMyProducts).mockResolvedValue(page2([{ ...ownProduct('a-1', 'Live chair', true), category: closedCurrent }]))
+    vi.mocked(marketplaceApi.updateMyProduct).mockResolvedValue({ ...ownProduct('a-1', 'Live chair', true), category: surgical })
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[0]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form = await screen.findByTestId('product-form')
+    const select = within(form).getByLabelText(/الفئة|category/i)
+    expect(select).toHaveValue('cat-closed') // the current category stays represented although closed since
+    expect(within(select).getByRole('option', { name: /مغلقة الآن|Closed now/ })).toBeEnabled()
+    expect(within(select).getByRole('option', { name: /بلا جمهور بعد|No audience yet/ })).toBeDisabled()
+    expect(within(select).getByRole('option', { name: /جراحة|Surgical/ })).toBeEnabled()
+    expect(within(form).getByText(/can only move to a category|لا يمكن نقل منتج منشور/)).toBeInTheDocument()
+
+    // an ordinary edit keeps the current category and is left to the backend's gate
+    const titleField = within(form).getByLabelText(/اسم المنتج|product name/i)
+    await user.clear(titleField)
+    await user.type(titleField, 'Live chair v2')
+    await user.click(within(form).getByRole('button', { name: /حفظ المنتج|save product/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenCalledWith('a-1', expect.objectContaining({ category: 'cat-closed', title: 'Live chair v2' })))
+
+    await user.click(within(rows[0]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form2 = await screen.findByTestId('product-form')
+    await user.selectOptions(within(form2).getByLabelText(/الفئة|category/i), 'cat-surgical')
+    await user.click(within(form2).getByRole('button', { name: /حفظ المنتج|save product/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenLastCalledWith('a-1', expect.objectContaining({ category: 'cat-surgical' })))
+  })
+
+  it('shows the backend refusal when a published product is saved into a category closed after load', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.updateMyProduct).mockRejectedValue(
+      new ApiError(409, 'category_unavailable', 'This category is not available for publication (inactive or without an audience).'),
+    )
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[1]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form = await screen.findByTestId('product-form')
+    await user.click(within(form).getByRole('button', { name: /حفظ المنتج|save product/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenCalledWith('a-1', expect.anything()))
+    expect(await within(form).findByRole('alert')).toHaveTextContent(/not available for publication/)
   })
 
   it('paginates own products through the backend', async () => {

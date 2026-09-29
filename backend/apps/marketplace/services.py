@@ -208,10 +208,14 @@ def _locked_publishable_category(category_id) -> ProductCategory:
 
 
 def _require_publishable(company: MedicalCompany, product: Product) -> None:
-    """The activation gate, on locked state: verified company with an active
-    account, publishable category. Never decided from stale snapshots."""
+    """The activation gate, on locked state: verified company on an active
+    MEDICAL_COMPANY account (read with the locked company, never from the
+    request's snapshot), publishable category."""
     if not company.can_publish:
-        raise CompanyNotVerified("The company must be verified before publishing products.")
+        raise CompanyNotVerified(
+            "The company must be verified, on an active medical company account, "
+            "before publishing products."
+        )
     _locked_publishable_category(product.category_id)
 
 

@@ -1089,6 +1089,7 @@
     "editProduct": "Edit product",
     "targetingNote": "Choose a category. Who sees the product is decided by Racheeta's rules for that category.",
     "chooseCategory": "Choose a category",
+    "activeCategoryHint": "A published product can only move to a category currently open for publication. Unpublish it first to move it elsewhere.",
     "noCategories": "No product categories are available yet.",
     "productTitle": "Product name",
     "description": "Description",

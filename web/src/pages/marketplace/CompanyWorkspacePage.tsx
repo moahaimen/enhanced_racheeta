@@ -310,10 +310,20 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
       {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
       <p className="text-caption">{t('company.targetingNote')}</p>
       <div className="grid-2">
-        <Select label={t('marketplace.category')} value={f.category} onChange={(e) => set('category', e.target.value)} error={errors.fieldErrors.category} required>
+        <Select
+          label={t('marketplace.category')}
+          value={f.category}
+          onChange={(e) => set('category', e.target.value)}
+          error={errors.fieldErrors.category}
+          hint={product?.is_active ? t('company.activeCategoryHint') : undefined}
+          required
+        >
           <option value="">{t('company.chooseCategory')}</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>
+            // A published product can only move to a category currently open for publication (the backend
+            // re-runs its gate on save and stays authoritative); its current category stays selectable so the
+            // form can show it. Drafts may sit in any active category.
+            <option key={c.id} value={c.id} disabled={product?.is_active === true && !c.can_publish && c.id !== product.category.id}>
               {name(c)}
             </option>
           ))}

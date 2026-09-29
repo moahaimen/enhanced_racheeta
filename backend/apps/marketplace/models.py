@@ -16,6 +16,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Exists, OuterRef, Q
 
+from apps.accounts.roles import AccountRole
 from apps.core.models import BaseModel
 from apps.geography.models import City, Governorate
 from apps.providers.types import ProviderType
@@ -26,9 +27,13 @@ from .types import CompanyVerificationStatus
 
 class MedicalCompanyQuerySet(models.QuerySet):
     def publishing(self):
-        """Companies whose active products may be exposed."""
+        """Companies whose active products may be exposed: VERIFIED, on an
+        active account whose role is still MEDICAL_COMPANY (a role moved
+        elsewhere by staff withdraws publication at once, like suspension)."""
         return self.filter(
-            verification_status=CompanyVerificationStatus.VERIFIED, account__is_active=True
+            verification_status=CompanyVerificationStatus.VERIFIED,
+            account__is_active=True,
+            account__role=AccountRole.MEDICAL_COMPANY,
         )
 
 
@@ -73,9 +78,12 @@ class MedicalCompany(BaseModel):
 
     @property
     def can_publish(self) -> bool:
+        """Same eligibility as MedicalCompanyQuerySet.publishing(), for one
+        loaded company (callers on the write path load it fresh under lock)."""
         return (
             self.verification_status == CompanyVerificationStatus.VERIFIED
             and self.account.is_active
+            and self.account.role == AccountRole.MEDICAL_COMPANY
         )
 
 
@@ -174,12 +182,13 @@ class ProductAudience(BaseModel):
 class ProductQuerySet(models.QuerySet):
     def exposable(self):
         """Products that may be shown to SOME provider: published by a verified
-        company with an active account, in an active category that has at
-        least one active audience rule."""
+        company on an active MEDICAL_COMPANY account, in an active category
+        that has at least one active audience rule."""
         return self.filter(
             is_active=True,
             company__verification_status=CompanyVerificationStatus.VERIFIED,
             company__account__is_active=True,
+            company__account__role=AccountRole.MEDICAL_COMPANY,
             category__is_active=True,
             category__audiences__is_active=True,
         ).distinct()
@@ -211,6 +220,7 @@ class ProductQuerySet(models.QuerySet):
                 is_active=True,
                 company__verification_status=CompanyVerificationStatus.VERIFIED,
                 company__account__is_active=True,
+                company__account__role=AccountRole.MEDICAL_COMPANY,
                 category__is_active=True,
             )
             .filter(models.Exists(verified))
