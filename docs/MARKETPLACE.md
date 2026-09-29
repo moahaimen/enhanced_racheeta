@@ -92,6 +92,11 @@ product) re-checks, on locked rows (company → product → category):
   The product form likewise disables, for a **published** product, every other
   category with `can_publish=false` (its current category stays selectable so
   the form can show it) — guidance only; drafts may sit in any active category.
+  A product whose category an administrator has since deactivated (absent from
+  the active reference list) still shows that category, once, as its selected
+  current value, labelled as no longer available; once the user moves away it
+  is disabled, so it is never a destination. The categories endpoint stays
+  active-only.
 
 An unverified, rejected or suspended company keeps and edits its drafts and
 history; deactivation is always possible. Exposure is derived at read time

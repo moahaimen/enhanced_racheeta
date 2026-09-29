@@ -285,6 +285,11 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
   })
   const errors = useFormErrors(['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency'] as const)
   const set = (key: keyof typeof f, value: string) => setF((prev) => ({ ...prev, [key]: value }))
+  // The reference list holds active categories only. A product whose category an administrator has since
+  // deactivated still references it, so that category is shown once as the current value — never as a
+  // destination: once the user moves away it is disabled (it is not a category a product can be moved to).
+  const historical = product && !categories.some((c) => c.id === product.category.id) ? product.category : null
+  const categoryOptions = historical ? [historical, ...categories] : categories
   const submit = async () => {
     const next: Record<string, string> = {}
     if (!f.category) next.category = t('validation.required')
@@ -319,12 +324,16 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
           required
         >
           <option value="">{t('company.chooseCategory')}</option>
-          {categories.map((c) => (
+          {categoryOptions.map((c) => (
             // A published product can only move to a category currently open for publication (the backend
             // re-runs its gate on save and stays authoritative); its current category stays selectable so the
             // form can show it. Drafts may sit in any active category.
-            <option key={c.id} value={c.id} disabled={product?.is_active === true && !c.can_publish && c.id !== product.category.id}>
-              {name(c)}
+            <option
+              key={c.id}
+              value={c.id}
+              disabled={(c === historical && f.category !== c.id) || (product?.is_active === true && !c.can_publish && c.id !== product.category.id)}
+            >
+              {c === historical ? t('company.currentCategoryUnavailable', { name: name(c) }) : name(c)}
             </option>
           ))}
         </Select>

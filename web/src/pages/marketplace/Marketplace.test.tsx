@@ -317,6 +317,66 @@ describe('Company workspace', () => {
     await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenLastCalledWith('a-1', expect.objectContaining({ category: 'cat-surgical' })))
   })
 
+  it('keeps a published product\'s deactivated category as the selected current value, never as a destination', async () => {
+    const retired: ProductCategory = { ...dental, id: 'cat-retired', slug: 'retired', name_ar: 'متقاعدة', name_en: 'Retired', can_publish: false }
+    const surgical: ProductCategory = { ...dental, id: 'cat-surgical', slug: 'surgical', name_ar: 'جراحة', name_en: 'Surgical', can_publish: true }
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental, noAudience, surgical]) // active categories only: no "Retired"
+    vi.mocked(marketplaceApi.listMyProducts).mockResolvedValue(page2([{ ...ownProduct('a-1', 'Live chair', true), category: retired }]))
+    vi.mocked(marketplaceApi.updateMyProduct).mockResolvedValue({ ...ownProduct('a-1', 'Live chair', true), category: surgical })
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[0]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form = await screen.findByTestId('product-form')
+    const select = within(form).getByLabelText(/الفئة|category/i)
+    expect(select).toHaveValue('cat-retired') // the actual state, not the placeholder
+    expect(within(select).getByRole('option', { name: /اختر فئة|choose a category/i })).not.toHaveAttribute('selected')
+    const current = within(select).getByRole('option', { name: /متقاعدة|Retired/ })
+    expect(current).toHaveTextContent(/لم تعد متاحة|no longer available/)
+    expect(current).toBeEnabled()
+    expect(within(select).getByRole('option', { name: /جراحة|Surgical/ })).toBeEnabled()
+    expect(within(select).getByRole('option', { name: /بلا جمهور بعد|No audience yet/ })).toBeDisabled()
+    await user.selectOptions(select, 'cat-surgical')
+    expect(current).toBeDisabled() // moved away: the retired category is not a destination
+    await user.click(within(form).getByRole('button', { name: /حفظ المنتج|save product/i }))
+    await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenCalledWith('a-1', expect.objectContaining({ category: 'cat-surgical' })))
+  })
+
+  it('keeps a draft\'s deactivated category shown while every active category stays open to it', async () => {
+    const retired: ProductCategory = { ...dental, id: 'cat-retired', slug: 'retired', name_ar: 'متقاعدة', name_en: 'Retired', can_publish: false }
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental, noAudience])
+    vi.mocked(marketplaceApi.listMyProducts).mockResolvedValue(page2([{ ...ownProduct('d-1', 'Draft chair', false), category: retired }]))
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[0]!).getByRole('button', { name: /تعديل|edit/i }))
+    const form = await screen.findByTestId('product-form')
+    const select = within(form).getByLabelText(/الفئة|category/i)
+    expect(select).toHaveValue('cat-retired')
+    expect(within(select).getByRole('option', { name: /متقاعدة|Retired/ })).toBeEnabled()
+    expect(within(select).getByRole('option', { name: /أجهزة الأسنان|Dental equipment/ })).toBeEnabled()
+    expect(within(select).getByRole('option', { name: /بلا جمهور بعد|No audience yet/ })).toBeEnabled() // draft rule unchanged
+    await user.selectOptions(select, 'cat-empty')
+    expect(within(select).getByRole('option', { name: /متقاعدة|Retired/ })).toBeDisabled()
+  })
+
+  it('adds no duplicate option when the current category is still active', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental, noAudience])
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[1]!).getByRole('button', { name: /تعديل|edit/i })) // Live chair, in Dental
+    const form = await screen.findByTestId('product-form')
+    const select = within(form).getByLabelText(/الفئة|category/i)
+    expect(select).toHaveValue('cat-dental')
+    expect(within(select).getAllByRole('option')).toHaveLength(3) // placeholder + 2 active categories
+    expect(within(select).getAllByRole('option', { name: /أجهزة الأسنان|Dental equipment/ })).toHaveLength(1)
+    expect(within(form).queryByText(/لم تعد متاحة|no longer available/)).not.toBeInTheDocument()
+  })
+
   it('shows the backend refusal when a published product is saved into a category closed after load', async () => {
     vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
     vi.mocked(marketplaceApi.updateMyProduct).mockRejectedValue(

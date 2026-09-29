@@ -1,6 +1,6 @@
 # Current State
 
-Date: 2026-09-29
+Date: 2026-09-30
 AI/Engineer: Claude (Opus 5.5)
 Branch: `feat/phase6-medical-marketplace`
 Base: `main` at `34e3f4c981e1fc2ce3a0d0dc0185d2aa4bf39341` (Phase 5 merged via PR #6; post-merge CI #180 green; final Codex review on `6e09328` reported no major issues)
@@ -21,6 +21,7 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - PR #7 acceptance review on `a9a20aa` (2 P1, 1 P2) fixed: `ProviderProfileAdmin.save_model` (existing profile) → `services.save_admin_form` writes only changed ordinary fields onto the locked current row; `account` and `verification_note` read-only on existing profiles; owner PATCH → `services.update_profile` (locked row, identity lock decided there, only sent fields written). Race tests in `apps/providers/tests/test_verification_write_races.py`. Tests: backend 986 passed, web 265 passed.
 - PR #7 acceptance review on `4087175` (1 P2) fixed: `ProductCategorySerializer.can_publish` (read-only) from `ProductCategoryQuerySet.with_publishability()` (EXISTS annotation; nested categories via `Prefetch`, write responses re-read through `_own_products`); `CompanyWorkspacePage` renders Publish only when `company.can_publish && product.category.can_publish`, else `company.categoryUnavailable` hint; `category_unavailable` from the backend still surfaces as the error alert. Tests: backend 995 passed, web 268 passed.
 - PR #7 acceptance review on `638492f` (2 P2) fixed: `account__role=AccountRole.MEDICAL_COMPANY` added to `MedicalCompanyQuerySet.publishing()`, `MedicalCompany.can_publish`, `ProductQuerySet.exposable()` and `targeted_for()` (the activation gate and `dashboard_summary` derive from these; race test proves the gate reads the locked company, not the request snapshot) — `apps/marketplace/tests/test_publisher_role.py`; `ProductForm` disables, for `product.is_active`, other categories with `can_publish=false` with `company.activeCategoryHint`. OpenAPI unchanged. Tests: backend 1003 passed, web 271 passed.
+- PR #7 acceptance review on `d9afa9d` (1 P2, web only) fixed: `ProductForm` computes `historical = product && !categories.some(c => c.id === product.category.id) ? product.category : null` and `categoryOptions = historical ? [historical, ...categories] : categories`; the historical option is labelled `company.currentCategoryUnavailable` and disabled when `f.category !== historical.id`; the published-product rule for other categories is unchanged. Tests: backend 1003 passed, web 274 passed.
 
 ## Next step
 
