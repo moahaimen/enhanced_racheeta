@@ -16,7 +16,9 @@ browser can never choose, widen or inspect an audience.
 
 Companies and products are **inspection-only** in Django admin (their state
 changes go through the services, which lock, validate and audit). Categories
-and audience rules are editable there.
+and audience rules are editable there. On the provider admin, `verification_status`
+is read-only and an existing profile's `provider_type`/`specialties` are read-only,
+so staff cannot bypass the verified identity targeting relies on (ADR-045).
 
 ## Verified identity (ADR-045)
 

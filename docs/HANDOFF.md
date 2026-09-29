@@ -1,6 +1,6 @@
 # Current State
 
-Date: 2026-09-28
+Date: 2026-09-29
 AI/Engineer: Claude (Opus 5.5)
 Branch: `feat/phase6-medical-marketplace`
 Base: `main` at `34e3f4c981e1fc2ce3a0d0dc0185d2aa4bf39341` (Phase 5 merged via PR #6; post-merge CI #180 green; final Codex review on `6e09328` reported no major issues)
@@ -17,6 +17,7 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - Tests: backend 927 passed, web 263 passed (initial Phase 6 head `0b32801`).
 - PR #7 acceptance review on `0b32801` (2 P1) fixed: verified identity is frozen while PENDING/VERIFIED on the locked row — company name/governorate/city/address/website, provider type/specialties — and admin decisions lock the same row (ADR-045). Tests: backend 951 passed, web 265 passed.
 - PR #7 acceptance review on `3571665` (2 P1, 1 P2) fixed: VERIFIED only from PENDING for companies and providers; `current_verified_provider` re-reads the provider when the catalogue queryset is built and `targeted_for` re-checks verification/type/specialties in SQL. Tests: backend 969 passed, web 265 passed.
+- PR #7 acceptance review on `84ab580` (1 P1) fixed: `ProviderProfileAdmin` makes `verification_status` read-only always and `provider_type`/`specialties` read-only on existing profiles; verification only via the guarded actions → `services.set_verification` (ADR-045). Regression tests in `apps/providers/tests/test_admin_verified_identity.py`. Tests: backend 978 passed, web 265 passed.
 
 ## Next step
 

@@ -30,6 +30,7 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     filter_horizontal = ("specialties",)
     readonly_fields = (
         "id",
+        "verification_status",
         "verification_requested_at",
         "verification_changed_at",
         "verified_at",
@@ -38,6 +39,19 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     )
     inlines = [ServiceInline]
     actions = ["mark_verified", "mark_rejected", "mark_suspended"]
+
+    # ADR-045: the admin forms cannot bypass verified identity. The status only
+    # moves through the guarded actions below (services.set_verification:
+    # VERIFIED only from PENDING, on the locked row), and an existing profile's
+    # identity (provider type, specialties) is never edited by staff — the owner
+    # edits it outside review and requests verification again.
+    IDENTITY_READONLY = ("provider_type", "specialties")
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            fields += self.IDENTITY_READONLY
+        return fields
 
     @admin.action(description="Mark selected providers VERIFIED (pending review only)")
     def mark_verified(self, request, queryset):
