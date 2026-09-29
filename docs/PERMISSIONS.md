@@ -100,7 +100,8 @@ Verification state machine:
 | --- | --- |
 | UNVERIFIED / REJECTED → PENDING | the provider (`/providers/me/verification/request`) |
 | any → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED | administrators only |
-| `provider_type` / `specialties` change | the provider, only while not PENDING or VERIFIED (ADR-045); read-only for staff on the Django admin change form, as is `verification_status` (verification moves only through the guarded admin actions / `services.set_verification`) |
+| `provider_type` / `specialties` change | the provider, only while not PENDING or VERIFIED (ADR-045); read-only for staff on the Django admin change form, as are `verification_status` and `verification_note` (verification moves only through the guarded admin actions / `services.set_verification`) |
+| `account` (profile owner) | set once at creation; never changed afterwards (read-only on the admin change form, never written by admin or owner saves) |
 
 Membership state machine:
 

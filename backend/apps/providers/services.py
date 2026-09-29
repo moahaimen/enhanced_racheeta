@@ -55,29 +55,79 @@ def _lock_profile_status(profile: ProviderProfile) -> None:
     )
 
 
-@transaction.atomic
-def require_identity_unchanged(profile: ProviderProfile, validated: dict) -> None:
+# What an owner may write (ProviderWriteSerializer). Verification state and
+# metadata, the account and timestamps are never among them.
+OWNER_WRITABLE_FIELDS = frozenset(
+    {
+        "provider_type",
+        "display_name",
+        "about",
+        "phone",
+        "public_email",
+        "website",
+        "governorate",
+        "city",
+        "address",
+        "latitude",
+        "longitude",
+        "image_url",
+        "specialties",
+        "is_visible",
+    }
+)
+
+
+def _require_identity_unchanged(current: ProviderProfile, validated: dict) -> None:
     """Refuses an owner edit that would change verified identity while the
-    profile is PENDING or VERIFIED, decided on the LOCKED row (the caller saves
-    inside the same transaction). Sending the current value is not a change."""
-    _lock_profile_status(profile)
-    if profile.verification_status not in IDENTITY_LOCKED_STATUSES:
+    LOCKED row is PENDING or VERIFIED. Sending the current value is not a change."""
+    if current.verification_status not in IDENTITY_LOCKED_STATUSES:
         return
     changed = []
-    if "provider_type" in validated:
-        current = (
-            ProviderProfile.objects.filter(pk=profile.pk)
-            .values_list("provider_type", flat=True)
-            .get()
-        )
-        if validated["provider_type"] != current:
-            changed.append("provider_type")
+    if "provider_type" in validated and validated["provider_type"] != current.provider_type:
+        changed.append("provider_type")
     if "specialties" in validated:
-        current_ids = set(profile.specialties.values_list("pk", flat=True))
+        current_ids = set(current.specialties.values_list("pk", flat=True))
         if {s.pk for s in validated["specialties"]} != current_ids:
             changed.append("specialty_ids")
     if changed:
         raise IdentityLocked(changed)
+
+
+@transaction.atomic
+def update_profile(profile: ProviderProfile, validated: dict) -> ProviderProfile:
+    """The owner's profile edit, applied to the LOCKED current row (the lock
+    verification decisions take). Identity locks are decided on that row and
+    only the fields the owner sent are written, so an edit loaded before a
+    concurrent decision never writes back stale verification status, note or
+    timestamps (ADR-045)."""
+    unknown = set(validated) - OWNER_WRITABLE_FIELDS
+    if unknown:  # programming error: the serializer only yields owner fields
+        raise ValueError(f"Not owner-writable: {sorted(unknown)}")
+    current = ProviderProfile.objects.select_for_update().get(pk=profile.pk)
+    _require_identity_unchanged(current, validated)
+    fields = [name for name in validated if name != "specialties"]
+    for name in fields:
+        setattr(current, name, validated[name])
+    if fields:
+        current.save(update_fields=[*fields, "updated_at"])
+    if "specialties" in validated:
+        current.specialties.set(validated["specialties"])
+    return current
+
+
+@transaction.atomic
+def save_admin_form(profile: ProviderProfile, form_fields: dict) -> ProviderProfile:
+    """Django admin change-form save of an existing profile: re-reads the
+    LOCKED current row and writes only the given ordinary fields, never the
+    stale form instance — so it can't undo a concurrent verification decision
+    or move identity/ownership (the guarded actions stay the only way to
+    change verification)."""
+    current = ProviderProfile.objects.select_for_update().get(pk=profile.pk)
+    for name, value in form_fields.items():
+        setattr(current, name, value)
+    if form_fields:
+        current.save(update_fields=[*form_fields, "updated_at"])
+    return current
 
 
 @transaction.atomic

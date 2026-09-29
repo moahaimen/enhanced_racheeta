@@ -162,23 +162,22 @@ class MyProviderView(APIView):
         profile = _own_profile(request)
         serializer = ProviderWriteSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
-            # Verified identity (type, specialties) is decided on the locked row,
-            # in the same transaction as the write (ADR-045).
-            try:
-                services.require_identity_unchanged(profile, serializer.validated_data)
-            except services.IdentityLocked as exc:
-                raise ValidationError(
-                    {
-                        field: ErrorDetail(
-                            "This field is locked while verification is pending or granted. "
-                            "Ask Racheeta administration to change it.",
-                            code="type_locked" if field == "provider_type" else "identity_locked",
-                        )
-                        for field in exc.fields
-                    }
-                ) from exc
-            serializer.save()
+        # Applied to the locked current row: identity locks are decided there and
+        # only the sent fields are written — never stale verification metadata
+        # from the instance loaded above (ADR-045).
+        try:
+            services.update_profile(profile, serializer.validated_data)
+        except services.IdentityLocked as exc:
+            raise ValidationError(
+                {
+                    field: ErrorDetail(
+                        "This field is locked while verification is pending or granted. "
+                        "Ask Racheeta administration to change it.",
+                        code="type_locked" if field == "provider_type" else "identity_locked",
+                    )
+                    for field in exc.fields
+                }
+            ) from exc
         return Response(ProviderOwnerSerializer(_own_profile(request)).data)
 
 

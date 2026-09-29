@@ -1,13 +1,16 @@
-"""Phase 6 acceptance review (commit 84ab580), ADR-045: the Django admin
-provider form cannot bypass verified identity. Verification moves only through
-the guarded actions (services.set_verification: VERIFIED only from PENDING);
-an existing profile's provider type and specialties are read-only for staff."""
+"""Phase 6 acceptance reviews (commits 84ab580, a9a20aa), ADR-045: the Django
+admin provider form cannot bypass verified identity or ownership. Verification
+moves only through the guarded actions (services.set_verification: VERIFIED
+only from PENDING); an existing profile's account, provider type, specialties
+and verification note are read-only for staff."""
 
 import pytest
 from django.conf import settings
 from django.test import Client
+from rest_framework.test import APIClient
 
 from apps.accounts.models import Account
+from apps.accounts.roles import AccountRole
 from apps.providers.models import ProviderProfile
 from apps.providers.types import ProviderType, VerificationStatus
 
@@ -55,7 +58,13 @@ def _form(profile, **overrides):
 def test_change_form_shows_status_and_identity_as_read_only(staff, provider_factory, cardiology):
     profile = provider_factory(specialties=[cardiology])
     html = staff.get(_change_url(profile)).content.decode()
-    for field in ("verification_status", "provider_type", "specialties"):
+    for field in (
+        "verification_status",
+        "verification_note",
+        "account",
+        "provider_type",
+        "specialties",
+    ):
         assert f'name="{field}"' not in html, field
     assert 'name="display_name"' in html  # ordinary fields stay editable
 
@@ -123,3 +132,20 @@ def test_reject_and_suspend_actions_still_work(staff, provider_factory, action, 
     _action(staff, action, profile)
     profile.refresh_from_db()
     assert profile.verification_status == expected
+
+
+def test_form_post_cannot_transfer_a_profile_to_another_account(
+    staff, provider_factory, account_factory, cardiology
+):
+    profile = provider_factory(specialties=[cardiology])  # VERIFIED
+    owner_id = profile.account_id
+    target = account_factory(role=AccountRole.PROVIDER)
+    resp = staff.post(_change_url(profile), _form(profile, account=str(target.pk)))
+    assert resp.status_code == 302
+    profile.refresh_from_db()
+    assert profile.account_id == owner_id
+    assert profile.verification_status == VerificationStatus.VERIFIED
+    assert not ProviderProfile.objects.filter(account=target).exists()
+    client = APIClient()
+    client.force_authenticate(user=Account.objects.get(pk=target.pk))
+    assert client.get("/api/v1/marketplace/products").status_code == 403
