@@ -10,7 +10,7 @@ browser can never choose, widen or inspect an audience.
 | Model | Owner | Notes |
 | --- | --- | --- |
 | `MedicalCompany` | the `MEDICAL_COMPANY` account (one-to-one) | name, description, contact, governorate/city/address; `verification_status` UNVERIFIED → PENDING (company request) → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED (administrator only). `can_publish` = VERIFIED and account active. |
-| `ProductCategory` | administrators (Django admin) | bilingual names, unique slug, optional parent, sort order, `is_active`. **No taxonomy is seeded**; the Master Plan's list is examples only. |
+| `ProductCategory` | administrators (Django admin) | bilingual names, unique slug, optional parent, sort order, `is_active`. **No taxonomy is seeded**; the Master Plan's list is examples only. Serialized with `can_publish` (read-only, backend-derived: active category with at least one active audience rule, annotated in SQL by `ProductCategoryQuerySet.with_publishability()`), so the company UI offers Publish only where the gate can succeed. UI guidance only: the publication gate below stays authoritative. |
 | `ProductAudience` | administrators (Django admin, inline on the category) | one targeting rule: `provider_type` and/or `specialty`. A rule with neither is refused (model validation + DB check constraint `marketplace_audience_meaningful`); duplicates are refused (`marketplace_audience_unique`). |
 | `Product` | the company | category, title, description, brand, model, `price` (nullable = price on request, ≥ 0, DB check), `currency` (settings allow-list IQD/USD), `is_active` (the company's publication switch; created inactive). |
 
@@ -83,7 +83,9 @@ product) re-checks, on locked rows (company → product → category):
 
 - the company can publish (`company_not_verified`, 403 otherwise);
 - the category is active and has at least one active audience rule
-  (`category_unavailable`, 409 otherwise).
+  (`category_unavailable`, 409 otherwise). The same state is exposed to
+  clients as the category's `can_publish` so the UI hides Publish where it
+  would fail; a category closed after the page loaded is still refused here.
 
 An unverified, rejected or suspended company keeps and edits its drafts and
 history; deactivation is always possible. Exposure is derived at read time

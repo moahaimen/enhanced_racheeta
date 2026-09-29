@@ -1103,6 +1103,7 @@
     "myProducts": "My products",
     "noProducts": "You have no products yet.",
     "cannotPublish": "Products can be published once your company is verified.",
+    "categoryUnavailable": "This category is not currently open for publication.",
     "active": "Published",
     "inactive": "Draft",
     "edit": "Edit",

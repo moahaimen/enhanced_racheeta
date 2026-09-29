@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
@@ -77,8 +78,10 @@ class ProductCategoryListView(generics.ListAPIView):
     authentication_classes = []
     serializer_class = ProductCategorySerializer
     pagination_class = None  # bounded administrator reference data, like governorates
-    queryset = ProductCategory.objects.filter(is_active=True).order_by(
-        "sort_order", "name_en", "id"
+    queryset = (
+        ProductCategory.objects.filter(is_active=True)
+        .with_publishability()
+        .order_by("sort_order", "name_en", "id")
     )
 
 
@@ -164,9 +167,25 @@ class MyCompanyDashboardView(APIView):
         )
 
 
+def _category_with_publishability():
+    """Nested categories carry `can_publish` too: one bounded query per page,
+    annotated in SQL (see ProductCategoryQuerySet.with_publishability)."""
+    return Prefetch("category", queryset=ProductCategory.objects.with_publishability())
+
+
+def _own_product_response(request, pk, status_code=status.HTTP_200_OK):
+    """After a write: answer with the product as the owner list reads it
+    (current row, category publishability annotated)."""
+    return Response(
+        ProductOwnerSerializer(_own_products(request).get(pk=pk)).data, status=status_code
+    )
+
+
 def _own_products(request):
-    return Product.objects.filter(company__account=request.user).select_related(
-        "category", "company"
+    return (
+        Product.objects.filter(company__account=request.user)
+        .select_related("company")
+        .prefetch_related(_category_with_publishability())
     )
 
 
@@ -207,7 +226,7 @@ class MyProductListView(generics.GenericAPIView):
             )
         except services.MarketplaceError as exc:
             raise_api(exc)
-        return Response(ProductOwnerSerializer(product).data, status=status.HTTP_201_CREATED)
+        return _own_product_response(request, product.pk, status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=["marketplace-company"])
@@ -237,7 +256,7 @@ class MyProductDetailView(APIView):
             )
         except services.MarketplaceError as exc:
             raise_api(exc)
-        return Response(ProductOwnerSerializer(product).data)
+        return _own_product_response(request, product.pk)
 
 
 def _publication_view(active: bool, summary: str):
@@ -252,7 +271,7 @@ def _publication_view(active: bool, summary: str):
                 product = services.update_product(_own_company(request), pk, {}, active=active)
             except services.MarketplaceError as exc:
                 raise_api(exc)
-            return Response(ProductOwnerSerializer(product).data)
+            return _own_product_response(request, product.pk)
 
     View.__name__ = "MyProductActivateView" if active else "MyProductDeactivateView"
     return View
@@ -272,8 +291,10 @@ def _targeted(request):
     provider = current_verified_provider(request.user)
     if provider is None:
         raise PermissionDenied(BROWSE_DENIED)
-    return Product.objects.targeted_for(provider).select_related(
-        "category", "company", "company__governorate", "company__city"
+    return (
+        Product.objects.targeted_for(provider)
+        .select_related("company", "company__governorate", "company__city")
+        .prefetch_related(_category_with_publishability())
     )
 
 

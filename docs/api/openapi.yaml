@@ -8592,7 +8592,15 @@ components:
         sort_order:
           type: integer
           readOnly: true
+        can_publish:
+          type: boolean
+          description: |-
+            Whether a product in this category can currently be published: the
+            category is active and has at least one active audience rule. Derived
+            by the backend at read time; publication is still decided server-side.
+          readOnly: true
       required:
+      - can_publish
       - id
       - name_ar
       - name_en

@@ -59,11 +59,21 @@ class _ForbidFieldsMixin:
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     parent_id = serializers.UUIDField(read_only=True, allow_null=True)
+    can_publish = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "slug", "name_ar", "name_en", "parent_id", "sort_order")
+        fields = ("id", "slug", "name_ar", "name_en", "parent_id", "sort_order", "can_publish")
         read_only_fields = fields
+
+    def get_can_publish(self, obj) -> bool:
+        """Whether a product in this category can currently be published: the
+        category is active and has at least one active audience rule. Derived
+        by the backend at read time; publication is still decided server-side."""
+        # Read strictly from the SQL annotation (ProductCategoryQuerySet
+        # .with_publishability): a queryset that forgot it fails loudly instead
+        # of querying per category.
+        return obj.can_publish
 
 
 # ---- company -----------------------------------------------------------------------

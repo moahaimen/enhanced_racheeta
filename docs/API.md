@@ -161,7 +161,8 @@ See `REVIEWS_OFFERS.md`.
 See `MARKETPLACE.md` for the full table. Company self-service lives under
 `/api/v1/marketplace/company…` (role `MEDICAL_COMPANY`), the targeted
 catalogue under `/api/v1/marketplace/products…` (verified `PROVIDER`), the
-category reference list at `/api/v1/marketplace/categories` (public) and the
+category reference list at `/api/v1/marketplace/categories` (public; each
+category carries a read-only, backend-derived `can_publish`) and the
 verification control plane under `/api/v1/admin/marketplace/companies…`
 (staff). New error codes: `company_not_verified` (403),
 `category_unavailable` (409), `already_exists` (409), `invalid_product`,

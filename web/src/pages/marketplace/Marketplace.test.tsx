@@ -15,7 +15,8 @@ vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/marketplace')
 vi.mock('../../api/endpoints/reference')
 
-const dental: ProductCategory = { id: 'cat-dental', slug: 'dental', name_ar: 'أجهزة الأسنان', name_en: 'Dental equipment', parent_id: null, sort_order: 0 }
+const dental: ProductCategory = { id: 'cat-dental', slug: 'dental', name_ar: 'أجهزة الأسنان', name_en: 'Dental equipment', parent_id: null, sort_order: 0, can_publish: true }
+const noAudience: ProductCategory = { ...dental, id: 'cat-empty', slug: 'empty', name_en: 'No audience yet', can_publish: false }
 
 function product(id: string, title: string, overrides: Partial<MarketplaceProduct> = {}): MarketplaceProduct {
   return {
@@ -59,6 +60,8 @@ function company(overrides: Partial<MedicalCompany> = {}): MedicalCompany {
     ...overrides,
   }
 }
+
+const page2 = (results: CompanyProduct[]) => ({ count: results.length, next: null, previous: null, results })
 
 function ownProduct(id: string, title: string, is_active: boolean): CompanyProduct {
   const { company: _c, ...rest } = product(id, title)
@@ -221,6 +224,47 @@ describe('Company workspace', () => {
     await user.type(titleField, 'Draft chair v2')
     await user.click(within(editForm).getByRole('button', { name: /حفظ المنتج|save product/i }))
     await waitFor(() => expect(marketplaceApi.updateMyProduct).toHaveBeenCalledWith('d-1', expect.objectContaining({ title: 'Draft chair v2' })))
+  })
+
+  it('offers Publish only where the backend says the category can be published', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.listMyProducts).mockResolvedValue(
+      page2([ownProduct('d-1', 'Draft chair', false), { ...ownProduct('d-2', 'Draft lamp', false), category: noAudience }, ownProduct('a-1', 'Live chair', true)]),
+    )
+    renderApp('/company')
+    const rows = await screen.findAllByTestId('company-product')
+    expect(within(rows[0]!).getByRole('button', { name: /^نشر$|^publish$/i })).toBeInTheDocument()
+    expect(within(rows[1]!).queryByRole('button', { name: /^نشر$|^publish$/i })).not.toBeInTheDocument()
+    expect(within(rows[1]!).getByTestId('category-unavailable')).toBeInTheDocument()
+    expect(within(rows[2]!).getByRole('button', { name: /إلغاء النشر|unpublish/i })).toBeInTheDocument()
+    expect(within(rows[2]!).queryByTestId('category-unavailable')).not.toBeInTheDocument()
+  })
+
+  it('never offers Publish while the company cannot publish, whatever the category', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company({ verification_status: 'UNVERIFIED', can_publish: false }))
+    vi.mocked(marketplaceApi.getCompanyDashboard).mockResolvedValue({ ...dashboard, verification_status: 'UNVERIFIED', can_publish: false })
+    vi.mocked(marketplaceApi.listMyProducts).mockResolvedValue(
+      page2([ownProduct('d-1', 'Draft chair', false), { ...ownProduct('d-2', 'Draft lamp', false), category: noAudience }, ownProduct('a-1', 'Live chair', true)]),
+    )
+    renderApp('/company')
+    const rows = await screen.findAllByTestId('company-product')
+    expect(screen.queryByRole('button', { name: /^نشر$|^publish$/i })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('category-unavailable')).not.toBeInTheDocument()
+    expect(within(rows[2]!).getByRole('button', { name: /إلغاء النشر|unpublish/i })).toBeInTheDocument()
+  })
+
+  it('shows the backend refusal when the category closed after the page loaded', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.setMyProductActive).mockRejectedValue(
+      new ApiError(409, 'category_unavailable', 'This category is not available for publication (inactive or without an audience).'),
+    )
+    renderApp('/company')
+    const user = userEvent.setup()
+    const rows = await screen.findAllByTestId('company-product')
+    await user.click(within(rows[0]!).getByRole('button', { name: /^نشر$|^publish$/i }))
+    await waitFor(() => expect(marketplaceApi.setMyProductActive).toHaveBeenCalledWith('d-1', true))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/not available for publication/)
+    expect(within(rows[0]!).getByRole('button', { name: /^نشر$|^publish$/i })).toBeInTheDocument() // still a draft; the user may retry
   })
 
   it('paginates own products through the backend', async () => {

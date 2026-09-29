@@ -1135,6 +1135,7 @@
     "myProducts": "منتجاتي",
     "noProducts": "لا توجد لديك منتجات بعد.",
     "cannotPublish": "يمكن نشر المنتجات بعد توثيق شركتك.",
+    "categoryUnavailable": "هذه الفئة غير متاحة للنشر حاليًا.",
     "active": "منشور",
     "inactive": "مسودة",
     "edit": "تعديل",

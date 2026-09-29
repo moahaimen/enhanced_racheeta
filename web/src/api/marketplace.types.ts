@@ -9,6 +9,8 @@ export interface ProductCategory {
   name_en: string
   parent_id: string | null
   sort_order: number
+  /** Backend-derived: active category with an active audience rule. UI guidance only — publication is decided server-side. */
+  can_publish: boolean
 }
 
 export interface CompanySummary {

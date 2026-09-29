@@ -158,12 +158,15 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
                       <ApiActionButton size="sm" variant="secondary" action={() => marketplaceApi.setMyProductActive(product.id, false)} onSuccess={() => { setError(null); refresh() }} onError={(e) => setError(toErrorMessage(e))}>
                         {t('company.deactivate')}
                       </ApiActionButton>
-                    ) : company.can_publish ? (
-                      // The backend refuses publication for a company that is not verified: no button then.
+                    ) : !company.can_publish ? null : product.category.can_publish ? (
+                      // The backend refuses publication for an unverified company or a category without an
+                      // audience: no button then. Its answer stays authoritative (the hint below is only guidance).
                       <ApiActionButton size="sm" action={() => marketplaceApi.setMyProductActive(product.id, true)} onSuccess={() => { setError(null); refresh() }} onError={(e) => setError(toErrorMessage(e))}>
                         {t('company.activate')}
                       </ApiActionButton>
-                    ) : null}
+                    ) : (
+                      <span className="text-caption" data-testid="category-unavailable">{t('company.categoryUnavailable')}</span>
+                    )}
                   </div>
                 </li>
               ))}

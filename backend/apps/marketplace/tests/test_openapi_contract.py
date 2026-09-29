@@ -53,5 +53,11 @@ def test_the_product_write_schema_carries_no_targeting_or_state():
     assert props == {"category", "title", "description", "brand", "model_name", "price", "currency"}
 
 
+def test_category_publishability_is_read_only_reference_state():
+    prop = _component("ProductCategory")["properties"]["can_publish"]
+    assert prop["type"] == "boolean" and prop["readOnly"] is True
+    assert set(SCHEMA["paths"]["/api/v1/marketplace/categories"]) == {"get"}
+
+
 def test_detail_endpoint_is_documented():
     assert _ok_ref("/api/v1/marketplace/products/{id}") == "ProductPublic"

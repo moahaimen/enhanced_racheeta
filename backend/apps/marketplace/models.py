@@ -14,7 +14,7 @@ their audience rules are system-controlled; targeting is decided here.
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 
 from apps.core.models import BaseModel
 from apps.geography.models import City, Governorate
@@ -79,6 +79,19 @@ class MedicalCompany(BaseModel):
         )
 
 
+class ProductCategoryQuerySet(models.QuerySet):
+    def with_publishability(self):
+        """Annotates `can_publish`: an active category with at least one active
+        audience rule — the state the publication gate checks
+        (services._locked_publishable_category), computed once per statement
+        as an EXISTS subquery, never per row. Read-only reference state for
+        clients; the gate on locked rows stays authoritative."""
+        active_rule = ProductAudience.objects.filter(
+            category=OuterRef("pk"), category__is_active=True, is_active=True
+        )
+        return self.annotate(can_publish=Exists(active_rule))
+
+
 class ProductCategory(BaseModel):
     """Administrator reference data. The Master Plan's examples (dental,
     laboratory, ...) are examples; the taxonomy is managed, not seeded."""
@@ -96,6 +109,8 @@ class ProductCategory(BaseModel):
         db_table = "marketplace_category"
         ordering = ["sort_order", "name_en"]
         verbose_name_plural = "product categories"
+
+    objects = ProductCategoryQuerySet.as_manager()
 
     def __str__(self) -> str:
         return self.name_en
