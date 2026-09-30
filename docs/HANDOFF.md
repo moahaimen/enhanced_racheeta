@@ -15,7 +15,8 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - Public API `real-estate/listings[/{id}]` (filters, allow-listed null-last orderings with an `id` tiebreak); owner API `real-estate/owner…` (profile, dashboard computed in SQL, listing CRUD without DELETE, publish/unpublish); audit events; admin inspection-only. OpenAPI regenerated (no existing path or schema changed).
 - Web: `/real-estate`, `/real-estate/:id`, `/real-estate/owner` (RequireRole `REAL_ESTATE_SELLER`); URL-backed backend filters; seller workspace with dashboard, listing form, publish/unpublish (guidance only — the backend gate is authoritative and its typed refusals are shown); deactivated governorate/city kept as the selected current value; header/footer links and a live home card; ar/en.
 - Deferred: images/media (no storage), advertising/boosts/payments (Phase 8), chat/notifications (Phase 9), PostGIS/proximity search. See `REAL_ESTATE.md`, ADR-046.
-- Tests: backend 1199 passed, web 316 passed.
+- PR #8 review fixes: (1) every seller mutation — profile update, draft create/edit, published edit, publish — calls `_require_eligible` on the locked seller+account (only unpublish is exempt); `_own_seller` also refuses an ineligible account; (2) `publicly_visible()` adds `city.governorate_id = F(governorate_id)` so a moved city hides the listing (list, detail, dashboard, `is_public`); (3) owner listing nests `OwnerGovernorate`/`OwnerCity` with `is_active`; `publicationGaps` reports inactive/moved geography and the form keeps the stored city while on the listing's governorate. OpenAPI regenerated.
+- Tests: backend 1212 passed, web 321 passed.
 
 ## Previous phase (Phase 6 — merged via PR #7)
 

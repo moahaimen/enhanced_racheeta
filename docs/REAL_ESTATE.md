@@ -72,9 +72,9 @@ visible **now** only when all hold:
 3. the seller's account is active;
 4. the seller's account role is still exactly `REAL_ESTATE_SELLER`;
 5. the governorate is active;
-6. the city, when set, is active.
+6. the city, when set, is active **and still belongs to the listing's governorate** (`city.governorate_id = listing.governorate_id`) — an administrator can move a city between governorates, so the relationship is read live, not assumed from when the listing was saved.
 
-Everything is read from live database state, so a role change, an account
+Everything is read from live database state, so a role change, a city moved to another governorate, an account
 deactivation, a deactivated governorate or city, or the passing of the expiry
 hides the listing on the next request without touching it; restoring the state
 restores it. Anything not visible answers the ordinary **404** on detail — the
@@ -82,7 +82,11 @@ same body as an id that never existed — and never discloses the title, seller
 name or contact data.
 
 The owner sees derived, read-only state on their own rows (`is_public`,
-`is_expired`), annotated in SQL by `with_public_state()` from the same rule.
+`is_expired`), annotated in SQL by `with_public_state()` from the same rule, and
+the owner's nested governorate and city also carry the **current** `is_active`
+(and the city's present `governorate`) so the workspace can recognise an
+inactive or moved reference. The public representation is unchanged; the public
+geography endpoints stay active-only.
 
 ## The publication gate
 
@@ -137,13 +141,22 @@ happens only in the services, **after taking the listing's row lock**.
 
 ## Locking and races
 
+**Every ordinary seller mutation** — profile update, draft creation, draft edit,
+published edit and publish — re-checks the CURRENT seller state after taking
+the lock: the account exists, is active and its role is exactly
+`REAL_ESTATE_SELLER` (`seller_not_eligible`, 403), before anything is written.
+The view resolves the seller with the same check, but only the service closes the
+race. The one exception is **unpublish**, which only reduces exposure and is
+always allowed at the service level.
+
 Lock order: seller (with its account) → listing → suitable uses. Every
 mutation re-reads and locks in that order and writes only the fields it owns
 (`update_fields`), never a stale instance. Consequences, each proven by tests
 with a real second database connection:
 
-- publishing with a seller role that changed after the view loaded it fails,
-  the listing stays `DRAFT` and the catalogue does not show it;
+- publishing, profile updates, draft creation and draft edits with a seller role
+  that changed after the view loaded it fail and leave the data unchanged;
+- publishing in that situation leaves the listing `DRAFT` and out of the catalogue;
 - use replacement and publication wait for the listing lock, and publication
   decides on the uses committed under that lock.
 
@@ -221,8 +234,15 @@ services.
 - A listing that references a governorate or city an administrator has since
   deactivated keeps it as the selected current option, labelled "no longer
   available" and disabled once the user moves away; an untouched inactive
-  reference is not resent when other fields are saved. The public geography
-  endpoints stay active-only.
+  reference is not resent when other fields are saved. The stored city stays
+  visible **while the user is on the listing's stored governorate**, also when an
+  administrator moved it to another governorate (so it is missing from that
+  governorate's active list); it is never injected into another governorate's
+  options and is only for recovery. Publish is not offered (the missing item is
+  listed) when the loaded owner data shows an inactive governorate, an inactive
+  city, or a city that no longer belongs to the governorate. This is guidance
+  only: the backend gate stays authoritative and its typed refusals are shown.
+  The public geography endpoints stay active-only.
 - Header links (public; workspace for sellers), footer link and a live home
   card. Every label is available in Arabic and English.
 
