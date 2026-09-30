@@ -13,7 +13,7 @@ from apps.specialties.models import Specialty
 from apps.specialties.serializers import SpecialtySerializer
 
 from .models import ProviderMembership, ProviderProfile, ServiceOffering
-from .types import MembershipStatus, ProviderType, VerificationStatus
+from .types import IDENTITY_LOCKED_STATUSES, MembershipStatus, ProviderType, VerificationStatus
 
 ADMIN_ONLY_FIELDS = frozenset(
     {
@@ -200,6 +200,7 @@ class ProviderOwnerSerializer(serializers.ModelSerializer):
     city = CitySerializer(read_only=True)
     specialties = SpecialtySerializer(many=True, read_only=True)
     can_change_type = serializers.SerializerMethodField()
+    identity_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderProfile
@@ -208,6 +209,7 @@ class ProviderOwnerSerializer(serializers.ModelSerializer):
             "provider_type",
             "kind",
             "can_change_type",
+            "identity_locked",
             "display_name",
             "about",
             "phone",
@@ -232,7 +234,11 @@ class ProviderOwnerSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_can_change_type(self, obj) -> bool:
-        return obj.verification_status != VerificationStatus.VERIFIED
+        return obj.verification_status not in IDENTITY_LOCKED_STATUSES
+
+    def get_identity_locked(self, obj) -> bool:
+        """Type and specialties are frozen while review is pending or granted."""
+        return obj.verification_status in IDENTITY_LOCKED_STATUSES
 
 
 class ProviderWriteSerializer(ForbidAdminFieldsMixin, serializers.ModelSerializer):
@@ -281,8 +287,8 @@ class ProviderWriteSerializer(ForbidAdminFieldsMixin, serializers.ModelSerialize
         if (
             instance is not None
             and value != instance.provider_type
-            and instance.verification_status == VerificationStatus.VERIFIED
-        ):
+            and instance.verification_status in IDENTITY_LOCKED_STATUSES
+        ):  # early answer; the authoritative check runs on the locked row
             raise serializers.ValidationError(
                 "A verified provider cannot change its type. Contact support.",
                 code="type_locked",

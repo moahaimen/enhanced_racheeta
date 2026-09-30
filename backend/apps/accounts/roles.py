@@ -54,6 +54,7 @@ ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
             "reservations.manage_received",
             "offers.manage_own",
             "jobs.manage_own",
+            "marketplace.view_targeted_products",
         }
     ),
     AccountRole.MEDICAL_COMPANY: frozenset(

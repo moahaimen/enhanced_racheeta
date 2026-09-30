@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from . import services
 from .models import ProviderMembership, ProviderProfile, ServiceOffering
@@ -30,6 +30,7 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     filter_horizontal = ("specialties",)
     readonly_fields = (
         "id",
+        "verification_status",
         "verification_requested_at",
         "verification_changed_at",
         "verified_at",
@@ -39,10 +40,64 @@ class ProviderProfileAdmin(admin.ModelAdmin):
     inlines = [ServiceInline]
     actions = ["mark_verified", "mark_rejected", "mark_suspended"]
 
-    @admin.action(description="Mark selected providers VERIFIED")
+    # ADR-045: the admin forms cannot bypass verified identity or ownership.
+    # The status and its metadata only move through the guarded actions below
+    # (services.set_verification: VERIFIED only from PENDING, on the locked row).
+    # An existing profile's owner account and identity (provider type,
+    # specialties) are never edited by staff — the owner edits identity outside
+    # review and requests verification again.
+    EXISTING_READONLY = ("account", "provider_type", "specialties", "verification_note")
+    # The only fields an ordinary change-form save of an existing profile writes.
+    ORDINARY_FIELDS = frozenset(
+        {
+            "display_name",
+            "about",
+            "phone",
+            "public_email",
+            "website",
+            "governorate",
+            "city",
+            "address",
+            "latitude",
+            "longitude",
+            "image_url",
+            "is_visible",
+        }
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            fields += self.EXISTING_READONLY
+        return fields
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # a new profile starts UNVERIFIED (model default)
+            super().save_model(request, obj, form, change)
+            return
+        # Never a full save of the form instance, which was loaded before the
+        # POST validated and may hold a verification state a concurrent action
+        # has since replaced: write only the changed ordinary fields onto the
+        # locked current row.
+        changed = [name for name in form.changed_data if name in self.ORDINARY_FIELDS]
+        # The inline services and log entry only need obj.pk; specialties are
+        # not a form field on existing profiles, so save_m2m writes nothing.
+        services.save_admin_form(obj, {name: getattr(obj, name) for name in changed})
+
+    @admin.action(description="Mark selected providers VERIFIED (pending review only)")
     def mark_verified(self, request, queryset):
+        skipped = 0
         for profile in queryset:
-            services.set_verification(profile, VerificationStatus.VERIFIED, by=request.user)
+            try:
+                services.set_verification(profile, VerificationStatus.VERIFIED, by=request.user)
+            except services.InvalidTransition:
+                skipped += 1  # ADR-045: only PENDING profiles can be verified
+        if skipped:
+            self.message_user(
+                request,
+                f"{skipped} profile(s) were not pending review and were left unchanged.",
+                level=messages.WARNING,
+            )
 
     @admin.action(description="Mark selected providers REJECTED")
     def mark_rejected(self, request, queryset):

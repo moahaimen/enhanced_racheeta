@@ -5,7 +5,13 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import filters, generics, status
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    ErrorDetail,
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -156,8 +162,22 @@ class MyProviderView(APIView):
         profile = _own_profile(request)
         serializer = ProviderWriteSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
-            serializer.save()
+        # Applied to the locked current row: identity locks are decided there and
+        # only the sent fields are written — never stale verification metadata
+        # from the instance loaded above (ADR-045).
+        try:
+            services.update_profile(profile, serializer.validated_data)
+        except services.IdentityLocked as exc:
+            raise ValidationError(
+                {
+                    field: ErrorDetail(
+                        "This field is locked while verification is pending or granted. "
+                        "Ask Racheeta administration to change it.",
+                        code="type_locked" if field == "provider_type" else "identity_locked",
+                    )
+                    for field in exc.fields
+                }
+            ) from exc
         return Response(ProviderOwnerSerializer(_own_profile(request)).data)
 
 
@@ -373,12 +393,17 @@ class AdminVerificationView(APIView):
         profile = get_object_or_404(ProviderProfile, pk=pk)
         serializer = VerificationDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        services.set_verification(
-            profile,
-            serializer.validated_data["status"],
-            serializer.validated_data.get("note", ""),
-            by=request.user,
-        )
+        try:
+            services.set_verification(
+                profile,
+                serializer.validated_data["status"],
+                serializer.validated_data.get("note", ""),
+                by=request.user,
+            )
+        except services.InvalidTransition as exc:
+            raise ValidationError(
+                {"status": [ErrorDetail(str(exc), code="invalid_transition")]}
+            ) from exc
         profile = (
             ProviderProfile.objects.select_related("governorate", "city")
             .prefetch_related("specialties")

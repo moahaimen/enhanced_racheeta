@@ -26,16 +26,18 @@ Django's `auth.Permission` / `Group` tables are used only by the admin site.
 | Role | Capabilities |
 | --- | --- |
 | PATIENT | accounts.view_self, accounts.edit_self, providers.search, reservations.create_own, reviews.create_own |
-| PROVIDER | accounts.view_self, accounts.edit_self, providers.search, providers.manage_own_profile, reservations.manage_received, offers.manage_own, jobs.manage_own |
+| PROVIDER | accounts.view_self, accounts.edit_self, providers.search, providers.manage_own_profile, reservations.manage_received, offers.manage_own, jobs.manage_own, marketplace.view_targeted_products |
 | MEDICAL_COMPANY | accounts.view_self, accounts.edit_self, marketplace.manage_own_products, advertising.manage_own_campaigns |
 | REAL_ESTATE_SELLER | accounts.view_self, accounts.edit_self, real_estate.manage_own_listings |
 | ADMIN | accounts.view_self, accounts.edit_self, admin.access, admin.manage_accounts, admin.verify_providers, admin.moderate_content |
 
 `is_staff` adds `admin.access`; `is_superuser` adds every ADMIN capability.
 
-These codes are forward-looking labels for modules that do not exist yet. They
-are not enforced anywhere until the module ships. Keep this table, the
-`ROLE_CAPABILITIES` dict, and the module's permission classes in sync.
+Codes for modules that do not exist yet are forward-looking labels, enforced
+only once the module ships. `marketplace.manage_own_products` and
+`marketplace.view_targeted_products` are enforced since Phase 6 (see below).
+Keep this table, the `ROLE_CAPABILITIES` dict, and the module's permission
+classes in sync.
 
 ## Self-registration roles
 
@@ -58,6 +60,19 @@ class OfferViewSet(...):
 
 Default for every endpoint is `IsAuthenticated` (`REST_FRAMEWORK` settings);
 public endpoints opt out explicitly with `AllowAny`.
+
+## Marketplace permissions (`apps/marketplace/permissions.py`, Phase 6)
+
+| Class | Grants |
+| --- | --- |
+| `IsMedicalCompanyAccount` | `role == MEDICAL_COMPANY` (`marketplace.manage_own_products`) — may create its company profile |
+| `HasMedicalCompany` | company account with a profile — own products, verification request, dashboard; ownership comes from `request.user.medical_company`, never a client id |
+| `CanBrowseMarketplace` | early answer only: `current_verified_provider(account)` — an active PROVIDER whose profile, re-read from the database, is VERIFIED (`marketplace.view_targeted_products`); `is_visible` is not required. The catalogue views re-read it when building the queryset, and `ProductQuerySet.targeted_for` re-checks verification, type and specialties inside the SQL statement; those inputs are frozen while PENDING or VERIFIED (ADR-045) |
+| `IsAdminAccount` | company verification decisions and the company list |
+
+Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields. Administrators can grant VERIFIED only to a PENDING company or provider (`invalid_transition` otherwise), so the approved identity is always the one frozen by the review request.
+
+Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false and, for a published product, disables moving it to a category not open for publication. Publisher eligibility itself is backend state: VERIFIED, active account, role still `MEDICAL_COMPANY` (`MedicalCompany.can_publish` / `publishing()`, `Product.objects.exposable()` / `targeted_for()`, the activation gate and the dashboard all require it).
 
 ## Provider permissions (`apps/providers/permissions.py`)
 
@@ -85,7 +100,8 @@ Verification state machine:
 | --- | --- |
 | UNVERIFIED / REJECTED → PENDING | the provider (`/providers/me/verification/request`) |
 | any → VERIFIED / REJECTED / SUSPENDED / UNVERIFIED | administrators only |
-| `provider_type` change | provider while not VERIFIED; afterwards administrators only (Django admin) |
+| `provider_type` / `specialties` change | the provider, only while not PENDING or VERIFIED (ADR-045); read-only for staff on the Django admin change form, as are `verification_status` and `verification_note` (verification moves only through the guarded admin actions / `services.set_verification`) |
+| `account` (profile owner) | set once at creation; never changed afterwards (read-only on the admin change form, never written by admin or owner saves) |
 
 Membership state machine:
 

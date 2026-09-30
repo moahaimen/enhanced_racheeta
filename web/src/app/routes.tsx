@@ -21,6 +21,9 @@ import { ProfilePage } from '../pages/ProfilePage'
 import { ProviderDetailPage } from '../pages/providers/ProviderDetailPage'
 import { ProviderProfilePage } from '../pages/providers/ProviderProfilePage'
 import { ProviderOffersPage } from '../pages/offers/ProviderOffersPage'
+import { CompanyWorkspacePage } from '../pages/marketplace/CompanyWorkspacePage'
+import { MarketplacePage } from '../pages/marketplace/MarketplacePage'
+import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
 import { ProviderReservationsPage } from '../pages/reservations/ProviderReservationsPage'
 import { ProvidersPage } from '../pages/providers/ProvidersPage'
@@ -81,7 +84,14 @@ export const routes: RouteObject[] = [
               { path: 'provider/profile', element: <ProviderProfilePage /> },
               { path: 'provider/reservations', element: <ProviderReservationsPage /> },
               { path: 'provider/offers', element: <ProviderOffersPage /> },
+              // B2B catalogue: the backend decides which products this provider may see.
+              { path: 'marketplace', element: <MarketplacePage /> },
+              { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
             ],
+          },
+          {
+            element: <RequireRole roles={['MEDICAL_COMPANY']} deniedTitleKey="company.notCompany" />,
+            children: [{ path: 'company', element: <CompanyWorkspacePage /> }],
           },
         ],
       },

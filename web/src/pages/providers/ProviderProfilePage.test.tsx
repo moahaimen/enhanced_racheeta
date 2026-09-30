@@ -71,11 +71,16 @@ describe('ProviderProfilePage', () => {
   })
 
   it('loads the existing profile and saves edits through PATCH', async () => {
-    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ display_name: 'Loaded', verification_status: 'VERIFIED', can_change_type: false }))
-    vi.mocked(providersApi.updateMyProvider).mockResolvedValue(makeOwner({ display_name: 'Edited', verification_status: 'VERIFIED', can_change_type: false }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ display_name: 'Loaded', verification_status: 'VERIFIED', can_change_type: false, identity_locked: true }))
+    vi.mocked(providersApi.updateMyProvider).mockResolvedValue(makeOwner({ display_name: 'Edited', verification_status: 'VERIFIED', can_change_type: false, identity_locked: true }))
     renderApp('/provider/profile')
     const name = await screen.findByDisplayValue('Loaded')
     expect(screen.getByLabelText(/^النوع$|^type$/i)).toBeDisabled() // locked after verification
+    // specialties are verified identity too (marketplace targeting): locked, never sent
+    expect(screen.getByTestId('specialties-locked')).toBeInTheDocument()
+    for (const box of screen.getAllByRole('checkbox').filter((c) => c.closest('fieldset')?.textContent?.match(/التخصص|specialt/i))) {
+      expect(box).toBeDisabled()
+    }
     await userEvent.clear(name)
     await userEvent.type(name, 'Edited')
     const save = screen.getByRole('button', { name: /^حفظ$|^save$/i })
@@ -84,6 +89,7 @@ describe('ProviderProfilePage', () => {
     const payload = vi.mocked(providersApi.updateMyProvider).mock.calls[0]![0]
     expect(payload.display_name).toBe('Edited')
     expect(payload).not.toHaveProperty('provider_type')
+    expect(payload).not.toHaveProperty('specialty_ids')
     expect(payload).not.toHaveProperty('verification_status')
     expect(await screen.findByText(/تم حفظ الملف|profile saved/i)).toBeInTheDocument()
   })

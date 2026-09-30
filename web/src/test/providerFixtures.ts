@@ -72,6 +72,7 @@ export function makeOwner(overrides: Partial<ProviderOwner> = {}): ProviderOwner
   return {
     ...makeCard(),
     can_change_type: true,
+    identity_locked: false,
     about: '',
     phone: '',
     public_email: '',

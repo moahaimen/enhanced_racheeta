@@ -104,6 +104,8 @@ export interface ProviderPublic extends ProviderCard {
 
 export interface ProviderOwner extends ProviderCard {
   can_change_type: boolean
+  /** Backend rule (ADR-045): type and specialties are frozen while verification is pending or granted. */
+  identity_locked: boolean
   about: string
   phone: string
   public_email: string

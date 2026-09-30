@@ -39,13 +39,13 @@ export function PublicOnly() {
 }
 
 /** Inside RequireAuth: only accounts with one of `roles` may proceed. */
-export function RequireRole({ roles }: { roles: AccountRole[] }) {
+export function RequireRole({ roles, deniedTitleKey = 'providerProfile.notProvider' }: { roles: AccountRole[]; deniedTitleKey?: string }) {
   const { account } = useAuth()
   const { t } = useTranslation()
   if (!account || !roles.includes(account.role)) {
     return (
       <div role="alert" data-testid="role-denied">
-        <ErrorState title={t('providerProfile.notProvider')} error={null} />
+        <ErrorState title={t(deniedTitleKey)} error={null} />
       </div>
     )
   }

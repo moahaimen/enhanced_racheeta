@@ -71,3 +71,34 @@ describe('HomePage provider call-to-action', () => {
     expect(screen.queryByRole('link', { name: /أنشئ حسابك|create your account/i })).toBeNull()
   })
 })
+
+describe('HomePage marketplace entry points', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
+    vi.mocked(providersApi.listProviders).mockResolvedValue({ count: 0, next: null, previous: null, results: [] })
+  })
+
+  it.each([
+    ['PROVIDER', /^السوق الطبي$|^Marketplace$/i, '/marketplace'],
+    ['MEDICAL_COMPANY', /مساحة الشركة|company workspace/i, '/company'],
+  ] as const)('gives a %s its marketplace link and a live home card', async (role, label, href) => {
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role }))
+    renderApp('/')
+    const navLinks = await screen.findAllByRole('link', { name: label })
+    expect(navLinks.some((a) => a.getAttribute('href') === href)).toBe(true)
+    // the home card is live (a link into the route), no longer "coming soon"
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+    expect(hrefs.filter((h) => h === href).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('shows no marketplace or company link to a patient', async () => {
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
+    renderApp('/')
+    await screen.findAllByRole('link', { name: /حجوزاتي|my reservations/i })
+    expect(screen.queryByRole('link', { name: /^السوق الطبي$|^Marketplace$/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /مساحة الشركة|company workspace/i })).toBeNull()
+  })
+})
+

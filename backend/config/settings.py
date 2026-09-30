@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "apps.reservations",
     "apps.reviews",
     "apps.offers",
+    "apps.marketplace",
 ]
 
 MIDDLEWARE = [
@@ -231,6 +232,8 @@ SPECTACULAR_SETTINGS = {
         "MemberStatusEnum": "apps.jobs.types.MemberStatus.choices",
         "RecruitmentStatusEnum": "apps.jobs.types.RecruitmentStatus.choices",
         "DegreeEnum": "apps.jobs.types.Degree.choices",
+        "CompanyVerificationStatusEnum": "apps.marketplace.types.CompanyVerificationStatus.choices",
+        "CompanyVerificationDecisionEnum": "apps.marketplace.types.VERIFICATION_DECISION_CHOICES",
         "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
         "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
         "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",

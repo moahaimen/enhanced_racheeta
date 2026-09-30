@@ -152,8 +152,24 @@ and `BILLING.md` (plans, admin subscription actions, credits). `GET
 `already_invited`, `already_saved`, `invalid_transition`, `already_member`,
 `contact_information_not_allowed` (validation, under `codes.<field>`).
 
+### Phase 5 — reviews and offers
+
+See `REVIEWS_OFFERS.md`.
+
+### Phase 6 — medical marketplace
+
+See `MARKETPLACE.md` for the full table. Company self-service lives under
+`/api/v1/marketplace/company…` (role `MEDICAL_COMPANY`), the targeted
+catalogue under `/api/v1/marketplace/products…` (verified `PROVIDER`), the
+category reference list at `/api/v1/marketplace/categories` (public; each
+category carries a read-only, backend-derived `can_publish`) and the
+verification control plane under `/api/v1/admin/marketplace/companies…`
+(staff). New error codes: `company_not_verified` (403),
+`category_unavailable` (409), `already_exists` (409), `invalid_product`,
+`field_not_allowed` (validation, under `codes.<field>`).
+
 ## Planned (not implemented)
 
-Reservations/availability (Phase 4, free), reviews and offers (Phase 5) and the
-remaining modules of the master plan. Password change for logged-in users and admin account-management
+The remaining modules of the master plan (real estate, advertising and
+payments, chat and notifications, dashboards). Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.

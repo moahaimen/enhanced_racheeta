@@ -92,6 +92,8 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
   const [saved, setSaved] = useState(false)
   const errors = useFormErrors(FIELDS)
   const typeLocked = profile !== null && !profile.can_change_type
+  // Specialties are verified identity too (they drive marketplace targeting): same backend rule.
+  const identityLocked = profile !== null && profile.identity_locked
 
   const cities = useAsyncData<City[]>(
     (signal) => (form.governorate ? reference.listCities(form.governorate, signal) : Promise.resolve([])),
@@ -133,8 +135,8 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
       latitude: form.latitude.trim() || null,
       longitude: form.longitude.trim() || null,
       image_url: form.image_url.trim(),
-      specialty_ids: form.specialty_ids,
     }
+    if (!identityLocked) payload.specialty_ids = form.specialty_ids
     if (!typeLocked) payload.provider_type = form.provider_type
     if (profile) payload.is_visible = form.is_visible
     return submit(payload)
@@ -275,11 +277,13 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
       </FormSection>
 
       <FormSection title={t('providerProfile.specialties')}>
+        {identityLocked ? <p className="text-caption" data-testid="specialties-locked">{t('providerProfile.specialtiesLocked')}</p> : null}
         <CheckboxGroup legend={t('providerProfile.specialties')} error={errors.fieldErrors.specialty_ids}>
           {specialties.map((s) => (
             <Checkbox
               key={s.id}
               label={name(s)}
+              disabled={identityLocked}
               checked={form.specialty_ids.includes(s.id)}
               onChange={(e) =>
                 set('specialty_ids', e.target.checked ? [...form.specialty_ids, s.id] : form.specialty_ids.filter((id) => id !== s.id))
