@@ -16,7 +16,8 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - APIs: company (dashboard, quote, campaigns, submit, cancel), admin (list/detail/verify-payment/reject-payment), provider (`advertising/marketplace`). Django admin: only the rate is editable. OpenAPI regenerated (no existing schema changed; `ProviderTypeEnum` and campaign enums pinned in settings).
 - Web: `/company/advertising`, admin console Advertising tab, sponsored section on `/marketplace`, nav/company links, Arabic/English.
 - Deferred: gateway/webhook, refunds, media/receipts, non-product/real-estate campaigns, analytics (Phase 10), chat/notifications (Phase 9). See `ADVERTISING.md`, ADR-047.
-- Tests: backend 1400 passed, web 364 passed.
+- PR #9 review fixes: `visible_to()` requires `specialty__is_active=True` on the matching specialty target; `views._require_no_body` rejects any body key on submit/cancel (`field_not_allowed`); `services._require_quote_coherent` runs in `verify_campaign_payment` (payment ↔ snapshot, never the current rate; `payment_quote_mismatch` 409); `services.save_rate` locks the rates it swaps (Django admin uses it; `RateActivationConflict` becomes an admin message). OpenAPI unchanged.
+- Tests: backend 1444 passed, web 364 passed.
 
 ## Previous phase (Phase 7 — merged via PR #8)
 

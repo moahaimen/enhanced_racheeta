@@ -85,6 +85,7 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Current-state visibility:** `visible_to()` re-reads company, product, category, audience, provider and dates on every request; campaign targeting only narrows Phase 6 product targeting.
 - **Concurrency:** one lock order (company+account → campaign → payment → product/rate); races (verify vs reject, stale company role, product deactivation, rate change, row locks) are proven with real second connections.
 - **Ownership:** company from `request.user`; foreign campaigns 404; Django admin inspection-only except the rate.
+- **Review hardening:** targeted specialties must be active to produce exposure; submit/cancel reject any client field (`field_not_allowed`) instead of ignoring it; payment verification proves payment ↔ quote snapshot coherence on the locked rows (`payment_quote_mismatch`) so a bypassed model guard cannot activate a campaign; rate activation locks the rows it swaps and leaves the unique constraint as the final guard.
 - **No uploads, no analytics, no new infrastructure.**
 
 ## HTTP hardening (`DEBUG=false`)

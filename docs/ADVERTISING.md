@@ -81,7 +81,8 @@ Payment is completed **outside the platform**. An administrator calls
 `reference` and `note`; the amount is the campaign's own quote and can never be
 sent. `services.verify_campaign_payment` locks company → campaign → payment →
 product, then requires: campaign PENDING_PAYMENT and payment PENDING
-(`invalid_transition` / `payment_not_pending` otherwise), the company **currently**
+(`invalid_transition` / `payment_not_pending` otherwise), **the locked financial
+snapshot to be coherent** (`payment_quote_mismatch`, 409, see below), the company **currently**
 eligible (`company_not_eligible`), the product **currently** exposable
 (`product_unavailable`), targeted references still active, and the end date not
 passed (`campaign_ended`). Only then are the payment VERIFIED and the campaign
@@ -102,6 +103,19 @@ amount/currency/reference, then (4) call this same locked service. A browser's
 "payment succeeded" can never activate a campaign. Steps 1–3 are **not built**:
 there is no fake webhook, test endpoint or placeholder secret.
 
+### Payment ↔ quote coherence
+
+Model guards can be bypassed by `QuerySet.update()`, SQL or a future integration, so
+`verify_campaign_payment` itself proves, on the **locked** rows and before anything is
+marked VERIFIED: the campaign has a rate reference, `quoted_days > 0`,
+`quoted_daily_rate > 0`, `quoted_amount > 0` and a supported `quoted_currency`;
+`quoted_amount == quantize(quoted_daily_rate × quoted_days)`; `payment.amount ==
+campaign.quoted_amount`; `payment.currency == campaign.quoted_currency`; and the payment
+belongs to this campaign. Any mismatch is `payment_quote_mismatch` (409): the payment stays
+PENDING and the campaign PENDING_PAYMENT (an administrator can still reject it); nothing is
+repaired automatically. The snapshot is deliberately **not** compared with the current
+`AdvertisingRate`, which may legitimately have changed since submission.
+
 ## Targeting and visibility
 
 `AdvertisingCampaignQuerySet.visible_to(provider)` is the only exposure rule,
@@ -116,7 +130,10 @@ evaluated from **current database state** and the server date on every read:
 4. the provider is an active PROVIDER with a VERIFIED profile, re-read here;
 5. each configured narrowing matches the provider's current profile: provider types
    (none = no restriction), specialties (any one), governorates (current governorate
-   must match one; a deactivated targeted governorate stops producing exposure).
+   must match one; a deactivated targeted governorate stops producing exposure). A
+   campaign's targeted **specialty must itself still be active** to match: deactivating it
+   (or all of a campaign's specialty targets) stops exposure at read time, while the
+   campaign and its payment stay untouched — no automatic cancel, reject or refund.
 
 The company/product-category dimension is the product's own current category and its
 audience rules — there is no separate category selector. Nothing caches provider
@@ -138,7 +155,9 @@ Queries are bounded (Exists/Subquery; target checks are not per row).
 | GET | `admin/advertising/campaigns/{id}` | staff | full review payload |
 | POST | `…/{id}/verify-payment` · `…/{id}/reject-payment` | staff | `IsAdminAccount` (staff flag); anonymous 401, non-staff 403 |
 
-No DELETE. The campaign payload accepts only `name, product, starts_on, ends_on,
+No DELETE. The lifecycle actions `…/submit` and `…/cancel` take **no client data**: an
+empty body or `{}` works, and **any** key (amount, quote, status, payment, company, product,
+reference, …) is refused with `field_not_allowed`, never silently ignored. The campaign payload accepts only `name, product, starts_on, ends_on,
 provider_types, specialties, governorates`; status, payment/paid/verified fields,
 amounts, rates, days, currency, quote, reference-as-proof, company and lifecycle
 keys are refused with `field_not_allowed`; the admin decision bodies refuse
@@ -146,7 +165,7 @@ amount/currency/status/company/product. Owner payloads include `quote` and a saf
 `payment` summary (no admin note, no verifier); the admin payload adds both. Error
 codes: `pricing_unavailable`, `campaign_not_editable`, `campaign_not_submittable`,
 `company_not_eligible` (403), `product_unavailable`, `invalid_transition`,
-`payment_not_pending`, `campaign_ended`, plus per-field validation codes
+`payment_not_pending`, `payment_quote_mismatch`, `campaign_ended`, plus per-field validation codes
 (`dates_invalid`, `start_in_past`, `end_in_past`, `governorate_inactive`,
 `specialty_inactive`, `product_not_found`, …). Audit events:
 `advertising.campaign.created|updated|submitted|activated|cancelled`,
@@ -155,8 +174,13 @@ codes: `pricing_unavailable`, `campaign_not_editable`, `campaign_not_submittable
 
 ## Django admin
 
-Only `AdvertisingRate` is editable (price > 0, supported currency, atomic single-active
-swap, no delete). Campaigns, payments and target rows are inspection-only: the admin
+Only `AdvertisingRate` is editable (price > 0, supported currency, no delete). Saving goes
+through `services.save_rate`: activating a rate locks every active rate and the target in
+primary-key order, retires the previous one and activates the new one in one transaction, so
+concurrent activations serialize. The partial unique constraint `advertising_rate_one_active`
+remains the final guard; the only case that can still reach it is two simultaneous
+first-ever active rates (no stable row to lock), which surfaces as a message in the admin
+("Another rate was activated at the same time"), never a 500 or two active rates. Campaigns, payments and target rows are inspection-only: the admin
 can neither activate a campaign, mark a payment verified, rewrite a status nor change
 an amount. Lifecycle goes through the services and API.
 

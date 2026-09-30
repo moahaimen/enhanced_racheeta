@@ -193,7 +193,7 @@ campaigns, submit, cancel), sponsored campaigns for providers at
 payment control plane under `/api/v1/admin/advertising/campaigns…` (staff: list,
 detail, `verify-payment`, `reject-payment`). New error codes: `pricing_unavailable`,
 `campaign_not_editable`, `campaign_not_submittable`, `company_not_eligible` (403),
-`product_unavailable`, `payment_not_pending`, `campaign_ended`, plus per-field
+`product_unavailable`, `payment_not_pending`, `payment_quote_mismatch` (409), `campaign_ended`, plus per-field
 validation codes (`dates_invalid`, `start_in_past`, `end_in_past`,
 `governorate_inactive`, `specialty_inactive`, `product_not_found`,
 `duplicate_target`, `reason_required`) and the existing `invalid_transition` and
