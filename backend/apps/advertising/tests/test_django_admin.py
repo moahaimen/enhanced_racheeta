@@ -109,3 +109,17 @@ def test_the_admin_cannot_activate_verify_or_change_amounts(staff, pending):
     assert (state.status, state.payment.status, state.payment.amount) == (
         "PENDING_PAYMENT", "PENDING", Decimal("10000.00"),
     )  # fmt: skip
+
+
+def test_a_rate_activation_conflict_is_a_message_not_a_500(staff, rate, monkeypatch):
+    from apps.advertising import services
+
+    def conflict(*args, **kwargs):
+        raise services.RateActivationConflict("simultaneous")
+
+    monkeypatch.setattr(services, "save_rate", conflict)
+    resp = staff.post(f"{BASE}advertisingrate/add/", _rate_form(is_active="on"), follow=True)
+    assert resp.status_code == 200
+    assert "Another rate was activated at the same time" in resp.content.decode()
+    assert AdvertisingRate.objects.filter(is_active=True).count() == 1  # untouched
+    assert AdvertisingRate.objects.get(is_active=True).pk == rate.pk

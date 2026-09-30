@@ -40,6 +40,7 @@ class AdvertisingAPIError(APIException):
 
 
 STATUS_FOR_CODE = {
+    "payment_quote_mismatch": status.HTTP_409_CONFLICT,
     "pricing_unavailable": status.HTTP_409_CONFLICT,
     "campaign_not_editable": status.HTTP_409_CONFLICT,
     "campaign_not_submittable": status.HTTP_409_CONFLICT,
@@ -65,6 +66,22 @@ def raise_api(exc: services.AdvertisingError):
     err = AdvertisingAPIError(str(exc) or exc.code, code=exc.code)
     err.status_code = STATUS_FOR_CODE.get(exc.code, status.HTTP_400_BAD_REQUEST)
     raise err from exc
+
+
+def _require_no_body(request) -> None:
+    """Lifecycle actions (submit, cancel) take NO client data. Anything sent — above
+    all money or state — is refused, never silently ignored."""
+    data = request.data
+    if not data:
+        return
+    keys = list(data.keys()) if hasattr(data, "keys") else ["non_field_errors"]
+    raise ValidationError(
+        {
+            key: [ErrorDetail("This field cannot be set by a client.", code="field_not_allowed")]
+            for key in keys
+        },
+        code="field_not_allowed",
+    )
 
 
 def _own_company(request) -> MedicalCompany:
@@ -193,6 +210,7 @@ def _lifecycle_view(action_name: str, summary: str):
 
         @extend_schema(request=None, responses={200: CampaignOwnerSerializer})
         def post(self, request, pk):
+            _require_no_body(request)
             action = getattr(services, action_name)
             try:
                 campaign = action(_own_company(request), pk)

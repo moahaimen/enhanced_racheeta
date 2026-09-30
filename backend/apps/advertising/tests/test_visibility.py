@@ -161,6 +161,12 @@ def _targeted_governorate_deactivated(w):
     Governorate.objects.filter(slug="baghdad").update(is_active=False)
 
 
+def _targeted_specialty_deactivated(w):
+    from apps.specialties.models import Specialty
+
+    Specialty.objects.filter(slug="dentistry").update(is_active=False)
+
+
 def _narrowing_type_changed(w):
     w["campaign"].target_provider_types.all().delete()
     w["campaign"].target_provider_types.create(provider_type=ProviderType.PHARMACY)
@@ -185,7 +191,8 @@ HIDERS = [
     _provider_specialty, _provider_geography, _company_role, _company_inactive, _company_suspended,
     _product_inactive, _category_inactive, _audience_gone, _payment_pending, _payment_rejected,
     _status("CANCELLED"), _status("PENDING_PAYMENT"), _status("REJECTED"), _status("DRAFT"),
-    _not_started, _ended, _targeted_governorate_deactivated, _narrowing_type_changed,
+    _not_started, _ended, _targeted_governorate_deactivated, _targeted_specialty_deactivated,
+    _narrowing_type_changed,
     _narrowing_specialty_changed, _narrowing_geography_changed,
 ]  # fmt: skip
 
@@ -430,3 +437,69 @@ def test_the_sponsored_query_count_does_not_grow_with_the_number_of_campaigns(
         add()
     many = _count_queries(client)
     assert few == many and many <= 8
+
+
+# ---- a targeted specialty must still be ACTIVE to produce exposure ----
+
+
+def test_deactivating_the_targeted_specialty_hides_the_ad_and_reactivating_restores_it(
+    world, dentistry
+):
+    from apps.advertising.models import CampaignPayment
+
+    assert sees(world)  # active targeted specialty + otherwise eligible provider
+    dentistry.is_active = False
+    dentistry.save()
+    assert not sees(world)
+    assert client_for(world["provider"].account).get(SPONSORED).json()["results"] == []
+    # only exposure changed: the campaign and its payment are untouched (no cancel, reject, refund)
+    stored = AdvertisingCampaign.objects.get(pk=world["campaign"].pk)
+    assert stored.status == "ACTIVE"
+    assert CampaignPayment.objects.get(campaign=stored).status == "VERIFIED"
+    dentistry.is_active = True
+    dentistry.save()
+    assert sees(world)
+
+
+def test_one_active_target_specialty_is_enough_when_another_was_deactivated(
+    world, dentistry, cardiology
+):
+    world["campaign"].target_specialties.create(specialty=cardiology)  # dentistry OR cardiology
+    cardiology.is_active = False
+    cardiology.save()
+    assert sees(world)  # the provider's dentistry target is still active
+    dentistry.is_active = False
+    dentistry.save()
+    assert not sees(
+        world
+    )  # every specialty target inactive: nothing matches through that dimension
+
+
+def test_an_untargeted_campaign_ignores_specialty_deactivation(
+    category_factory, company_factory, product_factory, provider_factory, campaign_factory,
+    make_live, dentistry,
+):  # fmt: skip
+    category = category_factory(rules=[(ProviderType.DOCTOR, None)])
+    company = company_factory()
+    product = product_factory(company, category)
+    provider = provider_factory(ProviderType.DOCTOR, specialties=[dentistry])
+    campaign = make_live(campaign_factory(company, product))  # no specialty targeting at all
+    dentistry.is_active = False
+    dentistry.save()
+    assert visible(provider).filter(pk=campaign.pk).exists()
+
+
+def test_an_inactive_specialty_is_still_refused_at_verification(
+    ready, rate, campaign_factory, dentistry
+):
+    from apps.advertising import services
+
+    company, product = ready
+    campaign = campaign_factory(company, product)
+    campaign.target_specialties.create(specialty=dentistry)
+    services.submit_campaign(company, campaign.pk)
+    dentistry.is_active = False
+    dentistry.save()
+    with pytest.raises(services.CampaignProblems) as exc:
+        services.verify_campaign_payment(campaign.pk, method="CASH", verified_by=None)
+    assert exc.value.problems == {"specialties": "specialty_inactive"}

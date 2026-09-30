@@ -667,7 +667,7 @@ describe('Advertising translations', () => {
     'advertising.pricingUnavailable', 'advertising.quote.title', 'advertising.quote.note', 'advertising.rejectedBody', 'advertising.cancelledBody',
     'admin.advertising.verify', 'admin.advertising.reject', 'admin.advertising.amountNote', 'nav.advertising', 'admin.tabs.advertising',
     'apiErrors.pricing_unavailable', 'apiErrors.campaign_not_editable', 'apiErrors.campaign_not_submittable', 'apiErrors.company_not_eligible',
-    'apiErrors.product_unavailable', 'apiErrors.payment_not_pending', 'apiErrors.campaign_ended', 'apiErrors.end_in_past',
+    'apiErrors.product_unavailable', 'apiErrors.payment_quote_mismatch', 'apiErrors.payment_not_pending', 'apiErrors.campaign_ended', 'apiErrors.end_in_past',
   ]
 
   it.each(['ar', 'en'])('has every advertising string in %s (no raw keys or enum codes)', (lng) => {

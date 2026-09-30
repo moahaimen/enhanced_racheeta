@@ -581,7 +581,8 @@
     "governorate_inactive": "A selected governorate is no longer available.",
     "specialty_inactive": "A selected specialty is no longer available.",
     "reason_required": "A reason is required.",
-    "duplicate_target": "Each target can be chosen once."
+    "duplicate_target": "Each target can be chosen once.",
+    "payment_quote_mismatch": "The payment no longer matches the campaign's quote, so it cannot be verified."
   },
   "jobs": {
     "featured": "Featured",

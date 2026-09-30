@@ -26,7 +26,7 @@ def _codes(resp):
     return resp.json()["error"]["codes"]
 
 
-# ---- access -----------------------------------------------------------------------------
+# ---- access ----
 
 
 @pytest.mark.parametrize(
@@ -59,7 +59,7 @@ def test_a_company_account_without_a_profile_cannot_manage_campaigns(account_fac
     assert client.post(CAMPAIGNS, {}, format="json").status_code == 403
 
 
-# ---- drafts ------------------------------------------------------------------------------
+# ---- drafts ----
 
 
 def test_creating_a_campaign_makes_a_draft_owned_by_the_caller(ready, rate):
@@ -178,7 +178,7 @@ def test_an_inactive_governorate_or_specialty_cannot_be_targeted(ready, basra, d
     )
 
 
-# ---- ownership --------------------------------------------------------------------------
+# ---- ownership ----
 
 
 def test_a_company_cannot_advertise_another_companys_product(
@@ -228,7 +228,7 @@ def test_there_is_no_delete(ready, campaign_factory):
     assert client_for(company.account).delete(f"{CAMPAIGNS}/{campaign.pk}").status_code == 405
 
 
-# ---- payload protection -----------------------------------------------------------------
+# ---- payload protection ----
 
 
 @pytest.mark.parametrize(
@@ -272,7 +272,7 @@ def test_lifecycle_money_and_verification_fields_are_refused_not_ignored(
     assert campaign.status == "DRAFT" and campaign.quoted_amount is None
 
 
-# ---- editing ----------------------------------------------------------------------------
+# ---- editing ----
 
 
 def test_a_draft_is_editable_and_nothing_else_is(ready, rate, campaign_factory):
@@ -327,7 +327,7 @@ def test_the_model_refuses_to_move_a_submitted_campaigns_product_or_company(
         loaded.save()
 
 
-# ---- list / dashboard / cancel -----------------------------------------------------------
+# ---- list / dashboard / cancel ----
 
 
 def test_the_list_is_paginated_newest_first_and_filterable(ready, campaign_factory):

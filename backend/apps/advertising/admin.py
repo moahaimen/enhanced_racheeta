@@ -5,11 +5,10 @@ audit): inspection-only, so the admin can neither activate a campaign, mark a
 payment verified, rewrite a status nor change an amount."""
 
 from django import forms
-from django.contrib import admin
-from django.db import transaction
+from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
 
-from apps.audit import services as audit
-
+from . import services
 from .models import (
     AdvertisingCampaign,
     AdvertisingRate,
@@ -56,21 +55,20 @@ class AdvertisingRateAdmin(admin.ModelAdmin):
         # History stays understandable: campaigns keep a protected reference to the rate.
         return False
 
-    @transaction.atomic
     def save_model(self, request, obj, form, change):
-        # Activating a rate atomically retires the previous one (at most one is active).
-        if obj.is_active:
-            AdvertisingRate.objects.filter(is_active=True).exclude(pk=obj.pk).update(
-                is_active=False
+        services.save_rate(obj, actor=request.user, change=change)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        try:
+            return super().changeform_view(request, object_id, form_url, extra_context)
+        except services.RateActivationConflict:
+            # The admin's own transaction rolled back; nothing was half-applied.
+            self.message_user(
+                request,
+                "Another rate was activated at the same time. Nothing was changed; try again.",
+                level=messages.ERROR,
             )
-        super().save_model(request, obj, form, change)
-        audit.record(
-            actor=request.user,
-            action="advertising.rate.updated" if change else "advertising.rate.created",
-            target=obj,
-            summary=f"{obj.code}: {obj.price_per_day} {obj.currency}",
-            data={"is_active": obj.is_active},
-        )
+            return HttpResponseRedirect(request.get_full_path())
 
 
 class _InspectionOnly(admin.ModelAdmin):

@@ -26,7 +26,7 @@ def _decide(admin_client, campaign, action, body):
     return admin_client.post(f"{ADMIN}/{campaign.pk}/{action}", body, format="json")
 
 
-# ---- pricing ----------------------------------------------------------------------------
+# ---- pricing ----
 
 
 def test_no_price_is_seeded_by_any_migration(db):
@@ -103,7 +103,7 @@ def test_the_rate_is_positive_single_and_supported(rate, db):
         )
 
 
-# ---- submission --------------------------------------------------------------------------
+# ---- submission ----
 
 
 def test_submission_snapshots_the_price_and_creates_exactly_one_pending_payment(
@@ -156,27 +156,79 @@ def test_a_rate_change_never_touches_a_snapshot_and_submit_uses_the_current_rate
     assert CampaignPayment.objects.get(campaign=first).amount == Decimal("10000.00")
 
 
-def test_submit_accepts_no_price_from_the_client(ready, rate, campaign_factory):
+FORBIDDEN_ACTION_KEYS = [
+    "amount", "quoted_amount", "quoted_daily_rate", "quoted_days", "quoted_currency",
+    "payment_status", "status", "is_paid", "paid", "verified", "company", "company_id",
+    "product", "product_id", "payment", "rate", "reference", "currency", "anything_else",
+]  # fmt: skip
+
+
+def test_submit_takes_no_body_empty_and_empty_object_both_work(ready, rate, campaign_factory):
     company, product = ready
-    for key, value in (
-        ("amount", "1"),
-        ("quoted_amount", "1"),
-        ("quoted_daily_rate", "1"),
-        ("quoted_days", 1),
-        ("payment_status", "VERIFIED"),
-        ("status", "ACTIVE"),
-        ("is_paid", True),
-    ):
-        campaign = campaign_factory(company, product)
-        resp = client_for(company.account).post(
-            f"{CAMPAIGNS}/{campaign.pk}/submit", {key: value}, format="json"
-        )
-        assert resp.status_code == 200  # the body of an action is not read at all …
-        campaign.refresh_from_db()  # … so the price and state are the backend's
+    client = client_for(company.account)
+    first = campaign_factory(company, product)
+    assert client.post(f"{CAMPAIGNS}/{first.pk}/submit").status_code == 200  # no body at all
+    second = campaign_factory(company, product)
+    assert client.post(f"{CAMPAIGNS}/{second.pk}/submit", {}, format="json").status_code == 200
+    for campaign in (first, second):
+        campaign.refresh_from_db()
         assert (
             campaign.quoted_amount == Decimal("10000.00") and campaign.status == "PENDING_PAYMENT"
         )
-        assert CampaignPayment.objects.get(campaign=campaign).amount == Decimal("10000.00")
+
+
+@pytest.mark.parametrize("key", FORBIDDEN_ACTION_KEYS)
+def test_submit_rejects_any_client_field_instead_of_ignoring_it(ready, rate, campaign_factory, key):
+    company, product = ready
+    campaign = campaign_factory(company, product)
+    resp = client_for(company.account).post(
+        f"{CAMPAIGNS}/{campaign.pk}/submit", {key: "1"}, format="json"
+    )
+    assert resp.status_code == 400, key
+    assert _err(resp)["codes"][key] == ["field_not_allowed"]
+    campaign.refresh_from_db()
+    assert campaign.status == "DRAFT" and campaign.quoted_amount is None
+    assert not CampaignPayment.objects.exists()  # nothing was created by the rejected attempt
+
+
+def test_submit_rejects_a_non_object_body_too(ready, rate, campaign_factory):
+    company, product = ready
+    campaign = campaign_factory(company, product)
+    resp = client_for(company.account).post(
+        f"{CAMPAIGNS}/{campaign.pk}/submit", [{"amount": 1}], format="json"
+    )
+    assert resp.status_code == 400
+    assert AdvertisingCampaign.objects.get(pk=campaign.pk).status == "DRAFT"
+
+
+def test_cancel_takes_no_body_and_rejects_tampering(live_campaign, ready):
+    company, _ = ready
+    client = client_for(company.account)
+    url = f"{CAMPAIGNS}/{live_campaign.pk}/cancel"
+    for key in ("status", "amount", "payment_status", "is_paid", "reference", "company"):
+        resp = client.post(url, {key: "x"}, format="json")
+        assert resp.status_code == 400 and _err(resp)["codes"][key] == ["field_not_allowed"], key
+        assert AdvertisingCampaign.objects.get(pk=live_campaign.pk).status == "ACTIVE"
+    assert client.post(url, {}, format="json").status_code == 200  # empty object is fine
+    assert AdvertisingCampaign.objects.get(pk=live_campaign.pk).status == "CANCELLED"
+
+
+def test_cancel_with_no_body_at_all_works(live_campaign, ready):
+    company, _ = ready
+    resp = client_for(company.account).post(f"{CAMPAIGNS}/{live_campaign.pk}/cancel")
+    assert resp.status_code == 200 and resp.json()["status"] == "CANCELLED"
+
+
+def test_create_and_patch_keep_their_forbidden_field_protection(ready, campaign_factory):
+    from .conftest import draft_payload
+
+    company, product = ready
+    client = client_for(company.account)
+    created = client.post(CAMPAIGNS, draft_payload(product, amount="1"), format="json")
+    assert created.status_code == 400 and _err(created)["codes"]["amount"] == ["field_not_allowed"]
+    campaign = campaign_factory(company, product)
+    patched = client.patch(f"{CAMPAIGNS}/{campaign.pk}", {"status": "ACTIVE"}, format="json")
+    assert patched.status_code == 400 and _err(patched)["codes"]["status"] == ["field_not_allowed"]
 
 
 def test_submission_needs_dates_a_name_a_future_window_and_active_targets(
@@ -219,7 +271,7 @@ def test_a_campaign_can_only_be_submitted_from_draft(ready, rate, campaign_facto
     assert CampaignPayment.objects.filter(campaign=campaign).count() == 1
 
 
-# ---- submission needs the CURRENT company / product state ---------------------------------------
+# ---- submission needs the CURRENT company / product state ----
 
 
 def test_submission_fails_when_the_company_role_was_lost(ready, rate, campaign_factory):
@@ -265,7 +317,7 @@ def test_submission_fails_when_the_product_is_no_longer_exposable(
     assert not CampaignPayment.objects.exists()
 
 
-# ---- manual verification ------------------------------------------------------------------------
+# ---- manual verification ----
 
 
 @pytest.fixture
@@ -449,3 +501,62 @@ def test_a_verified_payment_row_must_be_coherent_in_the_database(pending):
         CampaignPayment.objects.filter(campaign=pending).update(
             status="VERIFIED"
         )  # no time, no method
+
+
+# ---- verification proves payment <-> quote coherence on the LOCKED snapshot ----
+
+
+def _corrupt(pending, what):
+    if what == "payment_amount":
+        CampaignPayment.objects.filter(campaign=pending).update(amount=Decimal("9999.00"))
+    elif what == "payment_currency":
+        CampaignPayment.objects.filter(campaign=pending).update(currency="USD")
+    elif what == "quoted_amount":
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(quoted_amount=Decimal("1.00"))
+    elif what == "arithmetic":
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(quoted_daily_rate=Decimal("5.00"))
+    elif what == "quoted_days":
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(quoted_days=3)
+    elif what == "quoted_currency":
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(quoted_currency="EUR")
+    elif what == "no_rate_reference":
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(rate=None)
+
+
+@pytest.mark.parametrize(
+    "what",
+    ["payment_amount", "payment_currency", "quoted_amount", "arithmetic", "quoted_days",
+     "quoted_currency", "no_rate_reference"],
+)  # fmt: skip
+def test_verification_refuses_a_payment_that_no_longer_matches_the_quote(
+    pending, admin_client, what
+):
+    _corrupt(pending, what)  # bypasses the model guards, as SQL / update() / a bug could
+    resp = _decide(admin_client, pending, "verify-payment", {"method": "CASH", "reference": "R"})
+    assert resp.status_code == 409 and _err(resp)["code"] == "payment_quote_mismatch"
+    state = AdvertisingCampaign.objects.select_related("payment").get(pk=pending.pk)
+    assert (state.status, state.payment.status) == ("PENDING_PAYMENT", "PENDING")
+    assert (
+        state.payment.verified_at is None
+        and not AuditEvent.objects.filter(action="advertising.campaign.activated").exists()
+    )
+    # rejecting stays possible: the administrator is never stuck with a corrupt record
+    assert (
+        _decide(admin_client, pending, "reject-payment", {"reason": "corrupt"}).status_code == 200
+    )
+
+
+def test_an_off_by_one_payment_amount_is_enough_to_refuse(pending, admin_client):
+    CampaignPayment.objects.filter(campaign=pending).update(amount=Decimal("10001.00"))
+    with pytest.raises(services.PaymentQuoteMismatch):
+        services.verify_campaign_payment(pending.pk, method="CASH", verified_by=None)
+    assert CampaignPayment.objects.get(campaign=pending).status == "PENDING"
+
+
+def test_a_historical_rate_change_does_not_affect_verification(pending, rate, admin_client):
+    """The snapshot is history: the CURRENT rate may differ and verification still works."""
+    AdvertisingRate.objects.filter(pk=rate.pk).update(price_per_day=Decimal("7777.00"))
+    resp = _decide(admin_client, pending, "verify-payment", {"method": "CASH"})
+    assert resp.status_code == 200 and resp.json()["payment"]["amount"] == "10000.00"
+    AdvertisingRate.objects.filter(pk=rate.pk).update(is_active=False)  # even with no active rate
+    assert AdvertisingCampaign.objects.get(pk=pending.pk).status == "ACTIVE"

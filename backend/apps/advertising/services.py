@@ -21,7 +21,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db import transaction
+from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -81,6 +82,14 @@ class PaymentNotPending(AdvertisingError):
 
 class CampaignEnded(AdvertisingError):
     code = "campaign_ended"
+
+
+class PaymentQuoteMismatch(AdvertisingError):
+    code = "payment_quote_mismatch"
+
+
+class RateActivationConflict(AdvertisingError):
+    code = "rate_activation_conflict"
 
 
 class CampaignProblems(AdvertisingError):
@@ -288,6 +297,32 @@ def _draft_structure_problems(campaign: AdvertisingCampaign) -> dict[str, str]:
     ):
         problems["ends_on"] = "dates_invalid"
     return problems
+
+
+def _require_quote_coherent(campaign: AdvertisingCampaign, payment: CampaignPayment) -> None:
+    """The LOCKED financial snapshot must agree with itself before money is
+    marked verified: model guards can be bypassed by QuerySet.update(), SQL or a
+    future integration. Deliberately NOT compared with the current
+    AdvertisingRate — the rate may legitimately have changed since submission."""
+    days, rate, amount = campaign.quoted_days, campaign.quoted_daily_rate, campaign.quoted_amount
+    coherent = (
+        campaign.rate_id is not None
+        and payment.campaign_id == campaign.pk
+        and days is not None
+        and days > 0
+        and rate is not None
+        and rate > 0
+        and amount is not None
+        and amount > 0
+        and campaign.quoted_currency in settings.RACHEETA["CURRENCIES"]
+        and amount == _quantize(rate * days)
+        and payment.amount == amount
+        and payment.currency == campaign.quoted_currency
+    )
+    if not coherent:
+        raise PaymentQuoteMismatch(
+            "The payment no longer matches the campaign's server-authoritative quote."
+        )
 
 
 def _quantize(value: Decimal) -> Decimal:
@@ -558,6 +593,7 @@ def verify_campaign_payment(
     if method not in PaymentMethod.values:
         raise CampaignProblems({"method": "invalid_choice"})
     company, campaign, payment = _lock_pending(campaign_id)
+    _require_quote_coherent(campaign, payment)
     _require_company_eligible(company)
     _require_exposable_product(company, campaign.product_id)
     problems = _reference_problems(campaign)
@@ -611,6 +647,42 @@ def reject_campaign_payment(campaign_id, *, reason: str, rejected_by) -> Adverti
         data={"campaign": str(campaign.pk)},
     )
     return campaign
+
+
+# ---- pricing administration -----------------------------------------------------------------
+
+
+@transaction.atomic
+def save_rate(rate: AdvertisingRate, *, actor, change: bool) -> AdvertisingRate:
+    """Create or update a rate. Activating one retires the previous active rate in
+    the same transaction. The rows involved (every currently active rate and the
+    target) are locked in primary-key order first, so concurrent activations
+    serialize instead of racing around the swap. The partial unique constraint
+    `advertising_rate_one_active` stays the final guard: the one case that can still
+    reach it is two first-ever active rates created simultaneously (no stable row
+    to lock), reported as a typed conflict instead of a raw database error."""
+    if rate.is_active:
+        ids = set(AdvertisingRate.objects.filter(is_active=True).values_list("pk", flat=True))
+        if not rate._state.adding:
+            ids.add(rate.pk)
+        if ids:
+            list(AdvertisingRate.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
+        AdvertisingRate.objects.filter(is_active=True).exclude(pk=rate.pk).update(is_active=False)
+    try:
+        with transaction.atomic():
+            rate.save()
+    except IntegrityError as exc:
+        if "advertising_rate_one_active" not in str(exc):
+            raise
+        raise RateActivationConflict("Another rate was activated at the same time.") from exc
+    audit.record(
+        actor=actor,
+        action="advertising.rate.updated" if change else "advertising.rate.created",
+        target=rate,
+        summary=f"{rate.code}: {rate.price_per_day} {rate.currency}",
+        data={"is_active": rate.is_active},
+    )
+    return rate
 
 
 # ---- dashboard --------------------------------------------------------------------------------

@@ -134,8 +134,9 @@ class AdvertisingCampaignQuerySet(models.QuerySet):
         4. the provider is a verified, active PROVIDER (re-read here, never trusted
            from the request);
         5. each configured narrowing (provider types, specialties, governorates)
-           matches the provider's current profile; a targeted governorate that has
-           been deactivated stops producing exposure.
+           matches the provider's current profile; a targeted governorate or
+           specialty that has been deactivated stops producing exposure (the
+           campaign and its payment are untouched — only exposure changes).
         """
         today = today or timezone.localdate()
         verified = ProviderProfile.objects.filter(
@@ -173,7 +174,11 @@ class AdvertisingCampaignQuerySet(models.QuerySet):
             )
             .filter(
                 ~Exists(wants_specialties)
-                | Exists(wants_specialties.filter(specialty_id__in=provider_specialties))
+                | Exists(
+                    wants_specialties.filter(
+                        specialty_id__in=provider_specialties, specialty__is_active=True
+                    )
+                )
             )
             .filter(
                 ~Exists(wants_governorates)

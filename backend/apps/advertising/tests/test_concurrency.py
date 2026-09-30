@@ -48,7 +48,7 @@ def _pair(campaign):
     return state.status, state.payment.status
 
 
-# ---- verify vs reject -------------------------------------------------------------------------
+# ---- verify vs reject ----
 
 
 @pytest.mark.parametrize("round_", range(4))
@@ -97,7 +97,7 @@ def test_two_verifications_race_and_only_one_wins(ready, rate, campaign_factory,
     assert CampaignPayment.objects.filter(status="VERIFIED").count() == 1
 
 
-# ---- company state ----------------------------------------------------------------------------
+# ---- company state ----
 
 
 def test_submission_with_a_stale_company_role_fails_and_changes_nothing(
@@ -145,7 +145,7 @@ def test_verification_after_the_company_role_changed_elsewhere_fails_and_shows_n
     assert not AdvertisingCampaign.objects.visible_to(provider).exists()
 
 
-# ---- product state -----------------------------------------------------------------------------
+# ---- product state ----
 
 
 def test_verification_waits_for_a_concurrent_product_deactivation_and_then_refuses(
@@ -181,7 +181,7 @@ def test_verification_waits_for_a_concurrent_product_deactivation_and_then_refus
     assert _pair(campaign) == ("PENDING_PAYMENT", "PENDING")
 
 
-# ---- pricing ------------------------------------------------------------------------------------
+# ---- pricing ----
 
 
 def test_submission_waits_for_a_concurrent_rate_change_and_uses_the_committed_rate(
@@ -230,7 +230,7 @@ def test_a_rate_swap_after_submission_leaves_the_snapshot_alone(ready, rate, cam
     assert stored.quoted_amount == Decimal("10000.00")
 
 
-# ---- the campaign lock -------------------------------------------------------------------------
+# ---- the campaign lock ----
 
 
 def test_a_cancellation_and_a_verification_serialize_on_the_campaign(
@@ -259,7 +259,7 @@ def test_a_cancellation_and_a_verification_serialize_on_the_campaign(
         assert "error" not in o1 and "error" not in o2
 
 
-# ---- each row lock is really taken (state decided under the lock, not before it) -----------------
+# ---- each row lock is really taken (state decided under the lock, not before it) ----
 
 
 @pytest.mark.parametrize(
@@ -302,3 +302,93 @@ def test_verification_decides_on_the_row_state_committed_under_its_lock(
     assert isinstance(outcome.get("error"), expected), outcome
     assert not CampaignPayment.objects.filter(status="VERIFIED").exists()
     assert AdvertisingCampaign.objects.get(pk=campaign.pk).status != "ACTIVE"
+
+
+# ---- rate activation is serialized; the unique constraint stays the final guard ----
+
+
+def _rate(code, price="1000.00", active=False):
+    return AdvertisingRate.objects.create(
+        code=code, name_ar=code, name_en=code, price_per_day=Decimal(price), is_active=active
+    )
+
+
+def _active_count():
+    return AdvertisingRate.objects.filter(is_active=True).count()
+
+
+def test_activating_rates_one_after_another_swaps_atomically(admin_user):
+    first, second = _rate("a", active=True), _rate("b")
+    second.is_active = True
+    services.save_rate(second, actor=admin_user, change=True)
+    assert _active_count() == 1 and AdvertisingRate.objects.get(is_active=True).code == "b"
+    assert not AdvertisingRate.objects.get(pk=first.pk).is_active  # retired, not deleted
+
+
+@pytest.mark.parametrize("round_", range(3))
+def test_two_concurrent_activations_of_existing_rates_leave_exactly_one_active(admin_user, round_):
+    old, one, two = _rate("old", active=True), _rate("one"), _rate("two")
+    barrier = threading.Barrier(2)
+
+    def activate(pk):
+        def run():
+            rate = AdvertisingRate.objects.get(pk=pk)
+            rate.is_active = True
+            barrier.wait(timeout=10)
+            return services.save_rate(rate, actor=admin_user, change=True)
+
+        return run
+
+    t1, o1 = _in_thread(activate(one.pk))
+    t2, o2 = _in_thread(activate(two.pk))
+    t1.join(timeout=20)
+    t2.join(timeout=20)
+    assert not t1.is_alive() and not t2.is_alive()
+    for outcome in (o1, o2):  # no raw database error: success or the typed conflict only
+        assert "error" not in outcome or isinstance(
+            outcome["error"], services.RateActivationConflict
+        )
+    assert _active_count() == 1
+    assert AdvertisingRate.objects.count() == 3  # history preserved
+    assert old.pk
+
+
+def test_two_simultaneous_first_ever_active_rates_never_leave_two_active(admin_user):
+    """No row exists to lock, so the partial unique constraint is the final guard: the
+    loser gets the typed conflict (never a raw IntegrityError) and state stays valid."""
+    barrier = threading.Barrier(2)
+
+    def create(code):
+        def run():
+            rate = AdvertisingRate(
+                code=code,
+                name_ar=code,
+                name_en=code,
+                price_per_day=Decimal("500.00"),
+                is_active=True,
+            )
+            barrier.wait(timeout=10)
+            return services.save_rate(rate, actor=admin_user, change=False)
+
+        return run
+
+    t1, o1 = _in_thread(create("x"))
+    t2, o2 = _in_thread(create("y"))
+    t1.join(timeout=20)
+    t2.join(timeout=20)
+    for outcome in (o1, o2):
+        assert "error" not in outcome or isinstance(
+            outcome["error"], services.RateActivationConflict
+        )
+    assert _active_count() == 1
+
+
+def test_a_campaign_submitted_before_a_rate_swap_keeps_its_snapshot(
+    ready, rate, campaign_factory, admin_user
+):
+    campaign = _pending(ready, campaign_factory)
+    other = _rate("later", price="9000.00")
+    other.is_active = True
+    services.save_rate(other, actor=admin_user, change=True)
+    stored = AdvertisingCampaign.objects.get(pk=campaign.pk)
+    assert stored.quoted_amount == Decimal("10000.00") and stored.rate_id == rate.pk
