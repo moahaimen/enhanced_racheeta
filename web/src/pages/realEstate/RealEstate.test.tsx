@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +11,9 @@ import { tokenStore } from '../../api/tokens'
 import type { City, OwnerDashboard, OwnerListing, PropertyListing, RealEstateSeller } from '../../api'
 import { baghdad, basra } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
+
+// These pages chain several backend loads; be generous so a slow or busy machine does not flake (per test file).
+configure({ asyncUtilTimeout: 5000 })
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/realEstate')

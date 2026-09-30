@@ -1065,7 +1065,7 @@ Avoid architecture that prevents moving from Railway later.
 - Expiry.
 - Provider management.
 
-## Phase 6 — Medical Marketplace (CURRENT)
+## Phase 6 — Medical Marketplace (done — merged via PR #7)
 
 - Medical companies.
 - Categories.
@@ -1073,7 +1073,7 @@ Avoid architecture that prevents moving from Railway later.
 - Targeting.
 - Company dashboards.
 
-## Phase 7 — Medical Real Estate
+## Phase 7 — Medical Real Estate (CURRENT)
 
 - Property listings.
 - Sale/rent.
