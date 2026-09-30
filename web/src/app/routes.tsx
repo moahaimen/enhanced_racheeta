@@ -24,6 +24,9 @@ import { ProviderOffersPage } from '../pages/offers/ProviderOffersPage'
 import { CompanyWorkspacePage } from '../pages/marketplace/CompanyWorkspacePage'
 import { MarketplacePage } from '../pages/marketplace/MarketplacePage'
 import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
+import { OwnerWorkspacePage } from '../pages/realEstate/OwnerWorkspacePage'
+import { RealEstateDetailPage } from '../pages/realEstate/RealEstateDetailPage'
+import { RealEstatePage } from '../pages/realEstate/RealEstatePage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
 import { ProviderReservationsPage } from '../pages/reservations/ProviderReservationsPage'
 import { ProvidersPage } from '../pages/providers/ProvidersPage'
@@ -48,6 +51,9 @@ export const routes: RouteObject[] = [
       { path: 'jobs', element: <JobsPage /> },
       { path: 'jobs/:id', element: <JobDetailPage /> },
       { path: 'employers/:id', element: <EmployerPublicPage /> },
+      // Medical real estate is publicly browsable; the backend decides what is visible.
+      { path: 'real-estate', element: <RealEstatePage /> },
+      { path: 'real-estate/:id', element: <RealEstateDetailPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
@@ -92,6 +98,10 @@ export const routes: RouteObject[] = [
           {
             element: <RequireRole roles={['MEDICAL_COMPANY']} deniedTitleKey="company.notCompany" />,
             children: [{ path: 'company', element: <CompanyWorkspacePage /> }],
+          },
+          {
+            element: <RequireRole roles={['REAL_ESTATE_SELLER']} deniedTitleKey="realEstateOwner.notSeller" />,
+            children: [{ path: 'real-estate/owner', element: <OwnerWorkspacePage /> }],
           },
         ],
       },

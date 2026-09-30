@@ -7,7 +7,7 @@ import { Container } from './Container'
 import { BrandMark } from './SiteHeader'
 import styles from './SiteFooter.module.css'
 
-const UPCOMING = ['offers', 'marketplace', 'realEstate'] as const
+const UPCOMING = ['offers', 'marketplace'] as const
 
 export function SiteFooter() {
   const { t } = useTranslation()
@@ -31,6 +31,9 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link to="/jobs">{t('nav.jobs')}</Link>
+              </li>
+              <li>
+                <Link to="/real-estate">{t('modules.realEstate')}</Link>
               </li>
               <li>
                 <Link to="/providers">{t('modules.reservations')}</Link>
