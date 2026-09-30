@@ -191,14 +191,76 @@ def test_submit_rejects_any_client_field_instead_of_ignoring_it(ready, rate, cam
     assert not CampaignPayment.objects.exists()  # nothing was created by the rejected attempt
 
 
-def test_submit_rejects_a_non_object_body_too(ready, rate, campaign_factory):
+# Bodies that are not a mapping are request bodies too, falsey or not.
+NON_OBJECT_BODIES = [
+    pytest.param([], id="empty-array"),
+    pytest.param([{"amount": 1}], id="array-with-object"),
+    pytest.param("", id="empty-string"),
+    pytest.param("hello", id="string"),
+    pytest.param(0, id="zero"),
+    pytest.param(1, id="one"),
+    pytest.param(False, id="false"),
+    pytest.param(True, id="true"),
+]
+
+
+def _assert_refused(resp):
+    assert resp.status_code == 400
+    assert _err(resp)["code"] == "validation_error"
+    assert _err(resp)["codes"]["non_field_errors"] == ["field_not_allowed"]
+
+
+@pytest.mark.parametrize("body", NON_OBJECT_BODIES)
+def test_submit_rejects_any_non_object_body_even_a_falsey_one(ready, rate, campaign_factory, body):
     company, product = ready
     campaign = campaign_factory(company, product)
     resp = client_for(company.account).post(
-        f"{CAMPAIGNS}/{campaign.pk}/submit", [{"amount": 1}], format="json"
+        f"{CAMPAIGNS}/{campaign.pk}/submit", body, format="json"
     )
-    assert resp.status_code == 400
+    _assert_refused(resp)
+    campaign.refresh_from_db()
+    assert campaign.status == "DRAFT" and campaign.quoted_amount is None
+    assert not CampaignPayment.objects.exists()
+
+
+def test_submit_rejects_an_explicit_json_null(ready, rate, campaign_factory):
+    company, product = ready
+    campaign = campaign_factory(company, product)
+    resp = client_for(company.account).generic(
+        "POST", f"{CAMPAIGNS}/{campaign.pk}/submit", "null", content_type="application/json"
+    )
+    _assert_refused(resp)
     assert AdvertisingCampaign.objects.get(pk=campaign.pk).status == "DRAFT"
+    assert not CampaignPayment.objects.exists()
+
+
+@pytest.mark.parametrize("body", NON_OBJECT_BODIES)
+def test_cancel_rejects_any_non_object_body_even_a_falsey_one(live_campaign, ready, body):
+    company, _ = ready
+    resp = client_for(company.account).post(
+        f"{CAMPAIGNS}/{live_campaign.pk}/cancel", body, format="json"
+    )
+    _assert_refused(resp)
+    assert AdvertisingCampaign.objects.get(pk=live_campaign.pk).status == "ACTIVE"
+
+
+def test_cancel_rejects_an_explicit_json_null(live_campaign, ready):
+    company, _ = ready
+    resp = client_for(company.account).generic(
+        "POST", f"{CAMPAIGNS}/{live_campaign.pk}/cancel", "null", content_type="application/json"
+    )
+    _assert_refused(resp)
+    assert AdvertisingCampaign.objects.get(pk=live_campaign.pk).status == "ACTIVE"
+
+
+def test_an_empty_form_is_still_no_data(ready, rate, campaign_factory):
+    """An empty multipart/form mapping is what a body-less POST can look like to DRF."""
+    company, product = ready
+    campaign = campaign_factory(company, product)
+    resp = client_for(company.account).post(
+        f"{CAMPAIGNS}/{campaign.pk}/submit", {}, format="multipart"
+    )
+    assert resp.status_code == 200
 
 
 def test_cancel_takes_no_body_and_rejects_tampering(live_campaign, ready):

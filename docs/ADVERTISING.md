@@ -155,9 +155,12 @@ Queries are bounded (Exists/Subquery; target checks are not per row).
 | GET | `admin/advertising/campaigns/{id}` | staff | full review payload |
 | POST | `…/{id}/verify-payment` · `…/{id}/reject-payment` | staff | `IsAdminAccount` (staff flag); anonymous 401, non-staff 403 |
 
-No DELETE. The lifecycle actions `…/submit` and `…/cancel` take **no client data**: an
-empty body or `{}` works, and **any** key (amount, quote, status, payment, company, product,
-reference, …) is refused with `field_not_allowed`, never silently ignored. The campaign payload accepts only `name, product, starts_on, ends_on,
+No DELETE. The lifecycle actions `…/submit` and `…/cancel` take **no client data**: no body, or an
+empty JSON object / empty form (an empty mapping), works; **anything else** is refused with
+`field_not_allowed`, never silently ignored — every key of a non-empty object (amount, quote,
+status, payment, company, product, reference, …) and every non-object body (a JSON array even
+when empty, a string, a number, a boolean, an explicit `null`). The check uses mapping
+semantics, not truthiness: `[]`, `false`, `0` and `""` are falsey but are still bodies. The campaign payload accepts only `name, product, starts_on, ends_on,
 provider_types, specialties, governorates`; status, payment/paid/verified fields,
 amounts, rates, days, currency, quote, reference-as-proof, company and lifecycle
 keys are refused with `field_not_allowed`; the admin decision bodies refuse

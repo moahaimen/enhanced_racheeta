@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -69,12 +71,19 @@ def raise_api(exc: services.AdvertisingError):
 
 
 def _require_no_body(request) -> None:
-    """Lifecycle actions (submit, cancel) take NO client data. Anything sent — above
-    all money or state — is refused, never silently ignored."""
+    """Lifecycle actions (submit, cancel) take NO client data. Allowed: no body, or an
+    empty JSON object / empty form (an empty mapping). Everything else is refused with
+    `field_not_allowed` — any key of a non-empty object, and any non-object body (a JSON
+    array even when empty, a string, a number, a boolean, an explicit null) — never
+    silently ignored. Mapping semantics, not truthiness: `[]`, `false`, `0` and `""`
+    are falsey but are still request bodies."""
     data = request.data
-    if not data:
-        return
-    keys = list(data.keys()) if hasattr(data, "keys") else ["non_field_errors"]
+    if isinstance(data, Mapping):
+        if len(data) == 0:
+            return
+        keys = list(data.keys())
+    else:
+        keys = ["non_field_errors"]
     raise ValidationError(
         {
             key: [ErrorDetail("This field cannot be set by a client.", code="field_not_allowed")]
