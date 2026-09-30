@@ -15,6 +15,7 @@ import {
   ErrorState,
   FormActions,
   Icon,
+  LinkButton,
   LoadingState,
   PageHeader,
   PageStack,
@@ -95,7 +96,14 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
         eyebrow={<><Icon name="cart" size={16} />{t('modules.marketplace')}</>}
         title={company.name}
         description={t('company.intro')}
-        actions={<Badge tone={statusTone}>{t(`verification.${company.verification_status}`)}</Badge>}
+        actions={
+          <div className="cluster">
+            <LinkButton to="/company/advertising" variant="subtle" size="sm" leading={<Icon name="tag" size={16} />}>
+              {t('advertising.open')}
+            </LinkButton>
+            <Badge tone={statusTone}>{t(`verification.${company.verification_status}`)}</Badge>
+          </div>
+        }
       />
       <PageStack>
         <SectionCard title={t('company.dashboard')} headingLevel={2}>

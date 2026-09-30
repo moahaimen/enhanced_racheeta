@@ -21,6 +21,7 @@ import { ProfilePage } from '../pages/ProfilePage'
 import { ProviderDetailPage } from '../pages/providers/ProviderDetailPage'
 import { ProviderProfilePage } from '../pages/providers/ProviderProfilePage'
 import { ProviderOffersPage } from '../pages/offers/ProviderOffersPage'
+import { AdvertisingWorkspacePage } from '../pages/advertising/AdvertisingWorkspacePage'
 import { CompanyWorkspacePage } from '../pages/marketplace/CompanyWorkspacePage'
 import { MarketplacePage } from '../pages/marketplace/MarketplacePage'
 import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
@@ -97,7 +98,10 @@ export const routes: RouteObject[] = [
           },
           {
             element: <RequireRole roles={['MEDICAL_COMPANY']} deniedTitleKey="company.notCompany" />,
-            children: [{ path: 'company', element: <CompanyWorkspacePage /> }],
+            children: [
+              { path: 'company', element: <CompanyWorkspacePage /> },
+              { path: 'company/advertising', element: <AdvertisingWorkspacePage /> },
+            ],
           },
           {
             element: <RequireRole roles={['REAL_ESTATE_SELLER']} deniedTitleKey="realEstateOwner.notSeller" />,
