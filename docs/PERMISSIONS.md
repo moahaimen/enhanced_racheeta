@@ -35,7 +35,8 @@ Django's `auth.Permission` / `Group` tables are used only by the admin site.
 
 Codes for modules that do not exist yet are forward-looking labels, enforced
 only once the module ships. `marketplace.manage_own_products` and
-`marketplace.view_targeted_products` are enforced since Phase 6 (see below).
+`marketplace.view_targeted_products` are enforced since Phase 6, and
+`real_estate.manage_own_listings` since Phase 7 (see below).
 Keep this table, the `ROLE_CAPABILITIES` dict, and the module's permission
 classes in sync.
 
@@ -73,6 +74,16 @@ public endpoints opt out explicitly with `AllowAny`.
 Verified identity (ADR-045): a company's name, governorate, city, address and website, and a provider's type and specialties, are frozen for the owner while verification is PENDING or VERIFIED (`identity_locked`, decided on the locked row that the administrator's decision also locks). Owner payloads expose `identity_locked` so the web disables those fields. Administrators can grant VERIFIED only to a PENDING company or provider (`invalid_transition` otherwise), so the approved identity is always the one frozen by the review request.
 
 Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['PROVIDER'])`, `/company` behind `RequireRole(['MEDICAL_COMPANY'])`; the header shows the matching link per role and the company workspace hides Publish while `can_publish` is false and, for a published product, disables moving it to a category not open for publication. Publisher eligibility itself is backend state: VERIFIED, active account, role still `MEDICAL_COMPANY` (`MedicalCompany.can_publish` / `publishing()`, `Product.objects.exposable()` / `targeted_for()`, the activation gate and the dashboard all require it).
+
+## Real-estate permissions (`apps/real_estate/permissions.py`, Phase 7)
+
+| Class | Grants |
+| --- | --- |
+| `IsRealEstateSellerAccount` | `role == REAL_ESTATE_SELLER` (`real_estate.manage_own_listings`) — may read/create its seller profile |
+| `HasRealEstateSeller` | seller account with a profile — dashboard and listing management; ownership comes from `request.user.real_estate_seller`, never a client id; a foreign listing id is a 404 |
+| `AllowAny` | the public catalogue (list and detail), which only ever reads `publicly_visible()` |
+
+The permission check is an early answer only: every mutation re-reads and locks the seller **and its account** in its transaction and requires an active account whose role is still `REAL_ESTATE_SELLER` to publish or to edit a published listing (`seller_not_eligible`); unpublishing is always allowed. A seller profile's `account` and a listing's `seller` are immutable. Django admin is inspection-only. Web mirror (UX only): `/real-estate/owner` sits behind `RequireRole(['REAL_ESTATE_SELLER'])`, and the workspace offers Publish only when the loaded data says the gate can succeed.
 
 ## Provider permissions (`apps/providers/permissions.py`)
 

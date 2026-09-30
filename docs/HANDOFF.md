@@ -1,31 +1,30 @@
 # Current State
 
 Date: 2026-09-30
-AI/Engineer: Claude (Opus 5.5)
-Branch: `feat/phase6-medical-marketplace`
-Base: `main` at `34e3f4c981e1fc2ce3a0d0dc0185d2aa4bf39341` (Phase 5 merged via PR #6; post-merge CI #180 green; final Codex review on `6e09328` reported no major issues)
-Pull Request: Phase 6 draft PR (see below)
+AI/Engineer: Claude (Sonnet 5.5)
+Branch: `feat/phase7-medical-real-estate`
+Base: `main` at `39295676ac9ee40d9050f32500baca36bce27bcc` (Phase 6 merged via PR #7; post-merge CI #198 green; baseline 1003 backend / 274 web tests)
+Pull Request: Phase 7 draft PR (see the final report of this session)
 Last Commit SHA: see `git log`; recorded in the final report of this session
 
-## Phase 6 — Medical Marketplace (this session)
+## Phase 7 — Medical Real Estate (this session)
 
-- New `apps/marketplace`: `MedicalCompany` (admin-verified, one per MEDICAL_COMPANY account), `ProductCategory` and `ProductAudience` (administrator reference data; rules are provider type and/or specialty, never empty), `Product` (nullable price ≥ 0, IQD/USD, inactive until published). Migration `marketplace/0001_initial`.
-- Targeting: `ProductQuerySet.targeted_for(provider)` — one queryset for list and detail; a verified company, active category and an active matching rule are all required. Browsing needs a PROVIDER with a VERIFIED profile (`is_visible` not required).
-- Publication: `services.update_product` re-checks the locked company and category on every activation; payloads carrying targeting/state fields are refused.
-- APIs, permissions (`marketplace.view_targeted_products` added to PROVIDER), OpenAPI regenerated, web `/marketplace`, `/marketplace/products/:id`, `/company`, header links and live home card, ar/en.
-- Deferred: product images (no media storage), ProductCampaign/ads/payments (Phase 8). See `MARKETPLACE.md`, ADR-044.
-- Tests: backend 927 passed, web 263 passed (initial Phase 6 head `0b32801`).
-- PR #7 acceptance review on `0b32801` (2 P1) fixed: verified identity is frozen while PENDING/VERIFIED on the locked row — company name/governorate/city/address/website, provider type/specialties — and admin decisions lock the same row (ADR-045). Tests: backend 951 passed, web 265 passed.
-- PR #7 acceptance review on `3571665` (2 P1, 1 P2) fixed: VERIFIED only from PENDING for companies and providers; `current_verified_provider` re-reads the provider when the catalogue queryset is built and `targeted_for` re-checks verification/type/specialties in SQL. Tests: backend 969 passed, web 265 passed.
-- PR #7 acceptance review on `84ab580` (1 P1) fixed: `ProviderProfileAdmin` makes `verification_status` read-only always and `provider_type`/`specialties` read-only on existing profiles; verification only via the guarded actions → `services.set_verification` (ADR-045). Regression tests in `apps/providers/tests/test_admin_verified_identity.py`. Tests: backend 978 passed, web 265 passed.
-- PR #7 acceptance review on `a9a20aa` (2 P1, 1 P2) fixed: `ProviderProfileAdmin.save_model` (existing profile) → `services.save_admin_form` writes only changed ordinary fields onto the locked current row; `account` and `verification_note` read-only on existing profiles; owner PATCH → `services.update_profile` (locked row, identity lock decided there, only sent fields written). Race tests in `apps/providers/tests/test_verification_write_races.py`. Tests: backend 986 passed, web 265 passed.
-- PR #7 acceptance review on `4087175` (1 P2) fixed: `ProductCategorySerializer.can_publish` (read-only) from `ProductCategoryQuerySet.with_publishability()` (EXISTS annotation; nested categories via `Prefetch`, write responses re-read through `_own_products`); `CompanyWorkspacePage` renders Publish only when `company.can_publish && product.category.can_publish`, else `company.categoryUnavailable` hint; `category_unavailable` from the backend still surfaces as the error alert. Tests: backend 995 passed, web 268 passed.
-- PR #7 acceptance review on `638492f` (2 P2) fixed: `account__role=AccountRole.MEDICAL_COMPANY` added to `MedicalCompanyQuerySet.publishing()`, `MedicalCompany.can_publish`, `ProductQuerySet.exposable()` and `targeted_for()` (the activation gate and `dashboard_summary` derive from these; race test proves the gate reads the locked company, not the request snapshot) — `apps/marketplace/tests/test_publisher_role.py`; `ProductForm` disables, for `product.is_active`, other categories with `can_publish=false` with `company.activeCategoryHint`. OpenAPI unchanged. Tests: backend 1003 passed, web 271 passed.
-- PR #7 acceptance review on `d9afa9d` (1 P2, web only) fixed: `ProductForm` computes `historical = product && !categories.some(c => c.id === product.category.id) ? product.category : null` and `categoryOptions = historical ? [historical, ...categories] : categories`; the historical option is labelled `company.currentCategoryUnavailable` and disabled when `f.category !== historical.id`; the published-product rule for other categories is unchanged. Tests: backend 1003 passed, web 274 passed.
+- New `apps/real_estate` (migration `0001_initial`): `RealEstateSeller` (one per `REAL_ESTATE_SELLER` account, `account` immutable, no verification), `PropertyListing` (sale/rent; controlled property type; governorate/city; decimal coordinates; nullable price; server-owned `publication_status`/`published_at`; `expires_at`), `ListingSuitableUse` (normalized, unique per listing+use). DB checks for price, area, coordinate range/pair and "PUBLISHED needs area and expiry".
+- **One visibility rule:** `PropertyListingQuerySet.publicly_visible()` (PUBLISHED, `expires_at > now`, seller on an active account still `REAL_ESTATE_SELLER`, active governorate/city) serves the public list and detail; hidden ⇒ plain 404. Expiry is compared at read time; there is no scheduler.
+- **One publication gate:** `services.publication_problems()` decides publish and every edit of a PUBLISHED listing on the resulting state, with typed per-field codes; seller eligibility is read from the seller+account locked fresh (`services._lock_seller`), never from the request. Lock order seller → listing → uses; uses are replaced only under the listing lock.
+- Public API `real-estate/listings[/{id}]` (filters, allow-listed null-last orderings with an `id` tiebreak); owner API `real-estate/owner…` (profile, dashboard computed in SQL, listing CRUD without DELETE, publish/unpublish); audit events; admin inspection-only. OpenAPI regenerated (no existing path or schema changed).
+- Web: `/real-estate`, `/real-estate/:id`, `/real-estate/owner` (RequireRole `REAL_ESTATE_SELLER`); URL-backed backend filters; seller workspace with dashboard, listing form, publish/unpublish (guidance only — the backend gate is authoritative and its typed refusals are shown); deactivated governorate/city kept as the selected current value; header/footer links and a live home card; ar/en.
+- Deferred: images/media (no storage), advertising/boosts/payments (Phase 8), chat/notifications (Phase 9), PostGIS/proximity search. See `REAL_ESTATE.md`, ADR-046.
+- PR #8 review fixes: (1) every seller mutation — profile update, draft create/edit, published edit, publish — calls `_require_eligible` on the locked seller+account (only unpublish is exempt); `_own_seller` also refuses an ineligible account; (2) `publicly_visible()` adds `city.governorate_id = F(governorate_id)` so a moved city hides the listing (list, detail, dashboard, `is_public`); (3) owner listing nests `OwnerGovernorate`/`OwnerCity` with `is_active`; `publicationGaps` reports inactive/moved geography and the form keeps the stored city while on the listing's governorate. OpenAPI regenerated.
+- Tests: backend 1212 passed, web 321 passed.
+
+## Previous phase (Phase 6 — merged via PR #7)
+
+Medical marketplace (`MARKETPLACE.md`, ADR-044/045): verified companies, administrator categories and audience rules, products with a locked publication gate, backend targeting of verified providers, verified-identity locks, and the review rounds' fixes (admin forms cannot bypass verified identity; publisher eligibility needs the current `MEDICAL_COMPANY` role; category publishability is backend-derived; historical inactive categories stay visible in the edit form). Details are in `PROGRESS.md`.
 
 ## Next step
 
-Wait for green push and pull_request CI on the Phase 6 head, then run the Phase 6 acceptance review. Do not start Phase 7.
+Independent review of the Phase 7 branch and PR. Do not merge. Do not start Phase 8.
 
 ## Previous session (Phase 5)
 

@@ -69,6 +69,15 @@ No weakening of earlier decisions was needed to make tests pass.
 
 No weakening of earlier decisions was needed to make tests pass.
 
+## Phase 7 security review (2026-09-30)
+
+- **Non-disclosure:** a hidden listing (draft, expired, seller role lost, account inactive, geography inactive) answers the same plain 404 as an unknown id; list and detail share `publicly_visible()`, and filters only narrow it.
+- **Contact and identity:** the public response returns only the contact values the listing's contact method makes public, a seller summary by profile id, and never the account e-mail/id, roles or staff flags.
+- **Ownership:** owner endpoints resolve the seller from `request.user`; a foreign id is a 404; `account`/`seller` are refused in payloads and immutable in the model; Django admin is inspection-only.
+- **Server-owned lifecycle:** status, `published_at`, derived state, targeting, payment, advertising and image fields are refused (`field_not_allowed`).
+- **Current-state checks:** seller and account are locked fresh in each mutation; role loss or account deactivation blocks publication and hides listings at once (regression tests with a second connection).
+- **No uploads, no payment, no new infrastructure.**
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

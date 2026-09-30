@@ -110,7 +110,8 @@ avoid circular imports between business modules — put shared logic in `core`.
 | `reviews` | Reservation-backed 1–5 patient reviews, one per completed reservation; public provider review feed and provider rating aggregates — done in Phase 5 (`REVIEWS_OFFERS.md`). |
 | `offers` | Provider-owned service offers with price snapshots, server-controlled validity windows, public active-offer feed and provider management — done in Phase 5 (`REVIEWS_OFFERS.md`). |
 | `marketplace` | B2B medical marketplace: admin-verified medical companies, administrator categories and audience rules, company products with a locked publication gate, backend targeting of verified providers (`ProductQuerySet.targeted_for`), company dashboard — Phase 6 (`MARKETPLACE.md`). |
-| real estate, advertising, chat/notifications, dashboards | **(planned)** |
+| `real_estate` | Medical real estate: seller profiles on the `REAL_ESTATE_SELLER` role, property listings for sale/rent, structured suitable uses, seller-controlled publication behind one service gate, backend-evaluated expiry, one public visibility rule (`PropertyListingQuerySet.publicly_visible`), owner dashboard — Phase 7 (`REAL_ESTATE.md`). |
+| advertising, chat/notifications, dashboards | **(planned)** |
 
 ## Accounts and roles
 

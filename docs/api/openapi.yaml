@@ -3617,6 +3617,382 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderOwner'
           description: ''
+  /api/v1/real-estate/listings:
+    get:
+      operationId: real_estate_listings_list
+      summary: Public medical real-estate listings (paginated, newest first by default)
+      parameters:
+      - in: query
+        name: city
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: governorate
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: max_area
+        schema:
+          type: number
+      - in: query
+        name: max_price
+        schema:
+          type: number
+      - in: query
+        name: min_area
+        schema:
+          type: number
+      - in: query
+        name: min_price
+        schema:
+          type: number
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -area_sqm
+          - -created_at
+          - -price
+          - area_sqm
+          - created_at
+          - price
+        description: |-
+          * `created_at` - created_at
+          * `-created_at` - -created_at
+          * `price` - price
+          * `-price` - -price
+          * `area_sqm` - area_sqm
+          * `-area_sqm` - -area_sqm
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: property_type
+        schema:
+          type: string
+          enum:
+          - APARTMENT_FOR_CLINIC
+          - CLINIC
+          - COMMERCIAL_MEDICAL_PROPERTY
+          - HOSPITAL_BUILDING
+          - LABORATORY_LOCATION
+          - MEDICAL_BUILDING
+          - MEDICAL_CENTER
+          - MEDICAL_INVESTMENT_LAND
+          - PHARMACY_LOCATION
+        description: |-
+          * `CLINIC` - Clinic
+          * `APARTMENT_FOR_CLINIC` - Apartment suitable for a clinic
+          * `MEDICAL_BUILDING` - Medical building
+          * `PHARMACY_LOCATION` - Pharmacy location
+          * `LABORATORY_LOCATION` - Laboratory location
+          * `MEDICAL_CENTER` - Medical center
+          * `HOSPITAL_BUILDING` - Hospital building
+          * `COMMERCIAL_MEDICAL_PROPERTY` - Commercial property suitable for medical use
+          * `MEDICAL_INVESTMENT_LAND` - Land for medical investment
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      - in: query
+        name: suitable_use
+        schema:
+          type: string
+          enum:
+          - CLINIC
+          - GENERAL_MEDICAL_USE
+          - HOSPITAL
+          - LABORATORY
+          - MEDICAL_CENTER
+          - MEDICAL_INVESTMENT
+          - PHARMACY
+        description: |-
+          * `CLINIC` - Clinic
+          * `PHARMACY` - Pharmacy
+          * `LABORATORY` - Laboratory
+          * `MEDICAL_CENTER` - Medical center
+          * `HOSPITAL` - Hospital
+          * `GENERAL_MEDICAL_USE` - General medical use
+          * `MEDICAL_INVESTMENT` - Medical investment
+      - in: query
+        name: transaction_type
+        schema:
+          type: string
+          enum:
+          - RENT
+          - SALE
+        description: |-
+          * `SALE` - Sale
+          * `RENT` - Rent
+      tags:
+      - real-estate
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPropertyListingPublicList'
+          description: ''
+  /api/v1/real-estate/listings/{id}:
+    get:
+      operationId: real_estate_listings_retrieve
+      summary: One public listing (404 unless publicly visible)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingPublic'
+          description: ''
+  /api/v1/real-estate/owner:
+    get:
+      operationId: real_estate_owner_retrieve
+      summary: My seller profile
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerOwner'
+          description: ''
+    post:
+      operationId: real_estate_owner_create
+      summary: Create my seller profile (onboarding)
+      tags:
+      - real-estate-owner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellerWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SellerWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerOwner'
+          description: ''
+    patch:
+      operationId: real_estate_owner_partial_update
+      summary: Update my seller profile
+      tags:
+      - real-estate-owner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSellerWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSellerWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerOwner'
+          description: ''
+  /api/v1/real-estate/owner/dashboard:
+    get:
+      operationId: real_estate_owner_dashboard_retrieve
+      summary: My listing counts
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDashboard'
+          description: ''
+  /api/v1/real-estate/owner/listings:
+    get:
+      operationId: real_estate_owner_listings_retrieve
+      summary: My listings (paginated, newest first)
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number (20 per page).
+      - in: query
+        name: publication_status
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - PUBLISHED
+        description: Filter.
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPropertyListingOwner'
+          description: ''
+    post:
+      operationId: real_estate_owner_listings_create
+      summary: Create a listing (a draft until published)
+      tags:
+      - real-estate-owner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyListingWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PropertyListingWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
+  /api/v1/real-estate/owner/listings/{id}:
+    get:
+      operationId: real_estate_owner_listings_retrieve_2
+      summary: One of my listings
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
+    patch:
+      operationId: real_estate_owner_listings_partial_update
+      summary: Update one of my listings (a published listing is re-validated in full)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-owner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPropertyListingWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPropertyListingWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
+  /api/v1/real-estate/owner/listings/{id}/publish:
+    post:
+      operationId: real_estate_owner_listings_publish_create
+      summary: Publish one of my listings (full publication gate)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
+  /api/v1/real-estate/owner/listings/{id}/unpublish:
+    post:
+      operationId: real_estate_owner_listings_unpublish_create
+      summary: Unpublish one of my listings (back to draft)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-owner
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
   /api/v1/recruitment/applications/{id}/messages:
     get:
       operationId: recruitment_applications_messages_list
@@ -5198,6 +5574,16 @@ components:
       required:
       - governorate
       - name
+    ContactMethodEnum:
+      enum:
+      - PHONE
+      - EMAIL
+      - BOTH
+      type: string
+      description: |-
+        * `PHONE` - Phone
+        * `EMAIL` - Email
+        * `BOTH` - Phone and email
     Country:
       type: object
       properties:
@@ -7391,6 +7777,99 @@ components:
         * `UNIVERSITY` - University / college
         * `RECRUITMENT_AGENCY` - Recruitment agency
         * `OTHER` - Other approved healthcare organisation
+    OwnerCity:
+      type: object
+      description: |-
+        Like the governorate: `is_active` and `governorate` (the CURRENT parent,
+        which an administrator can change) let the workspace see an inactive or moved city.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        governorate:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - governorate
+      - id
+      - is_active
+      - name_ar
+      - name_en
+      - slug
+    OwnerDashboard:
+      type: object
+      properties:
+        listings_total:
+          type: integer
+        listings_draft:
+          type: integer
+        listings_published:
+          type: integer
+        listings_visible:
+          type: integer
+        listings_expired:
+          type: integer
+        listings_sale:
+          type: integer
+        listings_rent:
+          type: integer
+      required:
+      - listings_draft
+      - listings_expired
+      - listings_published
+      - listings_rent
+      - listings_sale
+      - listings_total
+      - listings_visible
+    OwnerGovernorate:
+      type: object
+      description: |-
+        The owner's view of a listing's governorate: it carries `is_active`, so the
+        workspace can tell that the stored reference is no longer available.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        country:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - country
+      - id
+      - is_active
+      - name_ar
+      - name_en
+      - slug
     PaginatedAdminSubscriptionList:
       type: object
       required:
@@ -7756,6 +8235,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductPublic'
+    PaginatedPropertyListingOwner:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyListingOwner'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    PaginatedPropertyListingPublicList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyListingPublic'
     PaginatedProviderCardList:
       type: object
       required:
@@ -8264,6 +8788,79 @@ components:
           type: string
           minLength: 1
           maxLength: 3
+    PatchedPropertyListingWriteRequest:
+      type: object
+      description: |-
+        Create (POST) and partial update (PATCH) by the owning seller. Drafts may
+        be incomplete: only the identity of the ad (title, types, governorate) is
+        required; completeness is the publication gate's job.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        property_type:
+          $ref: '#/components/schemas/PropertyTypeEnum'
+        transaction_type:
+          $ref: '#/components/schemas/TransactionTypeEnum'
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        district:
+          type: string
+          maxLength: 150
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        area_sqm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        facilities:
+          type: string
+        contact_method:
+          $ref: '#/components/schemas/ContactMethodEnum'
+        contact_phone:
+          type: string
+          maxLength: 32
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        suitable_uses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuitableUseEnum'
     PatchedProviderWriteRequest:
       type: object
       description: Create (POST) and partial update (PATCH) by the owner.
@@ -8327,6 +8924,27 @@ components:
             format: uuid
         is_visible:
           type: boolean
+    PatchedSellerWriteRequest:
+      type: object
+      properties:
+        seller_type:
+          $ref: '#/components/schemas/SellerTypeEnum'
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        about:
+          type: string
+        phone:
+          type: string
+          maxLength: 32
+        public_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
     PatchedServiceOfferingRequest:
       type: object
       description: Owner view of a service (read + write).
@@ -8784,6 +9402,372 @@ components:
         * `MEDICAL_ASSISTANT` - Medical assistant
         * `ADMINISTRATIVE` - Administrative / reception
         * `OTHER` - Other healthcare profession
+    PropertyListingOwner:
+      type: object
+      description: 'The owner''s view: stored contact values, lifecycle and derived
+        state.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        property_type:
+          allOf:
+          - $ref: '#/components/schemas/PropertyTypeEnum'
+          readOnly: true
+        transaction_type:
+          allOf:
+          - $ref: '#/components/schemas/TransactionTypeEnum'
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/OwnerGovernorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/OwnerCity'
+          readOnly: true
+          nullable: true
+        district:
+          type: string
+          readOnly: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        area_sqm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        suitable_uses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuitableUseEnum'
+          readOnly: true
+        facilities:
+          type: string
+          readOnly: true
+        contact_method:
+          allOf:
+          - $ref: '#/components/schemas/ContactMethodEnum'
+          readOnly: true
+        contact_phone:
+          type: string
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          readOnly: true
+        publication_status:
+          allOf:
+          - $ref: '#/components/schemas/PublicationStatusEnum'
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        is_public:
+          type: boolean
+          readOnly: true
+        is_expired:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - area_sqm
+      - city
+      - contact_email
+      - contact_method
+      - contact_phone
+      - created_at
+      - currency
+      - description
+      - district
+      - expires_at
+      - facilities
+      - governorate
+      - id
+      - is_expired
+      - is_public
+      - latitude
+      - longitude
+      - price
+      - property_type
+      - publication_status
+      - published_at
+      - suitable_uses
+      - title
+      - transaction_type
+      - updated_at
+    PropertyListingPublic:
+      type: object
+      description: |-
+        What anyone sees of a publicly visible listing. Only the contact values
+        the listing's contact method makes public are returned; the seller is a
+        summary (profile id, display name, type) — never account identity.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        property_type:
+          allOf:
+          - $ref: '#/components/schemas/PropertyTypeEnum'
+          readOnly: true
+        transaction_type:
+          allOf:
+          - $ref: '#/components/schemas/TransactionTypeEnum'
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+          nullable: true
+        district:
+          type: string
+          readOnly: true
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        area_sqm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        suitable_uses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuitableUseEnum'
+          readOnly: true
+        facilities:
+          type: string
+          readOnly: true
+        contact_method:
+          allOf:
+          - $ref: '#/components/schemas/ContactMethodEnum'
+          readOnly: true
+        contact_phone:
+          type: string
+          nullable: true
+          readOnly: true
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+          readOnly: true
+        seller:
+          allOf:
+          - $ref: '#/components/schemas/SellerSummary'
+          readOnly: true
+        published_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - area_sqm
+      - city
+      - contact_email
+      - contact_method
+      - contact_phone
+      - created_at
+      - currency
+      - description
+      - district
+      - expires_at
+      - facilities
+      - governorate
+      - id
+      - latitude
+      - longitude
+      - price
+      - property_type
+      - published_at
+      - seller
+      - suitable_uses
+      - title
+      - transaction_type
+      - updated_at
+    PropertyListingWriteRequest:
+      type: object
+      description: |-
+        Create (POST) and partial update (PATCH) by the owning seller. Drafts may
+        be incomplete: only the identity of the ad (title, types, governorate) is
+        required; completeness is the publication gate's job.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        property_type:
+          $ref: '#/components/schemas/PropertyTypeEnum'
+        transaction_type:
+          $ref: '#/components/schemas/TransactionTypeEnum'
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        district:
+          type: string
+          maxLength: 150
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        area_sqm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        facilities:
+          type: string
+        contact_method:
+          $ref: '#/components/schemas/ContactMethodEnum'
+        contact_phone:
+          type: string
+          maxLength: 32
+        contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        suitable_uses:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuitableUseEnum'
+      required:
+      - governorate
+      - property_type
+      - title
+      - transaction_type
+    PropertyTypeEnum:
+      enum:
+      - CLINIC
+      - APARTMENT_FOR_CLINIC
+      - MEDICAL_BUILDING
+      - PHARMACY_LOCATION
+      - LABORATORY_LOCATION
+      - MEDICAL_CENTER
+      - HOSPITAL_BUILDING
+      - COMMERCIAL_MEDICAL_PROPERTY
+      - MEDICAL_INVESTMENT_LAND
+      type: string
+      description: |-
+        * `CLINIC` - Clinic
+        * `APARTMENT_FOR_CLINIC` - Apartment suitable for a clinic
+        * `MEDICAL_BUILDING` - Medical building
+        * `PHARMACY_LOCATION` - Pharmacy location
+        * `LABORATORY_LOCATION` - Laboratory location
+        * `MEDICAL_CENTER` - Medical center
+        * `HOSPITAL_BUILDING` - Hospital building
+        * `COMMERCIAL_MEDICAL_PROPERTY` - Commercial property suitable for medical use
+        * `MEDICAL_INVESTMENT_LAND` - Land for medical investment
     ProviderCard:
       type: object
       description: List item for discovery with public rating summary.
@@ -9344,6 +10328,14 @@ components:
       - price
       - specialty
       - title
+    PublicationStatusEnum:
+      enum:
+      - DRAFT
+      - PUBLISHED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `PUBLISHED` - Published
     ReasonRequest:
       type: object
       properties:
@@ -9764,6 +10756,98 @@ components:
         * `PROVIDER` - Healthcare provider
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    SellerOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        seller_type:
+          allOf:
+          - $ref: '#/components/schemas/SellerTypeEnum'
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        about:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        public_email:
+          type: string
+          format: email
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - about
+      - created_at
+      - display_name
+      - id
+      - phone
+      - public_email
+      - seller_type
+      - updated_at
+    SellerSummary:
+      type: object
+      description: 'The public face of a seller: never contact data or account identity.'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        seller_type:
+          allOf:
+          - $ref: '#/components/schemas/SellerTypeEnum'
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - seller_type
+    SellerTypeEnum:
+      enum:
+      - OWNER
+      - AGENT
+      type: string
+      description: |-
+        * `OWNER` - Owner
+        * `AGENT` - Agent
+    SellerWriteRequest:
+      type: object
+      properties:
+        seller_type:
+          $ref: '#/components/schemas/SellerTypeEnum'
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        about:
+          type: string
+        phone:
+          type: string
+          maxLength: 32
+        public_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+      required:
+      - display_name
+      - seller_type
     SenderSideEnum:
       enum:
       - EMPLOYER
@@ -10007,6 +11091,24 @@ components:
         * `CANCELLED` - Cancelled
         * `EXPIRED` - Expired
         * `REJECTED` - Rejected
+    SuitableUseEnum:
+      enum:
+      - CLINIC
+      - PHARMACY
+      - LABORATORY
+      - MEDICAL_CENTER
+      - HOSPITAL
+      - GENERAL_MEDICAL_USE
+      - MEDICAL_INVESTMENT
+      type: string
+      description: |-
+        * `CLINIC` - Clinic
+        * `PHARMACY` - Pharmacy
+        * `LABORATORY` - Laboratory
+        * `MEDICAL_CENTER` - Medical center
+        * `HOSPITAL` - Hospital
+        * `GENERAL_MEDICAL_USE` - General medical use
+        * `MEDICAL_INVESTMENT` - Medical investment
     TalentCard:
       type: object
       description: What an entitled employer sees in talent search. No identity/contact
@@ -10226,6 +11328,14 @@ components:
       required:
       - access
       - refresh
+    TransactionTypeEnum:
+      enum:
+      - SALE
+      - RENT
+      type: string
+      description: |-
+        * `SALE` - Sale
+        * `RENT` - Rent
     VerificationDecisionRequest:
       type: object
       properties:

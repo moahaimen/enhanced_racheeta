@@ -72,6 +72,10 @@ export function SiteHeader() {
         <Icon name="briefcase" size={18} />
         {t('nav.jobs')}
       </NavLink>
+      <NavLink to="/real-estate" end className={styles.link}>
+        <Icon name="building" size={18} />
+        {t('nav.realEstate')}
+      </NavLink>
       {status === 'authenticated' && account?.role === 'PATIENT' ? (
         <NavLink to="/reservations" className={styles.link}>
           <Icon name="calendar" size={18} />
@@ -97,6 +101,12 @@ export function SiteHeader() {
             {t('nav.marketplace')}
           </NavLink>
         </>
+      ) : null}
+      {status === 'authenticated' && account?.role === 'REAL_ESTATE_SELLER' ? (
+        <NavLink to="/real-estate/owner" className={styles.link}>
+          <Icon name="home" size={18} />
+          {t('nav.realEstateWorkspace')}
+        </NavLink>
       ) : null}
       {status === 'authenticated' && account?.role === 'MEDICAL_COMPANY' ? (
         <NavLink to="/company" className={styles.link}>

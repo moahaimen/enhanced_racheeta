@@ -168,8 +168,24 @@ verification control plane under `/api/v1/admin/marketplace/companies…`
 `category_unavailable` (409), `already_exists` (409), `invalid_product`,
 `field_not_allowed` (validation, under `codes.<field>`).
 
+### Phase 7 — medical real estate
+
+See `REAL_ESTATE.md`. The public catalogue is under
+`/api/v1/real-estate/listings…` (anyone; filters `transaction_type`,
+`property_type`, `governorate`, `city`, `suitable_use`, `min_price`,
+`max_price`, `min_area`, `max_area`, `search`; ordering `created_at`,
+`-created_at`, `price`, `-price`, `area_sqm`, `-area_sqm`); seller self-service
+is under `/api/v1/real-estate/owner…` (role `REAL_ESTATE_SELLER`). New error
+codes: `seller_not_eligible` (403) and, as validation `codes.<field>`,
+`title_required`, `invalid_choice`, `geography_inactive`, `city_inactive`,
+`city_mismatch`, `area_required`, `area_invalid`, `coordinates_invalid`,
+`suitable_use_required`, `duplicate_suitable_use`, `contact_phone_required`,
+`contact_email_required`, `contact_email_invalid`, `expiry_required`,
+`expiry_in_past`, `price_invalid`, `currency_unsupported`; plus the existing
+`already_exists`, `invalid_transition`, `field_not_allowed`.
+
 ## Planned (not implemented)
 
-The remaining modules of the master plan (real estate, advertising and
+The remaining modules of the master plan (advertising and
 payments, chat and notifications, dashboards). Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.

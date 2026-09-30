@@ -25,10 +25,7 @@ import {
 import { useLocalizedName } from '../i18n/localized'
 import styles from './HomePage.module.css'
 
-const UPCOMING_MODULES = [
-  { key: 'offers', icon: 'tag' },
-  { key: 'realEstate', icon: 'home' },
-] as const
+const UPCOMING_MODULES = [{ key: 'offers', icon: 'tag' }] as const
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -141,6 +138,22 @@ export function HomePage() {
             }
           >
             {t('home.services.marketplace')}
+          </FeatureCard>
+          <FeatureCard
+            icon={<Icon name="home" size={22} />}
+            title={t('modules.realEstate')}
+            action={
+              <LinkButton
+                to={account?.role === 'REAL_ESTATE_SELLER' ? '/real-estate/owner' : '/real-estate'}
+                variant="subtle"
+                size="sm"
+                trailing={<Icon name="arrowForward" size={16} flipInRtl />}
+              >
+                {account?.role === 'REAL_ESTATE_SELLER' ? t('realEstateOwner.open') : t('common.browse')}
+              </LinkButton>
+            }
+          >
+            {t('home.services.realEstate')}
           </FeatureCard>
           {UPCOMING_MODULES.map((m) => (
             <FeatureCard
