@@ -24,6 +24,9 @@ const karrada: City = { id: 'c-karrada', governorate: 'g-baghdad', slug: 'karrad
 const mansour: City = { id: 'c-mansour', governorate: 'g-baghdad', slug: 'mansour', name_ar: 'المنصور', name_en: 'Mansour' }
 const ashar: City = { id: 'c-ashar', governorate: 'g-basra', slug: 'ashar', name_ar: 'العشار', name_en: 'Ashar' }
 
+/** The owner payload's nested geography: the reference row plus its CURRENT `is_active`. */
+const own = <T extends object>(row: T, is_active = true) => ({ ...row, is_active })
+
 const page = <T,>(results: T[], count = results.length, next: string | null = null, previous: string | null = null) => ({ count, next, previous, results })
 
 function listing(id: string, title: string, overrides: Partial<PropertyListing> = {}): PropertyListing {
@@ -62,7 +65,7 @@ function ownerListing(id: string, title: string, overrides: Partial<OwnerListing
     description: 'Bright ground floor.',
     property_type: 'CLINIC',
     transaction_type: 'RENT',
-    governorate: baghdad,
+    governorate: own(baghdad),
     city: null,
     district: 'Karrada',
     latitude: null,
@@ -548,7 +551,7 @@ describe('Seller workspace', () => {
       const form = await screen.findByTestId('listing-form')
       return { user, form }
     }
-    const retired = { id: 'g-retired', country: 'c-iq', slug: 'retired', name_ar: 'محافظة قديمة', name_en: 'Old governorate' }
+    const retired = own({ id: 'g-retired', country: 'c-iq', slug: 'retired', name_ar: 'محافظة قديمة', name_en: 'Old governorate' }, false)
 
     it('keeps a deactivated governorate as the selected current value, labelled, and never as a destination', async () => {
       const { user, form } = await openEditor(ownerListing('d-1', 'Draft', { governorate: retired }))
@@ -588,7 +591,7 @@ describe('Seller workspace', () => {
 
     it('clears the city when the governorate changes, so a city of another governorate is never sent', async () => {
       vi.mocked(realEstateApi.updateMyListing).mockResolvedValue(ownerListing('d-1', 'Draft'))
-      const { user, form } = await openEditor(ownerListing('d-1', 'Draft', { city: karrada }))
+      const { user, form } = await openEditor(ownerListing('d-1', 'Draft', { city: own(karrada) }))
       await user.selectOptions(within(form).getByLabelText(/^المحافظة|^governorate/i), 'g-basra')
       expect(within(form).getByLabelText(/^المدينة|^city/i)).toHaveValue('')
       await user.click(within(form).getByRole('button', { name: /حفظ الإعلان|save listing/i }))
@@ -597,7 +600,7 @@ describe('Seller workspace', () => {
     })
 
     it('adds no duplicate option while the governorate is still active', async () => {
-      const { form } = await openEditor(ownerListing('d-1', 'Draft', { governorate: baghdad }))
+      const { form } = await openEditor(ownerListing('d-1', 'Draft', { governorate: own(baghdad) }))
       const select = within(form).getByLabelText(/^المحافظة|^governorate/i)
       expect(select).toHaveValue('g-baghdad')
       expect(within(select).getAllByRole('option', { name: /بغداد|Baghdad/ })).toHaveLength(1)
@@ -606,7 +609,7 @@ describe('Seller workspace', () => {
     })
 
     it('keeps a deactivated city selected, once, and disabled after moving away', async () => {
-      const retiredCity: City = { id: 'c-retired', governorate: 'g-baghdad', slug: 'old', name_ar: 'مدينة قديمة', name_en: 'Old city' }
+      const retiredCity = own({ id: 'c-retired', governorate: 'g-baghdad', slug: 'old', name_ar: 'مدينة قديمة', name_en: 'Old city' }, false)
       const { user, form } = await openEditor(ownerListing('d-1', 'Draft', { city: retiredCity }))
       const city = within(form).getByLabelText(/^المدينة|^city/i)
       await waitFor(() => expect(referenceApi.listCities).toHaveBeenCalledWith('g-baghdad', expect.anything()))
@@ -615,6 +618,95 @@ describe('Seller workspace', () => {
       const current = within(city).getByRole('option', { name: /مدينة قديمة|Old city/ })
       await user.selectOptions(city, 'c-mansour')
       expect(current).toBeDisabled()
+    })
+
+    const deadCity = own({ id: 'c-dead', governorate: 'g-baghdad', slug: 'dead', name_ar: 'مدينة معطّلة', name_en: 'Dead city' }, false)
+    const movedCity = own({ id: 'c-moved', governorate: 'g-basra', slug: 'moved', name_ar: 'مدينة منقولة', name_en: 'Moved city' }) // active, but now under Basra
+    const UNAVAILABLE = /لم تعد متاحة|no longer available/
+
+    it('an inactive current city: shown selected and labelled, Publish hidden with an explanation, recoverable by choosing an active one', async () => {
+      vi.mocked(realEstateApi.updateMyListing).mockResolvedValue(ownerListing('d-1', 'Draft'))
+      vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([ownerListing('d-1', 'Draft', { city: deadCity })]))
+      renderApp('/real-estate/owner')
+      const user = userEvent.setup()
+      const row = (await screen.findAllByTestId('owner-listing'))[0]!
+      expect(within(row).queryByRole('button', { name: PUBLISH })).toBeNull()
+      expect(within(row).getByTestId('owner-listing-gaps')).toHaveTextContent(/مدينة متاحة|an available city/i)
+      await user.click(within(row).getByRole('button', { name: EDIT }))
+      const form = await screen.findByTestId('listing-form')
+      const city = within(form).getByLabelText(/^المدينة|^city/i)
+      await waitFor(() => expect(within(city).getByRole('option', { name: /مدينة معطّلة|Dead city/ })).toHaveTextContent(UNAVAILABLE))
+      expect(city).toHaveValue('c-dead') // the stored value, not the placeholder
+      const current = within(city).getByRole('option', { name: /مدينة معطّلة|Dead city/ })
+      await user.selectOptions(city, 'c-karrada')
+      expect(current).toBeDisabled() // cannot be picked again
+      await user.click(within(form).getByRole('button', { name: /حفظ الإعلان|save listing/i }))
+      await waitFor(() => expect(realEstateApi.updateMyListing).toHaveBeenCalled())
+      expect(vi.mocked(realEstateApi.updateMyListing).mock.calls[0]![1]).toMatchObject({ city: 'c-karrada' })
+    })
+
+    it('a city moved to another governorate: still represented, flagged, Publish hidden, fixable within the listing governorate', async () => {
+      vi.mocked(realEstateApi.updateMyListing).mockResolvedValue(ownerListing('d-1', 'Draft'))
+      vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([ownerListing('d-1', 'Draft', { city: movedCity })]))
+      renderApp('/real-estate/owner')
+      const user = userEvent.setup()
+      const row = (await screen.findAllByTestId('owner-listing'))[0]!
+      expect(within(row).queryByRole('button', { name: PUBLISH })).toBeNull()
+      expect(within(row).getByTestId('owner-listing-gaps')).toHaveTextContent(/تتبع المحافظة المختارة|belongs to the selected governorate/i)
+      await user.click(within(row).getByRole('button', { name: EDIT }))
+      const form = await screen.findByTestId('listing-form')
+      const city = within(form).getByLabelText(/^المدينة|^city/i)
+      await waitFor(() => expect(within(city).getByRole('option', { name: /مدينة منقولة|Moved city/ })).toHaveTextContent(UNAVAILABLE))
+      expect(city).toHaveValue('c-moved')
+      expect(within(city).getAllByRole('option', { name: /مدينة منقولة|Moved city/ })).toHaveLength(1)
+      const current = within(city).getByRole('option', { name: /مدينة منقولة|Moved city/ })
+      await user.selectOptions(city, 'c-mansour') // a valid city under the listing's governorate
+      expect(current).toBeDisabled() // the old city cannot be reselected
+      await user.click(within(form).getByRole('button', { name: /حفظ الإعلان|save listing/i }))
+      await waitFor(() => expect(realEstateApi.updateMyListing).toHaveBeenCalled())
+      expect(vi.mocked(realEstateApi.updateMyListing).mock.calls[0]![1]).toMatchObject({ city: 'c-mansour' })
+      expect(vi.mocked(realEstateApi.updateMyListing).mock.calls[0]![1]).not.toHaveProperty('governorate')
+    })
+
+    it('never carries the historical city into another governorate\'s options', async () => {
+      vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([ownerListing('d-1', 'Draft', { city: movedCity })]))
+      renderApp('/real-estate/owner')
+      const user = userEvent.setup()
+      const row = (await screen.findAllByTestId('owner-listing'))[0]!
+      await user.click(within(row).getByRole('button', { name: EDIT }))
+      const form = await screen.findByTestId('listing-form')
+      await user.selectOptions(within(form).getByLabelText(/^المحافظة|^governorate/i), 'g-basra')
+      const city = within(form).getByLabelText(/^المدينة|^city/i)
+      await waitFor(() => expect(within(city).getByRole('option', { name: /العشار|Ashar/ })).toBeInTheDocument())
+      expect(city).toHaveValue('') // cleared on the governorate change
+      expect(within(city).queryByRole('option', { name: /مدينة منقولة|Moved city/ })).toBeNull()
+    })
+
+    it('a still-valid city adds no duplicate option, no warning, and Publish is still offered', async () => {
+      vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([ownerListing('d-1', 'Draft', { city: own(karrada) })]))
+      renderApp('/real-estate/owner')
+      const user = userEvent.setup()
+      const row = (await screen.findAllByTestId('owner-listing'))[0]!
+      expect(within(row).getByRole('button', { name: PUBLISH })).toBeInTheDocument()
+      expect(within(row).queryByTestId('owner-listing-gaps')).toBeNull()
+      await user.click(within(row).getByRole('button', { name: EDIT }))
+      const form = await screen.findByTestId('listing-form')
+      const city = within(form).getByLabelText(/^المدينة|^city/i)
+      await waitFor(() => expect(referenceApi.listCities).toHaveBeenCalledWith('g-baghdad', expect.anything()))
+      await waitFor(() => expect(within(city).getAllByRole('option', { name: /الكرادة|Karrada/ })).toHaveLength(1))
+      expect(city).toHaveValue('c-karrada')
+      expect(within(form).queryByText(UNAVAILABLE)).toBeNull()
+    })
+
+    it('still surfaces a typed backend refusal when the city changed after the page loaded', async () => {
+      vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([ownerListing('d-1', 'Draft', { city: own(karrada) })]))
+      vi.mocked(realEstateApi.setMyListingPublished).mockRejectedValue(
+        new ApiError(400, 'validation_error', 'Validation failed.', { city: ['x'] }, { city: ['city_mismatch'] }),
+      )
+      renderApp('/real-estate/owner')
+      const row = (await screen.findAllByTestId('owner-listing'))[0]!
+      await userEvent.click(within(row).getByRole('button', { name: PUBLISH }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/لا تتبع المحافظة المختارة|does not belong to the selected governorate/i)
     })
 
     it('does not offer Publish for a listing whose governorate is no longer active', async () => {

@@ -26,19 +26,25 @@ export function fromLocalInput(value: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
-export type Missing = 'title' | 'governorate' | 'area' | 'uses' | 'expiry' | 'contact'
+export type Missing = 'title' | 'governorate' | 'cityInactive' | 'cityMoved' | 'area' | 'uses' | 'expiry' | 'contact'
 
 /**
  * UX guidance ONLY: what the loaded data already says would make publication
  * fail. The backend gate is authoritative and is always asked; this just avoids
- * offering a button that is certain to be refused. `activeGovernorateIds` is the
- * active reference list, so a listing whose governorate was since deactivated is
- * reported too.
+ * offering a button that is certain to be refused. The owner payload carries the
+ * CURRENT state of the listing's governorate and city (`is_active`, and the city's
+ * present parent), so a deactivated governorate or city, or a city an administrator
+ * moved to another governorate, is reported too. `activeGovernorateIds` is the
+ * active reference list.
  */
 export function publicationGaps(listing: OwnerListing, activeGovernorateIds: ReadonlySet<string>, now = Date.now()): Missing[] {
   const gaps: Missing[] = []
   if (!listing.title.trim()) gaps.push('title')
-  if (!activeGovernorateIds.has(listing.governorate.id)) gaps.push('governorate')
+  if (!listing.governorate.is_active || !activeGovernorateIds.has(listing.governorate.id)) gaps.push('governorate')
+  if (listing.city) {
+    if (!listing.city.is_active) gaps.push('cityInactive')
+    else if (listing.city.governorate !== listing.governorate.id) gaps.push('cityMoved')
+  }
   if (listing.area_sqm === null) gaps.push('area')
   if (listing.suitable_uses.length === 0) gaps.push('uses')
   if (!listing.expires_at || new Date(listing.expires_at).getTime() <= now) gaps.push('expiry')

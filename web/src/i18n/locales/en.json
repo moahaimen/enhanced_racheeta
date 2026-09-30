@@ -1249,6 +1249,8 @@
     "missing": {
       "title": "title",
       "governorate": "an available governorate",
+      "cityInactive": "an available city",
+      "cityMoved": "a city that belongs to the selected governorate",
       "area": "area",
       "uses": "a suitable medical use",
       "expiry": "a future expiration date",

@@ -95,6 +95,15 @@ export interface PropertyListing {
   updated_at: string
 }
 
+/** Owner-only nested geography: carries the CURRENT `is_active` (and, for a city, its current parent). */
+export interface OwnerGovernorate extends Governorate {
+  is_active: boolean
+}
+
+export interface OwnerCity extends City {
+  is_active: boolean
+}
+
 /** The owner's view of one of their listings, with lifecycle and derived state. */
 export interface OwnerListing {
   id: string
@@ -102,8 +111,8 @@ export interface OwnerListing {
   description: string
   property_type: PropertyType
   transaction_type: TransactionType
-  governorate: Governorate
-  city: City | null
+  governorate: OwnerGovernorate
+  city: OwnerCity | null
   district: string
   latitude: string | null
   longitude: string | null

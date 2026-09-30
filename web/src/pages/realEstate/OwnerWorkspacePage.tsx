@@ -327,9 +327,12 @@ function ListingForm({ listing, governorates, onSaved, onCancel }: { listing: Ow
     (signal) => (f.governorate ? reference.listCities(f.governorate, signal) : Promise.resolve([])),
     [f.governorate],
   )
-  const currentCity = listing?.city && listing.city.governorate === f.governorate ? listing.city : null
+  // The stored city stays visible while the user is still on the listing's stored governorate — even when an
+  // administrator moved it to another governorate, so it is absent from this governorate's active list. It is
+  // only for recovery: it becomes disabled once the user leaves it, and it is never injected into another governorate.
+  const storedCity = listing?.city && f.governorate === listing.governorate.id ? listing.city : null
   const cityList = cities.data ?? []
-  const historicalCity = currentCity && !cityList.some((c) => c.id === currentCity.id) ? currentCity : null
+  const historicalCity = storedCity && !cityList.some((c) => c.id === storedCity.id) ? storedCity : null
   const cityOptions = historicalCity ? [historicalCity, ...cityList] : cityList
 
   const submit = async () => {
