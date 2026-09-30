@@ -78,6 +78,15 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Current-state checks:** seller and account are locked fresh in each mutation; role loss or account deactivation blocks publication and hides listings at once (regression tests with a second connection).
 - **No uploads, no payment, no new infrastructure.**
 
+## Phase 8 security review (2026-09-30)
+
+- **Server-owned commerce:** price, quote, payment state, status, company and verification are never client input (`field_not_allowed`); the amount is computed from the active rate under lock and snapshotted; a later rate change cannot alter it.
+- **No payment trust from the browser:** only an administrator's locked `verify_campaign_payment` activates a campaign, atomically with the payment, after company, product, target and date checks on current state; there is no gateway, webhook or test endpoint, and no payment credentials are stored.
+- **Current-state visibility:** `visible_to()` re-reads company, product, category, audience, provider and dates on every request; campaign targeting only narrows Phase 6 product targeting.
+- **Concurrency:** one lock order (company+account → campaign → payment → product/rate); races (verify vs reject, stale company role, product deactivation, rate change, row locks) are proven with real second connections.
+- **Ownership:** company from `request.user`; foreign campaigns 404; Django admin inspection-only except the rate.
+- **No uploads, no analytics, no new infrastructure.**
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

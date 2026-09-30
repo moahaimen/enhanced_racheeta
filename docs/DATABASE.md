@@ -110,7 +110,12 @@ nullable), `price` decimal(12,2) ≥ 0 (`providers_service_price_nonneg`),
 | `real_estate_listing` | seller FK, property/transaction/contact enums, governorate/city FKs (`PROTECT`), decimal coordinates, `area_sqm`, nullable `price`, server-owned `publication_status`/`published_at`, `expires_at`. Checks: `price_non_negative`, `area_positive`, `latitude_range`, `longitude_range`, `coordinate_pair`, `published_complete` (PUBLISHED needs area and expiry). Indexes: (seller, status), (status, expires_at), (status, transaction_type), (status, property_type), (governorate, city) |
 | `real_estate_listing_use` | (listing, use) unique `real_estate_listing_use_unique`; index on `use` |
 
-Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`.
+| `advertising_rate` | `price_per_day` > 0 (`advertising_rate_price_positive`), at most one `is_active` (`advertising_rate_one_active`); **no rows are inserted by migrations** |
+| `advertising_campaign` | company/product FKs (`PROTECT`), name, dates, server-owned `status`, price snapshot (`quoted_*`, protected `rate` FK). Checks: dates ordered, `quoted_amount` ≥ 0, `quoted_days` > 0, submitted campaigns carry the full quote (`advertising_campaign_submitted_has_quote`). Indexes: (company, status), (status, starts_on, ends_on) |
+| `advertising_campaign_provider_type`, `advertising_campaign_specialty`, `advertising_campaign_governorate` | normalized targets, unique per (campaign, target) |
+| `advertising_payment` | one per campaign (OneToOne, `PROTECT`); `amount` ≥ 0; VERIFIED requires `verified_at` and a method (`advertising_payment_verified_coherent`). Separate from `billing_payment_record` |
+
+Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`, `advertising/0001`.
 
 ### SimpleJWT
 

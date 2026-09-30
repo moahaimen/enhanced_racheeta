@@ -111,7 +111,8 @@ avoid circular imports between business modules — put shared logic in `core`.
 | `offers` | Provider-owned service offers with price snapshots, server-controlled validity windows, public active-offer feed and provider management — done in Phase 5 (`REVIEWS_OFFERS.md`). |
 | `marketplace` | B2B medical marketplace: admin-verified medical companies, administrator categories and audience rules, company products with a locked publication gate, backend targeting of verified providers (`ProductQuerySet.targeted_for`), company dashboard — Phase 6 (`MARKETPLACE.md`). |
 | `real_estate` | Medical real estate: seller profiles on the `REAL_ESTATE_SELLER` role, property listings for sale/rent, structured suitable uses, seller-controlled publication behind one service gate, backend-evaluated expiry, one public visibility rule (`PropertyListingQuerySet.publicly_visible`), owner dashboard — Phase 7 (`REAL_ESTATE.md`). |
-| advertising, chat/notifications, dashboards | **(planned)** |
+| `advertising` | Sponsored medical-product campaigns: `MEDICAL_COMPANY` campaigns with normalized targeting, backend pricing from an admin-configured daily rate (no seeded price) snapshotted at submission, campaign-specific `CampaignPayment`, manual administrator payment verification (`verify_campaign_payment`, the future gateway boundary), and one current-state visibility queryset built on `ProductQuerySet.targeted_for` (`AdvertisingCampaignQuerySet.visible_to`) — Phase 8 (`ADVERTISING.md`). |
+| chat/notifications, dashboards | **(planned)** |
 
 ## Accounts and roles
 

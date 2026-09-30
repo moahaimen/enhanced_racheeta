@@ -144,6 +144,6 @@ Audit events: `marketplace.company.created`,
 
 - **Product images/files** — no uploads until production object storage and a
   media pipeline exist (no local/Railway disk, no S3/R2/B2 configuration).
-- **ProductCampaign, advertising, paid placement, payments** — Phase 8.
+- **Advertising, paid placement, payments** — built in Phase 8 as sponsored product campaigns (`ADVERTISING.md`). Organic targeting is unchanged: a campaign can only narrow `ProductQuerySet.targeted_for` and never forces a product into the organic catalogue.
 - Stock, cart, checkout, orders, shipping, purchase requests, chat — not in the
   requirement.
