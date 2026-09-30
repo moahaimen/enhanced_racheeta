@@ -7777,6 +7777,40 @@ components:
         * `UNIVERSITY` - University / college
         * `RECRUITMENT_AGENCY` - Recruitment agency
         * `OTHER` - Other approved healthcare organisation
+    OwnerCity:
+      type: object
+      description: |-
+        Like the governorate: `is_active` and `governorate` (the CURRENT parent,
+        which an administrator can change) let the workspace see an inactive or moved city.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        governorate:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - governorate
+      - id
+      - is_active
+      - name_ar
+      - name_en
+      - slug
     OwnerDashboard:
       type: object
       properties:
@@ -7802,6 +7836,40 @@ components:
       - listings_sale
       - listings_total
       - listings_visible
+    OwnerGovernorate:
+      type: object
+      description: |-
+        The owner's view of a listing's governorate: it carries `is_active`, so the
+        workspace can tell that the stored reference is no longer available.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        country:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - country
+      - id
+      - is_active
+      - name_ar
+      - name_en
+      - slug
     PaginatedAdminSubscriptionList:
       type: object
       required:
@@ -9359,11 +9427,11 @@ components:
           readOnly: true
         governorate:
           allOf:
-          - $ref: '#/components/schemas/Governorate'
+          - $ref: '#/components/schemas/OwnerGovernorate'
           readOnly: true
         city:
           allOf:
-          - $ref: '#/components/schemas/City'
+          - $ref: '#/components/schemas/OwnerCity'
           readOnly: true
           nullable: true
         district:

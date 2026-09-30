@@ -188,3 +188,96 @@ def test_publication_reads_the_suitable_uses_committed_under_the_listing_lock(li
     assert error.problems["suitable_uses"] == "suitable_use_required"
     final = PropertyListing.objects.get(pk=listing.pk)
     assert final.publication_status == PublicationStatus.DRAFT
+
+
+# ---- every ordinary seller mutation re-checks the CURRENT account state -------------------------
+
+
+def _role_changes_elsewhere(account_id, role=AccountRole.PATIENT):
+    """Another connection changes the role and commits; returns when it is done."""
+    thread, outcome = _in_thread(lambda: Account.objects.filter(pk=account_id).update(role=role))
+    thread.join(timeout=10)
+    assert not thread.is_alive() and "error" not in outcome, outcome
+
+
+def _stale_seller(seller_pk):
+    """The seller as a request loaded it: role REAL_ESTATE_SELLER, in memory."""
+    seller = RealEstateSeller.objects.select_related("account").get(pk=seller_pk)
+    assert seller.account.role == AccountRole.REAL_ESTATE_SELLER
+    return seller
+
+
+def test_seller_profile_update_with_a_stale_role_fails_and_changes_nothing(seller_factory):
+    seller = seller_factory(display_name="Original", about="Bio")
+    stale = _stale_seller(seller.pk)
+    _role_changes_elsewhere(seller.account_id)
+    assert stale.account.role == AccountRole.REAL_ESTATE_SELLER  # what the request still believes
+    with pytest.raises(services.SellerNotEligible):
+        services.update_seller(stale, {"display_name": "Hijacked", "about": "New"})
+    fresh = RealEstateSeller.objects.get(pk=seller.pk)
+    assert (fresh.display_name, fresh.about) == ("Original", "Bio")
+
+
+def test_draft_creation_with_a_stale_role_fails_and_creates_nothing(seller_factory, baghdad):
+    seller = seller_factory()
+    stale = _stale_seller(seller.pk)
+    _role_changes_elsewhere(seller.account_id)
+    with pytest.raises(services.SellerNotEligible):
+        services.create_listing(
+            stale,
+            {
+                "title": "Ghost",
+                "property_type": "CLINIC",
+                "transaction_type": "RENT",
+                "governorate": baghdad,
+            },
+        )
+    assert not PropertyListing.objects.filter(seller_id=seller.pk).exists()
+
+
+def test_draft_edit_with_a_stale_role_fails_and_leaves_the_draft_unchanged(listing_factory):
+    listing = listing_factory(title="Original title", uses=("CLINIC",))
+    stale = _stale_seller(listing.seller_id)
+    _role_changes_elsewhere(listing.seller.account_id, AccountRole.PROVIDER)
+    with pytest.raises(services.SellerNotEligible):
+        services.update_listing(
+            stale, listing.pk, {"title": "Hijacked", "district": "Elsewhere"}, ["PHARMACY"]
+        )
+    fresh = PropertyListing.objects.get(pk=listing.pk)
+    assert (fresh.title, fresh.district) == ("Original title", "Karrada")
+    assert list(fresh.suitable_uses.values_list("use", flat=True)) == ["CLINIC"]
+
+
+def test_http_draft_creation_with_a_stale_role_is_refused(seller_factory, baghdad, monkeypatch):
+    seller = seller_factory()
+    account_id = seller.account_id
+    original = views._own_seller
+
+    def own_seller_then_role_changes(request):
+        snapshot = original(request)
+        _role_changes_elsewhere(account_id)
+        return snapshot
+
+    monkeypatch.setattr(views, "_own_seller", own_seller_then_role_changes)
+    client = APIClient()
+    client.force_authenticate(user=Account.objects.get(pk=account_id))
+    resp = client.post(
+        OWNER_LISTINGS,
+        {
+            "title": "Ghost",
+            "property_type": "CLINIC",
+            "transaction_type": "RENT",
+            "governorate": str(baghdad.pk),
+        },
+        format="json",
+    )
+    assert resp.status_code == 403 and resp.json()["error"]["code"] == "seller_not_eligible"
+    assert not PropertyListing.objects.filter(seller_id=seller.pk).exists()
+
+
+def test_unpublish_stays_possible_for_a_stale_role_at_the_service_level(published):
+    listing = published()
+    stale = _stale_seller(listing.seller_id)
+    _role_changes_elsewhere(listing.seller.account_id)
+    services.unpublish_listing(stale, listing.pk)  # withdrawal only reduces exposure
+    assert PropertyListing.objects.get(pk=listing.pk).publication_status == PublicationStatus.DRAFT

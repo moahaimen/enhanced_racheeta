@@ -147,3 +147,17 @@ def test_detail_endpoints_return_the_matching_representation():
     assert _ok_ref(f"{BASE}/owner/listings/{{id}}") == "PropertyListingOwner"
     assert _ok_ref(f"{BASE}/owner/listings/{{id}}/publish", "post") == "PropertyListingOwner"
     assert _ok_ref(f"{BASE}/owner/listings/{{id}}/unpublish", "post") == "PropertyListingOwner"
+
+
+def test_owner_geography_carries_is_active_and_the_public_one_does_not():
+    owner = _component("PropertyListingOwner")["properties"]
+    public = _component("PropertyListingPublic")["properties"]
+    assert _ref_name(owner["governorate"]) == "OwnerGovernorate"
+    assert _ref_name(owner["city"]) == "OwnerCity"
+    assert _ref_name(public["governorate"]) == "Governorate"
+    assert _ref_name(public["city"]) == "City"
+    assert "is_active" in _component("OwnerGovernorate")["properties"]
+    assert "is_active" in _component("OwnerCity")["properties"]
+    assert "is_active" not in _component("Governorate")["properties"]
+    assert "is_active" not in _component("City")["properties"]
+    assert all(p.get("readOnly") for p in _component("OwnerCity")["properties"].values())

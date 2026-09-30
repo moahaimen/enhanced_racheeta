@@ -383,3 +383,44 @@ def test_public_catalogue_ignores_drafts_created_here(seller_factory, baghdad):
     from rest_framework.test import APIClient
 
     assert APIClient().get(PUBLIC_LISTINGS).json()["count"] == 0
+
+
+def test_owner_listing_reports_the_current_state_of_its_geography(
+    listing_factory, baghdad, baghdad_city, basra
+):
+    from apps.geography.models import City
+
+    listing = listing_factory(city=baghdad_city)
+    client = client_for(listing.seller.account)
+    row = client.get(f"{OWNER_LISTINGS}/{listing.pk}").json()
+    assert set(row["governorate"]) == {"id", "country", "slug", "name_ar", "name_en", "is_active"}
+    assert set(row["city"]) == {"id", "governorate", "slug", "name_ar", "name_en", "is_active"}
+    assert row["governorate"]["is_active"] is True and row["city"]["is_active"] is True
+    assert row["city"]["governorate"] == str(baghdad.pk)
+    # deactivated and moved references are visible to the owner (for recovery), not hidden
+    City.objects.filter(pk=baghdad_city.pk).update(is_active=False, governorate=basra)
+    baghdad.is_active = False
+    baghdad.save()
+    row = client.get(f"{OWNER_LISTINGS}/{listing.pk}").json()
+    assert row["governorate"]["is_active"] is False and row["city"]["is_active"] is False
+    assert row["city"]["governorate"] == str(basra.pk)
+    assert client.get(OWNER_LISTINGS).json()["results"][0]["city"]["is_active"] is False
+
+
+def test_the_public_geography_representation_is_unchanged(published, baghdad_city):
+    from rest_framework.test import APIClient
+
+    published(city=baghdad_city)
+    row = APIClient().get(PUBLIC_LISTINGS).json()["results"][0]
+    assert set(row["governorate"]) == {"id", "country", "slug", "name_ar", "name_en"}
+    assert set(row["city"]) == {"id", "governorate", "slug", "name_ar", "name_en"}
+
+
+def test_owner_endpoints_refuse_an_account_that_lost_the_role(listing_factory):
+    from apps.accounts.models import Account
+
+    listing = listing_factory()
+    client = client_for(listing.seller.account)
+    Account.objects.filter(pk=listing.seller.account_id).update(role=AccountRole.PATIENT)
+    assert client.get(OWNER).status_code == 403
+    assert client.patch(OWNER, {"about": "x"}, format="json").status_code == 403

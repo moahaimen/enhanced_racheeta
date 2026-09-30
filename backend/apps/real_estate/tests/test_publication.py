@@ -299,3 +299,21 @@ def test_editing_a_draft_never_publishes_it(listing_factory):
     )
     assert resp.status_code == 200 and resp.json()["publication_status"] == "DRAFT"
     assert _public_count() == 0
+
+
+def test_a_city_moved_after_creation_is_reported_as_city_mismatch(
+    listing_factory, published, baghdad_city, basra
+):
+    from apps.geography.models import City
+
+    draft = listing_factory(city=baghdad_city)
+    City.objects.filter(pk=baghdad_city.pk).update(governorate=basra)
+    resp = _publish(draft)
+    assert resp.status_code == 400 and _codes(resp)["city"] == ["city_mismatch"]
+    # the same reason blocks an edit of a published listing until the city is fixed
+    live = published(city=baghdad_city)
+    edit = client_for(live.seller.account).patch(
+        f"{OWNER_LISTINGS}/{live.pk}", {"district": "Elsewhere"}, format="json"
+    )
+    assert edit.status_code == 400 and "city" in edit.json()["error"]["details"]
+    assert PropertyListing.objects.get(pk=live.pk).district == "Karrada"

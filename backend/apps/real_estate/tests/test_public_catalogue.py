@@ -403,3 +403,62 @@ def test_owner_list_query_count_does_not_grow(listing_factory, seller_factory):
     for _ in range(10):
         listing_factory(seller, uses=["CLINIC", "PHARMACY"])
     assert run() == few
+
+
+# ---- the LIVE city -> governorate relationship ------------------------------------------------
+
+
+def _move_city(city, governorate):
+    from apps.geography.models import City
+
+    City.objects.filter(pk=city.pk).update(governorate=governorate)
+
+
+def test_a_city_moved_to_another_governorate_hides_the_listing_everywhere(
+    published, baghdad, basra, baghdad_city
+):
+    from .conftest import OWNER, OWNER_LISTINGS
+
+    listing = published(
+        title="Secret Title", city=baghdad_city, contact_phone="07799999999", seller=None
+    )
+    listing.seller.display_name = "Secret Seller"
+    listing.seller.save()
+    detail = f"{PUBLISHED_DETAIL}{listing.pk}"
+    owner = client_for(listing.seller.account)
+    # 1. matching active city: visible
+    assert _get().json()["count"] == 1 and APIClient().get(detail).status_code == 200
+    assert owner.get(f"{OWNER_LISTINGS}/{listing.pk}").json()["is_public"] is True
+    # 2. an administrator moves the city: gone at once, everywhere
+    _move_city(baghdad_city, basra)
+    assert _get().json()["count"] == 0
+    hidden = APIClient().get(detail)
+    assert hidden.status_code == 404 and hidden.json()["error"]["code"] == "not_found"
+    body = hidden.content.decode()
+    for secret in ("Secret Title", "Secret Seller", "07799999999"):
+        assert secret not in body
+    assert hidden.json() == APIClient().get(f"{PUBLISHED_DETAIL}{uuid.uuid4()}").json()
+    row = owner.get(f"{OWNER_LISTINGS}/{listing.pk}").json()
+    assert row["is_public"] is False and row["publication_status"] == "PUBLISHED"
+    assert owner.get(f"{OWNER}/dashboard").json()["listings_visible"] == 0
+    # 3. moving it back restores exposure (nothing else changed)
+    _move_city(baghdad_city, baghdad)
+    assert _get().json()["count"] == 1 and APIClient().get(detail).status_code == 200
+    assert owner.get(f"{OWNER_LISTINGS}/{listing.pk}").json()["is_public"] is True
+
+
+def test_a_listing_without_a_city_is_unaffected_by_city_moves(published, baghdad_city, basra):
+    listing = published()  # no city
+    _move_city(baghdad_city, basra)
+    assert _get().json()["count"] == 1 and listing.city_id is None
+
+
+def test_the_city_rule_lives_in_the_queryset_not_the_views(published, baghdad_city, basra):
+    listing = published(city=baghdad_city)
+    _move_city(baghdad_city, basra)
+    assert not PropertyListing.objects.publicly_visible().filter(pk=listing.pk).exists()
+    annotated = PropertyListing.objects.filter(pk=listing.pk).with_public_state().get()
+    assert annotated.is_public is False
+
+
+PUBLISHED_DETAIL = f"{PUBLIC_LISTINGS}/"

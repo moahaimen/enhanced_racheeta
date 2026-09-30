@@ -15,7 +15,7 @@ production media storage exists.
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Case, Exists, OuterRef, Q, Value, When
+from django.db.models import Case, Exists, F, OuterRef, Q, Value, When
 from django.utils import timezone
 
 from apps.accounts.roles import AccountRole
@@ -93,7 +93,8 @@ class PropertyListingQuerySet(models.QuerySet):
         filters only narrow it. Evaluated from live database state and server
         time on every read (no scheduler): PUBLISHED, not expired, seller on an
         active REAL_ESTATE_SELLER account, active governorate and — when set —
-        active city."""
+        an active city that STILL BELONGS to the listing's governorate (an
+        administrator can move a city between governorates)."""
         now = now or timezone.now()
         return self.filter(
             publication_status=PublicationStatus.PUBLISHED,
@@ -101,7 +102,9 @@ class PropertyListingQuerySet(models.QuerySet):
             seller__account__is_active=True,
             seller__account__role=AccountRole.REAL_ESTATE_SELLER,
             governorate__is_active=True,
-        ).filter(Q(city__isnull=True) | Q(city__is_active=True))
+        ).filter(
+            Q(city__isnull=True) | Q(city__is_active=True, city__governorate_id=F("governorate_id"))
+        )
 
     def with_public_state(self, now=None):
         """Owner-side derived state, computed once per statement: `is_public`

@@ -258,6 +258,7 @@ def create_seller(account, fields: dict) -> RealEstateSeller:
 @transaction.atomic
 def update_seller(seller: RealEstateSeller, fields: dict) -> RealEstateSeller:
     locked = _lock_seller(seller)
+    _require_eligible(locked)  # the CURRENT role/active flag, before anything is written
     changed = [k for k in fields if k in SELLER_FIELDS]
     for key in changed:
         setattr(locked, key, fields[key])
@@ -284,6 +285,7 @@ def create_listing(
 ) -> PropertyListing:
     """Creates a DRAFT (possibly incomplete); publication is a separate action."""
     locked_seller = _lock_seller(seller)
+    _require_eligible(locked_seller)
     values = {k: v for k, v in fields.items() if k in LISTING_FIELDS}
     listing = PropertyListing(seller=locked_seller, **values)
     codes = _validated_use_codes(suitable_uses or [])
@@ -311,6 +313,7 @@ def update_listing(
     the whole publication gate on the resulting state, since it changes live
     public data."""
     locked_seller = _lock_seller(seller)
+    _require_eligible(locked_seller)  # drafts too: every ordinary seller mutation
     listing = _lock_listing(locked_seller, listing_id)
     changed = [k for k in changes if k in LISTING_FIELDS]
     for key in changed:
@@ -320,7 +323,6 @@ def update_listing(
     if problems:
         raise ListingProblems(problems)
     if listing.publication_status == PublicationStatus.PUBLISHED:
-        _require_eligible(locked_seller)
         problems = publication_problems(
             listing, codes if codes is not None else _current_use_codes(listing)
         )

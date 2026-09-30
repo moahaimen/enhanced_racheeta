@@ -53,9 +53,12 @@ def raise_api(exc: services.RealEstateError):
 
 def _own_seller(request) -> RealEstateSeller:
     try:
-        return RealEstateSeller.objects.select_related("account").get(account=request.user)
+        seller = RealEstateSeller.objects.select_related("account").get(account=request.user)
     except RealEstateSeller.DoesNotExist as exc:
         raise NotFound("You have not created a seller profile yet.") from exc
+    if not seller.is_eligible:  # early answer; the services re-check on the locked rows
+        raise_api(services.SellerNotEligible("Your account is not an active seller account."))
+    return seller
 
 
 def _listing_relations(qs):

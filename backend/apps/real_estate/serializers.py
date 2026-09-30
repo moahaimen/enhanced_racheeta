@@ -132,6 +132,26 @@ class SellerWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
 # ---- listings ----------------------------------------------------------------------
 
 
+class OwnerGovernorateSerializer(serializers.ModelSerializer):
+    """The owner's view of a listing's governorate: it carries `is_active`, so the
+    workspace can tell that the stored reference is no longer available."""
+
+    class Meta:
+        model = Governorate
+        fields = ("id", "country", "slug", "name_ar", "name_en", "is_active")
+        read_only_fields = fields
+
+
+class OwnerCitySerializer(serializers.ModelSerializer):
+    """Like the governorate: `is_active` and `governorate` (the CURRENT parent,
+    which an administrator can change) let the workspace see an inactive or moved city."""
+
+    class Meta:
+        model = City
+        fields = ("id", "governorate", "slug", "name_ar", "name_en", "is_active")
+        read_only_fields = fields
+
+
 class _ListingBase(serializers.ModelSerializer):
     governorate = GovernorateSerializer(read_only=True)
     city = CitySerializer(read_only=True, allow_null=True)
@@ -192,6 +212,8 @@ class PropertyListingPublicSerializer(_ListingBase):
 class PropertyListingOwnerSerializer(_ListingBase):
     """The owner's view: stored contact values, lifecycle and derived state."""
 
+    governorate = OwnerGovernorateSerializer(read_only=True)
+    city = OwnerCitySerializer(read_only=True, allow_null=True)
     is_public = serializers.BooleanField(read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
 
