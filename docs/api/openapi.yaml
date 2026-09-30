@@ -4,6 +4,151 @@ info:
   version: 1.0.0
   description: Racheeta 2.0 — canonical API consumed by web, mobile and dashboards.
 paths:
+  /api/v1/admin/advertising/campaigns:
+    get:
+      operationId: admin_advertising_campaigns_list
+      summary: 'All campaigns (paginated; filters: status, company, payment_status)'
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - in: query
+        name: payment_status
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - REJECTED
+          - VERIFIED
+        description: |-
+          * `PENDING` - Pending
+          * `VERIFIED` - Verified
+          * `REJECTED` - Rejected
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - DRAFT
+          - PENDING_PAYMENT
+          - REJECTED
+        description: |-
+          * `DRAFT` - Draft
+          * `PENDING_PAYMENT` - Pending payment verification
+          * `ACTIVE` - Active
+          * `REJECTED` - Rejected
+          * `CANCELLED` - Cancelled
+      tags:
+      - admin-advertising
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCampaignAdminList'
+          description: ''
+  /api/v1/admin/advertising/campaigns/{id}:
+    get:
+      operationId: admin_advertising_campaigns_retrieve
+      summary: One campaign with its payment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin-advertising
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignAdmin'
+          description: ''
+  /api/v1/admin/advertising/campaigns/{id}/reject-payment:
+    post:
+      operationId: admin_advertising_campaigns_reject_payment_create
+      summary: 'Reject the payment: the campaign becomes REJECTED (history)'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin-advertising
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRejectionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRejectionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignAdmin'
+          description: ''
+  /api/v1/admin/advertising/campaigns/{id}/verify-payment:
+    post:
+      operationId: admin_advertising_campaigns_verify_payment_create
+      summary: 'Verify the off-platform payment: the campaign becomes ACTIVE'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin-advertising
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignAdmin'
+          description: ''
   /api/v1/admin/audit:
     get:
       operationId: admin_audit_list
@@ -735,6 +880,224 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobAdmin'
+          description: ''
+  /api/v1/advertising/company/campaigns:
+    get:
+      operationId: advertising_company_campaigns_retrieve
+      summary: My campaigns (paginated, newest first)
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number (20 per page).
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELLED
+          - DRAFT
+          - PENDING_PAYMENT
+          - REJECTED
+        description: Filter by status.
+      tags:
+      - advertising-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCampaignOwner'
+          description: ''
+    post:
+      operationId: advertising_company_campaigns_create
+      summary: Create a campaign (always a DRAFT)
+      tags:
+      - advertising-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CampaignWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOwner'
+          description: ''
+  /api/v1/advertising/company/campaigns/{id}:
+    get:
+      operationId: advertising_company_campaigns_retrieve_2
+      summary: One of my campaigns
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - advertising-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOwner'
+          description: ''
+    patch:
+      operationId: advertising_company_campaigns_partial_update
+      summary: Edit a DRAFT campaign (anything else is frozen)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - advertising-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCampaignWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCampaignWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOwner'
+          description: ''
+  /api/v1/advertising/company/campaigns/{id}/cancel:
+    post:
+      operationId: advertising_company_campaigns_cancel_create
+      summary: Cancel an active campaign
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - advertising-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOwner'
+          description: ''
+  /api/v1/advertising/company/campaigns/{id}/submit:
+    post:
+      operationId: advertising_company_campaigns_submit_create
+      summary: 'Submit a draft: the backend prices it and awaits payment verification'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - advertising-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignOwner'
+          description: ''
+  /api/v1/advertising/company/dashboard:
+    get:
+      operationId: advertising_company_dashboard_retrieve
+      summary: My campaign counts
+      tags:
+      - advertising-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignDashboard'
+          description: ''
+  /api/v1/advertising/company/quote:
+    post:
+      operationId: advertising_company_quote_create
+      summary: Price preview from the current backend rate (submission recomputes
+        it)
+      tags:
+      - advertising-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteDatesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteDatesRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+          description: ''
+  /api/v1/advertising/marketplace:
+    get:
+      operationId: advertising_marketplace_list
+      summary: Sponsored campaigns targeted at my provider profile (paginated)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      tags:
+      - advertising
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSponsoredCampaignList'
           description: ''
   /api/v1/auth/email-verification/confirm:
     post:
@@ -4806,6 +5169,21 @@ components:
         note:
           type: string
           maxLength: 500
+    AdminCompany:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        account_email:
+          type: string
+          format: email
+      required:
+      - account_email
+      - id
+      - name
     AdminDecisionRequest:
       type: object
       properties:
@@ -4813,6 +5191,54 @@ components:
           type: string
           default: ''
           maxLength: 500
+    AdminPayment:
+      type: object
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CampaignPaymentStatusEnum'
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        admin_note:
+          type: string
+          readOnly: true
+        verified_by_email:
+          type: string
+          format: email
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_note
+      - amount
+      - created_at
+      - currency
+      - method
+      - reference
+      - status
+      - verified_at
+      - verified_by_email
     AdminSubscription:
       type: object
       properties:
@@ -5219,6 +5645,338 @@ components:
     BlankEnum:
       enum:
       - ''
+    CampaignAdmin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        company:
+          allOf:
+          - $ref: '#/components/schemas/AdminCompany'
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/CampaignProduct'
+          readOnly: true
+        starts_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CampaignStatusEnum'
+          readOnly: true
+        provider_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        governorates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignGovernorate'
+          readOnly: true
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/QuoteSnapshot'
+          nullable: true
+          readOnly: true
+        payment:
+          allOf:
+          - $ref: '#/components/schemas/AdminPayment'
+          nullable: true
+          readOnly: true
+        is_live:
+          type: boolean
+          readOnly: true
+        is_ended:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - company
+      - created_at
+      - ends_on
+      - governorates
+      - id
+      - is_ended
+      - is_live
+      - name
+      - payment
+      - product
+      - provider_types
+      - quote
+      - specialties
+      - starts_on
+      - status
+      - updated_at
+    CampaignDashboard:
+      type: object
+      properties:
+        campaigns_total:
+          type: integer
+        campaigns_draft:
+          type: integer
+        campaigns_pending_payment:
+          type: integer
+        campaigns_active:
+          type: integer
+        campaigns_live:
+          type: integer
+        campaigns_ended:
+          type: integer
+        campaigns_rejected:
+          type: integer
+        campaigns_cancelled:
+          type: integer
+      required:
+      - campaigns_active
+      - campaigns_cancelled
+      - campaigns_draft
+      - campaigns_ended
+      - campaigns_live
+      - campaigns_pending_payment
+      - campaigns_rejected
+      - campaigns_total
+    CampaignGovernorate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - id
+      - is_active
+      - name_ar
+      - name_en
+      - slug
+    CampaignOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/CampaignProduct'
+          readOnly: true
+        starts_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CampaignStatusEnum'
+          readOnly: true
+        provider_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderTypeEnum'
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/Specialty'
+          readOnly: true
+        governorates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignGovernorate'
+          readOnly: true
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/QuoteSnapshot'
+          nullable: true
+          readOnly: true
+        payment:
+          allOf:
+          - $ref: '#/components/schemas/OwnerPayment'
+          nullable: true
+          readOnly: true
+        is_live:
+          type: boolean
+          readOnly: true
+        is_ended:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - ends_on
+      - governorates
+      - id
+      - is_ended
+      - is_live
+      - name
+      - payment
+      - product
+      - provider_types
+      - quote
+      - specialties
+      - starts_on
+      - status
+      - updated_at
+    CampaignPaymentStatusEnum:
+      enum:
+      - PENDING
+      - VERIFIED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+    CampaignProduct:
+      type: object
+      description: The company's own view of the product a campaign promotes.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        brand:
+          type: string
+          readOnly: true
+        model_name:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        category:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            slug:
+              type: string
+            name_ar:
+              type: string
+            name_en:
+              type: string
+          required:
+          - id
+          - slug
+          - name_ar
+          - name_en
+          readOnly: true
+      required:
+      - brand
+      - category
+      - id
+      - is_active
+      - model_name
+      - title
+    CampaignStatusEnum:
+      enum:
+      - DRAFT
+      - PENDING_PAYMENT
+      - ACTIVE
+      - REJECTED
+      - CANCELLED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `PENDING_PAYMENT` - Pending payment verification
+        * `ACTIVE` - Active
+        * `REJECTED` - Rejected
+        * `CANCELLED` - Cancelled
+    CampaignWriteRequest:
+      type: object
+      description: |-
+        Create (POST) and partial update (PATCH) of a DRAFT. The company is the
+        caller's own; the product must be one of its products; nothing commercial is accepted.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        product:
+          type: string
+          format: uuid
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+        provider_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderTypeEnum'
+        specialties:
+          type: array
+          items:
+            type: string
+            format: uuid
+        governorates:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - name
+      - product
     City:
       type: object
       properties:
@@ -7870,6 +8628,47 @@ components:
       - name_ar
       - name_en
       - slug
+    OwnerPayment:
+      type: object
+      description: 'What a company may know about its payment: never the admin note
+        or the verifier.'
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CampaignPaymentStatusEnum'
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - amount
+      - created_at
+      - currency
+      - method
+      - reference
+      - status
+      - verified_at
     PaginatedAdminSubscriptionList:
       type: object
       required:
@@ -7979,6 +8778,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AvailabilitySlot'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    PaginatedCampaignAdminList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignAdmin'
+    PaginatedCampaignOwner:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignOwner'
       required:
       - count
       - next
@@ -8418,6 +9262,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SavedCandidate'
+    PaginatedSponsoredCampaignList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SponsoredCampaign'
     PaginatedTalentCardList:
       type: object
       required:
@@ -8483,6 +9350,41 @@ components:
           maxLength: 32
         preferred_language:
           $ref: '#/components/schemas/PreferredLanguageEnum'
+    PatchedCampaignWriteRequest:
+      type: object
+      description: |-
+        Create (POST) and partial update (PATCH) of a DRAFT. The company is the
+        caller's own; the product must be one of its products; nothing commercial is accepted.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        product:
+          type: string
+          format: uuid
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+        provider_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderTypeEnum'
+        specialties:
+          type: array
+          items:
+            type: string
+            format: uuid
+        governorates:
+          type: array
+          items:
+            type: string
+            format: uuid
     PatchedCompanyWriteRequest:
       type: object
       properties:
@@ -9052,6 +9954,15 @@ components:
       required:
       - created_at
       - id
+    PaymentRejectionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - reason
     PaymentStatusEnum:
       enum:
       - RECORDED
@@ -9062,6 +9973,24 @@ components:
         * `RECORDED` - Recorded
         * `VERIFIED` - Verified
         * `REJECTED` - Rejected
+    PaymentVerificationRequest:
+      type: object
+      description: |-
+        The administrator's confirmation: how it was paid and the external reference.
+        The amount is the campaign's own quote — it is never an input.
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        reference:
+          type: string
+          default: ''
+          maxLength: 120
+        note:
+          type: string
+          default: ''
+          maxLength: 2000
+      required:
+      - method
     PeriodEnum:
       enum:
       - NONE
@@ -10336,6 +11265,62 @@ components:
       description: |-
         * `DRAFT` - Draft
         * `PUBLISHED` - Published
+    QuoteDatesRequest:
+      type: object
+      properties:
+        starts_on:
+          type: string
+          format: date
+        ends_on:
+          type: string
+          format: date
+      required:
+      - ends_on
+      - starts_on
+    QuoteResponse:
+      type: object
+      properties:
+        days:
+          type: integer
+        daily_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        currency:
+          type: string
+      required:
+      - currency
+      - daily_rate
+      - days
+      - total
+    QuoteSnapshot:
+      type: object
+      properties:
+        days:
+          type: integer
+        daily_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        currency:
+          type: string
+        quoted_at:
+          type: string
+          format: date-time
+      required:
+      - amount
+      - currency
+      - daily_rate
+      - days
+      - quoted_at
     ReasonRequest:
       type: object
       properties:
@@ -10997,6 +11982,39 @@ components:
       - name_en
       - parent
       - slug
+    SponsoredCampaign:
+      type: object
+      description: |-
+        What an eligible provider sees: the existing product (organic representation) and
+        the window — never payment, price, notes or lifecycle internals.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sponsored:
+          type: boolean
+          readOnly: true
+        starts_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/ProductPublic'
+          readOnly: true
+      required:
+      - ends_on
+      - id
+      - product
+      - sponsored
+      - starts_on
     Subscription:
       type: object
       properties:
