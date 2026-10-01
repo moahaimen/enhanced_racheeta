@@ -37,12 +37,20 @@ import { TargetingSummary } from './TargetingSummary'
 
 const PAGE_SIZE = 20
 
+/**
+ * Every product of the company, following the backend's pagination until it says there is no next
+ * page — no arbitrary page cap, so a large catalogue never loses products from the selector. The only
+ * guards are against a backend that stops advancing (an empty page, or a `next` link seen before),
+ * which would otherwise loop forever. The AbortSignal goes to every request; an abort propagates.
+ */
 async function loadAllMyProducts(signal: AbortSignal): Promise<CompanyProduct[]> {
   const out: CompanyProduct[] = []
-  for (let page = 1; page <= 10; page++) {
+  const seenNext = new Set<string>()
+  for (let page = 1; ; page++) {
     const res = await marketplaceApi.listMyProducts(page, signal)
     out.push(...res.results)
-    if (!res.next) break
+    if (!res.next || res.results.length === 0 || seenNext.has(res.next)) break
+    seenNext.add(res.next)
   }
   return out
 }

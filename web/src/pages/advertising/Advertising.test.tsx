@@ -172,6 +172,57 @@ describe('Company advertising workspace', () => {
     expect(marketplaceApi.listMyProducts).toHaveBeenCalled()
   })
 
+  describe('product selector pagination', () => {
+    const productPages = (total: number, size = 20) => async (pageNumber = 1) => {
+      const start = (pageNumber - 1) * size
+      const items = Array.from({ length: Math.max(0, Math.min(size, total - start)) }, (_, i) => companyProduct(`p-${start + i + 1}`, `Product ${start + i + 1}`))
+      const hasNext = start + size < total
+      return { count: total, next: hasNext ? `/api/v1/marketplace/company/products?page=${pageNumber + 1}` : null, previous: pageNumber > 1 ? 'prev' : null, results: items }
+    }
+
+    it('makes a product that only appears after page 10 selectable (no 200-product cutoff)', async () => {
+      vi.mocked(marketplaceApi.listMyProducts).mockImplementation(productPages(205))
+      renderApp('/company/advertising')
+      const form = await screen.findByTestId('campaign-form')
+      const select = within(form).getByLabelText(/^المنتج|^product/i)
+      await waitFor(() => expect(within(select).getByRole('option', { name: 'Product 205' })).toBeInTheDocument())
+      expect(within(select).getByRole('option', { name: 'Product 201' })).toBeInTheDocument()
+      expect(within(select).getAllByRole('option')).toHaveLength(206) // placeholder + all 205, no duplicates
+      expect(marketplaceApi.listMyProducts).toHaveBeenCalledTimes(11) // pages 1..11, then next is null
+      expect(vi.mocked(marketplaceApi.listMyProducts).mock.calls.map((c) => c[0])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    })
+
+    it('stops after one request when the first page has no next', async () => {
+      renderApp('/company/advertising')
+      await screen.findByTestId('campaign-form')
+      expect(marketplaceApi.listMyProducts).toHaveBeenCalledTimes(1)
+    })
+
+    it('stops exactly when next becomes null', async () => {
+      vi.mocked(marketplaceApi.listMyProducts).mockImplementation(productPages(45))
+      renderApp('/company/advertising')
+      const form = await screen.findByTestId('campaign-form')
+      const select = within(form).getByLabelText(/^المنتج|^product/i)
+      await waitFor(() => expect(within(select).getByRole('option', { name: 'Product 45' })).toBeInTheDocument())
+      expect(marketplaceApi.listMyProducts).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not loop forever when a broken backend keeps returning the same next link', async () => {
+      vi.mocked(marketplaceApi.listMyProducts).mockImplementation(async () => ({ count: 99, next: '/same?page=2', previous: null, results: [companyProduct('p-1', 'Only product')] }))
+      renderApp('/company/advertising')
+      await screen.findByTestId('campaign-form')
+      expect(vi.mocked(marketplaceApi.listMyProducts).mock.calls.length).toBeLessThanOrEqual(2)
+    })
+
+    it('passes the abort signal to every page request', async () => {
+      vi.mocked(marketplaceApi.listMyProducts).mockImplementation(productPages(45))
+      renderApp('/company/advertising')
+      await screen.findByTestId('campaign-form')
+      await waitFor(() => expect(marketplaceApi.listMyProducts).toHaveBeenCalledTimes(3))
+      for (const call of vi.mocked(marketplaceApi.listMyProducts).mock.calls) expect(call[1]).toBeInstanceOf(AbortSignal)
+    })
+  })
+
   it('creates a draft with only owner-editable data and structured targeting', async () => {
     vi.mocked(advertisingApi.createCampaign).mockResolvedValue(campaign('c-new', 'Spring push'))
     renderApp('/company/advertising')
