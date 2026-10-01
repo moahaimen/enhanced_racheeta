@@ -84,7 +84,8 @@
     "companyWorkspace": "Company workspace",
     "realEstate": "Real estate",
     "realEstateWorkspace": "Real-estate workspace",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "notifications": "Notifications"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -1433,5 +1434,23 @@
     "loadMoreSponsored": "Load more sponsored campaigns",
     "loadingMoreSponsored": "Loading…",
     "sponsoredMoreError": "More sponsored campaigns could not be loaded. Try again."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Updates about your reservations, kept here until you read them.",
+    "empty": "You have no notifications yet.",
+    "emptyHint": "We'll tell you here when something changes on your reservations.",
+    "emptyPage": "There are no notifications on this page.",
+    "count_one": "{{count}} notification",
+    "count_other": "{{count}} notifications",
+    "read": "Read",
+    "unread": "New",
+    "markRead": "Mark as read",
+    "marking": "Marking…",
+    "markAllRead": "Mark all as read",
+    "markingAll": "Marking all…",
+    "view": "View",
+    "unreadLabel_one": "{{count}} unread notification",
+    "unreadLabel_other": "{{count}} unread notifications"
   }
 }
