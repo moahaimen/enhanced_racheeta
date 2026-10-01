@@ -9,7 +9,6 @@ malformed payloads fall back to a generic, safe message.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from .types import NotificationEventType
@@ -73,33 +72,21 @@ def _text(payload: dict[str, Any], key: str) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def _when(payload: dict[str, Any]) -> str:
-    raw = _text(payload, "starts_at")
-    if not raw:
-        return ""
-    try:
-        return datetime.fromisoformat(raw).strftime("%Y-%m-%d %H:%M")
-    except ValueError:
-        return ""
-
-
 def _created(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
-    service, when = _text(payload, "service_title"), _when(payload)
+    # The appointment time is intentionally NOT rendered here. `starts_at` is a UTC instant
+    # and Phase 9A has no canonical recipient timezone, so any clock text in this prose
+    # would be wrong for someone. The reservation pages localise the real timestamp on the
+    # client. A timezone-aware push presentation may revisit this in Phase 9C.
+    service = _text(payload, "service_title")
     if lang == "ar":
-        title = "حجز جديد"
         body = "تم استلام حجز جديد"
         if service:
             body += f" لخدمة «{service}»"
-        if when:
-            body += f" بتاريخ {when}"
-        return title, body + "."
-    title = "New reservation"
+        return "حجز جديد", body + "."
     body = "A new reservation was requested"
     if service:
         body += f' for "{service}"'
-    if when:
-        body += f" on {when}"
-    return title, body + "."
+    return "New reservation", body + "."
 
 
 def _status_changed(lang: str, payload: dict[str, Any]) -> tuple[str, str] | None:

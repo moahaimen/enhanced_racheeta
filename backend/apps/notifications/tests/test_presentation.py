@@ -34,12 +34,30 @@ def test_statuses_are_distinct_per_language():
         assert len(titles) == len(STATUSES)
 
 
-def test_arabic_and_english_differ_and_use_expected_script():
+def test_created_prose_is_localised_and_never_renders_the_utc_clock_time():
+    # `starts_at` is UTC and there is no recipient timezone in Phase 9A, so the prose must
+    # not print a clock value that a UTC+3 reader would see as three hours wrong.
     ar = presentation.render(NotificationEventType.RESERVATION_CREATED, PAYLOAD, "ar")
     en = presentation.render(NotificationEventType.RESERVATION_CREATED, PAYLOAD, "en")
     assert ar != en
-    assert ar[0] == "حجز جديد" and en[0] == "New reservation"
-    assert "2030-01-02 09:30" in ar[1] and "2030-01-02 09:30" in en[1]
+    assert ar == ("حجز جديد", "تم استلام حجز جديد لخدمة «Consultation».")
+    assert en == ("New reservation", 'A new reservation was requested for "Consultation".')
+    for text in (*ar, *en):
+        assert "09:30" not in text
+        assert "2030" not in text
+
+
+@pytest.mark.parametrize("language", ["ar", "en"])
+@pytest.mark.parametrize("status", STATUSES)
+def test_no_prose_renders_the_appointment_time(language, status):
+    payload = {**PAYLOAD, "status": status}
+    for event_type in (
+        NotificationEventType.RESERVATION_CREATED,
+        NotificationEventType.RESERVATION_STATUS_CHANGED,
+    ):
+        title, body = presentation.render(event_type, payload, language)
+        assert "09:30" not in title + body
+        assert "2030" not in title + body
 
 
 @pytest.mark.parametrize(
@@ -65,6 +83,7 @@ def test_malformed_created_payload_is_safe():
         "en",
     )
     assert title == "New reservation"
+    assert body == "A new reservation was requested."
     assert "not-a-date" not in body
 
 
