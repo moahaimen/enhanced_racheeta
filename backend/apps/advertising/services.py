@@ -34,6 +34,7 @@ from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
 
 from .models import (
+    MAX_CAMPAIGN_AMOUNT,
     AdvertisingCampaign,
     AdvertisingRate,
     CampaignGovernorate,
@@ -86,6 +87,10 @@ class CampaignEnded(AdvertisingError):
 
 class PaymentQuoteMismatch(AdvertisingError):
     code = "payment_quote_mismatch"
+
+
+class QuoteAmountTooLarge(AdvertisingError):
+    code = "quote_amount_too_large"
 
 
 class RateActivationConflict(AdvertisingError):
@@ -339,10 +344,16 @@ def _quantize(value: Decimal) -> Decimal:
 
 def _build_quote(rate: AdvertisingRate, starts_on: date, ends_on: date) -> Quote:
     days = (ends_on - starts_on).days + 1
+    total = _quantize(rate.price_per_day * days)
+    # One rule for the preview and the authoritative submission: a total the stored
+    # snapshot and payment cannot represent is refused up front — never truncated,
+    # clamped, or left to fail as a database/serializer error.
+    if total > MAX_CAMPAIGN_AMOUNT:
+        raise QuoteAmountTooLarge("The campaign total exceeds the supported advertising amount.")
     return Quote(
         days=days,
         daily_rate=rate.price_per_day,
-        total=_quantize(rate.price_per_day * days),
+        total=total,
         currency=rate.currency,
         rate=rate,
     )

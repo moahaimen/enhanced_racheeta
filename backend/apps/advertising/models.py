@@ -10,6 +10,8 @@ state and server date on every read; it can only NARROW Phase 6 product
 targeting (`ProductQuerySet.targeted_for`), never widen it.
 """
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -375,3 +377,21 @@ class CampaignPayment(_GuardedFieldsMixin, BaseModel):
 
     def __str__(self) -> str:
         return f"{self.campaign_id}: {self.amount} {self.currency} {self.status}"
+
+
+def decimal_field_max(field) -> Decimal:
+    """The largest positive value a DecimalField can store (e.g. 16 digits, 2 places ->
+    99999999999999.99), derived from the field's own metadata so it cannot drift."""
+    whole = "9" * (field.max_digits - field.decimal_places)
+    fraction = "9" * field.decimal_places
+    return Decimal(f"{whole}.{fraction}")
+
+
+# What a campaign total must fit: the quote snapshot AND the payment record (both are
+# stored). Computed once from the authoritative fields; the quote preview serializer
+# mirrors the same precision (see QuoteResponseSerializer).
+QUOTE_AMOUNT_FIELD = AdvertisingCampaign._meta.get_field("quoted_amount")
+MAX_CAMPAIGN_AMOUNT = min(
+    decimal_field_max(QUOTE_AMOUNT_FIELD),
+    decimal_field_max(CampaignPayment._meta.get_field("amount")),
+)

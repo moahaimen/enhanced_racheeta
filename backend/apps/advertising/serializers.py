@@ -8,7 +8,7 @@ from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
 from apps.specialties.serializers import SpecialtySerializer
 
-from .models import AdvertisingCampaign, CampaignPayment
+from .models import QUOTE_AMOUNT_FIELD, AdvertisingCampaign, CampaignPayment
 from .types import PaymentMethod
 
 # Keys a company must never be able to send: lifecycle, money, ownership, payment
@@ -270,7 +270,9 @@ class QuoteDatesSerializer(serializers.Serializer):
 class QuoteResponseSerializer(serializers.Serializer):
     days = serializers.IntegerField()
     daily_rate = serializers.DecimalField(max_digits=14, decimal_places=2)
-    total = serializers.DecimalField(max_digits=16, decimal_places=2)
+    total = serializers.DecimalField(
+        max_digits=QUOTE_AMOUNT_FIELD.max_digits, decimal_places=QUOTE_AMOUNT_FIELD.decimal_places
+    )
     currency = serializers.CharField()
 
 

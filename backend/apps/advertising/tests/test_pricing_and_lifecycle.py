@@ -667,3 +667,86 @@ def test_corrupted_dates_fail_even_when_days_rate_amount_and_payment_all_agree(p
         services.verify_campaign_payment(pending.pk, method="CASH", verified_by=None)
     state = AdvertisingCampaign.objects.select_related("payment").get(pk=pending.pk)
     assert (state.status, state.payment.status) == ("PENDING_PAYMENT", "PENDING")
+
+
+# ---- a quote must fit the stored precision (Decimal(16, 2)) --------------------------------------
+
+MAX_DAILY_RATE = Decimal("999999999999.99")  # the largest AdvertisingRate.price_per_day
+
+
+def _window(campaign_factory, company, product, days):
+    return campaign_factory(
+        company, product, starts_on=today(), ends_on=today() + timedelta(days=days - 1)
+    )
+
+
+def test_the_exactly_fitting_total_previews_submits_and_is_stored_exactly(
+    ready, rate, campaign_factory, admin_client
+):
+    company, product = ready
+    AdvertisingRate.objects.filter(pk=rate.pk).update(price_per_day=MAX_DAILY_RATE)
+    client = client_for(company.account)
+    dates = {"starts_on": str(today()), "ends_on": str(today() + timedelta(days=99))}  # 100 days
+    preview = client.post(f"{COMPANY}/quote", dates, format="json")
+    assert preview.status_code == 200
+    assert preview.json()["total"] == "99999999999999.00" and preview.json()["days"] == 100
+    campaign = _window(campaign_factory, company, product, 100)
+    resp = client.post(f"{CAMPAIGNS}/{campaign.pk}/submit")
+    assert resp.status_code == 200, resp.json()
+    stored = AdvertisingCampaign.objects.get(pk=campaign.pk)
+    assert stored.quoted_amount == Decimal("99999999999999.00")
+    assert CampaignPayment.objects.get(campaign=campaign).amount == Decimal("99999999999999.00")
+    assert resp.json()["quote"]["amount"] == "99999999999999.00"
+    # and the stored maximum still verifies (the snapshot is coherent)
+    assert _decide(admin_client, campaign, "verify-payment", {"method": "CASH"}).status_code == 200
+
+
+def test_one_more_day_overflows_with_a_typed_error_on_preview_and_submission(
+    ready, rate, campaign_factory
+):
+    company, product = ready
+    AdvertisingRate.objects.filter(pk=rate.pk).update(price_per_day=MAX_DAILY_RATE)
+    client = client_for(company.account)
+    dates = {"starts_on": str(today()), "ends_on": str(today() + timedelta(days=100))}  # 101 days
+    preview = client.post(f"{COMPANY}/quote", dates, format="json")
+    assert preview.status_code == 409 and _err(preview)["code"] == "quote_amount_too_large"
+    campaign = _window(campaign_factory, company, product, 101)  # 100999999999998.99 overflows
+    resp = client.post(f"{CAMPAIGNS}/{campaign.pk}/submit")
+    assert resp.status_code == 409 and _err(resp)["code"] == "quote_amount_too_large"
+    stored = AdvertisingCampaign.objects.get(pk=campaign.pk)
+    assert stored.status == "DRAFT"
+    assert stored.quoted_amount is None and stored.quoted_days is None and stored.quoted_at is None
+    assert stored.quoted_daily_rate is None and stored.rate_id is None
+    assert not CampaignPayment.objects.exists()
+
+
+def test_an_overflowing_total_is_never_truncated_or_clamped(ready, rate):
+    company, _ = ready
+    AdvertisingRate.objects.filter(pk=rate.pk).update(price_per_day=MAX_DAILY_RATE)
+    with pytest.raises(services.QuoteAmountTooLarge):
+        services.quote_for_dates(today(), today() + timedelta(days=100))
+    assert AdvertisingRate.objects.get(pk=rate.pk).price_per_day == MAX_DAILY_RATE  # rate untouched
+
+
+def test_normal_rates_are_unaffected(ready, rate):
+    company, _ = ready
+    resp = client_for(company.account).post(
+        f"{COMPANY}/quote",
+        {"starts_on": str(today()), "ends_on": str(today() + timedelta(days=364))},
+        format="json",
+    )
+    assert resp.status_code == 200 and resp.json()["total"] == "365000.00"
+
+
+def test_the_service_limit_matches_every_persisted_and_serialized_amount():
+    from apps.advertising.models import MAX_CAMPAIGN_AMOUNT
+    from apps.advertising.serializers import QuoteResponseSerializer
+
+    quoted = AdvertisingCampaign._meta.get_field("quoted_amount")
+    paid = CampaignPayment._meta.get_field("amount")
+    total = QuoteResponseSerializer().fields["total"]
+    assert (quoted.max_digits, quoted.decimal_places) == (paid.max_digits, paid.decimal_places)
+    assert (total.max_digits, total.decimal_places) == (quoted.max_digits, quoted.decimal_places)
+    whole = "9" * (quoted.max_digits - quoted.decimal_places)
+    assert MAX_CAMPAIGN_AMOUNT == Decimal(f"{whole}.{'9' * quoted.decimal_places}")
+    assert MAX_CAMPAIGN_AMOUNT == Decimal("99999999999999.99")

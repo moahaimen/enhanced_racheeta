@@ -42,6 +42,7 @@ class AdvertisingAPIError(APIException):
 
 
 STATUS_FOR_CODE = {
+    "quote_amount_too_large": status.HTTP_409_CONFLICT,
     "payment_quote_mismatch": status.HTTP_409_CONFLICT,
     "pricing_unavailable": status.HTTP_409_CONFLICT,
     "campaign_not_editable": status.HTTP_409_CONFLICT,
