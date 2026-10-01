@@ -583,12 +583,20 @@ def _corrupt(pending, what):
         AdvertisingCampaign.objects.filter(pk=pending.pk).update(quoted_currency="EUR")
     elif what == "no_rate_reference":
         AdvertisingCampaign.objects.filter(pk=pending.pk).update(rate=None)
+    elif what == "start_date":  # 10 priced days -> 9 days between the stored dates
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(
+            starts_on=today() + timedelta(days=1)
+        )
+    elif what == "end_date":  # 10 priced days -> 13 days between the stored dates
+        AdvertisingCampaign.objects.filter(pk=pending.pk).update(
+            ends_on=today() + timedelta(days=12)
+        )
 
 
 @pytest.mark.parametrize(
     "what",
     ["payment_amount", "payment_currency", "quoted_amount", "arithmetic", "quoted_days",
-     "quoted_currency", "no_rate_reference"],
+     "quoted_currency", "no_rate_reference", "start_date", "end_date"],
 )  # fmt: skip
 def test_verification_refuses_a_payment_that_no_longer_matches_the_quote(
     pending, admin_client, what
@@ -622,3 +630,40 @@ def test_a_historical_rate_change_does_not_affect_verification(pending, rate, ad
     assert resp.status_code == 200 and resp.json()["payment"]["amount"] == "10000.00"
     AdvertisingRate.objects.filter(pk=rate.pk).update(is_active=False)  # even with no active rate
     assert AdvertisingCampaign.objects.get(pk=pending.pk).status == "ACTIVE"
+
+
+def test_a_date_window_shifted_with_the_same_duration_is_still_financially_coherent(
+    pending, admin_client
+):
+    """The helper's job is that the paid duration matches the stored window, not that the
+    calendar dates are the originally submitted ones (the model guard covers that)."""
+    AdvertisingCampaign.objects.filter(pk=pending.pk).update(
+        starts_on=today() + timedelta(days=2), ends_on=today() + timedelta(days=11)
+    )  # still exactly 10 inclusive days
+    resp = _decide(admin_client, pending, "verify-payment", {"method": "CASH"})
+    assert resp.status_code == 200 and resp.json()["status"] == "ACTIVE"
+
+
+def test_a_same_duration_window_in_the_past_still_fails_the_ended_rule(pending):
+    AdvertisingCampaign.objects.filter(pk=pending.pk).update(
+        starts_on=today() - timedelta(days=20), ends_on=today() - timedelta(days=11)
+    )  # 10 days: financially coherent, but already over
+    with pytest.raises(services.CampaignEnded):
+        services.verify_campaign_payment(pending.pk, method="CASH", verified_by=None)
+    assert CampaignPayment.objects.get(campaign=pending).status == "PENDING"
+
+
+def test_corrupted_dates_fail_even_when_days_rate_amount_and_payment_all_agree(pending):
+    """The reviewed case: only the dates were changed through update(); quoted_days, rate,
+    amount and the payment still agree with each other — but not with the window."""
+    AdvertisingCampaign.objects.filter(pk=pending.pk).update(ends_on=today() + timedelta(days=30))
+    stored = AdvertisingCampaign.objects.select_related("payment").get(pk=pending.pk)
+    assert (
+        stored.quoted_days * stored.quoted_daily_rate
+        == stored.quoted_amount
+        == stored.payment.amount
+    )
+    with pytest.raises(services.PaymentQuoteMismatch):
+        services.verify_campaign_payment(pending.pk, method="CASH", verified_by=None)
+    state = AdvertisingCampaign.objects.select_related("payment").get(pk=pending.pk)
+    assert (state.status, state.payment.status) == ("PENDING_PAYMENT", "PENDING")

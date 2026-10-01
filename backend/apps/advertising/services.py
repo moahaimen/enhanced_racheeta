@@ -303,10 +303,18 @@ def _require_quote_coherent(campaign: AdvertisingCampaign, payment: CampaignPaym
     """The LOCKED financial snapshot must agree with itself before money is
     marked verified: model guards can be bypassed by QuerySet.update(), SQL or a
     future integration. Deliberately NOT compared with the current
-    AdvertisingRate — the rate may legitimately have changed since submission."""
+    AdvertisingRate — the rate may legitimately have changed since submission — and
+    nothing is recomputed or repaired here."""
     days, rate, amount = campaign.quoted_days, campaign.quoted_daily_rate, campaign.quoted_amount
+    starts, ends = campaign.starts_on, campaign.ends_on
+    # The priced duration must still be the inclusive day count of the LOCKED dates, so a
+    # guard-bypassing change of the window cannot activate a different duration than was paid.
+    window_days = (ends - starts).days + 1 if starts is not None and ends is not None else None
     coherent = (
         campaign.rate_id is not None
+        and window_days is not None
+        and window_days > 0
+        and window_days == days
         and payment.campaign_id == campaign.pk
         and days is not None
         and days > 0

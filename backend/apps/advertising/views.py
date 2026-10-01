@@ -324,8 +324,12 @@ class SponsoredCampaignListView(generics.ListAPIView):
 
 
 def _admin_campaigns():
+    # The admin payload shows who verified a payment: load that account in the same
+    # statement (owner/provider queries deliberately do not).
     return _with_relations(
-        AdvertisingCampaign.objects.with_live_state().select_related("company__account")
+        AdvertisingCampaign.objects.with_live_state().select_related(
+            "company__account", "payment__verified_by"
+        )
     )
 
 

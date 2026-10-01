@@ -148,3 +148,54 @@ def test_an_ended_campaign_cannot_be_verified_through_the_api(pending, admin_cli
         f"{ADMIN}/{pending.pk}/verify-payment", {"method": "CASH"}, format="json"
     )
     assert resp.status_code == 409 and resp.json()["error"]["code"] == "campaign_ended"
+
+
+def _count_admin_queries(client):
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    with CaptureQueriesContext(connection) as ctx:
+        assert client.get(ADMIN).status_code == 200
+    return len(ctx)
+
+
+def test_the_admin_list_does_not_query_a_verifier_account_per_campaign(
+    ready, campaign_factory, make_live, admin_client, account_factory
+):
+    """`verified_by_email` is serialized for every verified payment: the verifier must be
+    loaded with the payment, not once per campaign (mixed with pending and rejected ones)."""
+    from decimal import Decimal
+
+    company, product = ready
+
+    def add(kind):
+        campaign = campaign_factory(company, product)
+        if kind == "verified":
+            make_live(campaign, verified_by=account_factory())  # a different verifier each time
+        else:
+            AdvertisingCampaign.objects.filter(pk=campaign.pk).update(
+                status="PENDING_PAYMENT" if kind == "pending" else "REJECTED",
+                quoted_days=10,
+                quoted_daily_rate=Decimal("1000.00"),
+                quoted_amount=Decimal("10000.00"),
+                quoted_currency="IQD",
+                quoted_at=campaign.created_at,
+            )
+            CampaignPayment.objects.create(
+                campaign=campaign,
+                amount=Decimal("10000.00"),
+                currency="IQD",
+                status="PENDING" if kind == "pending" else "REJECTED",
+            )
+
+    add("verified")
+    add("pending")
+    few = _count_admin_queries(admin_client)
+    for kind in ("verified", "pending", "rejected") * 4:
+        add(kind)
+    many = _count_admin_queries(admin_client)
+    assert many <= few + 1, (few, many)  # no growth per verified campaign
+    rows = admin_client.get(ADMIN).json()["results"]
+    verified = [r for r in rows if r["payment"]["status"] == "VERIFIED"]
+    assert len(verified) == 5 and all(r["payment"]["verified_by_email"] for r in verified)
+    assert {r["payment"]["status"] for r in rows} == {"PENDING", "VERIFIED", "REJECTED"}
