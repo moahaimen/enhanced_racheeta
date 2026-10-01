@@ -12,6 +12,8 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     category = serializers.ChoiceField(choices=NotificationCategory.choices, read_only=True)
     event_type = serializers.ChoiceField(choices=NotificationEventType.choices, read_only=True)
+    # Open-ended string on the wire: future resource kinds must not break clients.
+    resource_type = serializers.CharField(read_only=True)
     title = serializers.SerializerMethodField()
     body = serializers.SerializerMethodField()
     is_read = serializers.SerializerMethodField()

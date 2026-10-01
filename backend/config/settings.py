@@ -224,6 +224,8 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
+        "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
+        "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",
         "CampaignStatusEnum": "apps.advertising.types.CampaignStatus.choices",
         "CampaignPaymentStatusEnum": "apps.advertising.types.PaymentStatus.choices",
         "ProviderTypeEnum": "apps.providers.types.ProviderType.choices",
