@@ -90,8 +90,8 @@ reservation action that has already committed.
 ## REST API (`/api/v1/notifications/`)
 
 All endpoints require authentication (`401` otherwise) and are scoped to the
-caller. Lists use `StandardPagination` (20 per page), ordered
-`-created_at, -id`.
+caller. Lists use `StandardPagination` (20 per page by default, `?page=N`, `?page_size=M` capped at 100), ordered
+`-created_at, -id`. The OpenAPI contract documents both `page` and `page_size` on `GET /notifications/` (declared explicitly because the view paginates by hand; values come from `StandardPagination`).
 
 | Method and path | Behaviour |
 | --- | --- |
@@ -113,6 +113,7 @@ Django admin lists notifications for inspection only (no add, change or delete).
 - `web/src/api/notifications.types.ts` and `web/src/api/endpoints/notifications.ts`, exported through `web/src/api/index.ts`.
 - `/notifications` (authenticated): loading, error with retry, empty state, pagination, unread/read distinction, **Mark as read** per row and **Mark all as read** (both `ApiActionButton`s, disabled while in flight). The *View* link is derived on the client from `resource_type` and the viewer's role (RESERVATION: patient → `/reservations`, provider → `/provider/reservations`); unknown resources get no link. No URL is stored in the database.
 - `SiteHeader`: an authenticated **Notifications** entry (bell) with an unread badge (hidden at 0, `99+` cap) in the desktop and mobile navigation. `NotificationsProvider` (inside `AppLayout`) fetches `GET unread-count/` when an account signs in, on every **authenticated SPA navigation** (a `pathname` change; query-string-only changes such as pagination do not refetch) and after each mark-read action, and clears on logout. Each load aborts the previous one (`AbortController`), logout/account switch/unmount abort the current one, and a response is applied only while it is still the latest request for the current account; a failed refresh keeps the last known count. There is **no polling, no timer, no full-list fetch, and no locally computed count**: the badge always shows the backend's answer, and a page that stays open makes no periodic requests.
+- **Language:** title and body are rendered by the backend for the request's `Accept-Language`; the page never translates them in the browser. The list depends on the active language, so switching language while on `/notifications` re-requests the **same page** (an in-flight request in the old language is aborted/ignored) and the rows change language together with the page chrome.
 - **Mark all as read** is always available on a page that lists notifications. It is not gated on the (possibly stale) badge count: the backend is authoritative and `read-all` is idempotent (`{"updated": 0}` when nothing is unread). `ApiActionButton` disables it only while the request is in flight, and the count is re-fetched from the backend afterwards.
 
 ## Not in this phase

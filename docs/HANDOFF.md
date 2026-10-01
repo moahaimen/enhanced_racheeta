@@ -20,6 +20,7 @@ Review Phase 9A (`docs/NOTIFICATIONS.md`, ADR-048). Do **not** start Phase 9B un
 - PostgreSQL is authoritative; creation is backend-only (reservation hook receivers); safe allow-listed payload; text rendered at read time (ar/en); `dedupe_key` unique constraint; recipient-scoped API with no client writes. No FCM, WebSockets, Redis, Celery, chat, or other-module notifications.
 - Reservation recipients: created → provider account; status change → the other participant (never the actor; both if the actor is neither).
 - Web unread count: fetched on login, on each authenticated SPA navigation (pathname change) and after each mark-read action, with abort/stale-response protection; never polled or computed locally. Mark all as read is not gated on the badge count.
+- PR #10 Codex fixes: the notification list refetches on language change (same page; prose is backend-rendered, never translated in the browser) and OpenAPI documents `page`/`page_size` for the list.
 - Review hardening (2026-10-01): notification prose deliberately omits the appointment time (UTC `starts_at`, no recipient timezone; reservation pages localize it). A timezone-aware push presentation belongs to Phase 9C only if a real timezone policy exists.
 
 ## Phase 9 handoff notes
