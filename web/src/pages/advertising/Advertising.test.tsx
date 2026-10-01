@@ -12,6 +12,7 @@ import type { AdminCampaign, Campaign, CampaignDashboard, CompanyProduct, Market
 import i18n from '../../i18n'
 import { baghdad, basra } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
+import { formatMoney } from './advertisingFormat'
 
 // These pages chain several backend loads; be generous so a slow or busy machine does not flake (per test file).
 configure({ asyncUtilTimeout: 5000 })
@@ -299,6 +300,21 @@ describe('Company advertising workspace', () => {
       expect(within(preview).getByText(/السعر الحالي من الخادم|current backend quote/i)).toBeInTheDocument()
     })
 
+    it('shows the exact cents of a very large quote (no floating-point rounding)', async () => {
+      vi.mocked(advertisingApi.quoteCampaign).mockResolvedValue({ days: 99, daily_rate: '999999999999.99', total: '98999999999999.01', currency: 'IQD' })
+      renderApp('/company/advertising')
+      const user = userEvent.setup()
+      const form = await screen.findByTestId('campaign-form')
+      await user.type(within(form).getByLabelText(/تاريخ البدء|start date/i), '2030-01-01')
+      await user.type(within(form).getByLabelText(/تاريخ الانتهاء|end date/i), '2030-04-09')
+      const preview = await screen.findByTestId('quote-preview')
+      const total = await within(preview).findByTestId('quote-total')
+      expect(total.textContent).toBe(formatMoney('98999999999999.01', 'IQD', i18n.language))
+      expect(total).toHaveTextContent(/98.?999.?999.?999.?999.?01|٩٨.?٩٩٩.?٩٩٩.?٩٩٩.?٩٩٩.?٠١/)
+      expect(total.textContent).not.toMatch(/(\.|٫)(02|٠٢)/)
+      expect(within(preview).getByTestId('quote-rate').textContent).toBe(formatMoney('999999999999.99', 'IQD', i18n.language))
+    })
+
     it('says pricing has not been configured and invents nothing', async () => {
       vi.mocked(advertisingApi.quoteCampaign).mockRejectedValue(new ApiError(409, 'pricing_unavailable', 'No price.'))
       renderApp('/company/advertising')
@@ -363,6 +379,17 @@ describe('Company advertising workspace', () => {
       expect(within(after).queryByRole('button', { name: SUBMIT })).toBeNull()
       expect(within(after).queryByRole('button', { name: EDIT })).toBeNull() // frozen once submitted
       expect(screen.queryByText(/QR|IBAN|رقم الحساب/i)).toBeNull() // no fake bank details or provider
+    })
+
+    it('shows a stored campaign quote with exact cents', async () => {
+      const big = { days: 99, daily_rate: '999999999999.99', amount: '98999999999999.01', currency: 'IQD', quoted_at: '2026-10-01T00:00:00Z' }
+      vi.mocked(advertisingApi.listMyCampaigns).mockResolvedValue(page([campaign('c-1', 'Big', { status: 'PENDING_PAYMENT', quote: big, payment: pendingPayment })]))
+      renderApp('/company/advertising')
+      const row = (await screen.findAllByTestId('campaign'))[0]!
+      const line = within(row).getByTestId('campaign-quote').textContent ?? ''
+      expect(line).toContain(formatMoney('98999999999999.01', 'IQD', i18n.language))
+      expect(line).toContain(formatMoney('999999999999.99', 'IQD', i18n.language))
+      expect(line).not.toMatch(/(\.|٫)(02|٠٢)/)
     })
 
     it('offers Edit and Submit only for drafts that can be submitted, and explains what is missing', async () => {
@@ -562,6 +589,18 @@ describe('Admin advertising review', () => {
     expect(within(row).getByTestId('admin-payment-status')).toHaveTextContent(/قيد الانتظار|pending/i)
   })
 
+  it('shows the administrator the exact backend cents of a very large quote while verifying', async () => {
+    const big = { days: 99, daily_rate: '999999999999.99', amount: '98999999999999.01', currency: 'IQD', quoted_at: '2026-10-01T00:00:00Z' }
+    vi.mocked(advertisingApi.listAdminCampaigns).mockResolvedValue(page([adminCampaign('c-big', 'Big campaign', { quote: big })]))
+    renderApp('/admin-console?tab=advertising')
+    const row = (await screen.findAllByTestId('admin-campaign'))[0]!
+    const amount = within(row).getByTestId('admin-quote-amount')
+    expect(amount.textContent).toBe(formatMoney('98999999999999.01', 'IQD', i18n.language))
+    expect(amount.textContent).toMatch(/01$|٠١$|01 IQD$|٠١ IQD$/)
+    expect(amount.textContent).not.toMatch(/(\.|٫)(02|٠٢)/)
+    expect(within(row).getByTestId('admin-quote-rate').textContent).toBe(formatMoney('999999999999.99', 'IQD', i18n.language))
+  })
+
   it('has no amount input anywhere in the verification form', async () => {
     renderApp('/admin-console?tab=advertising')
     const row = (await screen.findAllByTestId('admin-campaign'))[0]!
@@ -689,6 +728,13 @@ describe('Sponsored marketplace section', () => {
     const organic = await screen.findAllByTestId('marketplace-product')
     expect(organic).toHaveLength(1)
     expect(within(organic[0]!).queryByText(/إعلان ممول|sponsored/i)).toBeNull()
+  })
+
+  it('formats a sponsored product price with the exact decimal formatter', async () => {
+    vi.mocked(advertisingApi.listSponsored).mockResolvedValue(page([ad('ad-1', { ...product('p-9', 'Priced'), price: '1234.56' })]))
+    renderApp('/marketplace')
+    const card = (await screen.findAllByTestId('sponsored-ad'))[0]!
+    expect(card.textContent).toContain(formatMoney('1234.56', 'IQD', i18n.language))
   })
 
   it('shows loading inside the sponsored section while organic products load independently', async () => {

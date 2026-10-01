@@ -7,6 +7,7 @@ import type { PaginatedSponsored, SponsoredCampaign } from '../../api'
 import { Alert, ApiActionButton, Badge, ErrorState, Icon, LoadingState, SectionCard } from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
+import { formatMoney } from './advertisingFormat'
 
 /**
  * Sponsored campaigns for /marketplace. The BACKEND returns only the advertisements this provider is
@@ -82,7 +83,7 @@ export function SponsoredSection() {
               {ad.product.model_name ? ` · ${ad.product.model_name}` : ''}
             </div>
             <div className="text-secondary" dir="auto">
-              {ad.product.price === null ? t('marketplace.priceOnRequest') : `${Number(ad.product.price).toLocaleString(i18n.language)} ${ad.product.currency}`}
+              {ad.product.price === null ? t('marketplace.priceOnRequest') : formatMoney(ad.product.price, ad.product.currency, i18n.language)}
             </div>
           </li>
         ))}
