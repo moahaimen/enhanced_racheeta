@@ -196,9 +196,9 @@ describe('Unread count refresh policy', () => {
     await userEvent.click(screen.getByRole('button', { name: /log out/i }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'b@example.com')
-    await userEvent.type(screen.getByLabelText(/^password$/i), 'Str0ng-Passw0rd!')
-    await userEvent.click(screen.getByRole('button', { name: /^log in$/i }))
+    await userEvent.type(await screen.findByLabelText(/email|البريد الإلكتروني/i), 'b@example.com')
+    await userEvent.type(await screen.findByLabelText(/^password$|^كلمة المرور$/i), 'Str0ng-Passw0rd!')
+    await userEvent.click(await screen.findByRole('button', { name: /^log in$|^دخول$/i }))
     await screen.findByRole('link', { name: /notifications/i })
     // Account B's own loads (sign-in lands on /login, then redirects to /profile).
     await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
