@@ -1,12 +1,14 @@
 from collections.abc import Mapping
 
 from django.http import Http404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics
 from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.core.pagination import StandardPagination
 
 from . import services
 from .models import Notification
@@ -50,7 +52,27 @@ class NotificationListView(generics.GenericAPIView):
             "-created_at", "-id"
         )
 
-    @extend_schema(summary="My notifications", responses={200: PaginatedNotificationSerializer})
+    @extend_schema(
+        summary="My notifications",
+        # Published explicitly because this generic view paginates by hand; the values
+        # come from the pagination class so the contract cannot drift from runtime.
+        parameters=[
+            OpenApiParameter(
+                "page",
+                int,
+                description=f"Page number ({StandardPagination.page_size} per page by default).",
+            ),
+            OpenApiParameter(
+                "page_size",
+                int,
+                description=(
+                    f"Page size (default {StandardPagination.page_size}, "
+                    f"maximum {StandardPagination.max_page_size})."
+                ),
+            ),
+        ],
+        responses={200: PaginatedNotificationSerializer},
+    )
     def get(self, request):
         page = self.paginate_queryset(self.get_queryset())
         serializer = NotificationSerializer(page, many=True, context={"request": request})

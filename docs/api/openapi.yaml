@@ -3385,6 +3385,17 @@ paths:
     get:
       operationId: notifications_retrieve
       summary: My notifications
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number (20 per page by default).
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Page size (default 20, maximum 100).
       tags:
       - notifications
       security:

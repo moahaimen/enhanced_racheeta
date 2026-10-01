@@ -114,6 +114,40 @@ def test_pagination_is_twenty_per_page(auth_client, account):
 
 
 @pytest.mark.django_db
+def test_page_size_selects_the_page_length_and_keeps_total_count(auth_client, account):
+    for _ in range(12):
+        _make(account)
+    first = auth_client.get(BASE + "?page_size=5").json()
+    assert first["count"] == 12
+    assert len(first["results"]) == 5
+    assert first["next"] is not None and first["previous"] is None
+    third = auth_client.get(BASE + "?page_size=5&page=3").json()
+    assert len(third["results"]) == 2 and third["next"] is None and third["previous"] is not None
+
+
+@pytest.mark.django_db
+def test_page_size_is_capped_at_the_repository_maximum(auth_client, account):
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                recipient=account,
+                category=NotificationCategory.RESERVATION,
+                event_type=NotificationEventType.RESERVATION_STATUS_CHANGED,
+                resource_type="RESERVATION",
+                resource_id=uuid.uuid4(),
+                dedupe_key=f"cap:{i}",
+                payload=PAYLOAD,
+            )
+            for i in range(105)
+        ]
+    )
+    data = auth_client.get(BASE + "?page_size=1000").json()
+    assert data["count"] == 105
+    assert len(data["results"]) == 100
+    assert data["next"] is not None
+
+
+@pytest.mark.django_db
 def test_list_has_no_n_plus_one(auth_client, account):
     for _ in range(3):
         _make(account)
