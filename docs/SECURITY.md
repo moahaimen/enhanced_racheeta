@@ -88,6 +88,15 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Review hardening:** targeted specialties must be active to produce exposure; submit/cancel reject any client field (`field_not_allowed`) instead of ignoring it; payment verification proves payment ↔ quote snapshot coherence on the locked rows (`payment_quote_mismatch`) so a bypassed model guard cannot activate a campaign; rate activation locks the rows it swaps and leaves the unique constraint as the final guard.
 - **No uploads, no analytics, no new infrastructure.**
 
+## Notifications (Phase 9A)
+
+- **Backend-only creation:** no endpoint creates, edits or deletes a notification; Django admin is inspection-only. Mark-read actions accept no client data (`field_not_allowed`, mapping semantics) and the server sets `read_at`.
+- **Recipient isolation:** every query is scoped to `request.user`; another user's id is the same plain `404` as a missing one, and read-all touches only the caller's rows.
+- **Privacy by construction:** the stored payload is an allow-list of non-sensitive snapshot facts; `patient_note`, contact details, tokens and account data cannot be stored. The API never exposes `recipient`, `dedupe_key` or the raw payload.
+- **Replay safety:** a unique `dedupe_key` makes duplicate events harmless; rolled-back reservations never notify (post-commit signals).
+- **Receiver isolation:** a failing receiver is logged and cannot break the committed business action.
+- **No new attack surface:** no push tokens, third-party credentials, sockets or workers.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session
