@@ -33,6 +33,18 @@ contains `patient_note`, phone numbers, e-mail addresses, contact details,
 tokens or any `Account` data, and unknown keys are dropped at the service
 boundary, so a future caller cannot leak by accident.
 
+### Appointment time is not rendered in prose
+
+`starts_at` stays in the payload (for future delivery and navigation) but is
+**intentionally not printed** in any notification title or body. It is a UTC
+instant and Phase 9A has no canonical recipient timezone, so a clock value in
+the text would be wrong for readers outside UTC (a 09:30 UTC appointment is
+12:30 in Baghdad). The reservation pages localize the real timestamp on the
+client (`toLocaleString`) and remain the authoritative place to read it. A
+timezone-aware presentation may be introduced with push delivery (Phase 9C)
+once a real timezone policy exists; the project must not hardcode a country
+timezone or label UTC as local.
+
 ### No stored prose
 
 Titles and bodies are **not** persisted. `apps.notifications.presentation.render(event_type, payload, language)`
@@ -100,7 +112,8 @@ Django admin lists notifications for inspection only (no add, change or delete).
 
 - `web/src/api/notifications.types.ts` and `web/src/api/endpoints/notifications.ts`, exported through `web/src/api/index.ts`.
 - `/notifications` (authenticated): loading, error with retry, empty state, pagination, unread/read distinction, **Mark as read** per row and **Mark all as read** (both `ApiActionButton`s, disabled while in flight). The *View* link is derived on the client from `resource_type` and the viewer's role (RESERVATION: patient → `/reservations`, provider → `/provider/reservations`); unknown resources get no link. No URL is stored in the database.
-- `SiteHeader`: an authenticated **Notifications** entry (bell) with an unread badge (hidden at 0, `99+` cap) in the desktop and mobile navigation. `NotificationsProvider` (inside `AppLayout`) fetches `GET unread-count/` once when an account signs in and again after each mark-read action, and clears on logout. There is **no polling, no timer, no full-list fetch, and no locally computed count**: the badge always shows the backend's answer.
+- `SiteHeader`: an authenticated **Notifications** entry (bell) with an unread badge (hidden at 0, `99+` cap) in the desktop and mobile navigation. `NotificationsProvider` (inside `AppLayout`) fetches `GET unread-count/` when an account signs in, on every **authenticated SPA navigation** (a `pathname` change; query-string-only changes such as pagination do not refetch) and after each mark-read action, and clears on logout. Each load aborts the previous one (`AbortController`), logout/account switch/unmount abort the current one, and a response is applied only while it is still the latest request for the current account; a failed refresh keeps the last known count. There is **no polling, no timer, no full-list fetch, and no locally computed count**: the badge always shows the backend's answer, and a page that stays open makes no periodic requests.
+- **Mark all as read** is always available on a page that lists notifications. It is not gated on the (possibly stale) badge count: the backend is authoritative and `read-all` is idempotent (`{"updated": 0}` when nothing is unread). `ApiActionButton` disables it only while the request is in flight, and the count is re-fetched from the backend afterwards.
 
 ## Not in this phase
 
