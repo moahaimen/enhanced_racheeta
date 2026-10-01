@@ -109,12 +109,12 @@ Model guards can be bypassed by `QuerySet.update()`, SQL or a future integration
 `verify_campaign_payment` itself proves, on the **locked** rows and before anything is
 marked VERIFIED: the campaign has a rate reference, `quoted_days > 0`,
 `quoted_daily_rate > 0`, `quoted_amount > 0` and a supported `quoted_currency`;
-`quoted_amount == quantize(quoted_daily_rate × quoted_days)`; `payment.amount ==
+`quoted_amount == quantize(quoted_daily_rate × quoted_days)`; **`quoted_days` equals the inclusive day count of the locked dates** (`(ends_on − starts_on).days + 1`, which must be > 0), so a guard-bypassing change of the window cannot activate a different duration than the one priced; `payment.amount ==
 campaign.quoted_amount`; `payment.currency == campaign.quoted_currency`; and the payment
 belongs to this campaign. Any mismatch is `payment_quote_mismatch` (409): the payment stays
 PENDING and the campaign PENDING_PAYMENT (an administrator can still reject it); nothing is
 repaired automatically. The snapshot is deliberately **not** compared with the current
-`AdvertisingRate`, which may legitimately have changed since submission.
+`AdvertisingRate`, which may legitimately have changed since submission, and nothing is recomputed or repaired. Shifting both dates while keeping the same duration stays financially coherent; the other verification rules (for example `campaign_ended`) still apply.
 
 ## Targeting and visibility
 
@@ -197,6 +197,7 @@ an amount. Lifecycle goes through the services and API.
   without dates or with an unpublished product is not offered Submit (guidance only —
   the backend decides and its typed refusals are shown). Saved targets that are no
   longer active stay visible so the draft can be fixed.
+- The product selector follows the backend's pagination until `next` is null — no page cap, so a company with any number of products can select every one (guards only against a backend that stops advancing). Admin campaign queries load the payment's verifier account together with the payment, so the list does not query one account per verified campaign.
 - Admin console → Advertising tab: campaigns awaiting payment by default, with company,
   product, dates, targeting, quoted rate/days/amount and payment state; **Verify**
   (method, reference, note) and **Reject** (reason) via `ApiActionButton`.
