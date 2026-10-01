@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "apps.marketplace",
     "apps.real_estate",
     "apps.advertising",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
