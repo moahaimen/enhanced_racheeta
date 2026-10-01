@@ -311,6 +311,18 @@ describe('Company advertising workspace', () => {
       expect(screen.queryByTestId('quote-rate')).toBeNull()
     })
 
+    it('shows the typed message when the backend says the total is too large and shows no number', async () => {
+      vi.mocked(advertisingApi.quoteCampaign).mockRejectedValue(new ApiError(409, 'quote_amount_too_large', 'too big'))
+      renderApp('/company/advertising')
+      const user = userEvent.setup()
+      const form = await screen.findByTestId('campaign-form')
+      await user.type(within(form).getByLabelText(/تاريخ البدء|start date/i), '2030-01-01')
+      await user.type(within(form).getByLabelText(/تاريخ الانتهاء|end date/i), '2030-06-01')
+      const preview = await screen.findByTestId('quote-preview')
+      expect(await within(preview).findByText(/أكبر من الحد المدعوم|too large for the current advertising pricing/i)).toBeInTheDocument()
+      expect(screen.queryByTestId('quote-total')).toBeNull()
+    })
+
     it('never sends the previewed price back when saving the draft', async () => {
       vi.mocked(advertisingApi.quoteCampaign).mockResolvedValue({ days: 10, daily_rate: '1000.00', total: '10000.00', currency: 'IQD' })
       vi.mocked(advertisingApi.createCampaign).mockResolvedValue(campaign('c-new', 'X'))
@@ -469,6 +481,16 @@ describe('Company advertising workspace', () => {
         expect(text).toMatch(/في الماضي|in the past/i)
         expect(text).toMatch(/لم تعد متاحة|no longer available/i)
       })
+    })
+
+    it('shows the typed refusal when the campaign total is too large, on submit', async () => {
+      vi.mocked(advertisingApi.listMyCampaigns).mockResolvedValue(page([campaign('c-1', 'X')]))
+      vi.mocked(advertisingApi.submitCampaign).mockRejectedValue(new ApiError(409, 'quote_amount_too_large', 'too big'))
+      renderApp('/company/advertising')
+      const row = (await screen.findAllByTestId('campaign'))[0]!
+      await userEvent.click(within(row).getByRole('button', { name: SUBMIT }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/أكبر من الحد المدعوم|too large for the current advertising pricing/i)
+      expect(within(row).getByRole('button', { name: SUBMIT })).toBeInTheDocument() // still a draft
     })
 
     it('surfaces a stale "not eligible" refusal and leaves the campaign a draft', async () => {
@@ -698,6 +720,108 @@ describe('Sponsored marketplace section', () => {
     expect(screen.queryAllByTestId('sponsored-ad')).toHaveLength(0)
   })
 
+  describe('sponsored pagination (Load more)', () => {
+    const LOAD_MORE = /عرض المزيد من الإعلانات الممولة|load more sponsored campaigns/i
+    const adsPage = (pageNumber: number, total: number, size = 20) => {
+      const start = (pageNumber - 1) * size
+      const results = Array.from({ length: Math.max(0, Math.min(size, total - start)) }, (_, i) => ad(`ad-${start + i + 1}`, product(`p-${start + i + 1}`, `Promoted ${start + i + 1}`)))
+      return { count: total, next: start + size < total ? `/api/v1/advertising/marketplace?page=${pageNumber + 1}` : null, previous: pageNumber > 1 ? 'prev' : null, results }
+    }
+
+    it('reaches a campaign on page 2: page 1 first, then Load more appends it and keeps page 1', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockImplementation(async (n = 1) => adsPage(n, 21))
+      renderApp('/marketplace')
+      const user = userEvent.setup()
+      expect(await screen.findAllByTestId('sponsored-ad')).toHaveLength(20)
+      expect(screen.queryByText('Promoted 21')).toBeNull() // not shown before it is requested
+      expect(advertisingApi.listSponsored).toHaveBeenCalledTimes(1)
+      await user.click(screen.getByRole('button', { name: LOAD_MORE }))
+      expect(await screen.findByText('Promoted 21')).toBeInTheDocument()
+      expect(advertisingApi.listSponsored).toHaveBeenLastCalledWith(2, expect.any(AbortSignal))
+      const titles = screen.getAllByTestId('sponsored-ad').map((c) => c.querySelector('strong')?.textContent)
+      expect(titles).toHaveLength(21)
+      expect(titles[0]).toBe('Promoted 1') // page 1 still rendered, backend order preserved
+      expect(titles[19]).toBe('Promoted 20')
+      expect(titles[20]).toBe('Promoted 21')
+      expect(screen.queryByRole('button', { name: LOAD_MORE })).toBeNull() // next was null
+    })
+
+    it('walks three pages in order, requesting each page once', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockImplementation(async (n = 1) => adsPage(n, 45))
+      renderApp('/marketplace')
+      const user = userEvent.setup()
+      await screen.findAllByTestId('sponsored-ad')
+      await user.click(screen.getByRole('button', { name: LOAD_MORE }))
+      await waitFor(() => expect(screen.getAllByTestId('sponsored-ad')).toHaveLength(40))
+      await user.click(screen.getByRole('button', { name: LOAD_MORE }))
+      await waitFor(() => expect(screen.getAllByTestId('sponsored-ad')).toHaveLength(45))
+      expect(vi.mocked(advertisingApi.listSponsored).mock.calls.map((c) => c[0])).toEqual([1, 2, 3])
+      expect(screen.getAllByTestId('sponsored-ad').map((c) => c.querySelector('strong')?.textContent)).toEqual(Array.from({ length: 45 }, (_, i) => `Promoted ${i + 1}`))
+      expect(screen.queryByRole('button', { name: LOAD_MORE })).toBeNull()
+    })
+
+    it('keeps page 1 and the organic catalogue when page 2 fails, then retries page 2', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockImplementation(async (n = 1) => adsPage(n, 21))
+      renderApp('/marketplace')
+      const user = userEvent.setup()
+      await screen.findAllByTestId('sponsored-ad')
+      vi.mocked(advertisingApi.listSponsored).mockRejectedValueOnce(new ApiError(500, 'server_error', 'Boom.'))
+      await user.click(screen.getByRole('button', { name: LOAD_MORE }))
+      expect(await screen.findByTestId('sponsored-more-error')).toHaveTextContent(/تعذّر تحميل المزيد|could not be loaded/i)
+      expect(screen.getAllByTestId('sponsored-ad')).toHaveLength(20) // page 1 untouched
+      expect(screen.queryByTestId('sponsored-error')).toBeNull() // not the initial-load failure state
+      expect(await screen.findByText('Organic scaler')).toBeInTheDocument() // organic marketplace unaffected
+      await user.click(screen.getByRole('button', { name: LOAD_MORE })) // retry
+      expect(await screen.findByText('Promoted 21')).toBeInTheDocument()
+      expect(screen.queryByTestId('sponsored-more-error')).toBeNull()
+      expect(vi.mocked(advertisingApi.listSponsored).mock.calls.map((c) => c[0])).toEqual([1, 2, 2])
+    })
+
+    it('ignores repeated clicks while a page is loading and never duplicates an ad', async () => {
+      const second = deferred<ReturnType<typeof adsPage>>()
+      vi.mocked(advertisingApi.listSponsored).mockImplementation((n = 1) => (n === 1 ? Promise.resolve(adsPage(1, 21)) : second.promise))
+      renderApp('/marketplace')
+      const user = userEvent.setup()
+      await screen.findAllByTestId('sponsored-ad')
+      await user.click(screen.getByRole('button', { name: LOAD_MORE }))
+      const busy = await screen.findByRole('button', { name: /جارٍ التحميل|loading/i })
+      expect(busy).toBeDisabled()
+      await user.click(busy)
+      await user.click(busy)
+      expect(vi.mocked(advertisingApi.listSponsored).mock.calls.filter((c) => c[0] === 2)).toHaveLength(1)
+      second.resolve(adsPage(2, 21))
+      await screen.findByText('Promoted 21')
+      expect(screen.getAllByTestId('sponsored-ad')).toHaveLength(21)
+    })
+
+    it('never renders an ad twice even if the backend repeats one across pages', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockImplementation(async (n = 1) => (n === 1 ? adsPage(1, 21) : { count: 21, next: null, previous: 'prev', results: [ad('ad-20', product('p-20', 'Promoted 20')), ad('ad-21', product('p-21', 'Promoted 21'))] }))
+      renderApp('/marketplace')
+      await screen.findAllByTestId('sponsored-ad')
+      await userEvent.click(screen.getByRole('button', { name: LOAD_MORE }))
+      await screen.findByText('Promoted 21')
+      expect(screen.getAllByTestId('sponsored-ad')).toHaveLength(21)
+    })
+
+    it('shows no Load more and makes one request when there is a single page', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockResolvedValue(adsPage(1, 3))
+      renderApp('/marketplace')
+      expect(await screen.findAllByTestId('sponsored-ad')).toHaveLength(3)
+      expect(screen.queryByRole('button', { name: LOAD_MORE })).toBeNull()
+      expect(advertisingApi.listSponsored).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not touch the organic marketplace pagination', async () => {
+      vi.mocked(advertisingApi.listSponsored).mockImplementation(async (n = 1) => adsPage(n, 21))
+      renderApp('/marketplace')
+      await screen.findAllByTestId('sponsored-ad')
+      await userEvent.click(screen.getByRole('button', { name: LOAD_MORE }))
+      await screen.findByText('Promoted 21')
+      expect(marketplaceApi.listTargetedProducts).toHaveBeenCalledTimes(1)
+      expect(marketplaceApi.listTargetedProducts).toHaveBeenCalledWith(1, '', expect.anything())
+    })
+  })
+
   it('does not load ads for accounts that cannot use the marketplace', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
     renderApp('/marketplace')
@@ -715,7 +839,7 @@ describe('Advertising translations', () => {
   const keys = [
     ...Object.entries(groups).flatMap(([g, codes]) => codes.map((c) => `${g}.${c}`)),
     'advertising.title', 'advertising.sponsored', 'advertising.sponsoredSection', 'advertising.pendingTitle', 'advertising.pendingBody',
-    'advertising.pricingUnavailable', 'advertising.quote.title', 'advertising.quote.note', 'advertising.rejectedBody', 'advertising.cancelledBody',
+    'advertising.pricingUnavailable', 'advertising.loadMoreSponsored', 'advertising.loadingMoreSponsored', 'advertising.sponsoredMoreError', 'apiErrors.quote_amount_too_large', 'advertising.quote.title', 'advertising.quote.note', 'advertising.rejectedBody', 'advertising.cancelledBody',
     'admin.advertising.verify', 'admin.advertising.reject', 'admin.advertising.amountNote', 'nav.advertising', 'admin.tabs.advertising',
     'apiErrors.pricing_unavailable', 'apiErrors.campaign_not_editable', 'apiErrors.campaign_not_submittable', 'apiErrors.company_not_eligible',
     'apiErrors.product_unavailable', 'apiErrors.payment_quote_mismatch', 'apiErrors.payment_not_pending', 'apiErrors.campaign_ended', 'apiErrors.end_in_past',

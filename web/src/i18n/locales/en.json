@@ -582,7 +582,8 @@
     "specialty_inactive": "A selected specialty is no longer available.",
     "reason_required": "A reason is required.",
     "duplicate_target": "Each target can be chosen once.",
-    "payment_quote_mismatch": "The payment no longer matches the campaign's quote, so it cannot be verified."
+    "payment_quote_mismatch": "The payment no longer matches the campaign's quote, so it cannot be verified.",
+    "quote_amount_too_large": "The campaign total is too large for the current advertising pricing system. Shorten the campaign or contact Racheeta administration."
   },
   "jobs": {
     "featured": "Featured",
@@ -1428,6 +1429,9 @@
     "sponsored": "Sponsored",
     "sponsoredSection": "Sponsored",
     "sponsoredIntro": "Paid advertisements targeted at your provider profile. They link to the regular product page.",
-    "sponsoredError": "Sponsored products could not be loaded"
+    "sponsoredError": "Sponsored products could not be loaded",
+    "loadMoreSponsored": "Load more sponsored campaigns",
+    "loadingMoreSponsored": "Loading…",
+    "sponsoredMoreError": "More sponsored campaigns could not be loaded. Try again."
   }
 }
