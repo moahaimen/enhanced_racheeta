@@ -84,7 +84,8 @@
     "companyWorkspace": "مساحة الشركة",
     "realEstate": "العقارات",
     "realEstateWorkspace": "مساحة العقارات",
-    "advertising": "الإعلانات"
+    "advertising": "الإعلانات",
+    "notifications": "الإشعارات"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -1465,5 +1466,31 @@
     "loadMoreSponsored": "عرض المزيد من الإعلانات الممولة",
     "loadingMoreSponsored": "جارٍ التحميل…",
     "sponsoredMoreError": "تعذّر تحميل المزيد من الإعلانات الممولة. حاول مرة أخرى."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "intro": "تحديثات حجوزاتك، تبقى هنا إلى أن تقرأها.",
+    "empty": "لا توجد إشعارات بعد.",
+    "emptyHint": "سنخبرك هنا عند حدوث أي تغيير على حجوزاتك.",
+    "emptyPage": "لا توجد إشعارات في هذه الصفحة.",
+    "count_zero": "لا إشعارات",
+    "count_one": "إشعار واحد",
+    "count_two": "إشعاران",
+    "count_few": "{{count}} إشعارات",
+    "count_many": "{{count}} إشعارًا",
+    "count_other": "{{count}} إشعار",
+    "read": "مقروء",
+    "unread": "جديد",
+    "markRead": "تحديد كمقروء",
+    "marking": "جارٍ التحديد…",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markingAll": "جارٍ تحديد الكل…",
+    "view": "عرض",
+    "unreadLabel_zero": "لا إشعارات غير مقروءة",
+    "unreadLabel_one": "إشعار واحد غير مقروء",
+    "unreadLabel_two": "إشعاران غير مقروءين",
+    "unreadLabel_few": "{{count}} إشعارات غير مقروءة",
+    "unreadLabel_many": "{{count}} إشعارًا غير مقروء",
+    "unreadLabel_other": "{{count}} إشعار غير مقروء"
   }
 }

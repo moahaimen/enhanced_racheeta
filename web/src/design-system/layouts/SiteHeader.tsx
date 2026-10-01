@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
+import { useNotifications } from '../../notifications/useNotifications'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
 import { Icon } from '../icons'
 import { ApiActionButton } from '../components/Button/ApiActionButton'
@@ -44,6 +45,30 @@ function LanguageSelect() {
         ))}
       </select>
     </label>
+  )
+}
+
+const BADGE_CAP = 99
+
+/** Bell entry with the backend-reported unread count (hidden at 0, capped at 99+). */
+function NotificationsLink() {
+  const { t } = useTranslation()
+  const { unreadCount } = useNotifications()
+  const count = unreadCount ?? 0
+  return (
+    <NavLink to="/notifications" className={styles.link}>
+      <Icon name="bell" size={18} />
+      {t('nav.notifications')}
+      {count > 0 ? (
+        <span
+          className={styles.badge}
+          data-testid="notifications-badge"
+          aria-label={t('notifications.unreadLabel', { count })}
+        >
+          {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
+        </span>
+      ) : null}
+    </NavLink>
   )
 }
 
@@ -132,6 +157,7 @@ export function SiteHeader() {
           {t('nav.adminConsole')}
         </NavLink>
       ) : null}
+      {status === 'authenticated' ? <NotificationsLink /> : null}
       {status === 'authenticated' ? (
         <NavLink to="/profile" className={styles.link}>
           <Icon name="user" size={18} />

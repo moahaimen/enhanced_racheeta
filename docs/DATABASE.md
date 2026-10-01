@@ -115,7 +115,9 @@ nullable), `price` decimal(12,2) ≥ 0 (`providers_service_price_nonneg`),
 | `advertising_campaign_provider_type`, `advertising_campaign_specialty`, `advertising_campaign_governorate` | normalized targets, unique per (campaign, target) |
 | `advertising_payment` | one per campaign (OneToOne, `PROTECT`); `amount` ≥ 0; VERIFIED requires `verified_at` and a method (`advertising_payment_verified_coherent`). Separate from `billing_payment_record` |
 
-Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`, `advertising/0001`.
+| `notifications_notification` | `recipient` FK (`CASCADE`), `category`, `event_type`, optional `resource_type`/`resource_id`, safe JSON `payload`, backend-only `dedupe_key`, nullable `read_at`. Constraints: `notification_dedupe_key_unique` (unique), `notification_resource_coherent` (type and id both empty or both populated). Indexes: (recipient, read_at), (recipient, -created_at). No title/body columns: text is rendered at read time |
+
+Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`, `advertising/0001`, `notifications/0001`.
 
 ### SimpleJWT
 

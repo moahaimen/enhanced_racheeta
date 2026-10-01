@@ -199,7 +199,21 @@ validation codes (`dates_invalid`, `start_in_past`, `end_in_past`,
 `duplicate_target`, `reason_required`) and the existing `invalid_transition` and
 `field_not_allowed`.
 
+### Notifications (Phase 9A)
+
+All authenticated and recipient-scoped; see `NOTIFICATIONS.md`.
+
+| Method and path | Result |
+| --- | --- |
+| `GET /api/v1/notifications/` | Paginated (20/page), newest first: `id`, `category`, `event_type`, `title`, `body` (rendered in the request language), `resource_type`, `resource_id`, `is_read`, `read_at`, `created_at` |
+| `GET /api/v1/notifications/unread-count/` | `{"count": N}` |
+| `POST /api/v1/notifications/{id}/read/` | The notification, now read (idempotent; foreign or unknown id: `404`) |
+| `POST /api/v1/notifications/read-all/` | `{"updated": N}` |
+
+The `POST` actions take no client data: no body or `{}` only; anything else is
+`field_not_allowed`. There is no create, update or delete endpoint.
+
 ## Planned (not implemented)
 
-The remaining modules of the master plan (chat and notifications, dashboards). Password change for logged-in users and admin account-management
+The remaining modules of the master plan (chat, dashboards). Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.

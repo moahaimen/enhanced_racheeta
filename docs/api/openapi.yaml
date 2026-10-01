@@ -3381,6 +3381,84 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
+  /api/v1/notifications/:
+    get:
+      operationId: notifications_retrieve
+      summary: My notifications
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number (20 per page by default).
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Page size (default 20, maximum 100).
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotification'
+          description: ''
+  /api/v1/notifications/{id}/read/:
+    post:
+      operationId: notifications_read_create
+      summary: Mark one of my notifications as read
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/read-all/:
+    post:
+      operationId: notifications_read_all_create
+      summary: Mark all my notifications as read
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarkAllRead'
+          description: ''
+  /api/v1/notifications/unread-count/:
+    get:
+      operationId: notifications_unread_count_retrieve
+      summary: My unread notification count
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCount'
+          description: ''
   /api/v1/offers/provider:
     get:
       operationId: offers_provider_retrieve
@@ -8210,6 +8288,13 @@ components:
           minLength: 1
       required:
       - refresh
+    MarkAllRead:
+      type: object
+      properties:
+        updated:
+          type: integer
+      required:
+      - updated
     MemberAddRequest:
       type: object
       properties:
@@ -8412,6 +8497,74 @@ components:
       - rating
       - reservation_id
       - service_title_snapshot
+    Notification:
+      type: object
+      description: |-
+        Client view of a notification. Never exposes `recipient`, `dedupe_key` or the
+        raw `payload`; title/body are rendered for the request language.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/NotificationCategoryEnum'
+          readOnly: true
+        event_type:
+          allOf:
+          - $ref: '#/components/schemas/NotificationEventTypeEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        resource_type:
+          type: string
+          readOnly: true
+        resource_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        is_read:
+          type: boolean
+          readOnly: true
+        read_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - category
+      - created_at
+      - event_type
+      - id
+      - is_read
+      - read_at
+      - resource_id
+      - resource_type
+      - title
+    NotificationCategoryEnum:
+      enum:
+      - RESERVATION
+      type: string
+      description: '* `RESERVATION` - Reservation'
+    NotificationEventTypeEnum:
+      enum:
+      - RESERVATION_CREATED
+      - RESERVATION_STATUS_CHANGED
+      type: string
+      description: |-
+        * `RESERVATION_CREATED` - Reservation created
+        * `RESERVATION_STATUS_CHANGED` - Reservation status changed
     OfferCreateRequest:
       type: object
       properties:
@@ -9012,6 +9165,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MyReview'
+    PaginatedNotification:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+      required:
+      - count
+      - next
+      - previous
+      - results
     PaginatedOfferOwner:
       type: object
       properties:
@@ -12354,6 +12529,13 @@ components:
       description: |-
         * `SALE` - Sale
         * `RENT` - Rent
+    UnreadCount:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+      - count
     VerificationDecisionRequest:
       type: object
       properties:

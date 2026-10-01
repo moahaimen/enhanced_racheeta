@@ -2,17 +2,26 @@
 
 Date: 2026-10-01
 AI/Engineer: Claude (Sonnet 5.5)
-Branch: `main`
-Current Git Tip: the latest commit on `main` — run `git rev-parse HEAD` (documentation commits after the Phase 8 merge move the tip, so no SHA is pinned here)
+Branch: `feat/phase9-chat-notifications` (from `main` `ae8bc49934da215f2d5739dba8fdc8b5b8ec26f6`)
+Current Git Tip: run `git rev-parse HEAD` (no SHA pinned here; commits move it)
 Phase 8 Code Baseline: `46f4d8ffb2465f3bee35bff7ca1c432540034816` (merge of PR #9; no application code has changed since)
 
-- **Phase 8 — Advertising and Payments is DONE and merged** through PR #9. Accepted head `25b4e6ef9f723c7ac41850f4167367a281f3259f`; the final exact-head Codex review found no major issues; post-merge CI #216 (id `36854496027`) is green (Web, Backend, OpenAPI freshness).
-- Tests on `main`: **1473 backend, 389 web**.
-- **Phase 9 — Chat and Notifications is the next / current phase.** No Phase 9 code exists yet (no `apps/chat`, no `apps/notifications`, no migrations, endpoints, pages, Firebase dependency or environment variables).
+- **Phase 8 — Advertising and Payments is DONE and merged** through PR #9 (merge `46f4d8ffb2465f3bee35bff7ca1c432540034816`; post-merge CI #216 green).
+- **Phase 9A — Persistent Notifications is IMPLEMENTED on branch `feat/phase9-chat-notifications`** (from `main` `ae8bc49934da215f2d5739dba8fdc8b5b8ec26f6`), pending independent review and merge. **Phase 9 remains CURRENT, not done.**
+- Tests on the branch: **1562 backend, 416 web** (`main` baseline: 1473 / 389).
 
 ## Exact next step
 
-Branch `feat/phase9-chat-notifications` from this `main` and start with **Phase 9A** (below). Re-read the Phase 9 section of `MASTER_PLAN.md` first; its scope is unchanged: conversations, messages, notification records, Firebase push, realtime only if justified. Architectural rule: **REST** for initial message/history loading, **FCM** for push, **WebSockets only later if justified**, and no Redis merely because WebSockets might be useful later.
+Review Phase 9A (`docs/NOTIFICATIONS.md`, ADR-048). Do **not** start Phase 9B until 9A is reviewed and merged. Then branch from the updated `main` for 9B.
+
+## Phase 9A summary — Persistent Notifications (branch, not merged)
+
+- Code: `backend/apps/notifications/` (model, services, presentation, receivers, serializers, views, urls, admin, migration `0001_initial`, tests); web `/notifications`, `NotificationsProvider`, header bell badge.
+- PostgreSQL is authoritative; creation is backend-only (reservation hook receivers); safe allow-listed payload; text rendered at read time (ar/en); `dedupe_key` unique constraint; recipient-scoped API with no client writes. No FCM, WebSockets, Redis, Celery, chat, or other-module notifications.
+- Reservation recipients: created → provider account; status change → the other participant (never the actor; both if the actor is neither).
+- Web unread count: fetched on login, on each authenticated SPA navigation (pathname change) and after each mark-read action, with abort/stale-response protection; never polled or computed locally. Mark all as read is not gated on the badge count.
+- PR #10 Codex fixes: the notification list refetches on language change (same page; prose is backend-rendered, never translated in the browser) and OpenAPI documents `page`/`page_size` for the list.
+- Review hardening (2026-10-01): notification prose deliberately omits the appointment time (UTC `starts_at`, no recipient timezone; reservation pages localize it). A timezone-aware push presentation belongs to Phase 9C only if a real timezone policy exists.
 
 ## Phase 9 handoff notes
 
@@ -23,7 +32,7 @@ Branch `feat/phase9-chat-notifications` from this `main` and start with **Phase 
 
 ### Recommended order (conservative)
 
-- **Phase 9A — persistent notifications first.** PostgreSQL notification records: recipient `Account`, typed event/category, title/body or a safe presentation payload, optional resource reference, `created_at`, `read_at`. Authenticated, paginated list; unread count; mark one read; mark all read. Notifications are backend-created only, with the reservation hook receivers first. **No** Redis, Celery, WebSockets, Firebase credential work or background service yet. Add FCM only after persistent notification semantics are correct.
+- **Phase 9A — persistent notifications first (IMPLEMENTED on the Phase 9 branch; see above).** PostgreSQL notification records: recipient `Account`, typed event/category, title/body or a safe presentation payload, optional resource reference, `created_at`, `read_at`. Authenticated, paginated list; unread count; mark one read; mark all read. Notifications are backend-created only, with the reservation hook receivers first. **No** Redis, Celery, WebSockets, Firebase credential work or background service yet. Add FCM only after persistent notification semantics are correct.
 - **Phase 9B — generic conversations/messages via REST.** Do not migrate `RecruitmentMessage` yet. Do not let arbitrary users message arbitrary accounts until the business authorization rules are deliberately defined.
 - **Phase 9C — FCM device registration and push delivery.** Persistent database notifications stay authoritative; push is best-effort delivery, never the source of truth.
 - **Realtime.** WebSockets remain deferred unless UX requirements justify them. No Redis in anticipation of them.
