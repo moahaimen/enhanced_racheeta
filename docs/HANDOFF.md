@@ -20,7 +20,8 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 - PR #9 follow-up: `views._require_no_body` uses `isinstance(data, Mapping)` (empty mapping = no data; any non-mapping body, including `[]`, `false`, `0`, `""`, JSON null, is `field_not_allowed`).
 - PR #9 Codex fixes: `services._require_quote_coherent` also checks `(ends_on - starts_on).days + 1 == quoted_days`; `views._admin_campaigns()` selects `payment__verified_by`; `loadAllMyProducts` (advertising workspace) follows `next` until null with only no-progress guards.
 - PR #9 second Codex fixes: `SponsoredSection` appends later pages via a local Load more (`ApiActionButton`, abort on unmount, id dedupe); `_build_quote()` raises `QuoteAmountTooLarge` above `models.MAX_CAMPAIGN_AMOUNT` (from field metadata; `QuoteResponseSerializer.total` mirrors it).
-- Tests: backend 1473 passed, web 378 passed.
+- PR #9 third Codex fix: `advertisingFormat.formatMoney` formats decimal strings exactly (BigInt integer part, exact fraction, `Intl` separator; malformed input shown as received); `SponsoredSection` price uses it too. Advertising money is never converted to a JS number.
+- Tests: backend 1473 passed, web 389 passed.
 
 ## Previous phase (Phase 7 — merged via PR #8)
 

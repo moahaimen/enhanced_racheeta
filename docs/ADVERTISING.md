@@ -209,6 +209,7 @@ an amount. Lifecycle goes through the services and API.
   page shows a local retry, no duplicate ads, no page cap) — every paid campaign stays
   reachable and the browser still filters/ranks nothing; loading, error/retry and empty states
   are local, so the organic catalogue never breaks.
+- Advertising monetary values remain **decimal strings** in the web client and are locale-formatted without IEEE-754 conversion (`formatMoney`: integer digits grouped via `BigInt`, fraction digits kept exactly, trailing zeros included, locale separator from `Intl`), so the administrator sees the exact backend amount during manual verification — e.g. `98999999999999.01`, never `…02`. The quote preview, stored quotes, the admin review and the sponsored product price all use it.
 - Every label, state and error is available in Arabic and English.
 
 ## Security summary
