@@ -36,7 +36,7 @@ Django's `auth.Permission` / `Group` tables are used only by the admin site.
 Codes for modules that do not exist yet are forward-looking labels, enforced
 only once the module ships. `marketplace.manage_own_products` and
 `marketplace.view_targeted_products` are enforced since Phase 6, and
-`real_estate.manage_own_listings` since Phase 7 (see below).
+`real_estate.manage_own_listings` since Phase 7, and `advertising.manage_own_campaigns` since Phase 8 (see below).
 Keep this table, the `ROLE_CAPABILITIES` dict, and the module's permission
 classes in sync.
 
@@ -84,6 +84,16 @@ Web mirrors (UX only): `/marketplace` and its detail sit behind `RequireRole(['P
 | `AllowAny` | the public catalogue (list and detail), which only ever reads `publicly_visible()` |
 
 The permission check is an early answer only: every mutation re-reads and locks the seller **and its account** in its transaction and requires an active account whose role is still `REAL_ESTATE_SELLER` to publish or to edit a published listing (`seller_not_eligible`); unpublishing is always allowed. A seller profile's `account` and a listing's `seller` are immutable. Django admin is inspection-only. Web mirror (UX only): `/real-estate/owner` sits behind `RequireRole(['REAL_ESTATE_SELLER'])`, and the workspace offers Publish only when the loaded data says the gate can succeed.
+
+## Advertising permissions (`apps/advertising`, Phase 8)
+
+| Class | Grants |
+| --- | --- |
+| `marketplace.HasMedicalCompany` | `role == MEDICAL_COMPANY` with a company profile (`advertising.manage_own_campaigns`): own campaigns, quote, submit, cancel, dashboard; ownership comes from `request.user.medical_company`, never a client id; a foreign campaign id is a 404 |
+| `marketplace.CanBrowseMarketplace` | early answer for `advertising/marketplace`; the view re-reads the verified provider (`current_verified_provider`) and `visible_to()` re-checks it in SQL |
+| `IsAdminAccount` (staff flag) | list/detail and the payment decisions; anonymous 401, non-staff 403 (a company can never verify or reject its own payment) |
+
+Drafts need an active MEDICAL_COMPANY account; **submission and payment verification** need the current marketplace publisher eligibility (VERIFIED company, active account, role `MEDICAL_COMPANY`) read from the locked company, never the request's snapshot; cancelling is always allowed. Money, status, ownership and verification fields are never client input (`field_not_allowed`). Django admin: only `AdvertisingRate` is editable. Web mirror (UX only): `/company/advertising` behind `RequireRole(['MEDICAL_COMPANY'])`.
 
 ## Provider permissions (`apps/providers/permissions.py`)
 

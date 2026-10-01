@@ -18,6 +18,7 @@ import {
 } from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
+import { SponsoredSection } from '../advertising/SponsoredSection'
 
 const PAGE_SIZE = 20
 
@@ -71,6 +72,7 @@ export function MarketplacePage() {
         }
       />
       <PageStack>
+        <SponsoredSection />
         <SectionCard title={t('marketplace.forYou')} description={t('marketplace.targetingNote')} headingLevel={2}>
           {products.loading ? (
             <LoadingState testId="marketplace-loading" />

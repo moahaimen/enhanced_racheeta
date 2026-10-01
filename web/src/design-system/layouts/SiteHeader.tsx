@@ -109,10 +109,16 @@ export function SiteHeader() {
         </NavLink>
       ) : null}
       {status === 'authenticated' && account?.role === 'MEDICAL_COMPANY' ? (
-        <NavLink to="/company" className={styles.link}>
-          <Icon name="cart" size={18} />
-          {t('nav.companyWorkspace')}
-        </NavLink>
+        <>
+          <NavLink to="/company" end className={styles.link}>
+            <Icon name="cart" size={18} />
+            {t('nav.companyWorkspace')}
+          </NavLink>
+          <NavLink to="/company/advertising" className={styles.link}>
+            <Icon name="tag" size={18} />
+            {t('nav.advertising')}
+          </NavLink>
+        </>
       ) : null}
       {status === 'authenticated' ? (
         <NavLink to="/employer" className={styles.link}>

@@ -2,29 +2,34 @@
 
 Date: 2026-09-30
 AI/Engineer: Claude (Sonnet 5.5)
-Branch: `feat/phase7-medical-real-estate`
-Base: `main` at `39295676ac9ee40d9050f32500baca36bce27bcc` (Phase 6 merged via PR #7; post-merge CI #198 green; baseline 1003 backend / 274 web tests)
-Pull Request: Phase 7 draft PR (see the final report of this session)
+Branch: `feat/phase8-advertising-payments`
+Base: `main` at `33126b32bceda9aaf3fb63dcb7a7c02bd17cddaa` (Phase 7 merged via PR #8; post-merge CI #203 green; baseline 1212 backend / 321 web tests)
+Pull Request: Phase 8 draft PR (see the final report of this session)
 Last Commit SHA: see `git log`; recorded in the final report of this session
 
-## Phase 7 — Medical Real Estate (this session)
+## Phase 8 — Advertising and Payments (this session)
 
-- New `apps/real_estate` (migration `0001_initial`): `RealEstateSeller` (one per `REAL_ESTATE_SELLER` account, `account` immutable, no verification), `PropertyListing` (sale/rent; controlled property type; governorate/city; decimal coordinates; nullable price; server-owned `publication_status`/`published_at`; `expires_at`), `ListingSuitableUse` (normalized, unique per listing+use). DB checks for price, area, coordinate range/pair and "PUBLISHED needs area and expiry".
-- **One visibility rule:** `PropertyListingQuerySet.publicly_visible()` (PUBLISHED, `expires_at > now`, seller on an active account still `REAL_ESTATE_SELLER`, active governorate/city) serves the public list and detail; hidden ⇒ plain 404. Expiry is compared at read time; there is no scheduler.
-- **One publication gate:** `services.publication_problems()` decides publish and every edit of a PUBLISHED listing on the resulting state, with typed per-field codes; seller eligibility is read from the seller+account locked fresh (`services._lock_seller`), never from the request. Lock order seller → listing → uses; uses are replaced only under the listing lock.
-- Public API `real-estate/listings[/{id}]` (filters, allow-listed null-last orderings with an `id` tiebreak); owner API `real-estate/owner…` (profile, dashboard computed in SQL, listing CRUD without DELETE, publish/unpublish); audit events; admin inspection-only. OpenAPI regenerated (no existing path or schema changed).
-- Web: `/real-estate`, `/real-estate/:id`, `/real-estate/owner` (RequireRole `REAL_ESTATE_SELLER`); URL-backed backend filters; seller workspace with dashboard, listing form, publish/unpublish (guidance only — the backend gate is authoritative and its typed refusals are shown); deactivated governorate/city kept as the selected current value; header/footer links and a live home card; ar/en.
-- Deferred: images/media (no storage), advertising/boosts/payments (Phase 8), chat/notifications (Phase 9), PostGIS/proximity search. See `REAL_ESTATE.md`, ADR-046.
-- PR #8 review fixes: (1) every seller mutation — profile update, draft create/edit, published edit, publish — calls `_require_eligible` on the locked seller+account (only unpublish is exempt); `_own_seller` also refuses an ineligible account; (2) `publicly_visible()` adds `city.governorate_id = F(governorate_id)` so a moved city hides the listing (list, detail, dashboard, `is_public`); (3) owner listing nests `OwnerGovernorate`/`OwnerCity` with `is_active`; `publicationGaps` reports inactive/moved geography and the form keeps the stored city while on the listing's governorate. OpenAPI regenerated.
-- Tests: backend 1212 passed, web 321 passed.
+- New `apps/advertising` (migration `0001_initial`): `AdvertisingRate` (admin-set daily price, **no seeded price**, one active by constraint), `AdvertisingCampaign` (DRAFT → PENDING_PAYMENT → ACTIVE | REJECTED; ACTIVE → CANCELLED; frozen after submission; price snapshot), normalized targets, `CampaignPayment` (one per campaign; `billing.PaymentRecord` untouched).
+- Pricing: `(ends - starts).days + 1` × active rate (Decimal). `POST advertising/company/quote` is a preview; `services.submit_campaign` recomputes under the rate lock and snapshots. No rate → `pricing_unavailable`.
+- Payments: no gateway/webhook. `services.verify_campaign_payment` (the future-gateway boundary) activates payment+campaign atomically after re-checking company (`MedicalCompany.can_publish`), product exposure (`Product.objects.exposable()`), targets and end date on locked rows; `reject_campaign_payment` rejects both. Lock order company+account → campaign → payment → product/rate.
+- Visibility: `AdvertisingCampaignQuerySet.visible_to(provider)` — `ProductQuerySet.targeted_for` ∩ campaign narrowing ∩ ACTIVE + VERIFIED payment + date window, current-state, bounded queries. A campaign can only narrow Phase 6 targeting.
+- APIs: company (dashboard, quote, campaigns, submit, cancel), admin (list/detail/verify-payment/reject-payment), provider (`advertising/marketplace`). Django admin: only the rate is editable. OpenAPI regenerated (no existing schema changed; `ProviderTypeEnum` and campaign enums pinned in settings).
+- Web: `/company/advertising`, admin console Advertising tab, sponsored section on `/marketplace`, nav/company links, Arabic/English.
+- Deferred: gateway/webhook, refunds, media/receipts, non-product/real-estate campaigns, analytics (Phase 10), chat/notifications (Phase 9). See `ADVERTISING.md`, ADR-047.
+- PR #9 review fixes: `visible_to()` requires `specialty__is_active=True` on the matching specialty target; `views._require_no_body` rejects any body key on submit/cancel (`field_not_allowed`); `services._require_quote_coherent` runs in `verify_campaign_payment` (payment ↔ snapshot, never the current rate; `payment_quote_mismatch` 409); `services.save_rate` locks the rates it swaps (Django admin uses it; `RateActivationConflict` becomes an admin message). OpenAPI unchanged.
+- PR #9 follow-up: `views._require_no_body` uses `isinstance(data, Mapping)` (empty mapping = no data; any non-mapping body, including `[]`, `false`, `0`, `""`, JSON null, is `field_not_allowed`).
+- PR #9 Codex fixes: `services._require_quote_coherent` also checks `(ends_on - starts_on).days + 1 == quoted_days`; `views._admin_campaigns()` selects `payment__verified_by`; `loadAllMyProducts` (advertising workspace) follows `next` until null with only no-progress guards.
+- PR #9 second Codex fixes: `SponsoredSection` appends later pages via a local Load more (`ApiActionButton`, abort on unmount, id dedupe); `_build_quote()` raises `QuoteAmountTooLarge` above `models.MAX_CAMPAIGN_AMOUNT` (from field metadata; `QuoteResponseSerializer.total` mirrors it).
+- PR #9 third Codex fix: `advertisingFormat.formatMoney` formats decimal strings exactly (BigInt integer part, exact fraction, `Intl` separator; malformed input shown as received); `SponsoredSection` price uses it too. Advertising money is never converted to a JS number.
+- Tests: backend 1473 passed, web 389 passed.
 
-## Previous phase (Phase 6 — merged via PR #7)
+## Previous phase (Phase 7 — merged via PR #8)
 
-Medical marketplace (`MARKETPLACE.md`, ADR-044/045): verified companies, administrator categories and audience rules, products with a locked publication gate, backend targeting of verified providers, verified-identity locks, and the review rounds' fixes (admin forms cannot bypass verified identity; publisher eligibility needs the current `MEDICAL_COMPANY` role; category publishability is backend-derived; historical inactive categories stay visible in the edit form). Details are in `PROGRESS.md`.
+Medical real estate (`REAL_ESTATE.md`, ADR-046): seller profiles, listings, one visibility rule, publication gate, owner dashboard, and the review hardening (current-seller eligibility on every mutation, live city→governorate visibility, historical geography recovery in the owner UI). Details are in `PROGRESS.md`.
 
 ## Next step
 
-Independent review of the Phase 7 branch and PR. Do not merge. Do not start Phase 8.
+Independent review of the Phase 8 branch and PR. Do not merge. Do not start Phase 9.
 
 ## Previous session (Phase 5)
 

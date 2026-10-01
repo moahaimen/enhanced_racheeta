@@ -23,7 +23,7 @@ times?" through capability keys. Reservations will stay free (owner decision).
 | Entitlement | `PlanEntitlement(key, kind BOOLEAN|LIMIT, enabled, limit null=unlimited, period NONE|DAILY|MONTHLY|SUBSCRIPTION)` | Values editable in the admin without code changes; for every known key the shape (kind, period) is fixed by `KNOWN_KEYS` and enforced on every write. |
 | Subscription | `Subscription(status PENDING|ACTIVE|SUSPENDED|CANCELLED|EXPIRED|REJECTED)` | One live (PENDING or ACTIVE) subscription per account (DB constraint). Activation cancels any other ACTIVE one. |
 | History | `SubscriptionEvent` | Every status change with actor and reason. |
-| Payment | `PaymentRecord` | Optional; recorded by the admin on activation (amount/method/reference). |
+| Payment | `PaymentRecord` | Optional; recorded by the admin on activation (amount/method/reference). **Subscription payments only**: advertising campaigns have their own `advertising.CampaignPayment` (Phase 8, `ADVERTISING.md`) and use no entitlement key, credit or plan. |
 | Credits | `CreditBalance`, `CreditTransaction` | Admin-granted top-ups per key; consumed only after the plan limit is exhausted. |
 | Usage | `UsageCounter(key, period_start, used)`, `UsageEvent(reference)` | Atomic increments (`select_for_update`); a `reference` makes consumption idempotent. |
 

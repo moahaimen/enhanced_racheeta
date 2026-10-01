@@ -1073,7 +1073,7 @@ Avoid architecture that prevents moving from Railway later.
 - Targeting.
 - Company dashboards.
 
-## Phase 7 — Medical Real Estate (CURRENT)
+## Phase 7 — Medical Real Estate (done — merged via PR #8)
 
 - Property listings.
 - Sale/rent.
@@ -1081,7 +1081,7 @@ Avoid architecture that prevents moving from Railway later.
 - Search/targeting.
 - Owner dashboard.
 
-## Phase 8 — Advertising and Payments
+## Phase 8 — Advertising and Payments (CURRENT)
 
 - Campaigns.
 - Backend pricing.

@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "apps.offers",
     "apps.marketplace",
     "apps.real_estate",
+    "apps.advertising",
 ]
 
 MIDDLEWARE = [
@@ -222,6 +223,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
+        "CampaignStatusEnum": "apps.advertising.types.CampaignStatus.choices",
+        "CampaignPaymentStatusEnum": "apps.advertising.types.PaymentStatus.choices",
+        "ProviderTypeEnum": "apps.providers.types.ProviderType.choices",
         "SellerTypeEnum": "apps.real_estate.types.SellerType.choices",
         "PropertyTypeEnum": "apps.real_estate.types.PropertyType.choices",
         "TransactionTypeEnum": "apps.real_estate.types.TransactionType.choices",

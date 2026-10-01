@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../../api/client'
 import * as authApi from '../../api/endpoints/auth'
+import * as advertisingApi from '../../api/endpoints/advertising'
 import * as marketplaceApi from '../../api/endpoints/marketplace'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
@@ -12,6 +13,7 @@ import { baghdad } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
+vi.mock('../../api/endpoints/advertising')
 vi.mock('../../api/endpoints/marketplace')
 vi.mock('../../api/endpoints/reference')
 
@@ -83,6 +85,7 @@ describe('Provider marketplace', () => {
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
     vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental])
+    vi.mocked(advertisingApi.listSponsored).mockResolvedValue({ count: 0, next: null, previous: null, results: [] }) // no ads: the organic tests are unaffected
   })
 
   it('shows loading then exactly the products the backend targeted', async () => {

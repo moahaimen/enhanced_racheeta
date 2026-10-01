@@ -184,8 +184,22 @@ codes: `seller_not_eligible` (403) and, as validation `codes.<field>`,
 `expiry_in_past`, `price_invalid`, `currency_unsupported`; plus the existing
 `already_exists`, `invalid_transition`, `field_not_allowed`.
 
+### Phase 8 — advertising and payments
+
+See `ADVERTISING.md`. Company self-service is under
+`/api/v1/advertising/company…` (role `MEDICAL_COMPANY`: dashboard, quote,
+campaigns, submit, cancel), sponsored campaigns for providers at
+`/api/v1/advertising/marketplace` (verified `PROVIDER`), and the administrator
+payment control plane under `/api/v1/admin/advertising/campaigns…` (staff: list,
+detail, `verify-payment`, `reject-payment`). New error codes: `pricing_unavailable`,
+`campaign_not_editable`, `campaign_not_submittable`, `company_not_eligible` (403),
+`product_unavailable`, `payment_not_pending`, `payment_quote_mismatch` (409), `campaign_ended`, plus per-field
+validation codes (`dates_invalid`, `start_in_past`, `end_in_past`,
+`governorate_inactive`, `specialty_inactive`, `product_not_found`,
+`duplicate_target`, `reason_required`) and the existing `invalid_transition` and
+`field_not_allowed`.
+
 ## Planned (not implemented)
 
-The remaining modules of the master plan (advertising and
-payments, chat and notifications, dashboards). Password change for logged-in users and admin account-management
+The remaining modules of the master plan (chat and notifications, dashboards). Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.
