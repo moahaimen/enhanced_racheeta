@@ -1,13 +1,33 @@
 # Current State
 
-Date: 2026-09-30
+Date: 2026-10-01
 AI/Engineer: Claude (Sonnet 5.5)
-Branch: `feat/phase8-advertising-payments`
-Base: `main` at `33126b32bceda9aaf3fb63dcb7a7c02bd17cddaa` (Phase 7 merged via PR #8; post-merge CI #203 green; baseline 1212 backend / 321 web tests)
-Pull Request: Phase 8 draft PR (see the final report of this session)
-Last Commit SHA: see `git log`; recorded in the final report of this session
+Branch: `main`
+HEAD: `46f4d8ffb2465f3bee35bff7ca1c432540034816` (merge of PR #9)
 
-## Phase 8 — Advertising and Payments (this session)
+- **Phase 8 — Advertising and Payments is DONE and merged** through PR #9. Accepted head `25b4e6ef9f723c7ac41850f4167367a281f3259f`; the final exact-head Codex review found no major issues; post-merge CI #216 (id `36854496027`) is green (Web, Backend, OpenAPI freshness).
+- Tests on `main`: **1473 backend, 389 web**.
+- **Phase 9 — Chat and Notifications is the next / current phase.** No Phase 9 code exists yet (no `apps/chat`, no `apps/notifications`, no migrations, endpoints, pages, Firebase dependency or environment variables).
+
+## Exact next step
+
+Branch `feat/phase9-chat-notifications` from this `main` and start with **Phase 9A** (below). Re-read the Phase 9 section of `MASTER_PLAN.md` first; its scope is unchanged: conversations, messages, notification records, Firebase push, realtime only if justified. Architectural rule: **REST** for initial message/history loading, **FCM** for push, **WebSockets only later if justified**, and no Redis merely because WebSockets might be useful later.
+
+## Phase 9 handoff notes
+
+### Existing facts that shape the design
+
+- **Jobs messaging already exists.** `backend/apps/jobs/models.py` defines `RecruitmentMessage`: scoped to one `JobApplication`, immutable, text-only, sender/account backed, protected by the jobs/recruitment authorization flow and contact-leak moderated (`MODERATION.md`). Inspect it **before** creating generic conversations so Phase 9 does not duplicate behaviour. Do not delete, migrate or redesign it as part of the first Phase 9 steps.
+- **A reservation notification boundary already exists.** `backend/apps/reservations/hooks.py` defines the signals `reservation_created` and `reservation_status_changed`, emitted through `transaction.on_commit(...)` (so a rolled-back reservation never notifies). The file states that Phase 9 receivers may subscribe and create persistent notifications **without changing reservation transaction code**. This is the preferred first integration point.
+
+### Recommended order (conservative)
+
+- **Phase 9A — persistent notifications first.** PostgreSQL notification records: recipient `Account`, typed event/category, title/body or a safe presentation payload, optional resource reference, `created_at`, `read_at`. Authenticated, paginated list; unread count; mark one read; mark all read. Notifications are backend-created only, with the reservation hook receivers first. **No** Redis, Celery, WebSockets, Firebase credential work or background service yet. Add FCM only after persistent notification semantics are correct.
+- **Phase 9B — generic conversations/messages via REST.** Do not migrate `RecruitmentMessage` yet. Do not let arbitrary users message arbitrary accounts until the business authorization rules are deliberately defined.
+- **Phase 9C — FCM device registration and push delivery.** Persistent database notifications stay authoritative; push is best-effort delivery, never the source of truth.
+- **Realtime.** WebSockets remain deferred unless UX requirements justify them. No Redis in anticipation of them.
+
+## Phase 8 summary — Advertising and Payments (merged via PR #9)
 
 - New `apps/advertising` (migration `0001_initial`): `AdvertisingRate` (admin-set daily price, **no seeded price**, one active by constraint), `AdvertisingCampaign` (DRAFT → PENDING_PAYMENT → ACTIVE | REJECTED; ACTIVE → CANCELLED; frozen after submission; price snapshot), normalized targets, `CampaignPayment` (one per campaign; `billing.PaymentRecord` untouched).
 - Pricing: `(ends - starts).days + 1` × active rate (Decimal). `POST advertising/company/quote` is a preview; `services.submit_campaign` recomputes under the rate lock and snapshots. No rate → `pricing_unavailable`.
@@ -26,10 +46,6 @@ Last Commit SHA: see `git log`; recorded in the final report of this session
 ## Previous phase (Phase 7 — merged via PR #8)
 
 Medical real estate (`REAL_ESTATE.md`, ADR-046): seller profiles, listings, one visibility rule, publication gate, owner dashboard, and the review hardening (current-seller eligibility on every mutation, live city→governorate visibility, historical geography recovery in the owner UI). Details are in `PROGRESS.md`.
-
-## Next step
-
-Independent review of the Phase 8 branch and PR. Do not merge. Do not start Phase 9.
 
 ## Previous session (Phase 5)
 

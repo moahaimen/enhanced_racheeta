@@ -1081,7 +1081,7 @@ Avoid architecture that prevents moving from Railway later.
 - Search/targeting.
 - Owner dashboard.
 
-## Phase 8 — Advertising and Payments (CURRENT)
+## Phase 8 — Advertising and Payments (done — merged via PR #9)
 
 - Campaigns.
 - Backend pricing.
@@ -1091,7 +1091,7 @@ Avoid architecture that prevents moving from Railway later.
 
 Do not integrate a paid payment gateway until the owner selects it.
 
-## Phase 9 — Chat and Notifications
+## Phase 9 — Chat and Notifications (CURRENT)
 
 - Conversations.
 - Messages.
