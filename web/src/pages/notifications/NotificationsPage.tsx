@@ -27,7 +27,7 @@ const PAGE_SIZE = 20
 
 export function NotificationsPage() {
   const { t } = useTranslation()
-  const { unreadCount, refreshUnreadCount } = useNotifications()
+  const { refreshUnreadCount } = useNotifications()
   const [params, setParams] = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
@@ -63,7 +63,6 @@ export function NotificationsPage() {
                   <ApiActionButton
                     variant="secondary"
                     size="sm"
-                    disabled={unreadCount === 0}
                     action={() => notificationsApi.markAllRead()}
                     onSuccess={afterChange}
                     onError={(err) => setError(toErrorMessage(err))}

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -215,6 +215,41 @@ describe('NotificationsPage', () => {
     renderApp('/notifications')
     await screen.findByText('Reservation confirmed')
     expect(screen.queryByRole('link', { name: 'View' })).toBeNull()
+  })
+
+  it('surfaces a notification created after login: navigation refreshes the badge and Mark all works', async () => {
+    vi.mocked(notificationsApi.getUnreadCount)
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValue({ count: 1 })
+    vi.mocked(notificationsApi.listNotifications).mockResolvedValue(pageOf([unread]))
+    const { router } = renderApp('/profile')
+    await waitFor(() => expect(notificationsApi.getUnreadCount).toHaveBeenCalledTimes(1))
+    expect(screen.queryByTestId('notifications-badge')).toBeNull()
+
+    await act(async () => {
+      await router.navigate('/notifications')
+    })
+
+    expect(await screen.findByText('Reservation confirmed')).toBeInTheDocument()
+    expect(await screen.findByTestId('notifications-badge')).toHaveTextContent('1')
+    expect(screen.getByRole('button', { name: 'Mark all as read' })).toBeEnabled()
+  })
+
+  it('does not disable Mark all because the unread count is stale at zero', async () => {
+    // The badge says 0 (stale or delayed) but the list plainly contains an unread row.
+    vi.mocked(notificationsApi.getUnreadCount).mockResolvedValue({ count: 0 })
+    vi.mocked(notificationsApi.listNotifications).mockResolvedValue(pageOf([unread]))
+    vi.mocked(notificationsApi.markAllRead).mockResolvedValue({ updated: 1 })
+    renderApp('/notifications')
+
+    const all = await screen.findByRole('button', { name: 'Mark all as read' })
+    await waitFor(() => expect(notificationsApi.getUnreadCount).toHaveBeenCalledTimes(1))
+    expect(all).toBeEnabled()
+
+    await userEvent.click(all)
+    await waitFor(() => expect(notificationsApi.markAllRead).toHaveBeenCalledTimes(1))
+    // After success the backend count is asked for again; nothing is computed locally.
+    await waitFor(() => expect(notificationsApi.getUnreadCount).toHaveBeenCalledTimes(2))
   })
 
   it('requires authentication', async () => {
