@@ -26,7 +26,10 @@ import styles from './NotificationsPage.module.css'
 const PAGE_SIZE = 20
 
 export function NotificationsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // Title/body are rendered by the backend for the request language (Accept-Language), so
+  // the list is re-requested when the active language changes instead of being translated here.
+  const language = i18n.resolvedLanguage ?? i18n.language
   const { refreshUnreadCount } = useNotifications()
   const [params, setParams] = useSearchParams()
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +45,7 @@ export function NotificationsPage() {
       />
       <PageStack>
         {error ? <Alert kind="error">{error}</Alert> : null}
-        <AsyncPage load={(signal) => notificationsApi.listNotifications(page, signal)} deps={[page]}>
+        <AsyncPage load={(signal) => notificationsApi.listNotifications(page, signal)} deps={[page, language]}>
           {(result, reload) => {
             const afterChange = () => {
               setError(null)

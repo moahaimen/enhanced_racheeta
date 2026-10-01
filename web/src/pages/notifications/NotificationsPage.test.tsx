@@ -185,6 +185,74 @@ describe('NotificationsPage', () => {
     expect(screen.getByRole('button', { name: 'تحديد كمقروء' })).toBeInTheDocument()
   })
 
+  it('re-requests the list when the language changes, replacing backend prose in place', async () => {
+    vi.mocked(notificationsApi.listNotifications)
+      .mockResolvedValueOnce(pageOf([note({ title: 'Reservation confirmed', body: 'English body' })]))
+      .mockResolvedValue(pageOf([note({ title: 'تم تأكيد الحجز', body: 'نص عربي' })]))
+    const { router } = renderApp('/notifications')
+    expect(await screen.findByText('English body')).toBeInTheDocument()
+    expect(notificationsApi.listNotifications).toHaveBeenCalledTimes(1)
+
+    const navigations: string[] = []
+    const unsubscribe = router.subscribe((state) => navigations.push(state.location.pathname))
+    await act(async () => {
+      await changeLanguage('ar')
+    })
+
+    expect(await screen.findByText('نص عربي')).toBeInTheDocument()
+    expect(screen.getByText('تم تأكيد الحجز')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'الإشعارات' })).toBeInTheDocument()
+    expect(screen.queryByText('English body')).toBeNull()
+    expect(screen.queryByText('Reservation confirmed')).toBeNull()
+    expect(notificationsApi.listNotifications).toHaveBeenCalledTimes(2)
+    // The second request came from the language change, not from a route change.
+    expect(router.state.location.pathname).toBe('/notifications')
+    expect(navigations).toEqual([])
+    unsubscribe()
+  })
+
+  it('keeps the current page when the language changes and refetches that page', async () => {
+    vi.mocked(notificationsApi.listNotifications).mockImplementation(async (page = 1) =>
+      pageOf([note({ id: `p${page}`, body: `body page ${page}` })], {
+        count: 41,
+        next: 'http://x/?page=3',
+        previous: 'http://x/?page=1',
+      }),
+    )
+    const { router } = renderApp('/notifications?page=2')
+    expect(await screen.findByText('body page 2')).toBeInTheDocument()
+
+    await act(async () => {
+      await changeLanguage('ar')
+    })
+
+    await waitFor(() => expect(notificationsApi.listNotifications).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(notificationsApi.listNotifications).mock.calls.map((call) => call[0])).toEqual([2, 2])
+    expect(router.state.location.search).toBe('?page=2')
+    expect(await screen.findByText('body page 2')).toBeInTheDocument()
+  })
+
+  it('ignores a slow response in the old language after the language changed', async () => {
+    const slowEnglish = deferred<PaginatedNotifications>()
+    vi.mocked(notificationsApi.listNotifications)
+      .mockReturnValueOnce(slowEnglish.promise)
+      .mockResolvedValue(pageOf([note({ title: 'تم تأكيد الحجز', body: 'نص عربي' })]))
+    renderApp('/notifications')
+    await waitFor(() => expect(notificationsApi.listNotifications).toHaveBeenCalledTimes(1))
+    const staleSignal = vi.mocked(notificationsApi.listNotifications).mock.calls[0]?.[1]
+
+    await act(async () => {
+      await changeLanguage('ar')
+    })
+    expect(await screen.findByText('نص عربي')).toBeInTheDocument()
+    expect(staleSignal?.aborted).toBe(true)
+
+    slowEnglish.resolve(pageOf([note({ title: 'Reservation confirmed', body: 'English body' })]))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.queryByText('English body')).toBeNull()
+    expect(screen.getByText('نص عربي')).toBeInTheDocument()
+  })
+
   it('links a patient to their reservations', async () => {
     vi.mocked(notificationsApi.listNotifications).mockResolvedValue(pageOf([unread]))
     renderApp('/notifications')
