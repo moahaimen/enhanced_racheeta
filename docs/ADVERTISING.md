@@ -63,6 +63,7 @@ stored `ACTIVE` but is not live and is not shown (server date, no worker).
   from the committed active rate and snapshots the result on the campaign and in
   its `CampaignPayment`. A later rate change never alters a submitted campaign
   (`test_a_rate_change_never_touches_a_snapshot…`, and a real concurrent test).
+- **A total must fit the stored precision.** `_build_quote()` (used by the preview and by the authoritative submission) refuses a total above `MAX_CAMPAIGN_AMOUNT` — derived from the `quoted_amount` and `CampaignPayment.amount` field metadata (`Decimal(16, 2)` → `99999999999999.99`), which the quote response serializer mirrors — with the typed `quote_amount_too_large` (409). It is never truncated, clamped or left to fail as a database/serializer error; the campaign stays an untouched DRAFT (no snapshot, no payment). At the maximum daily rate `999999999999.99`, 100 days (`99999999999999.00`) fits and 101 days overflows. This is distinct from `payment_quote_mismatch`, which protects verification against a corrupted snapshot.
 - Submission requires both dates, `ends_on >= starts_on`, `starts_on >= today` and
   `ends_on >= today` (no charging for elapsed days), active targeted
   governorates/specialties, and the company and product checks below.
@@ -168,7 +169,7 @@ amount/currency/status/company/product. Owner payloads include `quote` and a saf
 `payment` summary (no admin note, no verifier); the admin payload adds both. Error
 codes: `pricing_unavailable`, `campaign_not_editable`, `campaign_not_submittable`,
 `company_not_eligible` (403), `product_unavailable`, `invalid_transition`,
-`payment_not_pending`, `payment_quote_mismatch`, `campaign_ended`, plus per-field validation codes
+`payment_not_pending`, `payment_quote_mismatch`, `quote_amount_too_large`, `campaign_ended`, plus per-field validation codes
 (`dates_invalid`, `start_in_past`, `end_in_past`, `governorate_inactive`,
 `specialty_inactive`, `product_not_found`, …). Audit events:
 `advertising.campaign.created|updated|submitted|activated|cancelled`,
@@ -202,7 +203,11 @@ an amount. Lifecycle goes through the services and API.
   product, dates, targeting, quoted rate/days/amount and payment state; **Verify**
   (method, reference, note) and **Reject** (reason) via `ApiActionButton`.
 - `/marketplace`: a "Sponsored / إعلان ممول" section from the backend only, each card
-  labelled and linking the existing product page; loading, error/retry and empty states
+  labelled and linking the existing product page; the backend paginates (20 per page), so
+  while it reports a `next` page a local **Load more** control appends the following page in
+  the backend's order (page 1 stays rendered, the control is disabled while loading, a failed
+  page shows a local retry, no duplicate ads, no page cap) — every paid campaign stays
+  reachable and the browser still filters/ranks nothing; loading, error/retry and empty states
   are local, so the organic catalogue never breaks.
 - Every label, state and error is available in Arabic and English.
 
