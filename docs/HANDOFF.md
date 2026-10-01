@@ -3,7 +3,8 @@
 Date: 2026-10-01
 AI/Engineer: Claude (Sonnet 5.5)
 Branch: `main`
-HEAD: `46f4d8ffb2465f3bee35bff7ca1c432540034816` (merge of PR #9)
+Current Git Tip: the latest commit on `main` — run `git rev-parse HEAD` (documentation commits after the Phase 8 merge move the tip, so no SHA is pinned here)
+Phase 8 Code Baseline: `46f4d8ffb2465f3bee35bff7ca1c432540034816` (merge of PR #9; no application code has changed since)
 
 - **Phase 8 — Advertising and Payments is DONE and merged** through PR #9. Accepted head `25b4e6ef9f723c7ac41850f4167367a281f3259f`; the final exact-head Codex review found no major issues; post-merge CI #216 (id `36854496027`) is green (Web, Backend, OpenAPI freshness).
 - Tests on `main`: **1473 backend, 389 web**.
