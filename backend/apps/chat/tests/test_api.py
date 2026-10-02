@@ -156,7 +156,11 @@ def test_unread_count_and_sequence_cursor(api_client, account_factory):
     listing = api_client.get(BASE + "conversations/").json()
     assert listing["results"][0]["unread_count"] == 2
 
-    read = api_client.post(f"{BASE}conversations/{conversation_id}/read/")
+    read = api_client.post(
+        f"{BASE}conversations/{conversation_id}/read/",
+        {"through_sequence": 2},
+        format="json",
+    )
     assert read.status_code == 200
     assert read.json() == {"last_read_sequence": 2}
     assert api_client.get(BASE + "unread-count/").json() == {"count": 0}
@@ -172,8 +176,11 @@ def test_unread_count_and_sequence_cursor(api_client, account_factory):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("body", [{"x": 1}, [], "x", 0, False])
-def test_mark_read_rejects_client_fields(api_client, account_factory, body):
+@pytest.mark.parametrize(
+    "body",
+    [{}, {"through_sequence": -1}, {"through_sequence": "not-an-integer"}, [], "x", 0, False],
+)
+def test_mark_read_requires_a_valid_observed_sequence(api_client, account_factory, body):
     _, patient, _, reservation = make_reservation_world(account_factory)
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
     response = api_client.post(
@@ -182,7 +189,21 @@ def test_mark_read_rejects_client_fields(api_client, account_factory, body):
         format="json",
     )
     assert response.status_code == 400
-    assert "field_not_allowed" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_mark_read_rejects_cursor_beyond_current_conversation(api_client, account_factory):
+    _, patient, _, reservation = make_reservation_world(account_factory)
+    conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
+
+    response = api_client.post(
+        f"{BASE}conversations/{conversation_id}/read/",
+        {"through_sequence": 99},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "invalid_read_cursor" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -191,8 +212,16 @@ def test_mark_read_foreign_and_missing_are_same_404(api_client, account_factory)
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
     api_client.force_authenticate(user=outsider)
 
-    foreign = api_client.post(f"{BASE}conversations/{conversation_id}/read/")
-    missing = api_client.post(f"{BASE}conversations/{uuid.uuid4()}/read/")
+    foreign = api_client.post(
+        f"{BASE}conversations/{conversation_id}/read/",
+        {"through_sequence": 0},
+        format="json",
+    )
+    missing = api_client.post(
+        f"{BASE}conversations/{uuid.uuid4()}/read/",
+        {"through_sequence": 0},
+        format="json",
+    )
     assert foreign.status_code == missing.status_code == 404
 
 
