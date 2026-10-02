@@ -102,7 +102,7 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Token ownership is server-owned and DB-enforced:** `PushDevice.token` is globally unique; the owner is always `request.user` (no account field accepted); registering a token held by another account transfers it, so the previous owner stops receiving pushes (account switch / shared browser).
 - **No IDOR:** unregister only touches the caller's own device and answers `204` for unknown/foreign tokens alike; no list/read/delete-by-id API exists; tokens are never returned.
 - **Credential hygiene:** tokens are never logged in full, never in audit rows or payloads; admin is inspection-only with masked tokens; Firebase credentials stay in `FIREBASE_CREDENTIALS_FILE` (platform-injected, never committed).
-- **Best-effort, after commit:** pushes are scheduled with `transaction.on_commit`, never raise, and cannot fail or roll back the domain action; rolled-back changes never push.
+- **Best-effort, after commit, bounded:** pushes are scheduled with `transaction.on_commit`, never raise, and cannot fail or roll back the domain action; rolled-back changes never push. Because `on_commit` runs inside the request, delivery is one SDK multicast under a hard 3 s deadline with a bulkhead and a fail-fast window, so a Firebase outage cannot hold a request or accumulate threads.
 - **Privacy:** lock-screen text is generic (no message bodies, notes, contact data, service/provider names); `data` carries only opaque ids and is never an authorization input.
 - **Stale tokens:** only permanent Firebase rejections deactivate a device; transient errors never do. See `PUSH.md`.
 

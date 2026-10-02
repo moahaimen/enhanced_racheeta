@@ -13,7 +13,7 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 - PostgreSQL stays authoritative; push is a best-effort hint sent after commit.
 - `notifications_pushdevice`: globally unique token, one owner (`request.user`), platforms `ANDROID|IOS|WEB`, transfer on account switch, ≤10 active devices/account.
 - API: `POST /api/v1/notifications/push-devices/` (register/upsert) and `.../unregister/` (idempotent `204`, no ownership disclosure). Tokens are never returned.
-- `apps.notifications.push` (`PushSender`, Disabled default, `FirebaseAdminPushSender`) and `push_service` (never raises; permanent errors deactivate, transient do not).
+- `apps.notifications.push` (`PushSender` with ONE method `send_batch`, Disabled default, `FirebaseAdminPushSender` = one `send_each_for_multicast` under a hard 3 s deadline, ≤4 in-flight batches, 10 s fail-fast window) and `push_service` (never raises; per-token permanent errors deactivate, everything else keeps the device). `on_commit` is synchronous, so this bound is what keeps requests from hanging on Firebase; see `PUSH.md`.
 - Triggers: newly created persistent notifications; new chat messages (other participant only) via `apps.chat.hooks.message_sent`.
 - New env `PUSH_SENDER` (reuses `FIREBASE_CREDENTIALS_FILE`); `firebase-admin==7.7.0` in production requirements.
 - Deferred: web/mobile token acquisition (no Firebase client/service worker in repo; mobile is Phase 11), workers/queues, realtime.

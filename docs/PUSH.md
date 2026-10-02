@@ -54,15 +54,56 @@ Firebase or on this call; the transfer rule covers a missed call.
   * Chat: `apps.chat.hooks.message_sent` (post-commit signal) → receiver in
     `apps.notifications` → the **other** participant(s) from backend-owned membership.
     The sender never receives their own message; nothing about read cursors changes.
-* `push_service.deliver` never raises. Fan-out is sequential over ≤10 active devices of
-  an active account; one failing token does not stop the others.
-* **Invalid tokens:** Firebase `UnregisteredError` / `SenderIdMismatchError` deactivate the
-  local device. Everything else (quota, unavailable, network, auth, unknown) is transient
-  and **never** deactivates.
-* The Firebase sender uses its own named SDK app with a 5 s HTTP timeout, so a hanging FCM
-  cannot hold a request thread for the SDK default; worst case is bounded by 10 × 5 s.
-* No worker, queue, Redis, Celery, WebSocket or Channels exists. Delivery is bounded and
-  inline after commit; the `PushSender` boundary lets a future worker take it over.
+* `push_service.deliver` never raises and targets the recipient's ≤10 active devices.
+* **Invalid tokens:** per-token Firebase `UnregisteredError` / `SenderIdMismatchError`
+  deactivate that local device only. Everything else (quota, unavailable, invalid argument,
+  network, auth, unknown) is transient and **never** deactivates. A batch that is refused,
+  times out or fails as a whole says nothing about any token, so every registration is kept.
+* No worker, queue, Redis, Celery, WebSocket or Channels exists.
+
+### Why the request cannot hang on Firebase
+
+`transaction.on_commit` is a hook, **not** asynchronous execution: the callback runs inside
+the request that caused it, so push latency is request latency. The delivery path is built so
+that cost is a constant, never `devices × timeout`:
+
+1. **One operation per delivery.** `PushSender` has a single method, `send_batch(tokens,
+   message)`; there is no per-token `send` to loop over. `FirebaseAdminPushSender` makes one
+   `firebase_admin.messaging.send_each_for_multicast(MulticastMessage, app=...)` call and gets
+   back a `BatchResponse` whose `responses[i]` (`.success`, `.exception`) answers `tokens[i]`.
+2. **What the SDK really does (firebase-admin 7.7.0, measured, not assumed).** The old HTTP
+   batch endpoints (`send_all`/`send_multicast`) no longer exist; `send_each*` sends the
+   tokens **concurrently** on its own thread pool, one request per token. Ten tokens at 0.5 s
+   per request finished in 0.53 s (not 5 s). But its limits are *not* a strict bound: the
+   timeout is per socket operation and the retry policy is not configurable, so a server that
+   never answers cost 2× the timeout (4 s at `httpTimeout=2`) and a 503 storm ~7 s (retries with
+   back-off), and an OAuth token refresh can wait up to google-auth's own 120 s default.
+3. **Hard caller-side deadline** (`BoundedCallRunner`, `PUSH_BATCH_DEADLINE_SECONDS = 3`).
+   The SDK call runs on a fixed pool and the request waits at most the deadline. A blocked
+   call cannot be interrupted, so it is *abandoned*: it finishes in the background and its
+   result is discarded (the next delivery re-attempts; nothing is lost that PostgreSQL does
+   not already hold). This is the only mechanism that bounds retries and token refresh too.
+4. **Bulkhead.** At most `PUSH_MAX_INFLIGHT_BATCHES = 4` batches are in flight per process
+   (a semaphore taken without waiting). A batch keeps its slot until it really finishes, so a
+   hung Firebase can never accumulate threads or memory: further deliveries are refused
+   instantly (`PushBusy`). Worst case per process: 4 pool threads + the SDK's own ≤10 threads
+   per batch.
+5. **Fail-fast window.** After a missed deadline, deliveries are refused instantly
+   (`PushPaused`) for `PUSH_COOLDOWN_SECONDS = 10`, then the next one probes again. An outage
+   therefore costs one deadline per window per process, not one per notification, and a
+   request that notifies two people (e.g. an admin-driven status change) pays one deadline,
+   not two.
+
+**Bound:** a delivery adds at most `PUSH_BATCH_DEADLINE_SECONDS` (3 s) + two small queries to
+the originating request, independent of the number of devices; during an outage most
+deliveries add nothing. (A request triggers at most two deliveries, one per participant.)
+
+**Lifecycle / reliability of the background work.** The pool is fixed-size and created lazily
+in the serving process; its threads never touch the database or any request state (they run
+only the SDK call over plain tokens and the message), so there is no connection to leak or
+transaction to confuse. An abandoned or unfinished call can only lose a best-effort hint. At
+worker shutdown the interpreter joins the pool, so exit may be delayed by the SDK's remaining
+timeouts (a few seconds; gunicorn's graceful timeout still applies).
 
 ## Privacy rules
 
@@ -80,7 +121,14 @@ opening a conversation re-authorizes through the normal participant-scoped API.
 | `PUSH_SENDER` | `apps.notifications.push.DisabledPushSender` (default, sends nothing) or `apps.notifications.push.FirebaseAdminPushSender` |
 | `FIREBASE_CREDENTIALS_FILE` | Existing variable (service-account JSON, platform-injected, never committed); reused by FCM |
 
-`firebase-admin` is pinned in `requirements/production.txt`. System checks: `E003`
+Delivery bounds are code constants in `apps/notifications/push.py` (no new environment
+variables): `PUSH_BATCH_DEADLINE_SECONDS = 3`, `PUSH_HTTP_TIMEOUT_SECONDS = 2` (SDK per-request
+timeout; limits how long abandoned work lingers), `PUSH_MAX_INFLIGHT_BATCHES = 4`,
+`PUSH_COOLDOWN_SECONDS = 10`.
+
+`firebase-admin` is pinned in `requirements/production.txt` (`MulticastMessage.tokens` is marked
+deprecated in 7.7.0 in favour of Firebase Installation IDs but remains supported; revisit before
+upgrading the pin). System checks: `E003`
 (sender cannot be loaded), `E004` (Firebase sender without credentials), `W001`
 (production with push disabled: safe, nothing is sent). Development and CI never send.
 
@@ -94,8 +142,20 @@ unregister before logout/account change, and open pushes through authenticated A
 
 ## Tests
 
-`apps/notifications/tests/test_push.py` uses an injected `RecordingSender` (no network):
-registration/ownership/transfer/IDOR, DB uniqueness and concurrency (thread races),
-fan-out, permanent vs transient errors, after-commit and rollback behavior, chat and
-notification recipients, privacy of content, admin masking, system checks; plus OpenAPI
-contract tests.
+No test contacts Firebase.
+
+* `test_push.py` — registration/ownership/transfer/IDOR, DB uniqueness and concurrency (thread
+  races), fan-out, permanent vs transient errors, after-commit and rollback behavior, chat and
+  notification recipients, privacy of content, admin masking, system checks.
+* `test_push_delivery_bounds.py` — the latency contract: the sender interface has no per-token
+  send; one sender call for 1/3/10 devices; delivery latency does not scale with device count;
+  the real `FirebaseAdminPushSender` over a **fake SDK** makes exactly one multicast call and maps
+  mixed per-token results (misaligned responses are never trusted); `BoundedCallRunner` deadline,
+  bulkhead, thread bound, release-after-finish and fail-fast window; end-to-end: with a hung
+  Firebase and 10 devices, a chat send, a booking and a two-recipient request all return within
+  the deadline while the `Message` / `Notification` and every device registration are intact.
+* `test_firebase_sdk_contract.py` — the same claims against the **real** firebase-admin SDK with a
+  loopback server in place of FCM (concurrent multicast, typed per-token errors, SDK retry policy
+  vs the deadline). Skipped when `firebase-admin` is not installed (the default CI image); run it
+  locally with the SDK on the path.
+* OpenAPI contract tests for the device endpoints.

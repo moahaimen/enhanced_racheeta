@@ -1103,7 +1103,7 @@ Do not integrate a paid payment gateway until the owner selects it.
 - **9B — done and merged via PR #11.**
 - **9C Firebase push — current implementation branch (`feat/phase9c-fcm-push`).**
   - `PushDevice` token registry (globally unique token, server-owned account, bounded platforms, transfer on account switch).
-  - Authenticated register/unregister API; `PushSender` boundary over the Firebase Admin SDK; after-commit best-effort fan-out.
+  - Authenticated register/unregister API; `PushSender` boundary over the Firebase Admin SDK (one `send_batch` operation per recipient, one multicast call, hard 3 s deadline, bounded in-flight work); after-commit best-effort fan-out.
   - Pushes for newly created persistent notifications and for new chat messages (other participant only); privacy-preserving content.
   - Web/mobile token acquisition deferred (no Firebase client in the repo). No worker, Redis, Celery or WebSockets. See `PUSH.md`.
 - Realtime/WebSockets remain deferred unless UX later justifies them; no Redis/Celery added for chat.

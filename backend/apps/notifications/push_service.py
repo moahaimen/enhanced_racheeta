@@ -9,6 +9,10 @@ Three concerns, kept apart:
 `deliver` never raises: Firebase being down, a rejected token or missing credentials
 must not turn an already-committed business action into an error. Triggers register
 delivery with `transaction.on_commit`, so a rolled-back change never pushes.
+
+`on_commit` is not asynchronous: the callback runs in the originating request. `deliver`
+therefore makes exactly one sender call per delivery (`send_batch`, bounded by a hard
+deadline in `push.py`), so the latency it adds is a constant, never devices × timeout.
 """
 
 from __future__ import annotations
@@ -38,11 +42,6 @@ _GENERIC_BODY = {
     "en": "Open Racheeta to view the details.",
 }
 _CHAT_TITLE = {"ar": "رسالة جديدة", "en": "New message"}
-
-
-def _fingerprint(token: str) -> str:
-    """Safe log identifier for a token: never the full value."""
-    return f"…{token[-6:]}" if len(token) > 12 else "…"
 
 
 # --- registration -------------------------------------------------------------------------
@@ -155,29 +154,39 @@ def _deliver(account_id: Any, build: Callable[[str], PushMessage]) -> int:
     if not devices:
         return 0
     message = build(normalize_language(recipient.preferred_language))
-    sender = push.get_sender()
+    tokens = [device.token for device in devices]
+
+    # ONE bounded operation for every device of this recipient. The sender owns the latency
+    # bound (push.py); never loop over devices here, that would add one wait per device.
+    try:
+        results = push.get_sender().send_batch(tokens, message)
+    except push.PushDeadlineExceeded:
+        logger.warning("push batch missed its deadline devices=%d", len(devices))
+        return 0
+    except push.PushDeliveryUnavailable as exc:
+        logger.info("push batch skipped devices=%d reason=%s", len(devices), type(exc).__name__)
+        return 0
+    except Exception as exc:  # noqa: BLE001 - a whole-batch failure says nothing about tokens
+        logger.warning("push batch failed devices=%d error=%s", len(devices), type(exc).__name__)
+        return 0
+
     sent = 0
-    for device in devices:
-        try:
-            result = sender.send(device.token, message)
-        except Exception as exc:  # noqa: BLE001 - one broken token must not stop the rest
-            logger.warning(
-                "push send failed device=%s token=%s error=%s",
-                device.pk,
-                _fingerprint(device.token),
-                type(exc).__name__,
-            )
-            continue
+    rejected: list[str] = []
+    transient = 0
+    for token in tokens:
+        result = results.get(token, PushResult.TRANSIENT_FAILURE)
         if result is PushResult.SENT:
             sent += 1
         elif result is PushResult.INVALID_TOKEN:
-            logger.info("push token rejected permanently device=%s", device.pk)
-            try:
-                PushDevice.objects.filter(pk=device.pk, token=device.token).update(is_active=False)
-            except Exception:  # noqa: BLE001
-                logger.exception("could not deactivate rejected push device=%s", device.pk)
+            rejected.append(token)
         else:
-            logger.warning("push transient failure device=%s", device.pk)
+            transient += 1
+    if rejected:
+        # Only permanent per-token rejections deactivate a registration (one UPDATE).
+        PushDevice.objects.filter(token__in=rejected, is_active=True).update(is_active=False)
+        logger.info("push tokens rejected permanently count=%d", len(rejected))
+    if transient:
+        logger.warning("push transient failures count=%d", transient)
     return sent
 
 

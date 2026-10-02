@@ -195,6 +195,7 @@ def test_fan_out_to_all_active_devices_and_one_failure_does_not_block_others(acc
     RecordingSender.outcomes["t2-" + "b" * 30] = RuntimeError("boom")
     sent = push_service.deliver(account.pk, lambda lang: push.PushMessage("t", "b"))
     assert sent == 2
+    assert len(RecordingSender.batches) == 1  # one operation for all three devices
     assert len(RecordingSender.calls) == 3
     assert PushDevice.objects.filter(is_active=True).count() == 3  # transient: nothing deactivated
 
