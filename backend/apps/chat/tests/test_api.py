@@ -7,7 +7,6 @@ from apps.chat.models import Conversation, ConversationParticipant, Message
 
 from .helpers import make_reservation_world
 
-
 BASE = "/api/v1/chat/"
 
 
