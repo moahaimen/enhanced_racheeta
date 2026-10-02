@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 
-import { useAuth } from '../../auth/useAuth'
+import { useAuth } from '../../auth/useAuth'\nimport { useChat } from '../../chat/useChat'
 import { useNotifications } from '../../notifications/useNotifications'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
 import { Icon } from '../icons'
@@ -64,6 +64,27 @@ function NotificationsLink() {
           className={styles.badge}
           data-testid="notifications-badge"
           aria-label={t('notifications.unreadLabel', { count })}
+        >
+          {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
+        </span>
+      ) : null}
+    </NavLink>
+  )
+}
+
+function MessagesLink() {
+  const { t } = useTranslation()
+  const { unreadCount } = useChat()
+  const count = unreadCount ?? 0
+  return (
+    <NavLink to="/messages" className={styles.link}>
+      <Icon name="mail" size={18} />
+      {t('nav.messages')}
+      {count > 0 ? (
+        <span
+          className={styles.badge}
+          data-testid="messages-badge"
+          aria-label={t('messages.unreadLabel', { count })}
         >
           {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
         </span>
@@ -157,7 +178,7 @@ export function SiteHeader() {
           {t('nav.adminConsole')}
         </NavLink>
       ) : null}
-      {status === 'authenticated' ? <NotificationsLink /> : null}
+      {status === 'authenticated' ? <MessagesLink /> : null}\n      {status === 'authenticated' ? <NotificationsLink /> : null}
       {status === 'authenticated' ? (
         <NavLink to="/profile" className={styles.link}>
           <Icon name="user" size={18} />
