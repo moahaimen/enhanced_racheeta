@@ -57,7 +57,7 @@ def _participant_queryset(account):
                 & ~Q(conversation__messages__sender=account),
             )
         )
-        .order_by("-conversation__last_message_at", "-conversation__created_at", "-conversation__id")
+        .order_by(\n            F("conversation__last_message_at").desc(nulls_last=True),\n            "-conversation__created_at",\n            "-conversation__id",\n        )
     )
 
 
