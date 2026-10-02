@@ -28,7 +28,9 @@ import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
 import { OwnerWorkspacePage } from '../pages/realEstate/OwnerWorkspacePage'
 import { RealEstateDetailPage } from '../pages/realEstate/RealEstateDetailPage'
 import { RealEstatePage } from '../pages/realEstate/RealEstatePage'
-import { NotificationsPage } from '../pages/notifications/NotificationsPage'\nimport { ConversationPage } from '../pages/messages/ConversationPage'\nimport { MessagesPage } from '../pages/messages/MessagesPage'
+import { NotificationsPage } from '../pages/notifications/NotificationsPage'
+import { ConversationPage } from '../pages/messages/ConversationPage'
+import { MessagesPage } from '../pages/messages/MessagesPage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
 import { ProviderReservationsPage } from '../pages/reservations/ProviderReservationsPage'
 import { ProvidersPage } from '../pages/providers/ProvidersPage'
@@ -70,7 +72,9 @@ export const routes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           { path: 'profile', element: <ProfilePage /> },
-          { path: 'notifications', element: <NotificationsPage /> },\n          { path: 'messages', element: <MessagesPage /> },\n          { path: 'messages/:id', element: <ConversationPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
+          { path: 'messages', element: <MessagesPage /> },
+          { path: 'messages/:id', element: <ConversationPage /> },
           {
             element: <RequireRole roles={['PATIENT']} />,
             children: [{ path: 'reservations', element: <MyReservationsPage /> }],
