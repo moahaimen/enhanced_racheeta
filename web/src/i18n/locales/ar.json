@@ -85,7 +85,8 @@
     "realEstate": "العقارات",
     "realEstateWorkspace": "مساحة العقارات",
     "advertising": "الإعلانات",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "messages": "الرسائل"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -1492,5 +1493,29 @@
     "unreadLabel_few": "{{count}} إشعارات غير مقروءة",
     "unreadLabel_many": "{{count}} إشعارًا غير مقروء",
     "unreadLabel_other": "{{count}} إشعار غير مقروء"
+  },
+  "messages": {
+    "title": "الرسائل",
+    "intro": "محادثات خاصة مرتبطة بحجوزاتك في رشيطة.",
+    "empty": "لا توجد محادثات بعد.",
+    "emptyPage": "لا توجد محادثات في هذه الصفحة.",
+    "count": "{{count}} محادثة",
+    "participant": "المشارك",
+    "reservationConversation": "محادثة الحجز",
+    "unreadCount": "{{count}} غير مقروءة",
+    "unreadLabel": "{{count}} رسالة غير مقروءة",
+    "noMessagesYet": "لا توجد رسائل بعد.",
+    "open": "فتح المحادثة",
+    "opening": "جارٍ الفتح…",
+    "threadTitle": "المحادثة",
+    "threadIntro": "تُحفظ الرسائل في رشيطة ولا تظهر إلا لأطراف الحجز.",
+    "back": "العودة إلى الرسائل",
+    "you": "أنت",
+    "message": "الرسالة",
+    "placeholder": "اكتب رسالة…",
+    "send": "إرسال",
+    "sending": "جارٍ الإرسال…",
+    "messageProvider": "مراسلة مقدم الخدمة",
+    "messagePatient": "مراسلة المريض"
   }
-}
+}\n
