@@ -86,6 +86,10 @@ class UnreadCountSerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
+class ReadRequestSerializer(serializers.Serializer):
+    through_sequence = serializers.IntegerField(min_value=0)
+
+
 class ReadStateSerializer(serializers.Serializer):
     last_read_sequence = serializers.IntegerField()
 
