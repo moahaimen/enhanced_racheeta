@@ -25,12 +25,8 @@ def _open(api_client, account, reservation_id, body=None):
 def test_chat_endpoints_require_authentication(api_client):
     assert api_client.get(BASE + "conversations/").status_code == 401
     assert api_client.get(BASE + "unread-count/").status_code == 401
-    assert api_client.post(
-        f"{BASE}reservations/{uuid.uuid4()}/conversation"
-    ).status_code == 401
-    assert api_client.get(
-        f"{BASE}conversations/{uuid.uuid4()}/messages/"
-    ).status_code == 401
+    assert api_client.post(f"{BASE}reservations/{uuid.uuid4()}/conversation").status_code == 401
+    assert api_client.get(f"{BASE}conversations/{uuid.uuid4()}/messages/").status_code == 401
 
 
 @pytest.mark.django_db
@@ -106,14 +102,15 @@ def test_message_thread_is_participant_scoped_and_hides_contact_fields(api_clien
     assert received.json()["results"][0]["is_mine"] is False
 
     api_client.force_authenticate(user=outsider)
-    assert api_client.get(
-        f"{BASE}conversations/{conversation_id}/messages/"
-    ).status_code == 404
-    assert api_client.post(
-        f"{BASE}conversations/{conversation_id}/messages/",
-        {"body": "intrusion"},
-        format="json",
-    ).status_code == 404
+    assert api_client.get(f"{BASE}conversations/{conversation_id}/messages/").status_code == 404
+    assert (
+        api_client.post(
+            f"{BASE}conversations/{conversation_id}/messages/",
+            {"body": "intrusion"},
+            format="json",
+        ).status_code
+        == 404
+    )
     assert Message.objects.count() == 1
 
 
@@ -138,16 +135,22 @@ def test_unread_count_and_sequence_cursor(api_client, account_factory):
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
 
     api_client.force_authenticate(user=provider)
-    assert api_client.post(
-        f"{BASE}conversations/{conversation_id}/messages/",
-        {"body": "one"},
-        format="json",
-    ).status_code == 201
-    assert api_client.post(
-        f"{BASE}conversations/{conversation_id}/messages/",
-        {"body": "two"},
-        format="json",
-    ).status_code == 201
+    assert (
+        api_client.post(
+            f"{BASE}conversations/{conversation_id}/messages/",
+            {"body": "one"},
+            format="json",
+        ).status_code
+        == 201
+    )
+    assert (
+        api_client.post(
+            f"{BASE}conversations/{conversation_id}/messages/",
+            {"body": "two"},
+            format="json",
+        ).status_code
+        == 201
+    )
     assert api_client.get(BASE + "unread-count/").json() == {"count": 0}
 
     api_client.force_authenticate(user=patient)
@@ -276,9 +279,7 @@ def test_messages_page_one_is_latest_slice_but_chronological_inside_page(
 
     api_client.force_authenticate(user=patient)
     first = api_client.get(f"{BASE}conversations/{conversation_id}/messages/").json()
-    second = api_client.get(
-        f"{BASE}conversations/{conversation_id}/messages/?page=2"
-    ).json()
+    second = api_client.get(f"{BASE}conversations/{conversation_id}/messages/?page=2").json()
 
     assert [row["sequence"] for row in first["results"]] == list(range(6, 26))
     assert [row["sequence"] for row in second["results"]] == list(range(1, 6))
@@ -304,13 +305,19 @@ def test_no_public_client_update_delete_or_arbitrary_conversation_create(
     _, patient, _, reservation = make_reservation_world(account_factory)
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
 
-    assert api_client.post(
-        BASE + "conversations/",
-        {"participant": str(uuid.uuid4())},
-        format="json",
-    ).status_code == 405
+    assert (
+        api_client.post(
+            BASE + "conversations/",
+            {"participant": str(uuid.uuid4())},
+            format="json",
+        ).status_code
+        == 405
+    )
     for method in ("patch", "put", "delete"):
-        assert getattr(api_client, method)(
-            f"{BASE}conversations/{conversation_id}/messages/"
-        ).status_code == 405
+        assert (
+            getattr(api_client, method)(
+                f"{BASE}conversations/{conversation_id}/messages/"
+            ).status_code
+            == 405
+        )
     assert Conversation.objects.count() == 1
