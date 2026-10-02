@@ -20,7 +20,8 @@ from .serializers import (
     MessageSerializer,
     PaginatedConversationSerializer,
     PaginatedMessageSerializer,
-    ReadRequestSerializer,\n    ReadStateSerializer,
+    ReadRequestSerializer,
+    ReadStateSerializer,
     UnreadCountSerializer,
 )
 
@@ -57,7 +58,11 @@ def _participant_queryset(account):
                 & ~Q(conversation__messages__sender=account),
             )
         )
-        .order_by(\n            F("conversation__last_message_at").desc(nulls_last=True),\n            "-conversation__created_at",\n            "-conversation__id",\n        )
+        .order_by(
+            F("conversation__last_message_at").desc(nulls_last=True),
+            "-conversation__created_at",
+            "-conversation__id",
+        )
     )
 
 
