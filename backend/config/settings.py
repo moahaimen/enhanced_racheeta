@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "apps.marketplace",
     "apps.real_estate",
     "apps.advertising",
+    "apps.chat.apps.ChatConfig",
     "apps.notifications.apps.NotificationsConfig",
 ]
 
@@ -189,6 +190,7 @@ REST_FRAMEWORK = {
         "talent_search": "60/min",
         "talent_invite": "30/hour",
         "recruitment_messages": "60/hour",
+        "chat_messages": "120/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -226,6 +228,7 @@ SPECTACULAR_SETTINGS = {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",
+        "ConversationContextTypeEnum": "apps.chat.types.ConversationContextType.choices",
         "CampaignStatusEnum": "apps.advertising.types.CampaignStatus.choices",
         "CampaignPaymentStatusEnum": "apps.advertising.types.PaymentStatus.choices",
         "ProviderTypeEnum": "apps.providers.types.ProviderType.choices",
