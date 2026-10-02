@@ -43,7 +43,9 @@ def test_message_sequence_is_unique_per_conversation(account_factory):
 
 @pytest.mark.django_db
 def test_chat_admin_is_inspection_only(account_factory):
-    staff = account_factory(is_staff=True)
+    staff = account_factory()
+    type(staff).objects.filter(pk=staff.pk).update(is_staff=True)
+    staff.refresh_from_db()
     request = RequestFactory().get("/admin/")
     request.user = staff
     for model in (Conversation, ConversationParticipant, Message):
