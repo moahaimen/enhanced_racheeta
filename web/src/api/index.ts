@@ -23,4 +23,5 @@ export * as admin from './endpoints/admin'
 export type { AdminEmployer, AdminJob, AdminSubscription } from './endpoints/admin'
 export * from './notifications.types'
 export * as notifications from './endpoints/notifications'
-export * from './chat.types'\nexport * as chat from './endpoints/chat'\n
+export * from './chat.types'
+export * as chat from './endpoints/chat'
