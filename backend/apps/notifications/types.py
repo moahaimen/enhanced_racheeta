@@ -25,3 +25,9 @@ SAFE_PAYLOAD_KEYS = (
     "previous_status",
     "status",
 )
+
+
+class PushPlatform(models.TextChoices):
+    ANDROID = "ANDROID", "Android"
+    IOS = "IOS", "iOS"
+    WEB = "WEB", "Web"

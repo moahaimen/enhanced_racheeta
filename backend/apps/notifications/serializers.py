@@ -1,9 +1,12 @@
 from django.utils import translation
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
+from apps.chat.serializers import StrictFieldsSerializer
+
 from . import presentation
-from .models import Notification
-from .types import NotificationCategory, NotificationEventType
+from .models import Notification, PushDevice
+from .types import NotificationCategory, NotificationEventType, PushPlatform
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -61,3 +64,29 @@ class UnreadCountSerializer(serializers.Serializer):
 
 class MarkAllReadSerializer(serializers.Serializer):
     updated = serializers.IntegerField()
+
+
+@extend_schema_serializer(component_name="PushDeviceRegister")
+class PushDeviceRegisterSerializer(StrictFieldsSerializer):
+    """The only client input: the opaque FCM token and a bounded platform.
+    Ownership is always the authenticated caller; there is no account field."""
+
+    token = serializers.CharField(max_length=1024, min_length=1, trim_whitespace=True)
+    platform = serializers.ChoiceField(choices=PushPlatform.choices)
+
+
+@extend_schema_serializer(component_name="PushDeviceUnregister")
+class PushDeviceUnregisterSerializer(StrictFieldsSerializer):
+    token = serializers.CharField(max_length=1024, min_length=1, trim_whitespace=True)
+
+
+@extend_schema_serializer(component_name="PushDevice")
+class PushDeviceSerializer(serializers.ModelSerializer):
+    """Never includes the token or the owner."""
+
+    platform = serializers.ChoiceField(choices=PushPlatform.choices, read_only=True)
+
+    class Meta:
+        model = PushDevice
+        fields = ("id", "platform", "is_active", "last_registered_at")
+        read_only_fields = fields

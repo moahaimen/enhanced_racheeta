@@ -95,7 +95,16 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Privacy by construction:** the stored payload is an allow-list of non-sensitive snapshot facts; `patient_note`, contact details, tokens and account data cannot be stored. The API never exposes `recipient`, `dedupe_key` or the raw payload.
 - **Replay safety:** a unique `dedupe_key` makes duplicate events harmless; rolled-back reservations never notify (post-commit signals).
 - **Receiver isolation:** a failing receiver is logged and cannot break the committed business action.
-- **No new attack surface:** no push tokens, third-party credentials, sockets or workers.
+- **No new attack surface in 9A:** no push tokens, third-party credentials, sockets or workers (push arrived in 9C, below).
+
+## Push notifications (Phase 9C)
+
+- **Token ownership is server-owned and DB-enforced:** `PushDevice.token` is globally unique; the owner is always `request.user` (no account field accepted); registering a token held by another account transfers it, so the previous owner stops receiving pushes (account switch / shared browser).
+- **No IDOR:** unregister only touches the caller's own device and answers `204` for unknown/foreign tokens alike; no list/read/delete-by-id API exists; tokens are never returned.
+- **Credential hygiene:** tokens are never logged in full, never in audit rows or payloads; admin is inspection-only with masked tokens; Firebase credentials stay in `FIREBASE_CREDENTIALS_FILE` (platform-injected, never committed).
+- **Best-effort, after commit:** pushes are scheduled with `transaction.on_commit`, never raise, and cannot fail or roll back the domain action; rolled-back changes never push.
+- **Privacy:** lock-screen text is generic (no message bodies, notes, contact data, service/provider names); `data` carries only opaque ids and is never an authorization input.
+- **Stale tokens:** only permanent Firebase rejections deactivate a device; transient errors never do. See `PUSH.md`.
 
 ## HTTP hardening (`DEBUG=false`)
 

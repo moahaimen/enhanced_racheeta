@@ -209,6 +209,8 @@ All authenticated and recipient-scoped; see `NOTIFICATIONS.md`.
 | `GET /api/v1/notifications/unread-count/` | `{"count": N}` |
 | `POST /api/v1/notifications/{id}/read/` | The notification, now read (idempotent; foreign or unknown id: `404`) |
 | `POST /api/v1/notifications/read-all/` | `{"updated": N}` |
+| `POST /api/v1/notifications/push-devices/` | Register/refresh this device's FCM token: body `{token, platform: ANDROID\|IOS\|WEB}` only (owner is the caller); `200 {id, platform, is_active, last_registered_at}`; the token is never returned. A token held by another account is transferred to the caller. Throttled (`push_devices`). See `PUSH.md`. |
+| `POST /api/v1/notifications/push-devices/unregister/` | Body `{token}`; deactivates the caller's own registration; `204` whether the token is unknown, foreign or the caller's (no ownership disclosure). |
 
 The `POST` actions take no client data: no body or `{}` only; anything else is
 `field_not_allowed`. There is no create, update or delete endpoint.

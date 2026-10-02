@@ -3591,6 +3591,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/Notification'
           description: ''
+  /api/v1/notifications/push-devices/:
+    post:
+      operationId: notifications_push_devices_create
+      description: Idempotent upsert owned by the authenticated caller. If the token
+        was registered by another account it is transferred to the caller and the
+        previous owner stops receiving pushes through it. The token is never returned.
+      summary: Register or refresh this device's push token
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDeviceRegisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PushDeviceRegisterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushDevice'
+          description: ''
+  /api/v1/notifications/push-devices/unregister/:
+    post:
+      operationId: notifications_push_devices_unregister_create
+      description: Deactivates the caller's own registration of this token. Tokens
+        that are unknown or owned by someone else change nothing and are answered
+        identically (204).
+      summary: Unregister this device's push token (call before logout)
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushDeviceUnregisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PushDeviceUnregisterRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/notifications/read-all/:
     post:
       operationId: notifications_read_all_create
@@ -11773,6 +11823,65 @@ components:
       description: |-
         * `DRAFT` - Draft
         * `PUBLISHED` - Published
+    PushDevice:
+      type: object
+      description: Never includes the token or the owner.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/PushPlatformEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        last_registered_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - id
+      - is_active
+      - last_registered_at
+      - platform
+    PushDeviceRegisterRequest:
+      type: object
+      description: |-
+        The only client input: the opaque FCM token and a bounded platform.
+        Ownership is always the authenticated caller; there is no account field.
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        platform:
+          $ref: '#/components/schemas/PushPlatformEnum'
+      required:
+      - platform
+      - token
+    PushDeviceUnregisterRequest:
+      type: object
+      description: Reject undeclared client fields instead of silently ignoring them.
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required:
+      - token
+    PushPlatformEnum:
+      enum:
+      - ANDROID
+      - IOS
+      - WEB
+      type: string
+      description: |-
+        * `ANDROID` - Android
+        * `IOS` - iOS
+        * `WEB` - Web
     QuoteDatesRequest:
       type: object
       properties:

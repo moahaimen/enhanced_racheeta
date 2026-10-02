@@ -119,7 +119,7 @@ Django admin lists notifications for inspection only (no add, change or delete).
 ## Not in this phase
 
 - Generic chat / conversations / messages (Phase 9B); `RecruitmentMessage` is untouched.
-- FCM / Firebase push, device tokens, `FIREBASE_*` settings (Phase 9C). The existing Firebase *authentication* adapter is unchanged.
+- FCM push delivery was added in Phase 9C and is documented in `PUSH.md` (it sits on top of these rows and never replaces them).
 - WebSockets, Channels, ASGI consumers, Redis, Celery or any worker.
 - Notifications for other modules (jobs, invitations, interviews, offers, reviews, advertising, marketplace, real estate).
 - Per-user notification preferences, e-mail or SMS delivery, retention/pruning of old rows.

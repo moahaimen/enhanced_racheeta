@@ -1,10 +1,16 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.core.models import BaseModel
 
-from .types import NotificationCategory, NotificationEventType, NotificationResourceType
+from .types import (
+    NotificationCategory,
+    NotificationEventType,
+    NotificationResourceType,
+    PushPlatform,
+)
 
 
 class Notification(BaseModel):
@@ -51,3 +57,44 @@ class Notification(BaseModel):
     @property
     def is_read(self) -> bool:
         return self.read_at is not None
+
+
+class PushDevice(BaseModel):
+    """One FCM registration token and the single account that currently owns it.
+
+    This is delivery *registration* only: it never decides whether a notification or
+    message exists (PostgreSQL rows do). The token is a credential-like opaque value:
+    it is never serialized to clients, logged in full, or copied into payloads.
+
+    `token` is globally unique, so one physical app/browser token can belong to at
+    most one account at any time. Registering it under another account transfers
+    ownership (see `push_service.register_device`); the previous owner stops
+    receiving pushes through it. The database enforces this, not application code.
+    """
+
+    account = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="push_devices"
+    )
+    token = models.CharField(max_length=1024, editable=False)
+    platform = models.CharField(max_length=16, choices=PushPlatform.choices)
+    is_active = models.BooleanField(default=True)
+    # Refreshed on every (idempotent) registration: the only lifecycle signal needed to
+    # prefer fresh devices and cap fan-out. No device name/model/fingerprint is collected.
+    last_registered_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-last_registered_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["token"], name="push_device_token_unique"),
+            models.CheckConstraint(condition=~Q(token=""), name="push_device_token_not_empty"),
+        ]
+        indexes = [
+            models.Index(fields=["account", "is_active"], name="push_device_account_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.platform} device of {self.account_id}"
+
+    @property
+    def masked_token(self) -> str:
+        return f"…{self.token[-6:]}" if len(self.token) > 12 else "…"

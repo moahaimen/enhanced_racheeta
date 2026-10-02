@@ -1094,13 +1094,18 @@ Do not integrate a paid payment gateway until the owner selects it.
 ## Phase 9 — Chat and Notifications (CURRENT)
 
 - **9A Persistent notifications — done and merged via PR #10.**
-- **9B Generic conversations/messages via REST — current implementation branch.**
+- **9B Generic conversations/messages via REST.**
   - Generic Conversation / ConversationParticipant / immutable Message domain.
   - Initial authorized context is Reservation only; participants are derived by the backend.
   - No arbitrary account-to-account conversation creation.
   - Sequence-based read state; clients acknowledge only messages they actually rendered.
   - Existing recruitment `RecruitmentMessage` remains unchanged.
-- **9C Firebase push — deferred until 9B is accepted and merged.**
+- **9B — done and merged via PR #11.**
+- **9C Firebase push — current implementation branch (`feat/phase9c-fcm-push`).**
+  - `PushDevice` token registry (globally unique token, server-owned account, bounded platforms, transfer on account switch).
+  - Authenticated register/unregister API; `PushSender` boundary over the Firebase Admin SDK; after-commit best-effort fan-out.
+  - Pushes for newly created persistent notifications and for new chat messages (other participant only); privacy-preserving content.
+  - Web/mobile token acquisition deferred (no Firebase client in the repo). No worker, Redis, Celery or WebSockets. See `PUSH.md`.
 - Realtime/WebSockets remain deferred unless UX later justifies them; no Redis/Celery added for chat.
 
 ## Phase 10 — Dashboards and Analytics

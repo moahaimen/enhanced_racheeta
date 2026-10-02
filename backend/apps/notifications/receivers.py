@@ -10,15 +10,18 @@ from __future__ import annotations
 
 import logging
 
+from apps.chat import hooks as chat_hooks
+from apps.chat.models import ConversationParticipant
 from apps.reservations import hooks as reservation_hooks
 from apps.reservations.models import Reservation
 
-from . import services
+from . import push_service, services
 
 logger = logging.getLogger(__name__)
 
 CREATED_UID = "notifications.reservation_created"
 STATUS_UID = "notifications.reservation_status_changed"
+CHAT_UID = "notifications.chat_message_push"
 
 
 def _load(reservation_id):
@@ -75,7 +78,25 @@ def on_reservation_status_changed(
         logger.exception("notification for reservation_status_changed failed")
 
 
+def on_chat_message_sent(sender, *, conversation_id, sender_id, **kwargs) -> None:
+    """Push the other participant(s). Recipients come from backend-owned membership, never
+    from the event or the client; the sender never receives their own message."""
+    try:
+        recipient_ids = list(
+            ConversationParticipant.objects.filter(conversation_id=conversation_id)
+            .exclude(account_id=sender_id)
+            .values_list("account_id", flat=True)
+        )
+        for recipient_id in recipient_ids:
+            push_service.send_chat_message_push(
+                recipient_id=recipient_id, conversation_id=conversation_id
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("push for chat message failed")
+
+
 def connect() -> None:
+    chat_hooks.message_sent.connect(on_chat_message_sent, dispatch_uid=CHAT_UID)
     reservation_hooks.reservation_created.connect(on_reservation_created, dispatch_uid=CREATED_UID)
     reservation_hooks.reservation_status_changed.connect(
         on_reservation_status_changed, dispatch_uid=STATUS_UID
