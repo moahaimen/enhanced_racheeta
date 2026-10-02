@@ -103,6 +103,8 @@ def send_message(conversation_id: UUID, *, sender, body: str) -> Message:
     body = body.strip()
     if not body:
         raise ChatError("Message cannot be blank.", code="blank")
+    if len(body) > 2000:
+        raise ChatError("Message is too long.", code="max_length")
 
     sequence = conversation.last_sequence + 1
     message = Message.objects.create(
