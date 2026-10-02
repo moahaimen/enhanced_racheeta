@@ -44,10 +44,10 @@ export function sendMessage(conversationId: string, body: string): Promise<ChatM
   )
 }
 
-export function markRead(conversationId: string): Promise<ChatReadState> {
+export function markRead(conversationId: string, throughSequence: number): Promise<ChatReadState> {
   return apiRequest<ChatReadState>(
     `/api/v1/chat/conversations/${encodeURIComponent(conversationId)}/read/`,
-    { method: 'POST' },
+    { method: 'POST', body: { through_sequence: throughSequence } },
   )
 }
 
