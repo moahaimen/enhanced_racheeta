@@ -52,9 +52,7 @@ def _participant_queryset(account):
         .annotate(
             unread_count=Count(
                 "conversation__messages",
-                filter=Q(
-                    conversation__messages__sequence__gt=F("last_read_sequence")
-                )
+                filter=Q(conversation__messages__sequence__gt=F("last_read_sequence"))
                 & ~Q(conversation__messages__sender=account),
             )
         )
@@ -165,9 +163,11 @@ class ConversationMessagesView(generics.GenericAPIView):
     )
     def get(self, request, pk):
         participant = _participant_or_404(request.user, pk)
-        queryset = Message.objects.filter(conversation=participant.conversation).select_related(
-            "sender"
-        ).order_by("-sequence")
+        queryset = (
+            Message.objects.filter(conversation=participant.conversation)
+            .select_related("sender")
+            .order_by("-sequence")
+        )
         page = self.paginate_queryset(queryset)
         page = list(reversed(list(page)))
         data = MessageSerializer(page, many=True, context={"request": request}).data
@@ -217,11 +217,7 @@ class ConversationReadView(APIView):
             raise Http404 from exc
         except services.InvalidReadCursor as exc:
             raise ValidationError(
-                {
-                    "through_sequence": [
-                        ErrorDetail(str(exc), code="invalid_read_cursor")
-                    ]
-                }
+                {"through_sequence": [ErrorDetail(str(exc), code="invalid_read_cursor")]}
             ) from exc
         return Response({"last_read_sequence": participant.last_read_sequence})
 
