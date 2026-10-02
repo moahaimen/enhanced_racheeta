@@ -1091,7 +1091,7 @@ Avoid architecture that prevents moving from Railway later.
 
 Do not integrate a paid payment gateway until the owner selects it.
 
-## Phase 9 — Chat and Notifications (CURRENT)
+## Phase 9 — Chat and Notifications (done)
 
 - **9A Persistent notifications — done and merged via PR #10.**
 - **9B Generic conversations/messages via REST.**
@@ -1101,14 +1101,14 @@ Do not integrate a paid payment gateway until the owner selects it.
   - Sequence-based read state; clients acknowledge only messages they actually rendered.
   - Existing recruitment `RecruitmentMessage` remains unchanged.
 - **9B — done and merged via PR #11.**
-- **9C Firebase push — current implementation branch (`feat/phase9c-fcm-push`).**
+- **9C Firebase push — done and merged via PR #12** (merge commit `3ff9cdd05b3b6851c78c80359f6c71683fd3d6fe`, post-merge CI #295 green). Delivered as:
   - `PushDevice` token registry (globally unique token, server-owned account, bounded platforms, transfer on account switch).
   - Authenticated register/unregister API; `PushSender` boundary over the Firebase Admin SDK (one `send_batch` operation per recipient, one multicast call, hard 3 s deadline, bounded in-flight work); after-commit best-effort fan-out.
   - Pushes for newly created persistent notifications and for new chat messages (other participant only); privacy-preserving content.
   - Web/mobile token acquisition deferred (no Firebase client in the repo). No worker, Redis, Celery or WebSockets. See `PUSH.md`.
 - Realtime/WebSockets remain deferred unless UX later justifies them; no Redis/Celery added for chat.
 
-## Phase 10 — Dashboards and Analytics
+## Phase 10 — Dashboards and Analytics (CURRENT)
 
 Create dashboards for:
 

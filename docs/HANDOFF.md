@@ -1,14 +1,14 @@
 # Current State
 
 Date: 2026-10-02
-Branch: `feat/phase9c-fcm-push` (from `main` `479025d270ce34b4cc852bf2a56149d37e746018`, the Phase 9B merge; post-merge CI #290 green)
+Branch: `feat/phase10-dashboards-analytics` (from `main` `3ff9cdd05b3b6851c78c80359f6c71683fd3d6fe`, the Phase 9C merge; post-merge CI #295 green)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phase 9A (PR #10) and Phase 9B (PR #11) are DONE and merged.**
-- **Phase 9C — FCM push is CURRENT on `feat/phase9c-fcm-push`** (draft PR; not merged).
-- Do not merge Phase 9C until exact-head CI and independent acceptance review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous acceptance review.
+- **Phases 9A (PR #10), 9B (PR #11) and 9C (PR #12) are DONE and merged.**
+- **Phase 10 — Dashboards & Analytics is CURRENT** on `feat/phase10-dashboards-analytics` (draft PR; not merged). See `docs/DASHBOARDS.md`.
+- Do not merge Phase 10 until exact-head CI and independent acceptance review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous acceptance review. Do not start Phase 11.
 
-## Phase 9C summary — FCM push (see `docs/PUSH.md`, ADR-050)
+## Phase 9C summary (merged via PR #12, merge `3ff9cdd`) — FCM push (see `docs/PUSH.md`, ADR-050)
 
 - PostgreSQL stays authoritative; push is a best-effort hint sent after commit.
 - `notifications_pushdevice`: globally unique token, one owner (`request.user`), platforms `ANDROID|IOS|WEB`, transfer on account switch, ≤10 active devices/account.
