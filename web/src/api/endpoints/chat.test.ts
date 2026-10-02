@@ -29,14 +29,14 @@ describe('chat endpoints', () => {
 
   it('sends only body and marks read without a body', async () => {
     await real.sendMessage('abc', 'hello')
-    await real.markRead('abc')
+    await real.markRead('abc', 7)
     expect(calls()[0]).toEqual([
       '/api/v1/chat/conversations/abc/messages/',
       { method: 'POST', body: { body: 'hello' } },
     ])
     expect(calls()[1]).toEqual([
       '/api/v1/chat/conversations/abc/read/',
-      { method: 'POST' },
+      { method: 'POST', body: { through_sequence: 7 } },
     ])
   })
 
