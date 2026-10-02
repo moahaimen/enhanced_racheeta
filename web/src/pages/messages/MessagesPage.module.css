@@ -55,7 +55,7 @@
 
 .mine {
   margin-inline-start: auto;
-  background: var(--surface-brand-subtle);
+  background: var(--surface-brand);
   border-color: var(--border-brand);
 }
 
