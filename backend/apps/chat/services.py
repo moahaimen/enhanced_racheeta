@@ -120,9 +120,7 @@ def send_message(conversation_id: UUID, *, sender, body: str) -> Message:
 
 
 @transaction.atomic
-def mark_read(
-    conversation_id: UUID, *, account, through_sequence: int
-) -> ConversationParticipant:
+def mark_read(conversation_id: UUID, *, account, through_sequence: int) -> ConversationParticipant:
     """Advance only through the highest sequence the client actually observed.
 
     The conversation row is locked while the cursor is validated. A message
