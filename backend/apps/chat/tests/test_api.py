@@ -2,8 +2,8 @@ import uuid
 
 import pytest
 
-from apps.chat.models import Conversation, ConversationParticipant, Message
 from apps.chat import services
+from apps.chat.models import Conversation, ConversationParticipant, Message
 
 from .helpers import make_reservation_world
 
@@ -197,7 +197,9 @@ def test_mark_read_foreign_and_missing_are_same_404(api_client, account_factory)
 
 
 @pytest.mark.django_db
-def test_messages_page_one_is_latest_slice_but_chronological_inside_page(api_client, account_factory):
+def test_messages_page_one_is_latest_slice_but_chronological_inside_page(
+    api_client, account_factory
+):
     provider, patient, _, reservation = make_reservation_world(account_factory)
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
 
@@ -229,7 +231,9 @@ def test_conversation_list_is_own_only(api_client, account_factory):
 
 
 @pytest.mark.django_db
-def test_no_public_client_update_delete_or_arbitrary_conversation_create(api_client, account_factory):
+def test_no_public_client_update_delete_or_arbitrary_conversation_create(
+    api_client, account_factory
+):
     _, patient, _, reservation = make_reservation_world(account_factory)
     conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
 
