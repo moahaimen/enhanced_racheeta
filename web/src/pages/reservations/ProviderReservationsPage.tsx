@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 
-import { providers as providersApi, reservations as reservationsApi } from '../../api'
+import { chat as chatApi, providers as providersApi, reservations as reservationsApi } from '../../api'
 import type { ReservationProvider, ReservationStatus, ServiceOffering } from '../../api'
 import {
   Alert,
@@ -261,6 +261,17 @@ function ProviderReservationRow({ reservation, reload }: { reservation: Reservat
       </div>
       {reservation.patient_note ? <p className="text-secondary prewrap">{reservation.patient_note}</p> : null}
       <div className={styles.actions}>
+        <ApiActionButton
+          size="sm"
+          variant="secondary"
+          action={() => chatApi.openReservationConversation(reservation.id)}
+          onSuccess={(conversation) => navigate(`/messages/${conversation.id}`)}
+          onError={(err) => setError(toErrorMessage(err))}
+          pendingLabel={t('messages.opening')}
+          leading={<Icon name="mail" size={16} />}
+        >
+          {t('messages.messagePatient')}
+        </ApiActionButton>
         {reservation.status === 'PENDING' ? (
           <>
             {!hasStarted ? (
