@@ -228,7 +228,6 @@ SPECTACULAR_SETTINGS = {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",
-        "ConversationContextTypeEnum": "apps.chat.types.ConversationContextType.choices",
         "CampaignStatusEnum": "apps.advertising.types.CampaignStatus.choices",
         "CampaignPaymentStatusEnum": "apps.advertising.types.PaymentStatus.choices",
         "ProviderTypeEnum": "apps.providers.types.ProviderType.choices",
