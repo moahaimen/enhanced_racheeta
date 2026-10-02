@@ -96,7 +96,7 @@ describe('chat pages', () => {
     renderApp(`/messages/${conversation.id}`)
 
     expect(await screen.findByText('Hello from provider')).toBeInTheDocument()
-    await waitFor(() => expect(chatApi.markRead).toHaveBeenCalledWith(conversation.id))
+    await waitFor(() => expect(chatApi.markRead).toHaveBeenCalledWith(conversation.id, 1))
 
     const box = screen.getByLabelText(/الرسالة|message/i)
     await userEvent.type(box, 'My reply')
