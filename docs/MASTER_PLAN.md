@@ -1093,11 +1093,15 @@ Do not integrate a paid payment gateway until the owner selects it.
 
 ## Phase 9 — Chat and Notifications (CURRENT)
 
-- Conversations.
-- Messages.
-- Notification records.
-- Firebase push.
-- Realtime enhancement if justified.
+- **9A Persistent notifications — done and merged via PR #10.**
+- **9B Generic conversations/messages via REST — current implementation branch.**
+  - Generic Conversation / ConversationParticipant / immutable Message domain.
+  - Initial authorized context is Reservation only; participants are derived by the backend.
+  - No arbitrary account-to-account conversation creation.
+  - Sequence-based read state; clients acknowledge only messages they actually rendered.
+  - Existing recruitment `RecruitmentMessage` remains unchanged.
+- **9C Firebase push — deferred until 9B is accepted and merged.**
+- Realtime/WebSockets remain deferred unless UX later justifies them; no Redis/Celery added for chat.
 
 ## Phase 10 — Dashboards and Analytics
 
