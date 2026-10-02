@@ -29,6 +29,7 @@ import { OwnerWorkspacePage } from '../pages/realEstate/OwnerWorkspacePage'
 import { RealEstateDetailPage } from '../pages/realEstate/RealEstateDetailPage'
 import { RealEstatePage } from '../pages/realEstate/RealEstatePage'
 import { NotificationsPage } from '../pages/notifications/NotificationsPage'
+import { DashboardPage } from '../pages/dashboard/DashboardPage'
 import { ConversationPage } from '../pages/messages/ConversationPage'
 import { MessagesPage } from '../pages/messages/MessagesPage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
@@ -72,6 +73,7 @@ export const routes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           { path: 'profile', element: <ProfilePage /> },
+          { path: 'dashboard', element: <DashboardPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
           { path: 'messages', element: <MessagesPage /> },
           { path: 'messages/:id', element: <ConversationPage /> },

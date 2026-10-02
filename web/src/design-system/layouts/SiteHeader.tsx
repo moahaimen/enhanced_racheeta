@@ -123,6 +123,12 @@ export function SiteHeader() {
         <Icon name="building" size={18} />
         {t('nav.realEstate')}
       </NavLink>
+      {status === 'authenticated' ? (
+        <NavLink to="/dashboard" className={styles.link}>
+          <Icon name="chart" size={18} />
+          {t('nav.dashboard')}
+        </NavLink>
+      ) : null}
       {status === 'authenticated' && account?.role === 'PATIENT' ? (
         <NavLink to="/reservations" className={styles.link}>
           <Icon name="calendar" size={18} />

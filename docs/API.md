@@ -215,7 +215,27 @@ All authenticated and recipient-scoped; see `NOTIFICATIONS.md`.
 The `POST` actions take no client data: no body or `{}` only; anything else is
 `field_not_allowed`. There is no create, update or delete endpoint.
 
+### Dashboards (Phase 10)
+
+All `GET`, authenticated, read-only, **parameterless** (ownership always comes from the signed-in
+account; any query string is ignored), responses `Cache-Control: private, no-store`. Counts are
+zero-filled so a missing key never has to be interpreted. See `DASHBOARDS.md`.
+
+| Method and path | Who | Result |
+| --- | --- | --- |
+| `GET /api/v1/dashboards/` | any authenticated account | `{"dashboards": [...]}` — the keys this account can open now (`patient`, `doctor`, `facility`, `medical_company`, `real_estate_owner`, `recruiter`, `admin`) |
+| `GET /api/v1/dashboards/patient` | `PATIENT` | `reservations` (`total`, `by_status`, `upcoming`), `upcoming[]` and `recent[]` (≤ 5, no private fields), `unread` |
+| `GET /api/v1/dashboards/doctor` | `PROVIDER` with a practitioner profile | `profile`, `reservations`, `upcoming[]` (with `patient_name`, never the note), `reviews` (`average_rating` null when none, `review_count`, `distribution`), `offers` (`total`, `running_now`, `scheduled`), `unread` |
+| `GET /api/v1/dashboards/facility` | `PROVIDER` with a facility profile | everything in `doctor` plus `practitioners` (`active`, `incoming_requests`, `outgoing_invitations`) |
+| `GET /api/v1/dashboards/company` | `MEDICAL_COMPANY` with a company profile | `verification_status`, `can_publish`, `products`, `campaigns`, `payments` (by status); composes the existing marketplace and advertising summaries |
+| `GET /api/v1/dashboards/recruiter` | active member (any role) of a recruiting organisation | `organization`, `jobs` (`total`, `by_status`, `open_now`), `applications_access` (`null`, `organization_not_verified` or `plan_required`), `applications` / `interviews` (null when withheld), `seats` |
+| `GET /api/v1/dashboards/admin` | staff accounts | counts only: accounts by role/active, verification queues, jobs, reservations, products, listings, campaigns, payments, subscriptions, audit activity |
+| `GET /api/v1/real-estate/owner/dashboard` (existing) | `REAL_ESTATE_SELLER` | unchanged; the web hub calls it directly |
+
+A wrong role, a missing profile or a lapsed membership is `403`; anonymous is `401`. The existing
+`/marketplace/company/dashboard` and `/advertising/company/dashboard` endpoints are unchanged.
+
 ## Planned (not implemented)
 
-The remaining modules of the master plan (chat, dashboards). Password change for logged-in users and admin account-management
+The remaining modules of the master plan. Password change for logged-in users and admin account-management
 endpoints are also not implemented yet.

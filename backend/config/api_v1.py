@@ -22,6 +22,7 @@ urlpatterns = [
     path("", include("apps.advertising.urls")),
     path("", include("apps.chat.urls")),
     path("", include("apps.notifications.urls")),
+    path("", include("apps.dashboards.urls")),
     # Must stay last: JSON 404 for anything unmatched under /api/v1/.
     re_path(r"^.*$", ApiNotFoundView.as_view(), name="api-not-found"),
 ]
