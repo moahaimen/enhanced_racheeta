@@ -155,7 +155,7 @@ class CompanyCampaignsSerializer(serializers.Serializer):
     cancelled = serializers.IntegerField()
 
 
-@extend_schema_serializer(component_name="CompanyDashboard")
+@extend_schema_serializer(component_name="MedicalCompanyDashboard")
 class CompanyDashboardSerializer(serializers.Serializer):
     verification_status = serializers.ChoiceField(choices=CompanyVerificationStatus.choices)
     can_publish = serializers.BooleanField()

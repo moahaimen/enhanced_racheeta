@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Account
 from apps.accounts.roles import AccountRole
 from apps.advertising.models import AdvertisingCampaign, CampaignPayment
-from apps.advertising.types import CampaignStatus
+from apps.advertising.types import CampaignStatus, PaymentStatus
 from apps.billing import services as billing
 from apps.billing.models import Plan
 from apps.billing.types import Audience, SubjectType
@@ -128,9 +128,15 @@ def review_factory():
 
 @pytest.fixture
 def offer_factory():
+    counter = {"n": 0}
+
     def _make(provider, *, starts=timedelta(hours=-1), ends=timedelta(days=1), **fields):
+        counter["n"] += 1
         service = fields.pop("service", None) or ServiceOffering.objects.create(
-            provider=provider, title="Checkup", price=Decimal("30000"), currency="IQD"
+            provider=provider,
+            title=f"Checkup {counter['n']}",
+            price=Decimal("30000"),
+            currency="IQD",
         )
         now = timezone.now()
         return Offer.objects.create(
@@ -204,6 +210,15 @@ def campaign_factory():
 
     def _make(company, product, status=CampaignStatus.DRAFT, payment=None, **fields):
         counter["n"] += 1
+        if status != CampaignStatus.DRAFT:  # the DB requires a complete quote once submitted
+            today = timezone.localdate()
+            fields.setdefault("starts_on", today)
+            fields.setdefault("ends_on", today + timedelta(days=10))
+            fields.setdefault("quoted_days", 10)
+            fields.setdefault("quoted_daily_rate", Decimal("10"))
+            fields.setdefault("quoted_amount", Decimal("100"))
+            fields.setdefault("quoted_currency", "IQD")
+            fields.setdefault("quoted_at", timezone.now())
         campaign = AdvertisingCampaign.objects.create(
             company=company,
             product=product,
@@ -212,8 +227,13 @@ def campaign_factory():
             **fields,
         )
         if payment is not None:
+            verified = (
+                {"method": "BANK_TRANSFER", "verified_at": timezone.now()}
+                if payment == PaymentStatus.VERIFIED
+                else {}
+            )
             CampaignPayment.objects.create(
-                campaign=campaign, amount=Decimal("100"), currency="IQD", status=payment
+                campaign=campaign, amount=Decimal("100"), currency="IQD", status=payment, **verified
             )
         return campaign
 
@@ -239,18 +259,24 @@ def seller_factory(account_factory):
 @pytest.fixture
 def listing_factory(baghdad):
     def _make(seller, status=PublicationStatus.DRAFT, **fields) -> PropertyListing:
-        return PropertyListing.objects.create(
-            seller=seller,
-            publication_status=status,
-            title=fields.pop("title", "Listing"),
-            property_type=PropertyType.CLINIC,
-            transaction_type=fields.pop("transaction_type", TransactionType.RENT),
-            governorate=baghdad,
-            contact_method=ContactMethod.PHONE,
-            contact_phone="07700000000",
-            expires_at=fields.pop("expires_at", timezone.now() + timedelta(days=30)),
-            **fields,
-        )
+        defaults = {
+            "title": "Listing",
+            "property_type": PropertyType.CLINIC,
+            "transaction_type": TransactionType.RENT,
+            "governorate": baghdad,
+            "district": "Karrada",
+            "area_sqm": Decimal("120.00"),
+            "price": Decimal("1500000.00"),
+            "currency": "IQD",
+            "facilities": "Parking",
+            "contact_method": ContactMethod.PHONE,
+            "contact_phone": "07700000000",
+            "expires_at": timezone.now() + timedelta(days=30),
+        }
+        defaults.update(fields)
+        if status == PublicationStatus.PUBLISHED:
+            defaults.setdefault("published_at", timezone.now())
+        return PropertyListing.objects.create(seller=seller, publication_status=status, **defaults)
 
     return _make
 

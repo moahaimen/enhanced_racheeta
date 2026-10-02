@@ -1507,6 +1507,116 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatUnreadCount'
           description: ''
+  /api/v1/dashboards/:
+    get:
+      operationId: dashboards_retrieve
+      description: Decided by the server from current account state; the web app renders
+        only these.
+      summary: Dashboards I can open
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardIndex'
+          description: ''
+  /api/v1/dashboards/admin:
+    get:
+      operationId: dashboards_admin_retrieve
+      summary: Administrator operational summary (counts only)
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboard'
+          description: ''
+  /api/v1/dashboards/company:
+    get:
+      operationId: dashboards_company_retrieve
+      description: Composes the existing marketplace and advertising summaries and
+        adds payment status. No impressions, clicks, conversions or revenue exist,
+        so none are reported.
+      summary: Medical company dashboard
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedicalCompanyDashboard'
+          description: ''
+  /api/v1/dashboards/doctor:
+    get:
+      operationId: dashboards_doctor_retrieve
+      summary: Doctor (practitioner) dashboard
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorDashboard'
+          description: ''
+  /api/v1/dashboards/facility:
+    get:
+      operationId: dashboards_facility_retrieve
+      summary: Facility dashboard
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityDashboard'
+          description: ''
+  /api/v1/dashboards/patient:
+    get:
+      operationId: dashboards_patient_retrieve
+      summary: Patient dashboard
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientDashboard'
+          description: ''
+  /api/v1/dashboards/recruiter:
+    get:
+      operationId: dashboards_recruiter_retrieve
+      summary: Recruiter dashboard (my organisation)
+      tags:
+      - dashboards
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecruiterDashboard'
+          description: ''
   /api/v1/employers/{id}:
     get:
       operationId: employers_retrieve
@@ -5474,6 +5584,43 @@ components:
       - account_email
       - id
       - name
+    AdminDashboard:
+      type: object
+      properties:
+        accounts:
+          $ref: '#/components/schemas/DashboardAdminAccounts'
+        providers:
+          $ref: '#/components/schemas/DashboardAdminProviders'
+        medical_companies:
+          $ref: '#/components/schemas/DashboardAdminCompanies'
+        employers:
+          $ref: '#/components/schemas/DashboardAdminEmployers'
+        jobs:
+          $ref: '#/components/schemas/DashboardAdminJobs'
+        reservations:
+          $ref: '#/components/schemas/DashboardAdminReservations'
+        marketplace:
+          $ref: '#/components/schemas/DashboardAdminMarketplace'
+        real_estate:
+          $ref: '#/components/schemas/DashboardAdminRealEstate'
+        advertising:
+          $ref: '#/components/schemas/DashboardAdminAdvertising'
+        billing:
+          $ref: '#/components/schemas/DashboardAdminBilling'
+        audit:
+          $ref: '#/components/schemas/DashboardAdminAudit'
+      required:
+      - accounts
+      - advertising
+      - audit
+      - billing
+      - employers
+      - jobs
+      - marketplace
+      - medical_companies
+      - providers
+      - real_estate
+      - reservations
     AdminDecisionRequest:
       type: object
       properties:
@@ -6867,6 +7014,711 @@ components:
       - amount
       - billing_account
       - key
+    DashboardAccountRoleCounts:
+      type: object
+      properties:
+        PATIENT:
+          type: integer
+          minimum: 0
+        PROVIDER:
+          type: integer
+          minimum: 0
+        MEDICAL_COMPANY:
+          type: integer
+          minimum: 0
+        REAL_ESTATE_SELLER:
+          type: integer
+          minimum: 0
+        ADMIN:
+          type: integer
+          minimum: 0
+      required:
+      - ADMIN
+      - MEDICAL_COMPANY
+      - PATIENT
+      - PROVIDER
+      - REAL_ESTATE_SELLER
+    DashboardAdminAccounts:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        inactive:
+          type: integer
+        by_role:
+          $ref: '#/components/schemas/DashboardAccountRoleCounts'
+      required:
+      - active
+      - by_role
+      - inactive
+      - total
+    DashboardAdminAdvertising:
+      type: object
+      properties:
+        campaigns_by_status:
+          $ref: '#/components/schemas/DashboardCampaignStatusCounts'
+        payments_by_status:
+          $ref: '#/components/schemas/DashboardPaymentStatusCounts'
+      required:
+      - campaigns_by_status
+      - payments_by_status
+    DashboardAdminAudit:
+      type: object
+      properties:
+        last_24_hours:
+          type: integer
+        last_7_days:
+          type: integer
+      required:
+      - last_24_hours
+      - last_7_days
+    DashboardAdminBilling:
+      type: object
+      properties:
+        subscriptions_by_status:
+          $ref: '#/components/schemas/DashboardSubscriptionStatusCounts'
+      required:
+      - subscriptions_by_status
+    DashboardAdminCompanies:
+      type: object
+      properties:
+        by_verification:
+          $ref: '#/components/schemas/DashboardCompanyVerificationCounts'
+      required:
+      - by_verification
+    DashboardAdminEmployers:
+      type: object
+      properties:
+        by_verification:
+          $ref: '#/components/schemas/DashboardEmployerVerificationCounts'
+        recruitment_suspended:
+          type: integer
+      required:
+      - by_verification
+      - recruitment_suspended
+    DashboardAdminJobs:
+      type: object
+      properties:
+        by_status:
+          $ref: '#/components/schemas/DashboardJobStatusCounts'
+      required:
+      - by_status
+    DashboardAdminMarketplace:
+      type: object
+      properties:
+        products:
+          $ref: '#/components/schemas/DashboardAdminProducts'
+      required:
+      - products
+    DashboardAdminProducts:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+      required:
+      - active
+      - total
+    DashboardAdminProviders:
+      type: object
+      properties:
+        by_verification:
+          $ref: '#/components/schemas/DashboardVerificationCounts'
+      required:
+      - by_verification
+    DashboardAdminRealEstate:
+      type: object
+      properties:
+        listings_by_status:
+          $ref: '#/components/schemas/DashboardPublicationCounts'
+      required:
+      - listings_by_status
+    DashboardAdminReservations:
+      type: object
+      properties:
+        by_status:
+          $ref: '#/components/schemas/DashboardReservationStatusCounts'
+      required:
+      - by_status
+    DashboardApplicationStatusCounts:
+      type: object
+      properties:
+        SUBMITTED:
+          type: integer
+          minimum: 0
+        REVIEWING:
+          type: integer
+          minimum: 0
+        SHORTLISTED:
+          type: integer
+          minimum: 0
+        INTERVIEW:
+          type: integer
+          minimum: 0
+        ACCEPTED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        WITHDRAWN:
+          type: integer
+          minimum: 0
+      required:
+      - ACCEPTED
+      - INTERVIEW
+      - REJECTED
+      - REVIEWING
+      - SHORTLISTED
+      - SUBMITTED
+      - WITHDRAWN
+    DashboardCampaignStatusCounts:
+      type: object
+      properties:
+        DRAFT:
+          type: integer
+          minimum: 0
+        PENDING_PAYMENT:
+          type: integer
+          minimum: 0
+        ACTIVE:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        CANCELLED:
+          type: integer
+          minimum: 0
+      required:
+      - ACTIVE
+      - CANCELLED
+      - DRAFT
+      - PENDING_PAYMENT
+      - REJECTED
+    DashboardCompanyCampaigns:
+      type: object
+      properties:
+        total:
+          type: integer
+        draft:
+          type: integer
+        pending_payment:
+          type: integer
+        active:
+          type: integer
+        live:
+          type: integer
+        ended:
+          type: integer
+        rejected:
+          type: integer
+        cancelled:
+          type: integer
+      required:
+      - active
+      - cancelled
+      - draft
+      - ended
+      - live
+      - pending_payment
+      - rejected
+      - total
+    DashboardCompanyProducts:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        inactive:
+          type: integer
+        exposable:
+          type: integer
+      required:
+      - active
+      - exposable
+      - inactive
+      - total
+    DashboardCompanyVerificationCounts:
+      type: object
+      properties:
+        UNVERIFIED:
+          type: integer
+          minimum: 0
+        PENDING:
+          type: integer
+          minimum: 0
+        VERIFIED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        SUSPENDED:
+          type: integer
+          minimum: 0
+      required:
+      - PENDING
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      - VERIFIED
+    DashboardEmployerVerificationCounts:
+      type: object
+      properties:
+        UNVERIFIED:
+          type: integer
+          minimum: 0
+        PENDING:
+          type: integer
+          minimum: 0
+        VERIFIED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        SUSPENDED:
+          type: integer
+          minimum: 0
+      required:
+      - PENDING
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      - VERIFIED
+    DashboardFacilityMemberships:
+      type: object
+      properties:
+        active:
+          type: integer
+        incoming_requests:
+          type: integer
+        outgoing_invitations:
+          type: integer
+      required:
+      - active
+      - incoming_requests
+      - outgoing_invitations
+    DashboardIndex:
+      type: object
+      properties:
+        dashboards:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardsEnum'
+      required:
+      - dashboards
+    DashboardInterviewStatusCounts:
+      type: object
+      properties:
+        PROPOSED:
+          type: integer
+          minimum: 0
+        ACCEPTED:
+          type: integer
+          minimum: 0
+        DECLINED:
+          type: integer
+          minimum: 0
+        CANCELLED:
+          type: integer
+          minimum: 0
+      required:
+      - ACCEPTED
+      - CANCELLED
+      - DECLINED
+      - PROPOSED
+    DashboardJobStatusCounts:
+      type: object
+      properties:
+        DRAFT:
+          type: integer
+          minimum: 0
+        PENDING_ADMIN_REVIEW:
+          type: integer
+          minimum: 0
+        PUBLISHED:
+          type: integer
+          minimum: 0
+        CLOSED:
+          type: integer
+          minimum: 0
+        EXPIRED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        SUSPENDED:
+          type: integer
+          minimum: 0
+        ARCHIVED:
+          type: integer
+          minimum: 0
+      required:
+      - ARCHIVED
+      - CLOSED
+      - DRAFT
+      - EXPIRED
+      - PENDING_ADMIN_REVIEW
+      - PUBLISHED
+      - REJECTED
+      - SUSPENDED
+    DashboardOfferSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        running_now:
+          type: integer
+        scheduled:
+          type: integer
+      required:
+      - running_now
+      - scheduled
+      - total
+    DashboardOrganization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        verification_status:
+          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+        recruitment_status:
+          type: string
+        can_recruit:
+          type: boolean
+        my_role:
+          type: string
+      required:
+      - can_recruit
+      - id
+      - my_role
+      - name
+      - recruitment_status
+      - verification_status
+    DashboardPaymentStatusCounts:
+      type: object
+      properties:
+        PENDING:
+          type: integer
+          minimum: 0
+        VERIFIED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+      required:
+      - PENDING
+      - REJECTED
+      - VERIFIED
+    DashboardProviderAppointment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider_name_snapshot:
+          type: string
+        service_title_snapshot:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ReservationStatusEnum'
+        patient_name:
+          type: string
+          description: The patient's name, as the provider's own reservation API already
+            shows it.
+      required:
+      - ends_at
+      - id
+      - patient_name
+      - provider_name_snapshot
+      - service_title_snapshot
+      - starts_at
+      - status
+    DashboardProviderProfile:
+      type: object
+      properties:
+        display_name:
+          type: string
+        provider_type:
+          $ref: '#/components/schemas/ProviderTypeEnum'
+        verification_status:
+          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+        is_visible:
+          type: boolean
+      required:
+      - display_name
+      - is_visible
+      - provider_type
+      - verification_status
+    DashboardPublicationCounts:
+      type: object
+      properties:
+        DRAFT:
+          type: integer
+          minimum: 0
+        PUBLISHED:
+          type: integer
+          minimum: 0
+      required:
+      - DRAFT
+      - PUBLISHED
+    DashboardRatingDistribution:
+      type: object
+      properties:
+        '1':
+          type: integer
+          minimum: 0
+        '2':
+          type: integer
+          minimum: 0
+        '3':
+          type: integer
+          minimum: 0
+        '4':
+          type: integer
+          minimum: 0
+        '5':
+          type: integer
+          minimum: 0
+      required:
+      - '1'
+      - '2'
+      - '3'
+      - '4'
+      - '5'
+    DashboardRecruiterApplications:
+      type: object
+      properties:
+        total:
+          type: integer
+        by_status:
+          $ref: '#/components/schemas/DashboardApplicationStatusCounts'
+        awaiting_review:
+          type: integer
+        last_7_days:
+          type: integer
+      required:
+      - awaiting_review
+      - by_status
+      - last_7_days
+      - total
+    DashboardRecruiterInterviews:
+      type: object
+      properties:
+        total:
+          type: integer
+        by_status:
+          $ref: '#/components/schemas/DashboardInterviewStatusCounts'
+      required:
+      - by_status
+      - total
+    DashboardRecruiterJobs:
+      type: object
+      properties:
+        total:
+          type: integer
+        by_status:
+          $ref: '#/components/schemas/DashboardJobStatusCounts'
+        open_now:
+          type: integer
+      required:
+      - by_status
+      - open_now
+      - total
+    DashboardReservationBrief:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider_name_snapshot:
+          type: string
+        service_title_snapshot:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ReservationStatusEnum'
+      required:
+      - ends_at
+      - id
+      - provider_name_snapshot
+      - service_title_snapshot
+      - starts_at
+      - status
+    DashboardReservationCounts:
+      type: object
+      properties:
+        total:
+          type: integer
+        by_status:
+          $ref: '#/components/schemas/DashboardReservationStatusCounts'
+        upcoming:
+          type: integer
+          description: PENDING or CONFIRMED reservations that have not started yet.
+      required:
+      - by_status
+      - total
+      - upcoming
+    DashboardReservationStatusCounts:
+      type: object
+      properties:
+        PENDING:
+          type: integer
+          minimum: 0
+        CONFIRMED:
+          type: integer
+          minimum: 0
+        COMPLETED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        CANCELLED:
+          type: integer
+          minimum: 0
+        NO_SHOW:
+          type: integer
+          minimum: 0
+      required:
+      - CANCELLED
+      - COMPLETED
+      - CONFIRMED
+      - NO_SHOW
+      - PENDING
+      - REJECTED
+    DashboardReviewSummary:
+      type: object
+      properties:
+        average_rating:
+          type: number
+          format: double
+          nullable: true
+        review_count:
+          type: integer
+        distribution:
+          $ref: '#/components/schemas/DashboardRatingDistribution'
+      required:
+      - average_rating
+      - distribution
+      - review_count
+    DashboardSeats:
+      type: object
+      properties:
+        active_members:
+          type: integer
+        enabled:
+          type: boolean
+        limit:
+          type: integer
+          nullable: true
+          description: Null means unlimited.
+      required:
+      - active_members
+      - enabled
+      - limit
+    DashboardSubscriptionStatusCounts:
+      type: object
+      properties:
+        PENDING:
+          type: integer
+          minimum: 0
+        ACTIVE:
+          type: integer
+          minimum: 0
+        SUSPENDED:
+          type: integer
+          minimum: 0
+        CANCELLED:
+          type: integer
+          minimum: 0
+        EXPIRED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+      required:
+      - ACTIVE
+      - CANCELLED
+      - EXPIRED
+      - PENDING
+      - REJECTED
+      - SUSPENDED
+    DashboardUnread:
+      type: object
+      properties:
+        notifications:
+          type: integer
+        messages:
+          type: integer
+      required:
+      - messages
+      - notifications
+    DashboardVerificationCounts:
+      type: object
+      properties:
+        UNVERIFIED:
+          type: integer
+          minimum: 0
+        PENDING:
+          type: integer
+          minimum: 0
+        VERIFIED:
+          type: integer
+          minimum: 0
+        REJECTED:
+          type: integer
+          minimum: 0
+        SUSPENDED:
+          type: integer
+          minimum: 0
+      required:
+      - PENDING
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      - VERIFIED
+    DashboardsEnum:
+      enum:
+      - patient
+      - doctor
+      - facility
+      - medical_company
+      - real_estate_owner
+      - recruiter
+      - admin
+      type: string
+      description: |-
+        * `patient` - patient
+        * `doctor` - doctor
+        * `facility` - facility
+        * `medical_company` - medical_company
+        * `real_estate_owner` - real_estate_owner
+        * `recruiter` - recruiter
+        * `admin` - admin
     DegreeEnum:
       enum:
       - DIPLOMA
@@ -6893,6 +7745,30 @@ components:
           readOnly: true
       required:
       - detail
+    DoctorDashboard:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/DashboardProviderProfile'
+        reservations:
+          $ref: '#/components/schemas/DashboardReservationCounts'
+        upcoming:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardProviderAppointment'
+        reviews:
+          $ref: '#/components/schemas/DashboardReviewSummary'
+        offers:
+          $ref: '#/components/schemas/DashboardOfferSummary'
+        unread:
+          $ref: '#/components/schemas/DashboardUnread'
+      required:
+      - offers
+      - profile
+      - reservations
+      - reviews
+      - unread
+      - upcoming
     Education:
       type: object
       properties:
@@ -7318,6 +8194,33 @@ components:
       - period
       - remaining
       - used
+    FacilityDashboard:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/DashboardProviderProfile'
+        reservations:
+          $ref: '#/components/schemas/DashboardReservationCounts'
+        upcoming:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardProviderAppointment'
+        reviews:
+          $ref: '#/components/schemas/DashboardReviewSummary'
+        offers:
+          $ref: '#/components/schemas/DashboardOfferSummary'
+        unread:
+          $ref: '#/components/schemas/DashboardUnread'
+        practitioners:
+          $ref: '#/components/schemas/DashboardFacilityMemberships'
+      required:
+      - offers
+      - practitioners
+      - profile
+      - reservations
+      - reviews
+      - unread
+      - upcoming
     FeaturedRequest:
       type: object
       properties:
@@ -8634,6 +9537,25 @@ components:
           type: integer
       required:
       - updated
+    MedicalCompanyDashboard:
+      type: object
+      properties:
+        verification_status:
+          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+        can_publish:
+          type: boolean
+        products:
+          $ref: '#/components/schemas/DashboardCompanyProducts'
+        campaigns:
+          $ref: '#/components/schemas/DashboardCompanyCampaigns'
+        payments:
+          $ref: '#/components/schemas/DashboardPaymentStatusCounts'
+      required:
+      - campaigns
+      - can_publish
+      - payments
+      - products
+      - verification_status
     MemberAddRequest:
       type: object
       properties:
@@ -10467,6 +11389,26 @@ components:
           type: boolean
         description:
           type: string
+    PatientDashboard:
+      type: object
+      properties:
+        reservations:
+          $ref: '#/components/schemas/DashboardReservationCounts'
+        upcoming:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardReservationBrief'
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardReservationBrief'
+        unread:
+          $ref: '#/components/schemas/DashboardUnread'
+      required:
+      - recent
+      - reservations
+      - unread
+      - upcoming
     PatientSummary:
       type: object
       properties:
@@ -11945,6 +12887,35 @@ components:
           type: string
           default: ''
           maxLength: 500
+    RecruiterDashboard:
+      type: object
+      properties:
+        organization:
+          $ref: '#/components/schemas/DashboardOrganization'
+        jobs:
+          $ref: '#/components/schemas/DashboardRecruiterJobs'
+        applications_access:
+          type: string
+          nullable: true
+          description: 'Null when applicant aggregates are included; otherwise why
+            they are not: `organization_not_verified` or `plan_required`.'
+        applications:
+          allOf:
+          - $ref: '#/components/schemas/DashboardRecruiterApplications'
+          nullable: true
+        interviews:
+          allOf:
+          - $ref: '#/components/schemas/DashboardRecruiterInterviews'
+          nullable: true
+        seats:
+          $ref: '#/components/schemas/DashboardSeats'
+      required:
+      - applications
+      - applications_access
+      - interviews
+      - jobs
+      - organization
+      - seats
     RecruitmentReasonRequest:
       type: object
       properties:
