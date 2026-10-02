@@ -46,8 +46,9 @@ class ConversationParticipant(BaseModel):
         on_delete=models.PROTECT,
         related_name="chat_participations",
     )
-    # Sequence cursor, not a timestamp. Mark-read locks the conversation before
-    # copying last_sequence, so a concurrent later message can never be skipped.
+    # Sequence cursor, not a timestamp. Mark-read advances only through the
+    # highest sequence the client actually rendered, so a later concurrent
+    # message remains unread.
     last_read_sequence = models.PositiveBigIntegerField(default=0)
 
     class Meta:
