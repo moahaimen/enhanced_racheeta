@@ -2,9 +2,9 @@ from collections.abc import Mapping
 
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 
 from .models import ConversationParticipant, Message
-from .types import ConversationContextType
 
 
 class StrictFieldsSerializer(serializers.Serializer):
@@ -28,19 +28,17 @@ class StrictFieldsSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
+@extend_schema_serializer(component_name="ChatAccount")
 class ChatAccountSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     role = serializers.CharField(read_only=True)
 
 
+@extend_schema_serializer(component_name="ChatConversation")
 class ConversationSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source="conversation.id", read_only=True)
-    context_type = serializers.ChoiceField(
-        source="conversation.context_type",
-        choices=ConversationContextType.choices,
-        read_only=True,
-    )
+    context_type = serializers.CharField(source="conversation.context_type", read_only=True)
     context_id = serializers.UUIDField(source="conversation.context_id", read_only=True)
     last_sequence = serializers.IntegerField(source="conversation.last_sequence", read_only=True)
     last_message_at = serializers.DateTimeField(
@@ -65,6 +63,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(ChatAccountSerializer)
     def get_other_participant(self, obj: ConversationParticipant):
         request = self.context.get("request")
         account_id = getattr(getattr(request, "user", None), "pk", None)
@@ -88,6 +87,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         )
 
 
+@extend_schema_serializer(component_name="ChatMessage")
 class MessageSerializer(serializers.ModelSerializer):
     sender = ChatAccountSerializer(read_only=True)
     is_mine = serializers.SerializerMethodField()
@@ -102,22 +102,27 @@ class MessageSerializer(serializers.ModelSerializer):
         return obj.sender_id == getattr(getattr(request, "user", None), "pk", None)
 
 
+@extend_schema_serializer(component_name="ChatMessageCreate")
 class MessageCreateSerializer(StrictFieldsSerializer):
     body = serializers.CharField(max_length=2000, allow_blank=False, trim_whitespace=True)
 
 
+@extend_schema_serializer(component_name="ChatUnreadCount")
 class UnreadCountSerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
+@extend_schema_serializer(component_name="ChatReadRequest")
 class ReadRequestSerializer(StrictFieldsSerializer):
     through_sequence = serializers.IntegerField(min_value=0)
 
 
+@extend_schema_serializer(component_name="ChatReadState")
 class ReadStateSerializer(serializers.Serializer):
     last_read_sequence = serializers.IntegerField()
 
 
+@extend_schema_serializer(component_name="PaginatedChatConversation")
 class PaginatedConversationSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     next = serializers.URLField(allow_null=True)
@@ -125,6 +130,7 @@ class PaginatedConversationSerializer(serializers.Serializer):
     results = ConversationSerializer(many=True)
 
 
+@extend_schema_serializer(component_name="PaginatedChatMessage")
 class PaginatedMessageSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     next = serializers.URLField(allow_null=True)
