@@ -240,6 +240,7 @@ function ReceivedReservationsBlock({
 
 function ProviderReservationRow({ reservation, reload }: { reservation: ReservationProvider; reload: () => void }) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const transition = (status: ReservationStatus) => () =>
     reservationsApi.transitionProviderReservation(reservation.id, status)
