@@ -1,41 +1,50 @@
 # Current State
 
-Date: 2026-10-01
-AI/Engineer: Claude (Sonnet 5.5)
-Branch: `feat/phase9-chat-notifications` (from `main` `ae8bc49934da215f2d5739dba8fdc8b5b8ec26f6`)
-Current Git Tip: run `git rev-parse HEAD` (no SHA pinned here; commits move it)
-Phase 8 Code Baseline: `46f4d8ffb2465f3bee35bff7ca1c432540034816` (merge of PR #9; no application code has changed since)
+Date: 2026-10-02
+AI/Engineer: ChatGPT
+Branch: `feat/phase9b-conversations` (from `main` `882c97cb66c7dc999009583659733b4847a7d427`)
+Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
+Phase 9A Merge Baseline: `882c97cb66c7dc999009583659733b4847a7d427` (PR #10; post-merge CI #224 green)
 
-- **Phase 8 — Advertising and Payments is DONE and merged** through PR #9 (merge `46f4d8ffb2465f3bee35bff7ca1c432540034816`; post-merge CI #216 green).
-- **Phase 9A — Persistent Notifications is IMPLEMENTED on branch `feat/phase9-chat-notifications`** (from `main` `ae8bc49934da215f2d5739dba8fdc8b5b8ec26f6`), pending independent review and merge. **Phase 9 remains CURRENT, not done.**
-- Tests on the branch: **1562 backend, 416 web** (`main` baseline: 1473 / 389).
+- **Phase 9A — Persistent Notifications is DONE and merged** through PR #10.
+- **Phase 9B — Generic Conversations & Messages is CURRENT on `feat/phase9b-conversations`.**
+- **Phase 9C — FCM push has not started.**
+- Do not merge Phase 9B until exact-head CI and acceptance review are green and the owner explicitly says **`merge it`**.
 
 ## Exact next step
 
-Review Phase 9A (`docs/NOTIFICATIONS.md`, ADR-048). Do **not** start Phase 9B until 9A is reviewed and merged. Then branch from the updated `main` for 9B.
+1. Finish exact-head Phase 9B CI.
+2. Regenerate/commit `docs/api/openapi.yaml` if freshness fails.
+3. Open a draft PR into `main`.
+4. Run exact-head P1/P2 acceptance review (and Codex if available).
+5. Fix confirmed blockers only, re-run exact-head CI.
+6. Wait for explicit owner **`merge it`** before merging.
+7. Do not start Phase 9C before Phase 9B merge + post-merge main CI.
 
-## Phase 9A summary — Persistent Notifications (branch, not merged)
+## Phase 9B summary — Generic Conversations & Messages
 
-- Code: `backend/apps/notifications/` (model, services, presentation, receivers, serializers, views, urls, admin, migration `0001_initial`, tests); web `/notifications`, `NotificationsProvider`, header bell badge.
-- PostgreSQL is authoritative; creation is backend-only (reservation hook receivers); safe allow-listed payload; text rendered at read time (ar/en); `dedupe_key` unique constraint; recipient-scoped API with no client writes. No FCM, WebSockets, Redis, Celery, chat, or other-module notifications.
-- Reservation recipients: created → provider account; status change → the other participant (never the actor; both if the actor is neither).
-- Web unread count: fetched on login, on each authenticated SPA navigation (pathname change) and after each mark-read action, with abort/stale-response protection; never polled or computed locally. Mark all as read is not gated on the badge count.
-- PR #10 Codex fixes: the notification list refetches on language change (same page; prose is backend-rendered, never translated in the browser) and OpenAPI documents `page`/`page_size` for the list.
-- Review hardening (2026-10-01): notification prose deliberately omits the appointment time (UTC `starts_at`, no recipient timezone; reservation pages localize it). A timezone-aware push presentation belongs to Phase 9C only if a real timezone policy exists.
+- New backend app: `backend/apps/chat/`.
+- Generic domain: `Conversation`, `ConversationParticipant`, immutable text-only `Message`.
+- Enabled creation context: Reservation only. Participants are derived from the locked reservation; client account IDs are never accepted.
+- One conversation per context by DB uniqueness; one participant row per account/conversation; one sequence number per conversation/message.
+- Participant-scoped REST APIs: conversation list, bounded message history, send, observed-sequence read receipt, aggregate unread count.
+- Read cursor is `last_read_sequence`. The client submits only the highest sequence it actually rendered; a later concurrent message remains unread.
+- Sender is server-owned; undeclared write fields are rejected. Message body is trimmed, nonblank and bounded to 2000 in serializer + service boundary.
+- Foreign/missing conversation references are non-disclosing 404s.
+- Django admin is inspection-only.
+- Web: `/messages`, `/messages/:id`, header unread badge, patient/provider reservation entry actions, Arabic/English.
+- Existing jobs `RecruitmentMessage` is untouched.
+- No FCM, WebSockets, Redis, Celery/workers, attachments, group chat or arbitrary account-to-account messaging.
+- See `docs/CHAT.md` and ADR-049.
 
-## Phase 9 handoff notes
+## Phase 9A merged baseline
 
-### Existing facts that shape the design
-
-- **Jobs messaging already exists.** `backend/apps/jobs/models.py` defines `RecruitmentMessage`: scoped to one `JobApplication`, immutable, text-only, sender/account backed, protected by the jobs/recruitment authorization flow and contact-leak moderated (`MODERATION.md`). Inspect it **before** creating generic conversations so Phase 9 does not duplicate behaviour. Do not delete, migrate or redesign it as part of the first Phase 9 steps.
-- **A reservation notification boundary already exists.** `backend/apps/reservations/hooks.py` defines the signals `reservation_created` and `reservation_status_changed`, emitted through `transaction.on_commit(...)` (so a rolled-back reservation never notifies). The file states that Phase 9 receivers may subscribe and create persistent notifications **without changing reservation transaction code**. This is the preferred first integration point.
-
-### Recommended order (conservative)
-
-- **Phase 9A — persistent notifications first (IMPLEMENTED on the Phase 9 branch; see above).** PostgreSQL notification records: recipient `Account`, typed event/category, title/body or a safe presentation payload, optional resource reference, `created_at`, `read_at`. Authenticated, paginated list; unread count; mark one read; mark all read. Notifications are backend-created only, with the reservation hook receivers first. **No** Redis, Celery, WebSockets, Firebase credential work or background service yet. Add FCM only after persistent notification semantics are correct.
-- **Phase 9B — generic conversations/messages via REST.** Do not migrate `RecruitmentMessage` yet. Do not let arbitrary users message arbitrary accounts until the business authorization rules are deliberately defined.
-- **Phase 9C — FCM device registration and push delivery.** Persistent database notifications stay authoritative; push is best-effort delivery, never the source of truth.
-- **Realtime.** WebSockets remain deferred unless UX requirements justify them. No Redis in anticipation of them.
+- Persistent PostgreSQL notifications remain authoritative (ADR-048).
+- Reservation post-commit receivers, safe payload, read-time localized presentation, recipient-scoped REST API, web notification center/header badge.
+- Accepted branch head before merge: `a6ed6500da2349c5f59d27102e56559cc7bc55c9`.
+- Merge commit: `882c97cb66c7dc999009583659733b4847a7d427`.
+- Post-merge CI #224 green: Backend, Web and OpenAPI.
+- No FCM/Redis/Celery/WebSockets.
 
 ## Phase 8 summary — Advertising and Payments (merged via PR #9)
 

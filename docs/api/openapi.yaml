@@ -1345,6 +1345,168 @@ paths:
                 items:
                   $ref: '#/components/schemas/Plan'
           description: ''
+  /api/v1/chat/conversations/:
+    get:
+      operationId: chat_conversations_retrieve
+      summary: My conversations
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number (20 per page by default).
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Page size (default 20, maximum 100).
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChatConversation'
+          description: ''
+  /api/v1/chat/conversations/{id}/messages/:
+    get:
+      operationId: chat_conversations_messages_retrieve
+      summary: Messages in one of my conversations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Latest page is page 1; messages inside each page are chronological.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Page size (default 20, maximum 100).
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChatMessage'
+          description: ''
+    post:
+      operationId: chat_conversations_messages_create
+      summary: Send an immutable text message
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessageCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatMessageCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+          description: ''
+  /api/v1/chat/conversations/{id}/read/:
+    post:
+      operationId: chat_conversations_read_create
+      summary: Mark currently visible conversation messages as read
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatReadRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatReadRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatReadState'
+          description: ''
+  /api/v1/chat/reservations/{reservation_id}/conversation:
+    post:
+      operationId: chat_reservations_conversation_create
+      summary: Open the conversation for one of my reservations
+      parameters:
+      - in: path
+        name: reservation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatConversation'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatConversation'
+          description: ''
+  /api/v1/chat/unread-count/:
+    get:
+      operationId: chat_unread_count_retrieve
+      summary: My unread chat message count
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatUnreadCount'
+          description: ''
   /api/v1/employers/{id}:
     get:
       operationId: employers_retrieve
@@ -6055,6 +6217,133 @@ components:
       required:
       - name
       - product
+    ChatAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - id
+      - role
+    ChatConversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        context_type:
+          type: string
+          readOnly: true
+        context_id:
+          type: string
+          format: uuid
+          readOnly: true
+        other_participant:
+          allOf:
+          - $ref: '#/components/schemas/ChatAccount'
+          readOnly: true
+        last_sequence:
+          type: integer
+          readOnly: true
+        last_read_sequence:
+          type: integer
+          readOnly: true
+        unread_count:
+          type: integer
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - context_id
+      - context_type
+      - created_at
+      - id
+      - last_message_at
+      - last_read_sequence
+      - last_sequence
+      - other_participant
+      - unread_count
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sequence:
+          type: integer
+          readOnly: true
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/ChatAccount'
+          readOnly: true
+        is_mine:
+          type: boolean
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body
+      - created_at
+      - id
+      - is_mine
+      - sender
+      - sequence
+    ChatMessageCreateRequest:
+      type: object
+      description: Reject undeclared client fields instead of silently ignoring them.
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - body
+    ChatReadRequestRequest:
+      type: object
+      description: Reject undeclared client fields instead of silently ignoring them.
+      properties:
+        through_sequence:
+          type: integer
+          minimum: 0
+      required:
+      - through_sequence
+    ChatReadState:
+      type: object
+      properties:
+        last_read_sequence:
+          type: integer
+      required:
+      - last_read_sequence
+    ChatUnreadCount:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+      - count
     City:
       type: object
       properties:
@@ -8976,6 +9265,50 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CampaignOwner'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    PaginatedChatConversation:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatConversation'
+      required:
+      - count
+      - next
+      - previous
+      - results
+    PaginatedChatMessage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
       required:
       - count
       - next

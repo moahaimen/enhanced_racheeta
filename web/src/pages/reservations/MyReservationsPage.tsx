@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 
-import { reservations as reservationsApi, reviews as reviewsApi } from '../../api'
+import { chat as chatApi, reservations as reservationsApi, reviews as reviewsApi } from '../../api'
 import type { ReservationPatient, ReservationStatus } from '../../api'
 import {
   Alert,
@@ -81,6 +81,7 @@ export function MyReservationsPage() {
 
 function ReservationCard({ reservation, reload }: { reservation: ReservationPatient; reload: () => void }) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const canCancel =
     ['PENDING', 'CONFIRMED'].includes(reservation.status) &&
@@ -124,6 +125,19 @@ function ReservationCard({ reservation, reload }: { reservation: ReservationPati
         // was deleted stays visible through its snapshots, but cannot be reviewed.
         <ReviewForm reservationId={reservation.id} reload={reload} setError={setError} />
       ) : null}
+      <div className={styles.actions}>
+        <ApiActionButton
+          variant="secondary"
+          size="sm"
+          action={() => chatApi.openReservationConversation(reservation.id)}
+          onSuccess={(conversation) => navigate(`/messages/${conversation.id}`)}
+          onError={(err) => setError(toErrorMessage(err))}
+          pendingLabel={t('messages.opening')}
+          leading={<Icon name="mail" size={16} />}
+        >
+          {t('messages.messageProvider')}
+        </ApiActionButton>
+      </div>
       {canCancel ? (
         <div className={styles.actions}>
           <ApiActionButton

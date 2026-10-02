@@ -85,7 +85,8 @@
     "realEstate": "Real estate",
     "realEstateWorkspace": "Real-estate workspace",
     "advertising": "Advertising",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "messages": "Messages"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -1452,5 +1453,29 @@
     "view": "View",
     "unreadLabel_one": "{{count}} unread notification",
     "unreadLabel_other": "{{count}} unread notifications"
+  },
+  "messages": {
+    "title": "Messages",
+    "intro": "Private conversations tied to your Racheeta reservations.",
+    "empty": "No conversations yet.",
+    "emptyPage": "No conversations on this page.",
+    "count": "{{count}} conversations",
+    "participant": "Participant",
+    "reservationConversation": "Reservation conversation",
+    "unreadCount": "{{count}} unread",
+    "unreadLabel": "{{count}} unread messages",
+    "noMessagesYet": "No messages yet.",
+    "open": "Open conversation",
+    "opening": "Opening…",
+    "threadTitle": "Conversation",
+    "threadIntro": "Messages are stored in Racheeta and are visible only to reservation participants.",
+    "back": "Back to messages",
+    "you": "You",
+    "message": "Message",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "sending": "Sending…",
+    "messageProvider": "Message provider",
+    "messagePatient": "Message patient"
   }
 }

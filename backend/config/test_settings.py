@@ -30,6 +30,7 @@ REST_FRAMEWORK = {  # noqa: F405
         "talent_search": "10000/min",
         "talent_invite": "10000/min",
         "recruitment_messages": "10000/min",
+        "chat_messages": "10000/min",
     },
 }
 # No collectstatic in tests: serve admin/DRF assets straight from app finders.
