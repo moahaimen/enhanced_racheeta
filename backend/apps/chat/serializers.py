@@ -1,7 +1,31 @@
+from collections.abc import Mapping
+
 from rest_framework import serializers
+from rest_framework.exceptions import ErrorDetail
 
 from .models import ConversationParticipant, Message
 from .types import ConversationContextType
+
+
+class StrictFieldsSerializer(serializers.Serializer):
+    """Reject undeclared client fields instead of silently ignoring them."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping):
+            unknown = set(data) - set(self.fields)
+            if unknown:
+                raise serializers.ValidationError(
+                    {
+                        key: [
+                            ErrorDetail(
+                                "This field cannot be set by a client.",
+                                code="field_not_allowed",
+                            )
+                        ]
+                        for key in sorted(unknown)
+                    }
+                )
+        return super().to_internal_value(data)
 
 
 class ChatAccountSerializer(serializers.Serializer):
@@ -78,7 +102,7 @@ class MessageSerializer(serializers.ModelSerializer):
         return obj.sender_id == getattr(getattr(request, "user", None), "pk", None)
 
 
-class MessageCreateSerializer(serializers.Serializer):
+class MessageCreateSerializer(StrictFieldsSerializer):
     body = serializers.CharField(max_length=2000, allow_blank=False, trim_whitespace=True)
 
 
@@ -86,7 +110,7 @@ class UnreadCountSerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
-class ReadRequestSerializer(serializers.Serializer):
+class ReadRequestSerializer(StrictFieldsSerializer):
     through_sequence = serializers.IntegerField(min_value=0)
 
 
