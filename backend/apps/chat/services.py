@@ -55,12 +55,7 @@ def get_or_create_reservation_conversation(
     constraint plus that lock serialise concurrent opens.
     """
 
-    reservation = (
-        Reservation.objects.select_for_update()
-        .select_related("provider")
-        .filter(pk=reservation_id)
-        .first()
-    )
+    reservation = Reservation.objects.select_for_update().filter(pk=reservation_id).first()
     if reservation is None:
         raise ConversationNotFound("Conversation context was not found.")
 
