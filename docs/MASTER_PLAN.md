@@ -1120,6 +1120,13 @@ Create dashboards for:
 - Recruiter.
 - Administrator.
 
+**Implementation (branch `feat/phase10-dashboards-analytics`, see `DASHBOARDS.md`, ADR-051):**
+
+- Model-less `apps.dashboards`: role-scoped, read-only, parameterless summary endpoints under `/api/v1/dashboards/` plus a server-decided index; reuses the existing company, advertising and real-estate owner summaries.
+- Only metrics backed by real records; revenue/views/impressions/conversions/trends are deferred.
+- Web: one role-aware `/dashboard` hub (Arabic RTL and English) on the existing design system.
+- No migrations, no new infrastructure.
+
 ## Phase 11 — Mobile Integration
 
 Build a new Flutter architecture with:

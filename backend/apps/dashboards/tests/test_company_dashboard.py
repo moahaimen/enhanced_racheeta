@@ -143,4 +143,4 @@ def test_company_dashboard_query_count_is_constant(
             company, product_factory(company), CampaignStatus.PENDING_PAYMENT, PaymentStatus.PENDING
         )
     assert queries() == baseline
-    assert baseline <= 9
+    assert baseline <= 7  # products 3 (existing) + campaigns 1 (existing) + payments 1 + profile

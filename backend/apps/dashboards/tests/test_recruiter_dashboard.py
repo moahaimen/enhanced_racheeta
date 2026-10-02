@@ -214,7 +214,7 @@ def test_recruiter_dashboard_query_count_is_constant(
         application_factory(job)
     job_factory(employer, owner, JobStatus.DRAFT)
     assert queries() == baseline
-    assert baseline <= 16  # entitlement resolution dominates; independent of data volume
+    assert baseline <= 12  # entitlement resolution dominates; independent of data volume
 
 
 def test_verification_status_enum_is_the_jobs_one():

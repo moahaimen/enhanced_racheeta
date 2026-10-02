@@ -176,4 +176,4 @@ def test_admin_dashboard_query_count_is_constant(
     for _ in range(10):
         account_factory(role=AccountRole.PATIENT)
     assert queries() == baseline
-    assert baseline <= 20  # one aggregate per domain block
+    assert baseline <= 12  # one aggregate per domain block

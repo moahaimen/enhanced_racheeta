@@ -141,3 +141,7 @@ Migration files live in `backend/apps/<app>/migrations/` and are committed.
 ## Backups
 
 See `BACKUP_RESTORE.md`.
+
+## Dashboards (Phase 10)
+
+No tables, columns, constraints or migrations. Dashboard queries are single conditional aggregates served by existing indexes: `reservations_patient_idx`, `reservations_provider_idx`, `reviews_provider_idx`, `offers_public_idx`, `providers_membership_fac_idx`, `jobs_post_employer_idx`, `jobs_application_job_idx`, `jobs_membership_employer_idx`. The administrator summary scans whole domain tables with grouped counts (small, low-cardinality scans today); revisit with Phase 12 hardening if those tables grow large.

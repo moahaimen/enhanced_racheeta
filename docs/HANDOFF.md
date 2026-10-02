@@ -8,6 +8,15 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 - **Phase 10 — Dashboards & Analytics is CURRENT** on `feat/phase10-dashboards-analytics` (draft PR; not merged). See `docs/DASHBOARDS.md`.
 - Do not merge Phase 10 until exact-head CI and independent acceptance review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous acceptance review. Do not start Phase 11.
 
+## Phase 10 summary — Dashboards & Analytics (see `docs/DASHBOARDS.md`, ADR-051)
+
+- New backend app `apps/dashboards/` — **no models, no migrations**. `services/` (per-domain aggregates), `access.py` (single source of who may open what; used by permissions and the index), `permissions.py`, `serializers.py` (explicit output contracts), `views.py`, `urls.py`.
+- Endpoints (all `GET`, read-only, parameterless, `private, no-store`): `/api/v1/dashboards/` (index), `/patient`, `/doctor`, `/facility`, `/company`, `/recruiter`, `/admin`. The real-estate owner dashboard is the existing `/real-estate/owner/dashboard`.
+- Reused, not rebuilt: marketplace + advertising `dashboard_summary` (company), real-estate owner summary, notification/chat unread counts, `has_role`/`IsAdminAccount`/`membership_for`/entitlements.
+- Authorization is current-state and server-side; isolation is tested across accounts and organisations; recruiter applicant aggregates follow the applicant-read gate and are `null` with a reason when withheld; admin dashboard is counts only.
+- Web: `/dashboard` hub (`web/src/pages/dashboard/`), Dashboard header link, Arabic/English; keyed by account, no polling, only the selected dashboard loads.
+- Deferred (no authoritative data): revenue, views, impressions, conversions, trends, facility-wide practitioner reservations, recruiter time-to-hire, unread recruitment messages.
+
 ## Phase 9C summary (merged via PR #12, merge `3ff9cdd`) — FCM push (see `docs/PUSH.md`, ADR-050)
 
 - PostgreSQL stays authoritative; push is a best-effort hint sent after commit.

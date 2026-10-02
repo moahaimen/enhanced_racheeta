@@ -106,6 +106,16 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Privacy:** lock-screen text is generic (no message bodies, notes, contact data, service/provider names); `data` carries only opaque ids and is never an authorization input.
 - **Stale tokens:** only permanent Firebase rejections deactivate a device; transient errors never do. See `PUSH.md`.
 
+## Dashboards (Phase 10)
+
+- **Server-enforced scope, applied before aggregation:** each endpoint resolves the caller's own profile, company or active membership from the database on every request (never from the client) and filters by that foreign key; no endpoint accepts an id, filter or query parameter. A lapsed membership, deleted profile or wrong role is `403` on the very next request.
+- **Cross-account / cross-organisation isolation** is tested for patients, providers, companies and organisations, including requests that smuggle other accounts' ids in the query string and headers.
+- **No private data in aggregates:** lists select an explicit column allow-list (`patient_note`, contact data and tokens can never be selected); response serializers declare every field, so an accidental extra column cannot leave the server; the administrator dashboard is counts only (no row, e-mail or name is ever selected).
+- **Entitlement-aware:** recruiter applicant aggregates follow the existing applicant-read gate (organisation may recruit AND plan carries `jobs.application_review`); otherwise they are `null` with an explicit reason, never zero.
+- **Read-only:** no dashboard mutates domain data and none offers an administrator mutation; responses are `private, no-store`.
+- **Nothing is fabricated:** no revenue, views, impressions or conversions exist, so none are reported (see the deferred list in `DASHBOARDS.md`).
+- Entitlement resolution, shared with every existing entitlement read, may normalise an elapsed subscription; that behaviour predates Phase 10.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

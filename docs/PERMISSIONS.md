@@ -163,10 +163,26 @@ message threads accept the candidate of the application or an active member of
 the employer, nobody else (404 for third parties). Commercial capability is a
 separate axis enforced by the billing service, not by permission classes.
 
+## Dashboard permissions (`apps/dashboards/permissions.py`, Phase 10)
+
+One module, `apps/dashboards/access.py`, answers "who may open which dashboard" and is used by both
+the permission classes and `GET /dashboards/`, so the index can never advertise a dashboard its
+endpoint refuses. Every answer is read from current database state.
+
+| Class | Grants |
+| --- | --- |
+| `IsPatientAccount` | `role == PATIENT` |
+| `IsPractitionerProvider` / `IsFacilityProvider` | `role == PROVIDER` with a profile of that kind (`ProviderProfile.kind`); a practitioner is never shown facility data through a membership |
+| `HasCompanyProfile` | `role == MEDICAL_COMPANY` with a company profile |
+| `IsRecruitingOrganizationMember` | an ACTIVE `EmployerMembership` (OWNER, RECRUITER or VIEWER — the dashboard is read-only) |
+| `IsAdminAccount` (accounts) | `is_staff` |
+
+The real-estate owner dashboard keeps its existing `HasRealEstateSeller` permission.
+
 ## Web route guards
 
 `web/src/app/guards.tsx`: `RequireAuth` wraps protected routes, `PublicOnly`
-wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`), `RequireStaff` wraps `/admin-console` (`account.is_staff`). Pages contain no authentication checks. Guards improve
+wraps login/register, `RequireRole` wraps role-specific pages (`/provider/profile`), `RequireStaff` wraps `/admin-console` (`account.is_staff`). `/dashboard` sits under `RequireAuth`; the page renders only the dashboards the server lists for the account. Pages contain no authentication checks. Guards improve
 UX only; a protected page's data calls still fail with 401 without a valid
 token.
 

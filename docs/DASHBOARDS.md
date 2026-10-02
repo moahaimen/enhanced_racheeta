@@ -59,15 +59,17 @@ New backend app `apps.dashboards` with **no models and no migrations**.
 
 ```
 apps/dashboards/
+  access.py           ONE source of "who may open which dashboard" (permissions + the index)
+  permissions.py      IsPatientAccount, IsPractitionerProvider, IsFacilityProvider, HasCompanyProfile,
+                      IsRecruitingOrganizationMember (current database state, never client ids)
   services/           one small module per domain; each returns a plain dict of aggregates
-    reservations.py   by-status counts, upcoming, recent (patient and provider shapes)
-    providers.py      review aggregate, offers, memberships
+    common.py         status_counts (one conditional-aggregate query, zero-filled), list limits
+    reservations.py   patient and provider shapes: counts, upcoming, recent
+    providers.py      review aggregate, offers, facility memberships
     company.py        composes the existing marketplace and advertising summaries + payments
     recruiter.py      organisation, jobs, applications, interviews, seats
     admin.py          counts-only operational summary
-    availability.py   which dashboards the caller may open (server-decided)
-  permissions.py      CanViewPatient/Practitioner/Facility… (current database state, never client ids)
-  serializers.py      explicit response contracts (OpenAPI)
+  serializers.py      explicit output contracts (OpenAPI); undeclared fields cannot leave the server
   views.py            one small view per dashboard
   urls.py
 ```
@@ -106,3 +108,47 @@ existing provider reservation API already shows the provider (patient name), nev
   with grouped counts; these are small, low-cardinality scans today and are noted for Phase 12
   hardening if the tables grow.
 * No Redis, Celery or Elasticsearch; no polling in the web app.
+
+### Measured query budget
+
+Queries per request, measured under `force_authenticate` (JWT adds one user lookup in production),
+pinned as upper bounds by the tests, and **constant** as the data grows (the tests add 15–30 rows
+and assert the count does not move):
+
+| Endpoint | Queries | Composition |
+|---|---|---|
+| `GET /dashboards/` | 1 | membership lookup (role/profile checks that need no query are skipped) |
+| patient | 5 | status+upcoming counts, upcoming list, recent list, unread notifications, unread messages |
+| doctor | 7 | profile, counts, upcoming list, reviews, offers, 2 unread |
+| facility | 8 | doctor + memberships |
+| company | 7 | profile + existing marketplace summary (3) + existing advertising summary (1) + payments |
+| recruiter | 12 | membership, entitlement resolution (plan, subscription, entitlements), jobs, applications, interviews, members |
+| admin | 12 | one conditional aggregate per domain block |
+
+## 5. Web
+
+`/dashboard` (`web/src/pages/dashboard/`) is one role-aware hub under `RequireAuth`:
+
+* it asks `GET /dashboards/` which dashboards the account can open (never inferred from the role in
+  the browser) and shows a tab list only when there is more than one;
+* only the selected dashboard loads (its first request happens when it is opened); nothing polls;
+* every load uses `AsyncPage` (loading state, error with retry), lists have explicit empty states,
+  and there are no mutations (so no action buttons that could double-submit);
+* the hub is keyed by the signed-in account id, so a response that arrives after logout or an
+  account switch is discarded with its component and never rendered for the next account;
+* labels reuse the existing i18n groups (`reservationStatus`, `jobStatus`, `verification`, …); Arabic
+  RTL and English; a Dashboard link appears in the header (desktop and mobile) for signed-in accounts.
+
+## 6. Tests
+
+* Backend (`apps/dashboards/tests`, 79): authentication, per-dashboard authorization and
+  role/kind mismatches, current-state re-checks (ended membership, deleted profile), cross-account
+  and cross-organisation isolation (including smuggled ids in query/headers), correct aggregation,
+  empty datasets, status filtering, date boundaries (upcoming `starts_at >= now`, offer window end
+  exclusive, 7-day applications, 24 h/7 d audit), no private or fabricated fields, constant and
+  bounded query counts, OpenAPI contract (read-only, parameterless, authenticated, no forbidden
+  property) and a guard that the new schema cannot shadow the existing `CompanyDashboard`.
+* Web (`DashboardPage.test.tsx`, 21): loading, success for every dashboard, empty states, API
+  failure with retry, index failure, no-dashboard onboarding, withheld recruiter data, tabs and lazy
+  loading, logout + different login without leaking the previous account's late response, no
+  polling, header link (desktop/mobile/anonymous), Arabic and English.

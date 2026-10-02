@@ -276,7 +276,8 @@ def test_provider_dashboards_have_a_constant_query_count(
     for _ in range(5):
         membership_factory(provider_factory(), profile, MembershipStatus.ACTIVE)
     assert queries() == baseline
-    assert baseline <= 10
+    # doctor 7 / facility 8: profile, counts, upcoming, reviews, offers, 2 unread (+ memberships).
+    assert baseline <= (8 if kind == ProviderType.HOSPITAL else 7)
 
 
 @pytest.mark.django_db

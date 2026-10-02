@@ -218,7 +218,7 @@ def test_patient_dashboard_query_count_is_constant(patient, provider_factory, re
             patient, provider, ReservationStatus.CONFIRMED, starts_in=timedelta(days=i + 1)
         )
     assert count_queries() == baseline  # independent of the data volume
-    assert baseline <= 6  # counts + upcoming + recent + 2 unread (+ auth)
+    assert baseline <= 5  # counts + upcoming + recent + 2 unread; raise only on purpose
 
 
 # --- index ---------------------------------------------------------------------------------
