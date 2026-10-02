@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 
-import { useAuth } from '../../auth/useAuth'\nimport { useChat } from '../../chat/useChat'
+import { useAuth } from '../../auth/useAuth'
+import { useChat } from '../../chat/useChat'
 import { useNotifications } from '../../notifications/useNotifications'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
 import { Icon } from '../icons'
@@ -178,7 +179,8 @@ export function SiteHeader() {
           {t('nav.adminConsole')}
         </NavLink>
       ) : null}
-      {status === 'authenticated' ? <MessagesLink /> : null}\n      {status === 'authenticated' ? <NotificationsLink /> : null}
+      {status === 'authenticated' ? <MessagesLink /> : null}
+      {status === 'authenticated' ? <NotificationsLink /> : null}
       {status === 'authenticated' ? (
         <NavLink to="/profile" className={styles.link}>
           <Icon name="user" size={18} />
