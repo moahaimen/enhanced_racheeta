@@ -86,7 +86,8 @@
     "realEstateWorkspace": "مساحة العقارات",
     "advertising": "الإعلانات",
     "notifications": "الإشعارات",
-    "messages": "الرسائل"
+    "messages": "الرسائل",
+    "dashboard": "لوحة المعلومات"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -1517,5 +1518,110 @@
     "sending": "جارٍ الإرسال…",
     "messageProvider": "مراسلة مقدم الخدمة",
     "messagePatient": "مراسلة المريض"
+  },
+  "dashboard": {
+    "title": "لوحة المعلومات",
+    "intro": "أرقام حيّة لحسابك، يحسبها الخادم من سجلاتك أنت.",
+    "tabsLabel": "لوحات المعلومات",
+    "none": "لا توجد لوحة معلومات متاحة بعد",
+    "noneHint": "أكمل إعداد ملفك أو مؤسستك وستظهر لوحتك هنا.",
+    "viewAll": "عرض الكل",
+    "total": "الإجمالي",
+    "upcoming": "القادمة",
+    "upcomingHint": "قيد الانتظار أو مؤكدة ولم تبدأ بعد",
+    "noReservations": "لا توجد حجوزات لعرضها",
+    "unread": "غير المقروء",
+    "unreadNotifications": "إشعارات غير مقروءة",
+    "unreadMessages": "رسائل غير مقروءة",
+    "stars": {
+      "1": "نجمة واحدة",
+      "2": "نجمتان",
+      "3": "3 نجوم",
+      "4": "4 نجوم",
+      "5": "5 نجوم"
+    },
+    "interviewStatus": {
+      "PROPOSED": "مقترحة",
+      "ACCEPTED": "مقبولة",
+      "DECLINED": "مرفوضة",
+      "CANCELLED": "ملغاة"
+    },
+    "tabs": {
+      "patient": "مريض",
+      "doctor": "طبيب",
+      "facility": "منشأة",
+      "medical_company": "شركة طبية",
+      "real_estate_owner": "مالك عقار",
+      "recruiter": "مسؤول توظيف",
+      "admin": "مدير النظام"
+    },
+    "patient": {
+      "reservations": "حجوزاتي",
+      "upcomingList": "المواعيد القادمة",
+      "recentList": "أحدث الحجوزات"
+    },
+    "provider": {
+      "reservations": "الحجوزات الواردة",
+      "upcomingList": "المواعيد القادمة",
+      "reviews": "التقييمات",
+      "noReviews": "لا توجد تقييمات بعد.",
+      "averageRating": "متوسط التقييم",
+      "reviewCount": "عدد التقييمات",
+      "offers": "العروض",
+      "offersRunning": "سارية الآن",
+      "offersScheduled": "مجدولة",
+      "notDiscoverable": "لن يظهر ملفك للعامة قبل توثيقه وإظهاره."
+    },
+    "facility": {
+      "practitioners": "الممارسون",
+      "active": "ممارسون نشطون",
+      "incoming": "طلبات بانتظارك",
+      "incomingHint": "ممارسون طلبوا الانضمام",
+      "outgoing": "دعوات مرسلة",
+      "outgoingHint": "بانتظار رد الممارس"
+    },
+    "company": {
+      "products": "المنتجات",
+      "campaigns": "الحملات الإعلانية",
+      "payments": "مدفوعات الحملات",
+      "noAnalytics": "أعداد فقط — لا تُتتبَّع المشاهدات أو النقرات أو الإيرادات."
+    },
+    "recruiter": {
+      "jobs": "الوظائف",
+      "openNow": "مفتوحة الآن",
+      "openNowHint": "منشورة وما زالت تستقبل الطلبات",
+      "applications": "الطلبات",
+      "awaitingReview": "بانتظار المراجعة",
+      "awaitingReviewHint": "مُقدَّمة ولم تُراجَع بعد",
+      "last7Days": "واردة خلال آخر 7 أيام",
+      "interviews": "المقابلات",
+      "seats": "مقاعد التوظيف",
+      "activeMembers": "الأعضاء النشطون",
+      "seatLimit": "حد المقاعد",
+      "cannotRecruit": "لا يمكن لمؤسستك التوظيف حتى يتم توثيقها وتفعيلها.",
+      "access": {
+        "organization_not_verified": "تظهر أرقام المتقدمين بعد توثيق مؤسستك وتفعيلها.",
+        "plan_required": "أرقام المتقدمين تتطلب خطة تتضمن مراجعة الطلبات."
+      }
+    },
+    "admin": {
+      "aggregatesOnly": "أعداد مجمّعة فقط. لا تُعرض هنا أي بيانات شخصية.",
+      "accounts": "الحسابات",
+      "active": "نشطة",
+      "inactive": "غير نشطة",
+      "verification": "طوابير التوثيق",
+      "providers": "مقدمو الخدمة",
+      "companies": "الشركات الطبية",
+      "employers": "جهات التوظيف",
+      "recruitmentSuspended": "التوظيف موقوف",
+      "jobs": "الوظائف",
+      "reservations": "الحجوزات",
+      "catalogue": "السوق والعقارات",
+      "advertising": "الإعلانات",
+      "billing": "الاشتراكات",
+      "audit": "نشاط سجل التدقيق",
+      "last24h": "آخر 24 ساعة",
+      "last7d": "آخر 7 أيام"
+    }
   }
 }

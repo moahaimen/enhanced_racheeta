@@ -2,6 +2,11 @@
 import type { ReactNode } from 'react'
 
 export const paths = {
+  chart: (
+    <>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="7" />

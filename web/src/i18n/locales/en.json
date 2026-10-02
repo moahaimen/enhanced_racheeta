@@ -86,7 +86,8 @@
     "realEstateWorkspace": "Real-estate workspace",
     "advertising": "Advertising",
     "notifications": "Notifications",
-    "messages": "Messages"
+    "messages": "Messages",
+    "dashboard": "Dashboard"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -1477,5 +1478,110 @@
     "sending": "Sending…",
     "messageProvider": "Message provider",
     "messagePatient": "Message patient"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "intro": "Live figures for your account, computed by the server from your own records.",
+    "tabsLabel": "Dashboards",
+    "none": "No dashboard is available yet",
+    "noneHint": "Complete your profile or organisation setup and your dashboard will appear here.",
+    "viewAll": "View all",
+    "total": "Total",
+    "upcoming": "Upcoming",
+    "upcomingHint": "Pending or confirmed, not started yet",
+    "noReservations": "No reservations to show",
+    "unread": "Unread",
+    "unreadNotifications": "Unread notifications",
+    "unreadMessages": "Unread messages",
+    "stars": {
+      "1": "1 star",
+      "2": "2 stars",
+      "3": "3 stars",
+      "4": "4 stars",
+      "5": "5 stars"
+    },
+    "interviewStatus": {
+      "PROPOSED": "Proposed",
+      "ACCEPTED": "Accepted",
+      "DECLINED": "Declined",
+      "CANCELLED": "Cancelled"
+    },
+    "tabs": {
+      "patient": "Patient",
+      "doctor": "Doctor",
+      "facility": "Facility",
+      "medical_company": "Medical company",
+      "real_estate_owner": "Real-estate owner",
+      "recruiter": "Recruiter",
+      "admin": "Administrator"
+    },
+    "patient": {
+      "reservations": "My reservations",
+      "upcomingList": "Upcoming appointments",
+      "recentList": "Recent reservations"
+    },
+    "provider": {
+      "reservations": "Reservations received",
+      "upcomingList": "Upcoming appointments",
+      "reviews": "Reviews and rating",
+      "noReviews": "No reviews yet.",
+      "averageRating": "Average rating",
+      "reviewCount": "Reviews",
+      "offers": "Offers",
+      "offersRunning": "Running now",
+      "offersScheduled": "Scheduled",
+      "notDiscoverable": "Your profile is not publicly discoverable until it is verified and visible."
+    },
+    "facility": {
+      "practitioners": "Practitioners",
+      "active": "Active practitioners",
+      "incoming": "Requests awaiting you",
+      "incomingHint": "Practitioners who asked to join",
+      "outgoing": "Invitations sent",
+      "outgoingHint": "Waiting for the practitioner"
+    },
+    "company": {
+      "products": "Products",
+      "campaigns": "Advertising campaigns",
+      "payments": "Campaign payments",
+      "noAnalytics": "Counts only — impressions, clicks and revenue are not tracked."
+    },
+    "recruiter": {
+      "jobs": "Jobs",
+      "openNow": "Open now",
+      "openNowHint": "Published and still accepting applications",
+      "applications": "Applications",
+      "awaitingReview": "Awaiting review",
+      "awaitingReviewHint": "Submitted, not yet reviewed",
+      "last7Days": "Received in the last 7 days",
+      "interviews": "Interviews",
+      "seats": "Recruiter seats",
+      "activeMembers": "Active members",
+      "seatLimit": "Seat limit",
+      "cannotRecruit": "Your organisation cannot recruit until it is verified and active.",
+      "access": {
+        "organization_not_verified": "Applicant figures appear once your organisation is verified and active.",
+        "plan_required": "Applicant figures need a plan that includes application review."
+      }
+    },
+    "admin": {
+      "aggregatesOnly": "Aggregate counts only. No personal data is shown here.",
+      "accounts": "Accounts",
+      "active": "Active",
+      "inactive": "Inactive",
+      "verification": "Verification queues",
+      "providers": "Providers",
+      "companies": "Medical companies",
+      "employers": "Employers",
+      "recruitmentSuspended": "Recruitment suspended",
+      "jobs": "Jobs",
+      "reservations": "Reservations",
+      "catalogue": "Marketplace and real estate",
+      "advertising": "Advertising",
+      "billing": "Subscriptions",
+      "audit": "Audit activity",
+      "last24h": "Last 24 hours",
+      "last7d": "Last 7 days"
+    }
   }
 }

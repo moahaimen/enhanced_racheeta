@@ -1,0 +1,54 @@
+.countGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  padding: var(--space-3) var(--space-4);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rowTitle {
+  margin: 0;
+  font-size: var(--font-size-md, 1rem);
+  font-weight: 600;
+}
+
+.rowMeta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
