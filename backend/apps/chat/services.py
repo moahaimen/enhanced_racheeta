@@ -24,6 +24,10 @@ class ConversationNotFound(ChatError):
     code = "not_found"
 
 
+class InvalidReadCursor(ChatError):
+    code = "invalid_read_cursor"
+
+
 def participant_for(account, conversation_id: UUID) -> ConversationParticipant | None:
     if not getattr(account, "is_authenticated", False):
         return None
@@ -114,11 +118,14 @@ def send_message(conversation_id: UUID, *, sender, body: str) -> Message:
 
 
 @transaction.atomic
-def mark_read(conversation_id: UUID, *, account) -> ConversationParticipant:
-    """Advance the caller's cursor to the conversation sequence visible now.
+def mark_read(
+    conversation_id: UUID, *, account, through_sequence: int
+) -> ConversationParticipant:
+    """Advance only through the highest sequence the client actually observed.
 
-    The conversation row is locked before reading last_sequence. A send that
-    races with this call therefore receives the next sequence and stays unread.
+    The conversation row is locked while the cursor is validated. A message
+    committed after the client loaded its page has a greater sequence and
+    therefore cannot be accidentally marked read by this call.
     """
 
     conversation = Conversation.objects.select_for_update().filter(pk=conversation_id).first()
@@ -132,9 +139,11 @@ def mark_read(conversation_id: UUID, *, account) -> ConversationParticipant:
     )
     if participant is None:
         raise ConversationNotFound("Conversation was not found.")
+    if through_sequence > conversation.last_sequence:
+        raise InvalidReadCursor("Read cursor is beyond the conversation.")
 
-    if participant.last_read_sequence < conversation.last_sequence:
-        participant.last_read_sequence = conversation.last_sequence
+    if participant.last_read_sequence < through_sequence:
+        participant.last_read_sequence = through_sequence
         participant.save(update_fields=["last_read_sequence", "updated_at"])
     return participant
 
