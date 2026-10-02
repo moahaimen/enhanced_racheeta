@@ -81,6 +81,7 @@ export function MyReservationsPage() {
 
 function ReservationCard({ reservation, reload }: { reservation: ReservationPatient; reload: () => void }) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const canCancel =
     ['PENDING', 'CONFIRMED'].includes(reservation.status) &&
