@@ -20,7 +20,7 @@ from .serializers import (
     MessageSerializer,
     PaginatedConversationSerializer,
     PaginatedMessageSerializer,
-    ReadStateSerializer,
+    ReadRequestSerializer,\n    ReadStateSerializer,
     UnreadCountSerializer,
 )
 
@@ -196,15 +196,28 @@ class ConversationReadView(APIView):
 
     @extend_schema(
         summary="Mark currently visible conversation messages as read",
-        request=None,
+        request=ReadRequestSerializer,
         responses={200: ReadStateSerializer},
     )
     def post(self, request, pk):
-        _require_no_body(request)
+        serializer = ReadRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
-            participant = services.mark_read(pk, account=request.user)
+            participant = services.mark_read(
+                pk,
+                account=request.user,
+                through_sequence=serializer.validated_data["through_sequence"],
+            )
         except services.ConversationNotFound as exc:
             raise Http404 from exc
+        except services.InvalidReadCursor as exc:
+            raise ValidationError(
+                {
+                    "through_sequence": [
+                        ErrorDetail(str(exc), code="invalid_read_cursor")
+                    ]
+                }
+            ) from exc
         return Response({"last_read_sequence": participant.last_read_sequence})
 
 
