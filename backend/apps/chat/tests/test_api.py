@@ -226,6 +226,45 @@ def test_mark_read_foreign_and_missing_are_same_404(api_client, account_factory)
 
 
 @pytest.mark.django_db
+def test_message_rejects_client_owned_sender(api_client, account_factory):
+    provider, patient, outsider, reservation = make_reservation_world(account_factory)
+    conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
+
+    response = api_client.post(
+        f"{BASE}conversations/{conversation_id}/messages/",
+        {"body": "hello", "sender": str(outsider.pk)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "field_not_allowed" in response.content.decode()
+    assert Message.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_read_cursor_does_not_swallow_message_arriving_after_render(api_client, account_factory):
+    provider, patient, _, reservation = make_reservation_world(account_factory)
+    conversation_id = _open(api_client, patient, reservation.pk).json()["id"]
+    conversation_uuid = uuid.UUID(conversation_id)
+
+    services.send_message(conversation_uuid, sender=provider, body="observed")
+    # The patient rendered sequence 1. Another provider message arrives before
+    # the read receipt is submitted.
+    services.send_message(conversation_uuid, sender=provider, body="arrived later")
+
+    api_client.force_authenticate(user=patient)
+    read = api_client.post(
+        f"{BASE}conversations/{conversation_id}/read/",
+        {"through_sequence": 1},
+        format="json",
+    )
+
+    assert read.status_code == 200
+    assert read.json() == {"last_read_sequence": 1}
+    assert api_client.get(BASE + "unread-count/").json() == {"count": 1}
+
+
+@pytest.mark.django_db
 def test_messages_page_one_is_latest_slice_but_chronological_inside_page(
     api_client, account_factory
 ):
