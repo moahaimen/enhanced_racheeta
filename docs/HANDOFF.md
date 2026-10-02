@@ -1,27 +1,24 @@
 # Current State
 
 Date: 2026-10-02
-AI/Engineer: ChatGPT
-Branch: `feat/phase9b-conversations` (from `main` `882c97cb66c7dc999009583659733b4847a7d427`)
+Branch: `feat/phase9c-fcm-push` (from `main` `479025d270ce34b4cc852bf2a56149d37e746018`, the Phase 9B merge; post-merge CI #290 green)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
-Phase 9A Merge Baseline: `882c97cb66c7dc999009583659733b4847a7d427` (PR #10; post-merge CI #224 green)
 
-- **Phase 9A — Persistent Notifications is DONE and merged** through PR #10.
-- **Phase 9B — Generic Conversations & Messages is CURRENT on `feat/phase9b-conversations`.**
-- **Phase 9C — FCM push has not started.**
-- Do not merge Phase 9B until exact-head CI and acceptance review are green and the owner explicitly says **`merge it`**.
+- **Phase 9A (PR #10) and Phase 9B (PR #11) are DONE and merged.**
+- **Phase 9C — FCM push is CURRENT on `feat/phase9c-fcm-push`** (draft PR; not merged).
+- Do not merge Phase 9C until exact-head CI and independent acceptance review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous acceptance review.
 
-## Exact next step
+## Phase 9C summary — FCM push (see `docs/PUSH.md`, ADR-050)
 
-1. Finish exact-head Phase 9B CI.
-2. Regenerate/commit `docs/api/openapi.yaml` if freshness fails.
-3. Open a draft PR into `main`.
-4. Run exact-head P1/P2 acceptance review (and Codex if available).
-5. Fix confirmed blockers only, re-run exact-head CI.
-6. Wait for explicit owner **`merge it`** before merging.
-7. Do not start Phase 9C before Phase 9B merge + post-merge main CI.
+- PostgreSQL stays authoritative; push is a best-effort hint sent after commit.
+- `notifications_pushdevice`: globally unique token, one owner (`request.user`), platforms `ANDROID|IOS|WEB`, transfer on account switch, ≤10 active devices/account.
+- API: `POST /api/v1/notifications/push-devices/` (register/upsert) and `.../unregister/` (idempotent `204`, no ownership disclosure). Tokens are never returned.
+- `apps.notifications.push` (`PushSender` with ONE method `send_batch`, Disabled default, `FirebaseAdminPushSender` = one `send_each_for_multicast` under a hard 3 s deadline, ≤4 in-flight batches, 10 s fail-fast window) and `push_service` (never raises; per-token permanent errors deactivate, everything else keeps the device). `on_commit` is synchronous, so this bound is what keeps requests from hanging on Firebase; see `PUSH.md`.
+- Triggers: newly created persistent notifications; new chat messages (other participant only) via `apps.chat.hooks.message_sent`.
+- New env `PUSH_SENDER` (reuses `FIREBASE_CREDENTIALS_FILE`); `firebase-admin==7.7.0` in production requirements.
+- Deferred: web/mobile token acquisition (no Firebase client/service worker in repo; mobile is Phase 11), workers/queues, realtime.
 
-## Phase 9B summary — Generic Conversations & Messages
+## Phase 9B summary (merged) — Generic Conversations & Messages
 
 - New backend app: `backend/apps/chat/`.
 - Generic domain: `Conversation`, `ConversationParticipant`, immutable text-only `Message`.

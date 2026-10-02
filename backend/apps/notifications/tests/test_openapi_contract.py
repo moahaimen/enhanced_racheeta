@@ -49,3 +49,29 @@ def test_only_the_list_operation_takes_pagination_parameters():
         for operation in operations.values():
             names = {p["name"] for p in operation.get("parameters", [])}
             assert not names & {"page", "page_size"}
+
+
+def _push_contract(schema):
+    schemas = schema["components"]["schemas"]
+    register = schema["paths"]["/api/v1/notifications/push-devices/"]["post"]
+    unregister = schema["paths"]["/api/v1/notifications/push-devices/unregister/"]["post"]
+    assert register["security"] and unregister["security"]  # authenticated only
+    assert set(schemas["PushDeviceRegisterRequest"]["properties"]) == {"token", "platform"}
+    assert set(schemas["PushDeviceUnregisterRequest"]["properties"]) == {"token"}
+    assert schemas["PushPlatformEnum"]["enum"] == ["ANDROID", "IOS", "WEB"]
+    # Responses never carry the token or the owner.
+    assert set(schemas["PushDevice"]["properties"]) == {
+        "id",
+        "platform",
+        "is_active",
+        "last_registered_at",
+    }
+    assert set(unregister["responses"]) == {"204"}
+
+
+def test_committed_openapi_documents_push_devices():
+    _push_contract(COMMITTED)
+
+
+def test_generated_openapi_documents_push_devices():
+    _push_contract(SchemaGenerator().get_schema(request=None, public=True))

@@ -7,6 +7,7 @@ from django.db.models import F
 
 from apps.reservations.models import Reservation
 
+from . import hooks
 from .models import Conversation, ConversationParticipant, Message
 from .types import ConversationContextType
 
@@ -111,6 +112,7 @@ def send_message(conversation_id: UUID, *, sender, body: str) -> Message:
     conversation.last_sequence = sequence
     conversation.last_message_at = message.created_at
     conversation.save(update_fields=["last_sequence", "last_message_at", "updated_at"])
+    hooks.emit_message_sent(message)
     return message
 
 

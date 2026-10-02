@@ -43,3 +43,34 @@ def check_frontend_url(app_configs, **kwargs):
             )
         ]
     return []
+
+
+@register(Tags.security)
+def check_push_sender(app_configs, **kwargs):
+    """Push is optional: when unconfigured nothing is sent (safe). A selected Firebase
+    sender without credentials, or an unloadable sender, is a configuration error."""
+    from apps.notifications.push import FirebaseAdminPushSender, get_sender_class
+
+    try:
+        sender_class = get_sender_class()
+    except Exception as exc:  # noqa: BLE001
+        return [Error(f"RACHEETA['PUSH_SENDER'] cannot be loaded: {exc}", id="racheeta.E003")]
+    if (
+        sender_class is FirebaseAdminPushSender
+        and not settings.RACHEETA["FIREBASE_CREDENTIALS_FILE"]
+    ):
+        return [
+            Error(
+                "PUSH_SENDER is FirebaseAdminPushSender but FIREBASE_CREDENTIALS_FILE is empty.",
+                id="racheeta.E004",
+            )
+        ]
+    if not settings.DEBUG and sender_class.__name__ == "DisabledPushSender":
+        return [
+            Warning(
+                "Push delivery is disabled (PUSH_SENDER). Notifications and chat still work; "
+                "devices receive no push until a sender is configured.",
+                id="racheeta.W001",
+            )
+        ]
+    return []

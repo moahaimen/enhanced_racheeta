@@ -12,6 +12,7 @@ from uuid import UUID
 from django.db import transaction
 from django.utils import timezone
 
+from . import push_service
 from .models import Notification
 from .types import (
     SAFE_PAYLOAD_KEYS,
@@ -44,7 +45,7 @@ def create_notification(
 ) -> tuple[Notification, bool]:
     """Create a notification once per `dedupe_key`; replays return the existing row."""
     with transaction.atomic():
-        return Notification.objects.get_or_create(
+        notification, created = Notification.objects.get_or_create(
             dedupe_key=dedupe_key,
             defaults={
                 "recipient_id": recipient_id,
@@ -55,6 +56,11 @@ def create_notification(
                 "payload": safe_payload(payload),
             },
         )
+        if created:
+            # Delivery hint only, after the row is durable; replays (created=False) never push.
+            notification_id = notification.pk
+            transaction.on_commit(lambda: push_service.send_notification_push(notification_id))
+        return notification, created
 
 
 def notify_reservation_created(*, recipient_id: Any, reservation_id: UUID, payload: dict) -> bool:

@@ -38,6 +38,7 @@ env = environ.Env(
     EMAIL_VERIFICATION_TIMEOUT_HOURS=(int, 24),
     FIREBASE_VERIFIER=(str, "apps.accounts.firebase.DisabledVerifier"),
     FIREBASE_CREDENTIALS_FILE=(str, ""),
+    PUSH_SENDER=(str, "apps.notifications.push.DisabledPushSender"),
 )
 
 # Load repo-root .env if present (developer machines only; harmless elsewhere).
@@ -191,6 +192,7 @@ REST_FRAMEWORK = {
         "talent_invite": "30/hour",
         "recruitment_messages": "60/hour",
         "chat_messages": "120/hour",
+        "push_devices": "60/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -227,6 +229,7 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
+        "PushPlatformEnum": "apps.notifications.types.PushPlatform.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",
         "CampaignStatusEnum": "apps.advertising.types.CampaignStatus.choices",
         "CampaignPaymentStatusEnum": "apps.advertising.types.PaymentStatus.choices",
@@ -367,6 +370,8 @@ RACHEETA = {
     # Dotted path to a FirebaseVerifier implementation (apps.accounts.firebase).
     "FIREBASE_VERIFIER": env("FIREBASE_VERIFIER"),
     "FIREBASE_CREDENTIALS_FILE": env("FIREBASE_CREDENTIALS_FILE"),
+    # Dotted path to a PushSender (apps.notifications.push). Disabled sends nothing.
+    "PUSH_SENDER": env("PUSH_SENDER"),
     # Currencies accepted for service prices (ISO 4217). IQD first.
     "CURRENCIES": ("IQD", "USD"),
 }

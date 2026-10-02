@@ -2,20 +2,24 @@ from collections.abc import Mapping
 
 from django.http import Http404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.core.pagination import StandardPagination
 
-from . import services
+from . import push_service, services
 from .models import Notification
 from .serializers import (
     MarkAllReadSerializer,
     NotificationSerializer,
     PaginatedNotificationSerializer,
+    PushDeviceRegisterSerializer,
+    PushDeviceSerializer,
+    PushDeviceUnregisterSerializer,
     UnreadCountSerializer,
 )
 
@@ -120,3 +124,58 @@ class NotificationMarkAllReadView(APIView):
     def post(self, request):
         _require_no_body(request)
         return Response({"updated": services.mark_all_read(request.user)})
+
+
+@extend_schema(tags=["notifications"])
+class PushDeviceRegisterView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PushDeviceRegisterSerializer
+    throttle_scope = "push_devices"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    @extend_schema(
+        summary="Register or refresh this device's push token",
+        description=(
+            "Idempotent upsert owned by the authenticated caller. If the token was registered "
+            "by another account it is transferred to the caller and the previous owner stops "
+            "receiving pushes through it. The token is never returned."
+        ),
+        request=PushDeviceRegisterSerializer,
+        responses={200: PushDeviceSerializer},
+    )
+    def post(self, request):
+        serializer = PushDeviceRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        device = push_service.register_device(
+            request.user,
+            token=serializer.validated_data["token"],
+            platform=serializer.validated_data["platform"],
+        )
+        return Response(PushDeviceSerializer(device).data)
+
+
+@extend_schema(tags=["notifications"])
+class PushDeviceUnregisterView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PushDeviceUnregisterSerializer
+    throttle_scope = "push_devices"
+
+    def get_throttles(self):
+        return [ScopedRateThrottle()]
+
+    @extend_schema(
+        summary="Unregister this device's push token (call before logout)",
+        description=(
+            "Deactivates the caller's own registration of this token. Tokens that are unknown "
+            "or owned by someone else change nothing and are answered identically (204)."
+        ),
+        request=PushDeviceUnregisterSerializer,
+        responses={204: None},
+    )
+    def post(self, request):
+        serializer = PushDeviceUnregisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        push_service.unregister_device(request.user, token=serializer.validated_data["token"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
