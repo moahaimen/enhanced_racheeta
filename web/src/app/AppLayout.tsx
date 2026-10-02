@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router'
 
 import { SiteFooter, SiteHeader } from '../design-system'
-import { NotificationsProvider } from '../notifications/NotificationsProvider'
+import { ChatProvider } from '../chat/ChatProvider'\nimport { NotificationsProvider } from '../notifications/NotificationsProvider'
 import styles from './AppLayout.module.css'
 
 export function AppLayout() {
