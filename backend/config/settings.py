@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "apps.advertising",
     "apps.chat.apps.ChatConfig",
     "apps.notifications.apps.NotificationsConfig",
+    "apps.dashboards",
 ]
 
 MIDDLEWARE = [
