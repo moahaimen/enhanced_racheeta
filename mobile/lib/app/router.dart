@@ -1,0 +1,72 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/account/presentation/account_page.dart';
+import '../features/auth/application/providers.dart';
+import '../features/auth/application/session_state.dart';
+import '../features/auth/presentation/login_page.dart';
+import '../features/auth/presentation/restoring_page.dart';
+import '../features/home/presentation/home_page.dart';
+import '../features/shell/app_shell.dart';
+import '../shared/widgets/app_scaffold.dart';
+import '../shared/widgets/states.dart';
+
+abstract final class AppRoutes {
+  static const restoring = '/restoring';
+  static const login = '/login';
+  static const home = '/';
+  static const account = '/account';
+}
+
+/// Where a given session state is allowed to be. The router is a pure function of the session:
+/// signed-out users can only reach the login screen, signed-in users never see it, and the
+/// start-up/offline-restore screen is shown until the stored session is resolved.
+String? redirectFor(SessionState session, String location) {
+  switch (session) {
+    case SessionRestoring() || SessionRestoreFailed():
+      return location == AppRoutes.restoring ? null : AppRoutes.restoring;
+    case SessionAnonymous():
+      return location == AppRoutes.login ? null : AppRoutes.login;
+    case SessionAuthenticated():
+      return (location == AppRoutes.login || location == AppRoutes.restoring)
+          ? AppRoutes.home
+          : null;
+  }
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  // Re-evaluate redirects whenever the session changes.
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(sessionControllerProvider, (_, _) => refresh.value++);
+  ref.onDispose(refresh.dispose);
+
+  final router = GoRouter(
+    initialLocation: AppRoutes.restoring,
+    refreshListenable: refresh,
+    redirect: (context, state) =>
+        redirectFor(ref.read(sessionControllerProvider), state.matchedLocation),
+    routes: [
+      GoRoute(
+        path: AppRoutes.restoring,
+        builder: (_, _) => const RestoringPage(),
+      ),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginPage()),
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppShell(location: state.matchedLocation, child: child),
+        routes: [
+          GoRoute(path: AppRoutes.home, builder: (_, _) => const HomePage()),
+          GoRoute(
+            path: AppRoutes.account,
+            builder: (_, _) => const AccountPage(),
+          ),
+        ],
+      ),
+    ],
+    errorBuilder: (context, state) => const AppScaffold(body: EmptyView()),
+  );
+  ref.onDispose(router.dispose);
+  return router;
+});
