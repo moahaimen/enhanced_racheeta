@@ -501,7 +501,10 @@ void main() {
             .read(discoveryFiltersProvider.notifier)
             .update(const DiscoveryFilters(search: 'private query'));
         await tester.pump(const Duration(milliseconds: 50));
-        await h.container.read(sessionControllerProvider.notifier).logout();
+        // Real async work (dio) must run outside FakeAsync, or the awaited call never completes.
+        await tester.runAsync(
+          () => h.container.read(sessionControllerProvider.notifier).logout(),
+        );
         account = 'B';
         h.backend.on(
           'GET',
@@ -514,9 +517,11 @@ void main() {
             ),
           ),
         );
-        await h.container
-            .read(sessionControllerProvider.notifier)
-            .login(email: 'b@example.com', password: 'pw');
+        await tester.runAsync(
+          () => h.container
+              .read(sessionControllerProvider.notifier)
+              .login(email: 'b@example.com', password: 'pw'),
+        );
         slow.complete();
         await tester.pumpAndSettle();
         h.container.read(routerProvider).go('/providers');

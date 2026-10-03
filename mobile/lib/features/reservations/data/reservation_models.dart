@@ -77,7 +77,9 @@ class Reservation {
     final code = r.string('status');
     return Reservation(
       id: r.string('id'),
-      providerId: r.string('provider_id'),
+      // The schema documents it as always present, but the backend nulls it (SET_NULL) when the
+      // provider is deleted: a reservation must still render from its snapshots.
+      providerId: r.stringOrNull('provider_id'),
       providerName: r.string('provider_name_snapshot'),
       serviceTitle: r.string('service_title_snapshot'),
       price: r.stringOr('price_snapshot'),
@@ -94,7 +96,7 @@ class Reservation {
   }
 
   final String id;
-  final String providerId;
+  final String? providerId;
   final String providerName;
   final String serviceTitle;
   final String price;

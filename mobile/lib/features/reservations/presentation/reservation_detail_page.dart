@@ -184,10 +184,11 @@ class _DetailState extends ConsumerState<_Detail> {
               ),
           ],
           const SizedBox(height: RacheetaSpacing.xl),
-          SecondaryButton(
-            label: l10n.reservationViewProvider,
-            onPressed: () async => context.push('/providers/${r.providerId}'),
-          ),
+          if (r.providerId != null)
+            SecondaryButton(
+              label: l10n.reservationViewProvider,
+              onPressed: () async => context.push('/providers/${r.providerId}'),
+            ),
           if (offerCancel) ...[
             const SizedBox(height: RacheetaSpacing.md),
             PrimaryButton(

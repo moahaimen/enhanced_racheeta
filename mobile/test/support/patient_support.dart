@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -206,6 +204,10 @@ Future<Harness> pumpPatientApp(
   await tester.pumpAndSettle();
   if (path != '/') {
     h.container.read(routerProvider).go(path);
+    await tester.pumpAndSettle();
+    // Pages created on the last frame start their requests on a zero-length timer; run it so no
+    // timer is left pending when the test ends, then settle the answers.
+    await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();
   }
   return h;
