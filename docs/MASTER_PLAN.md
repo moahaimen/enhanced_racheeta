@@ -1108,7 +1108,7 @@ Do not integrate a paid payment gateway until the owner selects it.
   - Web/mobile token acquisition deferred (no Firebase client in the repo). No worker, Redis, Celery or WebSockets. See `PUSH.md`.
 - Realtime/WebSockets remain deferred unless UX later justifies them; no Redis/Celery added for chat.
 
-## Phase 10 — Dashboards and Analytics (CURRENT)
+## Phase 10 — Dashboards and Analytics (done — merged via PR #13)
 
 Create dashboards for:
 
@@ -1126,8 +1126,9 @@ Create dashboards for:
 - Only metrics backed by real records; revenue/views/impressions/conversions/trends are deferred.
 - Web: one role-aware `/dashboard` hub (Arabic RTL and English) on the existing design system.
 - No migrations, no new infrastructure.
+- Merged via PR #13 (merge commit `94dc2e39572a984d5e1d68b0602fe74de34096d8`, post-merge CI #298 successful).
 
-## Phase 11 — Mobile Integration
+## Phase 11 — Mobile Integration (CURRENT — 11A in progress)
 
 Build a new Flutter architecture with:
 
@@ -1136,6 +1137,19 @@ Build a new Flutter architecture with:
 - Unified session.
 - Loading-state components.
 - Feature migration.
+
+Delivered as independently reviewed subphases (each its own branch and draft PR; the owner authorizes every merge):
+
+| Subphase | Scope | Status |
+| --- | --- | --- |
+| 11A | Flutter foundation, authentication and session management (config, one API client, secure storage, navigation, shared UI, localization, login/logout/restore, account screen, CI job) | implemented on `feat/phase11a-flutter-foundation` (draft PR, not merged) |
+| 11B | Patient discovery and reservations | not started |
+| 11C | Provider-side workspace | not started |
+| 11D | Marketplace, jobs and real estate | not started |
+| 11E | Chat, notifications and FCM device registration | not started |
+| 11F | Release hardening (signing, store builds, performance, accessibility audit) | not started |
+
+**11A implementation (see `mobile/README.md`, ADR-052/053, `AUTHENTICATION.md` "Mobile client", `SECURITY.md` "Mobile client"):** Flutter 3.47.6, Riverpod, go_router, dio, flutter_secure_storage; access token in memory only, rotating refresh token in secure storage; single-flight refresh; stale-response protection across logout and account switching; role-aware navigation derived from `/me`; Arabic (RTL) and English. No feature beyond sign-in, session, home and account is exposed; no FCM registration, no Firebase login.
 
 ## Phase 12 — Production Hardening
 

@@ -174,6 +174,17 @@ Choosing and configuring the production provider is an owner decision
   backend "already invalid" answer is swallowed so the user is always logged
   out locally.
 
+## Mobile client (Phase 11A; `mobile/`)
+
+The Flutter app uses the same endpoints and tokens as the web client; no mobile-specific backend mechanism exists.
+
+- **Storage:** the access token (15 min) lives in memory only; the rotating refresh token (14 days) is stored with `flutter_secure_storage` (Keychain / Keystore-backed). Restoration at start-up: read refresh token → `POST /auth/refresh` → persist the new pair → `GET /me`.
+- **Refresh:** on a `401` the client performs one single-flight refresh and retries the request once (a request whose token was already rotated just retries). A definitive rejection (401/403/400/404) clears the session and shows the login screen with an expiry notice; network, timeout, 5xx and 429 keep the session (start-up shows a retry screen).
+- **Login:** `POST /auth/login {email,password}`; wrong credentials are `401 no_active_account`; `400 validation_error` field messages from `details` are shown under the fields; throttling is `429`. `/me` is then loaded and is the source of identity, role and permission codes.
+- **Logout:** local state and storage are cleared first, then `POST /auth/logout {refresh}` is attempted (failure, including `400 token_invalid`, is ignored).
+- **Account switching / logout races:** the previous session's in-flight requests are cancelled and any late response is discarded.
+- **Out of scope:** Firebase phone sign-in and FCM device registration (11E).
+
 ## Django admin
 
 The admin site (`/admin/` by default, `ADMIN_URL_PATH` to change) uses Django's

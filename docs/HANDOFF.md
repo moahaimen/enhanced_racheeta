@@ -1,12 +1,21 @@
 # Current State
 
-Date: 2026-10-02
-Branch: `feat/phase10-dashboards-analytics` (from `main` `3ff9cdd05b3b6851c78c80359f6c71683fd3d6fe`, the Phase 9C merge; post-merge CI #295 green)
+Date: 2026-10-03
+Branch: `feat/phase11a-flutter-foundation` (from `main` `94dc2e39572a984d5e1d68b0602fe74de34096d8`, the Phase 10 merge; post-merge CI #298 successful)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phases 9A (PR #10), 9B (PR #11) and 9C (PR #12) are DONE and merged.**
-- **Phase 10 — Dashboards & Analytics is CURRENT** on `feat/phase10-dashboards-analytics` (draft PR; not merged). See `docs/DASHBOARDS.md`.
-- Do not merge Phase 10 until exact-head CI and independent acceptance review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous acceptance review. Do not start Phase 11.
+- **Phases 9A–9C and Phase 10 (PR #13) are DONE and merged.**
+- **Phase 11 — Flutter mobile is CURRENT, subphase 11A only** (foundation, authentication, session). Draft PR; not merged. See `mobile/README.md`.
+- Do not merge 11A until exact-head CI and independent review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous review. Do not start 11B.
+
+## Phase 11A summary — Flutter foundation (see ADR-052, ADR-053)
+
+- `mobile/`: Flutter 3.47.6 / Dart 3.13.5, feature-oriented (`app/`, `core/{config,api,storage,logging}`, `features/{auth,home,account,shell}`, `shared/`, `l10n/`). Riverpod (state/DI), go_router (session-driven redirects), dio (HTTP), flutter_secure_storage (refresh token), shared_preferences (language only).
+- One `ApiClient` against `/api/v1/`: base URL from `--dart-define`, bearer header, `Accept-Language` ar/en, connect/send/receive timeouts, cancellation, typed `ApiException` from the error envelope, `Page<T>`, safe logging (method/path/status only).
+- Session: access token in memory, refresh token persisted and rotated; 401 → one single-flight refresh → one retry; definitive refresh rejection clears the session and returns to login with an expiry notice; transient failure keeps the session. Logout clears local state first and revokes best-effort. `SessionScope` aborts in-flight requests of an ended session; generation/ticket checks drop stale results (logout, account switching).
+- Screens: restoration/offline-retry, login (presence-only validation, server field errors), authenticated shell (bottom bar <720dp, rail wider), home, account (details from `/me`, language, confirmed logout). Navigation destinations come from a registry filtered by `/me` role and permission codes; 11B+ append to it.
+- Tests: unit + widget tests with a scripted HTTP adapter (no network, no credentials). CI: new `mobile` job (pinned Flutter, `pub get --enforce-lockfile`, format check, `analyze --fatal-infos`, `test`). Backend/web jobs untouched.
+- Not done by design: reservations, provider management, marketplace, jobs, real estate, chat, FCM device registration (11E), payments, signing/Firebase config, store release. The IBM Plex Sans Arabic font is not bundled yet (system font). Android/iOS builds were not run in the authoring environment (no platform SDKs); only `flutter analyze`/`flutter test` were.
 
 ## Phase 10 summary — Dashboards & Analytics (see `docs/DASHBOARDS.md`, ADR-051)
 

@@ -90,3 +90,26 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pinned: must match mobile/pubspec.yaml (environment.flutter) and docs/DECISIONS.md.
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - name: Resolve dependencies (lockfile must be up to date)
+        run: flutter pub get --enforce-lockfile
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Static analysis
+        run: flutter analyze --fatal-infos
+      - name: Tests
+        run: flutter test

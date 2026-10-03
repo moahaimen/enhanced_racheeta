@@ -116,6 +116,16 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Nothing is fabricated:** no revenue, views, impressions or conversions exist, so none are reported (see the deferred list in `DASHBOARDS.md`).
 - Entitlement resolution, shared with every existing entitlement read, may normalise an elapsed subscription; that behaviour predates Phase 10.
 
+## Mobile client (Phase 11A)
+
+- **Tokens:** access token in memory only; refresh token in the platform keystore (`flutter_secure_storage`), never in shared preferences (which only holds the UI language); rotated refresh tokens are persisted before use; logout and a rejected refresh clear storage.
+- **No logging of secrets:** `SafeLogger` writes only method, path, status and duration in debug builds and redacts bearer tokens, JWTs, e-mail addresses and password/token key-value pairs; it is a no-op in release.
+- **Transport:** `https` is required except for debug builds of the `development` environment (emulator host); release builds reject `http`, and reject the `development` environment. TLS verification is never disabled and there is no certificate-bypass code.
+- **No secrets in the app:** no admin credentials, database URLs, Firebase service-account files or payment keys; no hardcoded tokens; the API base URL comes from `--dart-define` and is not a secret. Signing keys and Firebase config files are git-ignored/absent.
+- **Stale data:** requests of an ended session are cancelled and their results dropped (logout, session expiry, account switching).
+- **Authorization:** the app hides destinations by role and permission codes from `/me` but the backend re-checks every action; the app never decides access.
+- Android/iOS platform hardening (backup rules, certificate pinning decision, obfuscation) is Phase 11F.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session
