@@ -512,4 +512,250 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cancelSuccess => 'تم إلغاء الموعد.';
+
+  @override
+  String get navWorkspace => 'لوحة التحكم';
+
+  @override
+  String get navSchedule => 'المواعيد المتاحة';
+
+  @override
+  String get navBookings => 'الحجوزات';
+
+  @override
+  String get providerOnly => 'هذه المنطقة مخصصة لحسابات مقدمي الخدمة.';
+
+  @override
+  String get providerProfileMissing =>
+      'أنشئ ملف مقدم الخدمة الخاص بك على موقع رشيتة لاستخدام هذه المنطقة.';
+
+  @override
+  String get dashboardTitle => 'لوحة التحكم';
+
+  @override
+  String get dashboardVerification => 'التوثيق';
+
+  @override
+  String get verificationUnverified => 'غير موثق';
+
+  @override
+  String get verificationPending => 'قيد المراجعة';
+
+  @override
+  String get verificationVerified => 'موثق';
+
+  @override
+  String get verificationRejected => 'مرفوض';
+
+  @override
+  String get verificationSuspended => 'موقوف';
+
+  @override
+  String get dashboardVisible => 'ظاهر للمرضى';
+
+  @override
+  String get dashboardHidden => 'غير ظاهر للمرضى';
+
+  @override
+  String get dashboardReservations => 'الحجوزات';
+
+  @override
+  String get dashboardTotal => 'الإجمالي';
+
+  @override
+  String get dashboardUpcoming => 'القادمة';
+
+  @override
+  String get dashboardUpcomingList => 'المواعيد القادمة';
+
+  @override
+  String get dashboardNoUpcoming => 'لا توجد مواعيد قادمة.';
+
+  @override
+  String get dashboardReviews => 'التقييمات';
+
+  @override
+  String get dashboardOffers => 'العروض';
+
+  @override
+  String get offersTotal => 'إجمالي العروض';
+
+  @override
+  String get offersRunning => 'سارية الآن';
+
+  @override
+  String get offersScheduled => 'مجدولة';
+
+  @override
+  String get dashboardUnread => 'غير المقروءة';
+
+  @override
+  String get unreadNotifications => 'الإشعارات';
+
+  @override
+  String get unreadMessages => 'الرسائل';
+
+  @override
+  String get dashboardPractitioners => 'الممارسون';
+
+  @override
+  String get practitionersActive => 'نشطون';
+
+  @override
+  String get practitionersIncoming => 'طلبات واردة';
+
+  @override
+  String get practitionersOutgoing => 'دعوات صادرة';
+
+  @override
+  String get scheduleTitle => 'المواعيد المتاحة';
+
+  @override
+  String get scheduleAdd => 'إضافة موعد متاح';
+
+  @override
+  String get scheduleEmptyTitle => 'لا توجد مواعيد متاحة قادمة';
+
+  @override
+  String get scheduleEmptyBody => 'أضف الأوقات التي يمكن للمرضى حجزها.';
+
+  @override
+  String get scheduleNoneLoaded =>
+      'لا توجد مواعيد قادمة في الصفحات المحمّلة حتى الآن.';
+
+  @override
+  String get slotRemove => 'إزالة';
+
+  @override
+  String get slotRemoving => 'جارٍ الإزالة…';
+
+  @override
+  String get slotRemoveConfirmTitle => 'إزالة هذا الموعد؟';
+
+  @override
+  String get slotRemoveConfirmBody => 'لن يتمكن المرضى من حجزه بعد الآن.';
+
+  @override
+  String get slotRemoveAction => 'إزالة';
+
+  @override
+  String get slotKeep => 'إبقاء';
+
+  @override
+  String get slotRemoved => 'تمت إزالة الموعد.';
+
+  @override
+  String get slotCreated => 'تمت إضافة الموعد المتاح.';
+
+  @override
+  String get slotFormTitle => 'إضافة موعد متاح';
+
+  @override
+  String get slotService => 'الخدمة';
+
+  @override
+  String get slotPickDate => 'اختر التاريخ';
+
+  @override
+  String get slotPickTime => 'اختر وقت البدء';
+
+  @override
+  String get slotCreate => 'إنشاء الموعد';
+
+  @override
+  String get slotCreating => 'جارٍ الإضافة…';
+
+  @override
+  String get slotNoServices =>
+      'تحتاج إلى خدمة نشطة ذات مدة قبل إضافة المواعيد. أنشئها على موقع رشيتة.';
+
+  @override
+  String get slotSelectAll => 'اختر الخدمة والتاريخ ووقت البدء.';
+
+  @override
+  String get slotBack => 'العودة إلى المواعيد المتاحة';
+
+  @override
+  String get errorSlotOverlap => 'يتداخل هذا الوقت مع موعد متاح آخر.';
+
+  @override
+  String get errorSlotPast => 'يجب أن يكون وقت البدء في المستقبل.';
+
+  @override
+  String get errorSlotService =>
+      'لا يمكن استخدام هذه الخدمة للمواعيد. يجب أن تكون نشطة ولها مدة.';
+
+  @override
+  String get errorSlotInUse =>
+      'هناك حجز قائم على هذا الموعد، لذلك لا يمكن إزالته.';
+
+  @override
+  String get bookingsTitle => 'الحجوزات';
+
+  @override
+  String get bookingsEmptyTitle => 'لا توجد حجوزات بعد';
+
+  @override
+  String get bookingsEmptyBody => 'ستظهر هنا حجوزات المرضى.';
+
+  @override
+  String get bookingDetailTitle => 'الحجز';
+
+  @override
+  String get patientLabel => 'المريض';
+
+  @override
+  String get patientNoteLabel => 'ملاحظة المريض';
+
+  @override
+  String get actionConfirm => 'تأكيد';
+
+  @override
+  String get actionConfirming => 'جارٍ التأكيد…';
+
+  @override
+  String get actionReject => 'رفض';
+
+  @override
+  String get actionCancelBooking => 'إلغاء الحجز';
+
+  @override
+  String get actionComplete => 'تحديد كمكتمل';
+
+  @override
+  String get actionNoShow => 'تحديد أنه لم يحضر';
+
+  @override
+  String get actionUpdating => 'جارٍ التحديث…';
+
+  @override
+  String get confirmRejectTitle => 'رفض هذا الحجز؟';
+
+  @override
+  String get confirmRejectBody =>
+      'سيرى المريض الحالة الجديدة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get confirmNoShowTitle => 'تحديد أنه لم يحضر؟';
+
+  @override
+  String get confirmNoShowBody =>
+      'سيرى المريض الحالة الجديدة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get confirmCancelBookingTitle => 'إلغاء هذا الحجز؟';
+
+  @override
+  String get confirmCancelBookingBody =>
+      'سيرى المريض الحالة الجديدة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get confirmKeep => 'إبقاء الحجز';
+
+  @override
+  String get transitionDone => 'تم تحديث الحجز.';
+
+  @override
+  String get errorTransitionRefused =>
+      'لا يمكن تغيير هذا الحجز بهذه الطريقة الآن.';
 }

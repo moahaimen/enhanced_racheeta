@@ -30,6 +30,16 @@ final class JsonReader {
     return value is String ? value : null;
   }
 
+  bool boolean(String key) {
+    final value = _map[key];
+    return value is bool ? value : _bad(key);
+  }
+
+  bool booleanOr(String key, {required bool fallback}) {
+    final value = _map[key];
+    return value is bool ? value : fallback;
+  }
+
   int integer(String key) {
     final value = _map[key];
     return value is int ? value : _bad(key);

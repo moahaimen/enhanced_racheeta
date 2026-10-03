@@ -55,6 +55,31 @@ void main() {
       expect(dayOf(DateTime(2026, 10, 5, 23, 59)), DateTime(2026, 10, 5));
     });
 
+    test('a picked local date and time converts back to a UTC instant', () {
+      final picked = DateTime(2026, 10, 4, 9, 30);
+      final utc = deviceLocalToUtc(picked);
+      expect(utc.isUtc, isTrue);
+      // the device-local fields round-trip through UTC
+      expect(deviceWallClock(utc), picked);
+      expect(toWireInstant(utc), endsWith('Z'));
+    });
+
+    test('the injected local-to-UTC (UTC+3) maps 09:00 to 06:00Z', () {
+      DateTime toUtc(DateTime wall) => DateTime.utc(
+        wall.year,
+        wall.month,
+        wall.day,
+        wall.hour,
+        wall.minute,
+      ).subtract(testOffset);
+      expect(toUtc(DateTime(2026, 10, 4, 9)), DateTime.utc(2026, 10, 4, 6));
+      // 00:30 local is the previous UTC day
+      expect(
+        toUtc(DateTime(2026, 10, 5, 0, 30)),
+        DateTime.utc(2026, 10, 4, 21, 30),
+      );
+    });
+
     test('the injected wall clock decides the displayed day (UTC+3)', () {
       DateTime wall(DateTime utc) => utc.toUtc().add(testOffset);
       // 21:30Z is 00:30 the NEXT day for a UTC+3 reader.
@@ -93,6 +118,15 @@ void main() {
       expect(() => r.list<int>('bad', (v) => v as int), throwsFormatException);
       expect(r.listOrEmpty<int>('bad', (v) => v as int), isEmpty);
       expect(r.listOrEmpty<int>('missing', (v) => v as int), isEmpty);
+    });
+
+    test('booleans: required is strict, optional falls back', () {
+      final r = JsonReader.of({'on': true, 'text': 'x'}, 'T');
+      expect(r.boolean('on'), isTrue);
+      expect(() => r.boolean('text'), throwsFormatException);
+      expect(() => r.boolean('missing'), throwsFormatException);
+      expect(r.booleanOr('missing', fallback: true), isTrue);
+      expect(r.booleanOr('text', fallback: false), isFalse);
     });
 
     test('an instant must carry an offset', () {
