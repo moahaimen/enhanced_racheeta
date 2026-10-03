@@ -12,6 +12,7 @@ import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/states.dart';
+import '../../auth/application/account_scope.dart';
 import '../../auth/application/providers.dart';
 import '../../auth/application/session_state.dart';
 import '../../reservations/application/reservation_actions.dart';
@@ -43,6 +44,8 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   String? _banner;
   String? _noteError;
   Reservation? _created;
+  // The account the booking result belongs to; a result is never shown to anyone else.
+  String? _createdFor;
 
   AvailabilityQuery get _query =>
       (providerId: widget.providerId, serviceId: widget.serviceId);
@@ -51,6 +54,21 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  /// Booking state belongs to one account: on logout or an account switch the selection, the note,
+  /// the messages and a finished booking (and its reservation id) are discarded, even when this
+  /// page itself stays on screen.
+  void _resetForAccountChange() {
+    _note.clear();
+    setState(() {
+      _day = null;
+      _slotId = null;
+      _banner = null;
+      _noteError = null;
+      _created = null;
+      _createdFor = null;
+    });
   }
 
   Future<void> _refresh() async {
@@ -75,13 +93,20 @@ class _BookingPageState extends ConsumerState<BookingPage> {
       _noteError = null;
       _banner = null;
     });
+    final accountId = ref.read(accountIdProvider);
     try {
       final reservation = await bookSlot(ref, slotId: slotId, note: _note.text);
-      if (mounted) setState(() => _created = reservation);
+      // The answer is applied only if the same account is still signed in.
+      if (mounted && ref.read(accountIdProvider) == accountId) {
+        setState(() {
+          _created = reservation;
+          _createdFor = accountId;
+        });
+      }
     } on StaleSessionException {
       // Signed out / switched account while booking: nothing to show for the old session.
     } on ApiException catch (error) {
-      if (!mounted) return;
+      if (!mounted || ref.read(accountIdProvider) != accountId) return;
       final isConflict =
           error.code == 'slot_unavailable' || error.code == 'slot_conflict';
       setState(() {
@@ -99,6 +124,10 @@ class _BookingPageState extends ConsumerState<BookingPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    ref.listen<String?>(accountIdProvider, (previous, next) {
+      if (previous != next) _resetForAccountChange();
+    });
+    final accountId = ref.watch(accountIdProvider);
     final session = ref.watch(sessionControllerProvider);
     final canBook =
         session is SessionAuthenticated &&
@@ -113,7 +142,7 @@ class _BookingPageState extends ConsumerState<BookingPage> {
         ),
       );
     }
-    if (_created != null) {
+    if (_created != null && _createdFor == accountId) {
       return AppScaffold(
         title: l10n.bookingTitle,
         body: _Success(reservation: _created!),

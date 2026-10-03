@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:racheeta_mobile/app/router.dart';
+import 'package:racheeta_mobile/features/auth/application/providers.dart';
 
 import 'support/fake_backend.dart';
 import 'support/patient_support.dart';
@@ -515,6 +516,138 @@ void main() {
           2,
           reason: 'the cached list was invalidated by the booking',
         );
+      },
+    );
+  });
+
+  group('booking: account isolation', () {
+    // The widget tree (and this page) stays put: only the authenticated account changes, via a
+    // `/me` refresh that now answers as account B. Logging out and in would rebuild the route and
+    // hide the bug.
+    const accountB = '99999999-9999-4999-8999-999999999999';
+
+    Future<void> switchToB(WidgetTester tester, Harness h) async {
+      h.backend.on(
+        'GET',
+        '/api/v1/me',
+        (_) =>
+            FakeBackend.json(200, accountJson(id: accountB, name: 'Account B')),
+      );
+      await tester.runAsync(
+        () => h.container
+            .read(sessionControllerProvider.notifier)
+            .refreshAccount(),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    testWidgets(
+      "account A's finished booking is neither visible nor actionable for account B",
+      (tester) async {
+        final h = await pumpPatientApp(
+          tester,
+          path: _bookPath,
+          size: _tall,
+          script: (b) => _script(
+            b,
+            create: (_) => FakeBackend.json(201, reservationJson()),
+          ),
+        );
+        await _pick(tester, _time(4, 9));
+        await tester.tap(_confirmButton());
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('booking-success')), findsOneWidget);
+        expect(find.text('View appointment'), findsOneWidget);
+        expect(
+          h.container.read(routerProvider).state.matchedLocation,
+          _bookPath,
+        );
+
+        await switchToB(tester, h);
+
+        // still the same page, but A's result is gone and cannot be acted on
+        expect(
+          h.container.read(routerProvider).state.matchedLocation,
+          _bookPath,
+        );
+        expect(find.byKey(const Key('booking-success')), findsNothing);
+        expect(find.text('Booking sent'), findsNothing);
+        expect(find.text('View appointment'), findsNothing);
+        expect(find.textContaining(reservationId), findsNothing);
+        // B gets a fresh booking form (availability reloaded for B), nothing preselected
+        await tester.pumpAndSettle();
+        expect(_confirmButton(), findsOneWidget);
+        expect(tester.widget<FilledButton>(_confirmButton()).onPressed, isNull);
+        expect(find.text('Select a time to continue.'), findsOneWidget);
+        expect(find.byKey(const Key('booking-summary')), findsNothing);
+        expect(
+          h.backend.count('POST', _create),
+          1,
+          reason: 'nothing resubmitted',
+        );
+      },
+    );
+
+    testWidgets("account A's selection, note and error never reach account B", (
+      tester,
+    ) async {
+      final h = await pumpPatientApp(
+        tester,
+        path: _bookPath,
+        size: _tall,
+        script: (b) => _script(
+          b,
+          create: (_) => FakeBackend.error(409, 'slot_unavailable'),
+        ),
+      );
+      await _pick(tester, _time(4, 9));
+      await tester.enterText(find.byType(TextField), 'private note of A');
+      await tester.tap(_confirmButton());
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('booking-banner')), findsOneWidget);
+      await _pick(tester, _time(4, 10));
+      expect(find.byKey(const Key('booking-summary')), findsOneWidget);
+
+      await switchToB(tester, h);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('booking-banner')), findsNothing);
+      expect(find.byKey(const Key('booking-summary')), findsNothing);
+      expect(find.text('private note of A'), findsNothing);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      expect(tester.widget<FilledButton>(_confirmButton()).onPressed, isNull);
+    });
+
+    testWidgets(
+      'a booking that completes after the account changed is not shown to the new account',
+      (tester) async {
+        final gate = Completer<void>();
+        final h = await pumpPatientApp(
+          tester,
+          path: _bookPath,
+          size: _tall,
+          script: (b) => _script(
+            b,
+            create: (_) async {
+              await gate.future;
+              return FakeBackend.json(201, reservationJson());
+            },
+          ),
+        );
+        await _pick(tester, _time(4, 9));
+        await tester.tap(_confirmButton());
+        await tester.pump(const Duration(milliseconds: 20));
+
+        await switchToB(tester, h);
+        gate.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('booking-success')), findsNothing);
+        expect(find.text('View appointment'), findsNothing);
       },
     );
   });
