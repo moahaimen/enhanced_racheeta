@@ -1,12 +1,21 @@
 # Current State
 
 Date: 2026-10-03
-Branch: `feat/phase11a-flutter-foundation` (from `main` `94dc2e39572a984d5e1d68b0602fe74de34096d8`, the Phase 10 merge; post-merge CI #298 successful)
+Branch: `feat/phase11b-patient-reservations` (from `main` `9282db373239d65ddc4dd7f1ea17e8721a8a0855`, the Phase 11A merge; post-merge CI #301 green)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phases 9A–9C and Phase 10 (PR #13) are DONE and merged.**
-- **Phase 11 — Flutter mobile is CURRENT, subphase 11A only** (foundation, authentication, session). Draft PR; not merged. See `mobile/README.md`.
-- Do not merge 11A until exact-head CI and independent review are green and the owner explicitly says **`merge it`**. Any later commit invalidates a previous review. Do not start 11B.
+- **Phases 9A–9C, Phase 10 and Phase 11A are DONE and merged** (11A: PR #14).
+- **Phase 11 — Flutter mobile is CURRENT, subphase 11B** (patient discovery and reservations). Draft PR; not merged. Do not merge 11B until exact-head CI and independent review are green and the owner explicitly says **`merge it`**. Do not start 11C.
+
+## Phase 11B summary — patient discovery and reservations (see ADR-054)
+
+- `mobile/lib/features/discovery/` (provider search + filters sheet + detail + booking page), `mobile/lib/features/reservations/` (list, detail, cancel), `core/time/` (timezone policy), `core/paging/` (epoch-protected paged notifier), `features/auth/application/account_scope.dart` (every patient provider watches the account id, so logout/switching discards state).
+- Endpoints used (all existing, no backend change): `GET /providers`, `/providers/{id}`, `/providers/{id}/availability`, `/specialties`, `/geo/governorates`, `/geo/cities`; patient-only `POST /reservations`, `GET /reservations/me`, `GET /reservations/me/{id}`, `POST /reservations/me/{id}/cancel`.
+- Backend authoritative: availability is a snapshot, booking and cancellation answers are final; `Cancel` is offered from status + start time as a hint only (no `can_cancel` field exists).
+- Timezone: timestamps must carry an explicit offset (else the response is rejected), kept as UTC, displayed and grouped in the device's local time; documented in `RESERVATIONS.md`.
+- Reservation creation is never retried and duplicate taps are blocked (no idempotency key exists); a taken slot refetches availability and clears the selection.
+- Gaps recorded for later phases: no `can_cancel` field, no idempotency key on `POST /reservations`, no provider timezone, provider/service images and coordinates are not rendered, availability is requested for a 30-day window, `provider_id` is documented as always present although the backend nulls it when a provider is deleted (the app tolerates null).
+- Tests: 168 Flutter tests (scripted HTTP adapter, injected clock/wall clock; widget tests must run `dio` calls through `tester.runAsync`), an OpenAPI contract test reading `docs/api/openapi.yaml`.
 
 ## Phase 11A summary — Flutter foundation (see ADR-052, ADR-053)
 
