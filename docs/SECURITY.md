@@ -126,6 +126,14 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Authorization:** the app hides destinations by role and permission codes from `/me` but the backend re-checks every action; the app never decides access.
 - Android/iOS platform hardening (backup rules, certificate pinning decision, obfuscation) is Phase 11F.
 
+## Mobile patient flows (Phase 11B)
+
+- **No new secrets or permissions:** the screens use the existing session; no payment, FCM or provider-side capability. Patient-only endpoints are also only *offered* to accounts whose `/me` lists the capability; the backend still enforces PATIENT (403 otherwise) and scopes every reservation query to the caller (foreign ids are a plain 404, shown as one generic text).
+- **No duplicate or foreign bookings:** `POST /reservations` is never retried automatically, duplicate taps are ignored while a request is pending, and a taken slot refetches availability instead of resubmitting.
+- **Account isolation:** patient state is keyed on the account id; logout, expiry and account switching rebuild it and drop late responses (tested with a slow answer for the previous account).
+- **Privacy in the client:** the patient note is sent only on booking and shown only to its owner; logs carry method/path/status only; `Reservation.toString` carries no personal data; server error bodies are never displayed.
+- **Clock correctness:** timestamps without an offset are rejected so an appointment can never be silently read in the wrong zone.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

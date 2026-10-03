@@ -27,27 +27,60 @@ class ShellDestination {
   static bool _always(Account _) => true;
 }
 
-/// Destinations that exist in 11A. No unfinished feature is listed.
+final ShellDestination _home = ShellDestination(
+  id: 'home',
+  path: '/',
+  icon: Icons.home_outlined,
+  selectedIcon: Icons.home,
+  label: (l10n) => l10n.navHome,
+);
+
+final ShellDestination _account = ShellDestination(
+  id: 'account',
+  path: '/account',
+  icon: Icons.person_outline,
+  selectedIcon: Icons.person,
+  label: (l10n) => l10n.navAccount,
+);
+
+/// Destinations every signed-in account has (11A).
 final List<ShellDestination> coreDestinations = <ShellDestination>[
-  ShellDestination(
-    id: 'home',
-    path: '/',
-    icon: Icons.home_outlined,
-    selectedIcon: Icons.home,
-    label: (l10n) => l10n.navHome,
-  ),
-  ShellDestination(
-    id: 'account',
-    path: '/account',
-    icon: Icons.person_outline,
-    selectedIcon: Icons.person,
-    label: (l10n) => l10n.navAccount,
-  ),
+  _home,
+  _account,
+];
+
+/// 11B patient destinations, shown only to accounts whose `/me` lists the capability.
+final ShellDestination discoverDestination = ShellDestination(
+  id: 'discover',
+  path: '/providers',
+  icon: Icons.search,
+  selectedIcon: Icons.manage_search,
+  label: (l10n) => l10n.navDiscover,
+  isAvailableFor: (account) =>
+      account.hasPermission('providers.search') &&
+      account.role == AccountRole.patient,
+);
+
+final ShellDestination reservationsDestination = ShellDestination(
+  id: 'reservations',
+  path: '/reservations',
+  icon: Icons.event_note_outlined,
+  selectedIcon: Icons.event_note,
+  label: (l10n) => l10n.navReservations,
+  isAvailableFor: (account) => account.hasPermission('reservations.create_own'),
+);
+
+/// Everything the shell can show, in display order. Later subphases append here.
+final List<ShellDestination> appDestinations = <ShellDestination>[
+  _home,
+  discoverDestination,
+  reservationsDestination,
+  _account,
 ];
 
 List<ShellDestination> destinationsFor(
   Account account, {
   List<ShellDestination>? registry,
-}) => (registry ?? coreDestinations)
+}) => (registry ?? appDestinations)
     .where((destination) => destination.isAvailableFor(account))
     .toList(growable: false);

@@ -1128,7 +1128,7 @@ Create dashboards for:
 - No migrations, no new infrastructure.
 - Merged via PR #13 (merge commit `94dc2e39572a984d5e1d68b0602fe74de34096d8`, post-merge CI #298 successful).
 
-## Phase 11 — Mobile Integration (CURRENT — 11A in progress)
+## Phase 11 — Mobile Integration (CURRENT — 11B in progress)
 
 Build a new Flutter architecture with:
 
@@ -1142,14 +1142,16 @@ Delivered as independently reviewed subphases (each its own branch and draft PR;
 
 | Subphase | Scope | Status |
 | --- | --- | --- |
-| 11A | Flutter foundation, authentication and session management (config, one API client, secure storage, navigation, shared UI, localization, login/logout/restore, account screen, CI job) | implemented on `feat/phase11a-flutter-foundation` (draft PR, not merged) |
-| 11B | Patient discovery and reservations | not started |
+| 11A | Flutter foundation, authentication and session management (config, one API client, secure storage, navigation, shared UI, localization, login/logout/restore, account screen, CI job) | merged via PR #14 (merge `9282db373239d65ddc4dd7f1ea17e8721a8a0855`, post-merge CI #301 green) |
+| 11B | Patient discovery and reservations | implemented on `feat/phase11b-patient-reservations` (draft PR, not merged) |
 | 11C | Provider-side workspace | not started |
 | 11D | Marketplace, jobs and real estate | not started |
 | 11E | Chat, notifications and FCM device registration | not started |
 | 11F | Release hardening (signing, store builds, performance, accessibility audit) | not started |
 
 **11A implementation (see `mobile/README.md`, ADR-052/053, `AUTHENTICATION.md` "Mobile client", `SECURITY.md` "Mobile client"):** Flutter 3.47.6, Riverpod, go_router, dio, flutter_secure_storage; access token in memory only, rotating refresh token in secure storage; single-flight refresh; stale-response protection across logout and account switching; role-aware navigation derived from `/me`; Arabic (RTL) and English. No feature beyond sign-in, session, home and account is exposed; no FCM registration, no Firebase login.
+
+**11B implementation (see `mobile/README.md`, ADR-054, `RESERVATIONS.md` "Mobile (Phase 11B)", `SECURITY.md` "Mobile patient flows"):** patient-only provider discovery (search, filters, pagination), provider detail, appointment booking from backend availability, "My appointments" and cancellation, all on the 11A client/session. Backend authoritative; no backend change; timezone policy explicit (UTC on the wire, device-local display); reservation creation is never retried automatically. Not in 11B: provider-side screens (11C), marketplace/jobs/real estate (11D), chat/notifications/FCM (11E), payments.
 
 ## Phase 12 — Production Hardening
 

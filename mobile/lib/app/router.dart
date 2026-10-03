@@ -8,7 +8,12 @@ import '../features/auth/application/providers.dart';
 import '../features/auth/application/session_state.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/restoring_page.dart';
+import '../features/discovery/presentation/booking_page.dart';
+import '../features/discovery/presentation/discovery_page.dart';
+import '../features/discovery/presentation/provider_detail_page.dart';
 import '../features/home/presentation/home_page.dart';
+import '../features/reservations/presentation/reservation_detail_page.dart';
+import '../features/reservations/presentation/reservations_page.dart';
 import '../features/shell/app_shell.dart';
 import '../shared/widgets/app_scaffold.dart';
 import '../shared/widgets/states.dart';
@@ -18,6 +23,8 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const home = '/';
   static const account = '/account';
+  static const providers = '/providers';
+  static const reservations = '/reservations';
 }
 
 /// Where a given session state is allowed to be. The router is a pure function of the session:
@@ -61,6 +68,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.account,
             builder: (_, _) => const AccountPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.providers,
+            builder: (_, _) => const DiscoveryPage(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (_, state) =>
+                    ProviderDetailPage(providerId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'book/:serviceId',
+                    builder: (_, state) => BookingPage(
+                      providerId: state.pathParameters['id']!,
+                      serviceId: state.pathParameters['serviceId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          GoRoute(
+            path: AppRoutes.reservations,
+            builder: (_, _) => const ReservationsPage(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (_, state) => ReservationDetailPage(
+                  reservationId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
           ),
         ],
       ),

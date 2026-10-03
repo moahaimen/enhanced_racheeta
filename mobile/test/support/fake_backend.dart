@@ -127,7 +127,11 @@ const testAccountJson = <String, Object?>{
   'email_verified_at': '2026-09-01T10:00:00Z',
   'has_password': true,
   'is_staff': false,
-  'permissions': <String>['accounts.view_self', 'reservations.create_own'],
+  'permissions': <String>[
+    'accounts.view_self',
+    'providers.search',
+    'reservations.create_own',
+  ],
   'created_at': '2026-09-01T09:00:00Z',
   'last_login': null,
 };
@@ -150,11 +154,17 @@ Map<String, Object?> tokens(String access, String refresh) => <String, Object?>{
 
 /// Everything a test needs to run the real wiring against a [FakeBackend].
 class Harness {
-  Harness({String? storedRefresh, bool autoRestore = false, this.language})
-    : backend = FakeBackend(),
-      tokenStore = MemoryTokenStore(storedRefresh),
-      preferences = MemoryPreferencesStore(language) {
-    container = ProviderContainer(overrides: _overrides(autoRestore));
+  Harness({
+    String? storedRefresh,
+    bool autoRestore = false,
+    this.language,
+    List<Override> extraOverrides = const <Override>[],
+  }) : backend = FakeBackend(),
+       tokenStore = MemoryTokenStore(storedRefresh),
+       preferences = MemoryPreferencesStore(language) {
+    container = ProviderContainer(
+      overrides: [..._overrides(autoRestore), ...extraOverrides],
+    );
   }
 
   final FakeBackend backend;

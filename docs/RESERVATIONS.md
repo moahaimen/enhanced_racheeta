@@ -90,3 +90,52 @@ The generated OpenAPI file remains the exact API contract.
   manage received reservations.
 - All backend actions use `ApiActionButton`; data loads use the shared async
   loading/error patterns.
+
+## Mobile (Phase 11B)
+
+The Flutter app (`mobile/`) offers the **patient** side only: find a provider, pick an appointment
+from the provider's backend availability, see "My appointments" and cancel. It uses the endpoints in
+the *API* section unchanged; the backend stays authoritative for every decision.
+
+- **Booking.** The list is exactly what `GET /providers/{id}/availability?service&from&to`
+  returned (a 30-day window starting now, in UTC); nothing is generated on the device. A listed slot
+  is a snapshot: `POST /reservations` re-validates it. A taken slot (`slot_unavailable` /
+  `slot_conflict`, 409) shows a localized message, clears the selection and refetches availability.
+  `provider_unavailable` and `service_unavailable` have their own messages. A service without a
+  duration cannot have slots, so *Book* is not offered for it.
+- **No automatic retry.** `POST /reservations` has no idempotency key, so a repeat after an
+  ambiguous failure could double-book. The app never retries it; the button shows progress and a
+  second tap while pending is ignored; after a failure the user decides.
+- **Cancellation.** *Cancel appointment* is offered from the documented rule (status PENDING or
+  CONFIRMED and the start still ahead) as a **hint**. The API has no `can_cancel` field. The user
+  confirms in a dialog (declining sends nothing); the backend's answer is final
+  (`invalid_transition` → "can no longer be cancelled", then the true state is refetched).
+- **Lists.** `GET /reservations/me` is paginated, newest appointment first. The screen groups the
+  loaded items under *Upcoming* (live status, start ahead) and *Past and closed* as presentation
+  only; there is no status filter in the API.
+- **Reload after change.** After a booking or a cancellation the list, every opened detail and every
+  availability snapshot are reloaded from the backend.
+- **Account isolation.** All patient state is keyed on the signed-in account id; logout and
+  account switching discard it and late responses of the old account are dropped.
+
+### Timezone policy
+
+The backend stores and returns UTC instants (`USE_TZ=True`, `TIME_ZONE=UTC`) and there is **no
+provider or account timezone** in the API. The app therefore:
+
+1. accepts only timestamps with an explicit offset (`Z` or `±hh:mm`); an offset-less value would be
+   read as local time by `DateTime.parse`, so the response is rejected as unreadable;
+2. keeps every instant as UTC internally and sends `from`/`to` as UTC (`...Z`);
+3. converts to the **device's local time** only for display, including the calendar day used to
+   group slots (a 21:30Z slot is the next local day for a UTC+3 reader), and says so on the booking
+   screen ("Times are shown in your device's time zone").
+
+It never labels UTC as local and never hardcodes a country. If the provider's own location time
+ever matters, that needs a provider timezone field in the API first.
+
+### Known gaps (not invented around)
+
+No `can_cancel` field; no idempotency key on `POST /reservations`; no provider timezone; provider
+images and coordinates are not rendered; no rescheduling; no status filter on `GET /reservations/me`.
+`ReservationPatient.provider_id` is documented as always present but the backend nulls it when a
+provider is deleted, so the app renders such a reservation from its snapshots.

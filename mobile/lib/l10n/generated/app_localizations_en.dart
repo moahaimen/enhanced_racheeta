@@ -186,4 +186,338 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyTitle => 'Nothing here yet';
+
+  @override
+  String get navDiscover => 'Find care';
+
+  @override
+  String get navReservations => 'Appointments';
+
+  @override
+  String get discoverTitle => 'Find a provider';
+
+  @override
+  String get searchHint => 'Search by name';
+
+  @override
+  String get searchClear => 'Clear search';
+
+  @override
+  String get filtersButton => 'Filters';
+
+  @override
+  String get filtersTitle => 'Filter providers';
+
+  @override
+  String get filtersApply => 'Apply';
+
+  @override
+  String get filtersReset => 'Reset';
+
+  @override
+  String get filterKind => 'Provider kind';
+
+  @override
+  String get kindPractitioner => 'Practitioner';
+
+  @override
+  String get kindFacility => 'Facility';
+
+  @override
+  String get filterType => 'Type';
+
+  @override
+  String get filterSpecialty => 'Specialty';
+
+  @override
+  String get filterGovernorate => 'Governorate';
+
+  @override
+  String get filterCity => 'City';
+
+  @override
+  String get filterAny => 'Any';
+
+  @override
+  String get filterLoadFailed => 'Could not load the options.';
+
+  @override
+  String get sortLabel => 'Sort by';
+
+  @override
+  String get sortNameAsc => 'Name (A–Z)';
+
+  @override
+  String get sortNameDesc => 'Name (Z–A)';
+
+  @override
+  String get sortNewest => 'Newest';
+
+  @override
+  String get sortOldest => 'Oldest';
+
+  @override
+  String get providerTypeDoctor => 'Doctor';
+
+  @override
+  String get providerTypeNurse => 'Nurse';
+
+  @override
+  String get providerTypeTherapist => 'Therapist';
+
+  @override
+  String get providerTypeHospital => 'Hospital';
+
+  @override
+  String get providerTypeMedicalCenter => 'Medical center';
+
+  @override
+  String get providerTypePharmacy => 'Pharmacy';
+
+  @override
+  String get providerTypeLaboratory => 'Laboratory';
+
+  @override
+  String get providerTypeBeautyCenter => 'Beauty center';
+
+  @override
+  String get discoverEmptyTitle => 'No providers found';
+
+  @override
+  String get discoverEmptyBody => 'Try changing your search or filters.';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String resultsCount(int count) {
+    return '$count results';
+  }
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get loadMoreFailed => 'Could not load more results.';
+
+  @override
+  String ratingSummary(String rating, int count) {
+    return '$rating · $count reviews';
+  }
+
+  @override
+  String get noReviews => 'No reviews yet';
+
+  @override
+  String verifiedSince(String date) {
+    return 'Verified $date';
+  }
+
+  @override
+  String get providerTitle => 'Provider';
+
+  @override
+  String get detailAbout => 'About';
+
+  @override
+  String get detailSpecialties => 'Specialties';
+
+  @override
+  String get detailLocation => 'Location';
+
+  @override
+  String get detailContact => 'Contact';
+
+  @override
+  String get detailPhone => 'Phone';
+
+  @override
+  String get detailEmail => 'Email';
+
+  @override
+  String get detailWebsite => 'Website';
+
+  @override
+  String get detailServices => 'Services';
+
+  @override
+  String get noServices => 'No services are listed.';
+
+  @override
+  String get detailRelated => 'Related providers';
+
+  @override
+  String serviceDuration(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get bookService => 'Book';
+
+  @override
+  String get bookingPatientsOnly =>
+      'Only patient accounts can book appointments.';
+
+  @override
+  String get bookingTitle => 'Book an appointment';
+
+  @override
+  String get bookingChooseDay => 'Choose a day';
+
+  @override
+  String get bookingChooseTime => 'Choose a time';
+
+  @override
+  String get bookingNoSlots => 'No appointments are available right now.';
+
+  @override
+  String get bookingNoSlotsHint =>
+      'Availability is set by the provider. Check again later.';
+
+  @override
+  String get bookingRefresh => 'Refresh availability';
+
+  @override
+  String get bookingNote => 'Note for the provider (optional)';
+
+  @override
+  String bookingNoteTooLong(int max) {
+    return 'The note must be at most $max characters.';
+  }
+
+  @override
+  String get bookingSummary => 'Your appointment';
+
+  @override
+  String get bookingSelectSlot => 'Select a time to continue.';
+
+  @override
+  String get bookingTimezoneNote =>
+      'Times are shown in your device\'s time zone.';
+
+  @override
+  String get bookingConfirm => 'Confirm booking';
+
+  @override
+  String get bookingConfirming => 'Booking…';
+
+  @override
+  String get bookingSuccessTitle => 'Booking sent';
+
+  @override
+  String get bookingSuccessBody =>
+      'You can follow its status under Appointments.';
+
+  @override
+  String get bookingViewReservation => 'View appointment';
+
+  @override
+  String get bookingSlotTaken =>
+      'That time is no longer available. The list has been refreshed; please pick another time.';
+
+  @override
+  String get errorProviderUnavailable =>
+      'This provider is not accepting bookings right now.';
+
+  @override
+  String get errorServiceUnavailable =>
+      'This service is not available for booking right now.';
+
+  @override
+  String get errorNotFound => 'We couldn\'t find that.';
+
+  @override
+  String get errorCannotCancel =>
+      'This appointment can no longer be cancelled.';
+
+  @override
+  String get reservationsTitle => 'My appointments';
+
+  @override
+  String get reservationsUpcoming => 'Upcoming';
+
+  @override
+  String get reservationsPast => 'Past and closed';
+
+  @override
+  String get reservationsEmptyTitle => 'No appointments yet';
+
+  @override
+  String get reservationsEmptyBody =>
+      'When you book an appointment it will appear here.';
+
+  @override
+  String get reservationsFindCare => 'Find a provider';
+
+  @override
+  String get reservationDetailTitle => 'Appointment';
+
+  @override
+  String get reservationProvider => 'Provider';
+
+  @override
+  String get reservationService => 'Service';
+
+  @override
+  String get reservationWhen => 'Date and time';
+
+  @override
+  String get reservationDuration => 'Duration';
+
+  @override
+  String get reservationPrice => 'Price';
+
+  @override
+  String get reservationNote => 'Your note';
+
+  @override
+  String get reservationStatus => 'Status';
+
+  @override
+  String get reservationHistory => 'Status history';
+
+  @override
+  String get reservationViewProvider => 'View provider';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get statusConfirmed => 'Confirmed';
+
+  @override
+  String get statusCompleted => 'Completed';
+
+  @override
+  String get statusRejected => 'Rejected';
+
+  @override
+  String get statusCancelled => 'Cancelled';
+
+  @override
+  String get statusNoShow => 'No show';
+
+  @override
+  String get statusUnknown => 'Unknown';
+
+  @override
+  String get cancelReservation => 'Cancel appointment';
+
+  @override
+  String get cancellingReservation => 'Cancelling…';
+
+  @override
+  String get cancelConfirmTitle => 'Cancel this appointment?';
+
+  @override
+  String get cancelConfirmBody => 'This cannot be undone.';
+
+  @override
+  String get cancelConfirmAction => 'Cancel appointment';
+
+  @override
+  String get cancelKeep => 'Keep appointment';
+
+  @override
+  String get cancelSuccess => 'The appointment was cancelled.';
 }

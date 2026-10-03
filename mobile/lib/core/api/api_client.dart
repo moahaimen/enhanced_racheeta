@@ -54,7 +54,8 @@ class ApiClient {
     Map<String, Object?>? query,
     bool auth = true,
     CancelToken? cancelToken,
-  }) async => parse(
+  }) async => _parsed(
+    parse,
     await _request(
       'GET',
       path,
@@ -70,7 +71,8 @@ class ApiClient {
     Object? body,
     bool auth = true,
     CancelToken? cancelToken,
-  }) async => parse(
+  }) async => _parsed(
+    parse,
     await _request(
       'POST',
       path,
@@ -86,7 +88,8 @@ class ApiClient {
     Object? body,
     bool auth = true,
     CancelToken? cancelToken,
-  }) async => parse(
+  }) async => _parsed(
+    parse,
     await _request(
       'PATCH',
       path,
@@ -134,6 +137,20 @@ class ApiClient {
       auth: auth,
       cancelToken: cancelToken,
     );
+  }
+
+  /// A body that does not match the typed model is an unreadable response, not a crash.
+  T _parsed<T>(T Function(Object? json) parse, Object? json) {
+    try {
+      return parse(json);
+    } on FormatException {
+      throw const ApiException(
+        kind: ApiErrorKind.server,
+        statusCode: 200,
+        code: 'invalid_response',
+        message: 'The server sent an unreadable response.',
+      );
+    }
   }
 
   Future<Object?> _request(

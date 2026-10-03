@@ -239,6 +239,10 @@ A wrong role, a missing profile or a lapsed membership is `403`; anonymous is `4
 
 The Flutter app (`mobile/`) consumes this API through one client (`lib/core/api/api_client.dart`): `Authorization: Bearer <access>` on authenticated calls, `Accept-Language: ar|en` from the UI language, bounded connect/send/receive timeouts, `{error:{code,message,details?}}` mapped to a typed exception, and `{count,next,previous,results}` mapped to `Page<T>` with `page`/`page_size`. Phase 11A integrates only `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` and `GET /me`. The login 200 response has no schema in `openapi.yaml`; the client relies on the documented `{access, refresh}` shape.
 
+### Mobile patient flows (Phase 11B)
+
+The app adds no endpoint and no field. It reads: `GET /providers` (filters `search`, `kind`, `type`, `specialty`, `governorate`, `city`, `ordering`, `page`, `page_size`), `/providers/{id}`, `/providers/{id}/availability?service&from&to` (UTC instants), `/specialties`, `/geo/governorates`, `/geo/cities?governorate=`; and, for PATIENT accounts only, `POST /reservations`, `GET /reservations/me`, `GET /reservations/me/{id}`, `POST /reservations/me/{id}/cancel`. Conflict codes (`slot_unavailable`, `slot_conflict`, `service_unavailable`, `provider_unavailable`, `invalid_transition`) are mapped to localized messages; `404` is shown as one generic text. A contract test in `mobile/test/openapi_contract_test.dart` reads `docs/api/openapi.yaml` and fails if a path, field or status the app depends on disappears. See `RESERVATIONS.md` "Mobile (Phase 11B)".
+
 ## Planned (not implemented)
 
 The remaining modules of the master plan. Password change for logged-in users and admin account-management
