@@ -1,0 +1,73 @@
+{
+  "@@locale": "ar",
+  "appName": "رشيتة",
+  "loading": "جارٍ التحميل…",
+  "retry": "إعادة المحاولة",
+  "cancel": "إلغاء",
+  "confirm": "تأكيد",
+  "fieldRequired": "هذا الحقل مطلوب.",
+  "showPassword": "إظهار كلمة المرور",
+  "hidePassword": "إخفاء كلمة المرور",
+  "loginTitle": "تسجيل الدخول",
+  "loginIntro": "أدخل بريدك الإلكتروني وكلمة المرور.",
+  "emailLabel": "البريد الإلكتروني",
+  "passwordLabel": "كلمة المرور",
+  "loginButton": "دخول",
+  "loggingIn": "جارٍ الدخول…",
+  "sessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مجدداً.",
+  "errorNetwork": "تعذّر الاتصال بالخادم. تحقق من اتصالك وحاول مجدداً.",
+  "errorTimeout": "استغرق الخادم وقتاً طويلاً في الرد. حاول مجدداً.",
+  "errorInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+  "errorThrottled": "محاولات كثيرة. حاول مجدداً بعد قليل.",
+  "errorForbidden": "غير مسموح لك بهذا الإجراء.",
+  "errorServer": "حدث خطأ من جهتنا. حاول لاحقاً.",
+  "errorUnknown": "حدث خطأ غير متوقع. حاول مجدداً.",
+  "restoringTitle": "جارٍ استعادة جلستك…",
+  "restoreFailedTitle": "تعذّر التحقق من جلستك",
+  "restoreFailedBody": "تعذّر الاتصال بالخادم. ما زلت مسجّلاً الدخول على هذا الجهاز؛ حاول مجدداً.",
+  "restoreUseAnotherAccount": "استخدام حساب آخر",
+  "navHome": "الرئيسية",
+  "navAccount": "حسابي",
+  "navigationLabel": "التنقل الرئيسي",
+  "homeGreeting": "مرحباً، {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSignedInAs": "مسجّل الدخول بصفة {role}",
+  "@homeSignedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "homeEmailNotVerified": "لم يتم تأكيد بريدك الإلكتروني بعد.",
+  "accountTitle": "حسابي",
+  "accountName": "الاسم",
+  "accountEmail": "البريد الإلكتروني",
+  "accountPhone": "الهاتف",
+  "accountRole": "الدور",
+  "accountEmailStatus": "حالة البريد",
+  "accountEmailVerified": "مؤكَّد",
+  "accountEmailNotVerified": "غير مؤكَّد",
+  "accountNotProvided": "غير مُدخل",
+  "accountLanguage": "اللغة",
+  "languageArabic": "العربية",
+  "languageEnglish": "English",
+  "logout": "تسجيل الخروج",
+  "loggingOut": "جارٍ الخروج…",
+  "logoutConfirmTitle": "تسجيل الخروج؟",
+  "logoutConfirmBody": "ستحتاج إلى تسجيل الدخول مجدداً لاستخدام رشيتة.",
+  "roleLabelPatient": "مريض",
+  "roleLabelProvider": "مقدّم خدمة صحية",
+  "roleLabelMedicalCompany": "شركة طبية / مورّد",
+  "roleLabelRealEstateSeller": "مالك أو وكيل عقارات طبية",
+  "roleLabelAdmin": "مدير رشيتة",
+  "roleLabelUnknown": "حساب",
+  "configErrorTitle": "التطبيق غير مُهيّأ",
+  "emptyTitle": "لا يوجد شيء هنا بعد"
+}

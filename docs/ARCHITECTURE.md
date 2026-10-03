@@ -50,7 +50,7 @@ racheeta-platform/
 │       ├── hooks/          useAsyncAction, useAsyncData
 │       ├── i18n/           Arabic (default, RTL) + English, bilingual-name helper
 │       └── pages/          home, auth/ (AuthShell) + auth pages, profile, providers/ (search, detail, workspace), 404
-├── mobile/             Flutter (planned, Phase 11)
+├── mobile/             Flutter app (Phase 11A foundation: app/, core/, features/, shared/, l10n/ — see mobile/README.md)
 ├── docs/               this documentation + docs/api/openapi.yaml (contract)
 ├── infrastructure/     deployment notes
 ├── scripts/            bootstrap.sh, start.sh, export_openapi.sh

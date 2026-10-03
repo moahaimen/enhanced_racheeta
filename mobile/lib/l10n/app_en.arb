@@ -1,0 +1,73 @@
+{
+  "@@locale": "en",
+  "appName": "Racheeta",
+  "loading": "Loading…",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "fieldRequired": "This field is required.",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "loginTitle": "Sign in",
+  "loginIntro": "Enter your email and password.",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "loginButton": "Sign in",
+  "loggingIn": "Signing in…",
+  "sessionExpired": "Your session has expired. Please sign in again.",
+  "errorNetwork": "Could not reach the server. Check your connection and try again.",
+  "errorTimeout": "The server took too long to respond. Try again.",
+  "errorInvalidCredentials": "Incorrect email or password.",
+  "errorThrottled": "Too many attempts. Wait a moment and try again.",
+  "errorForbidden": "You are not allowed to do this.",
+  "errorServer": "Something went wrong on our side. Try again later.",
+  "errorUnknown": "Something went wrong. Try again.",
+  "restoringTitle": "Restoring your session…",
+  "restoreFailedTitle": "We couldn't verify your session",
+  "restoreFailedBody": "The server could not be reached. You are still signed in on this device; try again.",
+  "restoreUseAnotherAccount": "Use a different account",
+  "navHome": "Home",
+  "navAccount": "Account",
+  "navigationLabel": "Main navigation",
+  "homeGreeting": "Welcome, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSignedInAs": "Signed in as {role}",
+  "@homeSignedInAs": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "homeEmailNotVerified": "Your email address is not verified yet.",
+  "accountTitle": "Account",
+  "accountName": "Name",
+  "accountEmail": "Email",
+  "accountPhone": "Phone",
+  "accountRole": "Role",
+  "accountEmailStatus": "Email status",
+  "accountEmailVerified": "Verified",
+  "accountEmailNotVerified": "Not verified",
+  "accountNotProvided": "Not provided",
+  "accountLanguage": "Language",
+  "languageArabic": "العربية",
+  "languageEnglish": "English",
+  "logout": "Sign out",
+  "loggingOut": "Signing out…",
+  "logoutConfirmTitle": "Sign out?",
+  "logoutConfirmBody": "You will need to sign in again to use Racheeta.",
+  "roleLabelPatient": "Patient",
+  "roleLabelProvider": "Healthcare provider",
+  "roleLabelMedicalCompany": "Medical company / supplier",
+  "roleLabelRealEstateSeller": "Medical real-estate owner or agent",
+  "roleLabelAdmin": "Racheeta administrator",
+  "roleLabelUnknown": "Account",
+  "configErrorTitle": "The app is not configured",
+  "emptyTitle": "Nothing here yet"
+}

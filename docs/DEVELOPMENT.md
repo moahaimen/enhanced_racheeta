@@ -91,3 +91,18 @@ terminal into the browser to complete the flow.
 cd web && npm run build && cd ..
 SPA_DIST_DIR=$PWD/web/dist make backend-run   # http://localhost:8000/
 ```
+
+## Mobile (Flutter)
+
+Requires Flutter 3.47.6 (Dart 3.13.5). From `mobile/`:
+
+```bash
+flutter pub get
+flutter run                                   # debug + development: API at http://10.0.2.2:8000 (Android emulator)
+flutter run --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://api.example.com
+dart format --output=none --set-exit-if-changed .
+flutter analyze --fatal-infos
+flutter test
+```
+
+CI runs the same three checks in the `mobile` job. See `mobile/README.md`.

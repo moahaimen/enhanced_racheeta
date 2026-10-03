@@ -1,0 +1,31 @@
+name: racheeta_mobile
+description: Racheeta mobile application (Flutter). Consumes the same /api/v1/ API as the web app.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: 3.13.5
+  flutter: 3.47.6
+
+# Every dependency is pinned to an exact version (pubspec.lock is committed as well).
+# Upgrade deliberately and record the reason in docs/DECISIONS.md.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  dio: 5.11.1
+  flutter_riverpod: 3.4.3
+  flutter_secure_storage: 11.2.0
+  go_router: 18.0.2
+  intl: 0.20.3
+  shared_preferences: 2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

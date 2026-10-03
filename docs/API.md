@@ -235,6 +235,10 @@ zero-filled so a missing key never has to be interpreted. See `DASHBOARDS.md`.
 A wrong role, a missing profile or a lapsed membership is `403`; anonymous is `401`. The existing
 `/marketplace/company/dashboard` and `/advertising/company/dashboard` endpoints are unchanged.
 
+## Mobile client conventions (Phase 11A)
+
+The Flutter app (`mobile/`) consumes this API through one client (`lib/core/api/api_client.dart`): `Authorization: Bearer <access>` on authenticated calls, `Accept-Language: ar|en` from the UI language, bounded connect/send/receive timeouts, `{error:{code,message,details?}}` mapped to a typed exception, and `{count,next,previous,results}` mapped to `Page<T>` with `page`/`page_size`. Phase 11A integrates only `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` and `GET /me`. The login 200 response has no schema in `openapi.yaml`; the client relies on the documented `{access, refresh}` shape.
+
 ## Planned (not implemented)
 
 The remaining modules of the master plan. Password change for logged-in users and admin account-management
