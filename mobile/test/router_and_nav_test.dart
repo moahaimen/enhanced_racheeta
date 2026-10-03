@@ -75,17 +75,24 @@ void main() {
       () {
         expect(coreDestinations.map((d) => d.id), ['home', 'account']);
         for (final role in [
-          'PATIENT',
           'PROVIDER',
           'MEDICAL_COMPANY',
           'REAL_ESTATE_SELLER',
           'ADMIN',
         ]) {
-          expect(destinationsFor(account(role: role)).map((d) => d.id), [
-            'home',
-            'account',
-          ]);
+          expect(
+            destinationsFor(account(role: role, permissions: const <String>[]))
+                .map((d) => d.id),
+            ['home', 'account'],
+          );
         }
+        // Patients (capabilities from /me) also get the 11B destinations.
+        expect(destinationsFor(account()).map((d) => d.id), [
+          'home',
+          'discover',
+          'reservations',
+          'account',
+        ]);
       },
     );
 

@@ -184,4 +184,332 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get emptyTitle => 'لا يوجد شيء هنا بعد';
+
+  @override
+  String get navDiscover => 'البحث عن رعاية';
+
+  @override
+  String get navReservations => 'مواعيدي';
+
+  @override
+  String get discoverTitle => 'ابحث عن مقدم رعاية';
+
+  @override
+  String get searchHint => 'ابحث بالاسم';
+
+  @override
+  String get searchClear => 'مسح البحث';
+
+  @override
+  String get filtersButton => 'تصفية';
+
+  @override
+  String get filtersTitle => 'تصفية مقدمي الرعاية';
+
+  @override
+  String get filtersApply => 'تطبيق';
+
+  @override
+  String get filtersReset => 'إعادة ضبط';
+
+  @override
+  String get filterKind => 'فئة مقدم الرعاية';
+
+  @override
+  String get kindPractitioner => 'ممارس';
+
+  @override
+  String get kindFacility => 'منشأة';
+
+  @override
+  String get filterType => 'النوع';
+
+  @override
+  String get filterSpecialty => 'التخصص';
+
+  @override
+  String get filterGovernorate => 'المحافظة';
+
+  @override
+  String get filterCity => 'المدينة';
+
+  @override
+  String get filterAny => 'الكل';
+
+  @override
+  String get filterLoadFailed => 'تعذّر تحميل الخيارات.';
+
+  @override
+  String get sortLabel => 'ترتيب حسب';
+
+  @override
+  String get sortNameAsc => 'الاسم (أ–ي)';
+
+  @override
+  String get sortNameDesc => 'الاسم (ي–أ)';
+
+  @override
+  String get sortNewest => 'الأحدث';
+
+  @override
+  String get sortOldest => 'الأقدم';
+
+  @override
+  String get providerTypeDoctor => 'طبيب';
+
+  @override
+  String get providerTypeNurse => 'ممرض';
+
+  @override
+  String get providerTypeTherapist => 'معالج';
+
+  @override
+  String get providerTypeHospital => 'مستشفى';
+
+  @override
+  String get providerTypeMedicalCenter => 'مركز طبي';
+
+  @override
+  String get providerTypePharmacy => 'صيدلية';
+
+  @override
+  String get providerTypeLaboratory => 'مختبر';
+
+  @override
+  String get providerTypeBeautyCenter => 'مركز تجميل';
+
+  @override
+  String get discoverEmptyTitle => 'لم يتم العثور على مقدمي رعاية';
+
+  @override
+  String get discoverEmptyBody => 'جرّب تغيير البحث أو عوامل التصفية.';
+
+  @override
+  String get clearFilters => 'مسح عوامل التصفية';
+
+  @override
+  String resultsCount(int count) {
+    return '$count نتيجة';
+  }
+
+  @override
+  String get loadMore => 'عرض المزيد';
+
+  @override
+  String get loadMoreFailed => 'تعذّر تحميل المزيد من النتائج.';
+
+  @override
+  String ratingSummary(String rating, int count) {
+    return '$rating · $count تقييم';
+  }
+
+  @override
+  String get noReviews => 'لا توجد تقييمات بعد';
+
+  @override
+  String verifiedSince(String date) {
+    return 'موثّق منذ $date';
+  }
+
+  @override
+  String get providerTitle => 'مقدم الرعاية';
+
+  @override
+  String get detailAbout => 'نبذة';
+
+  @override
+  String get detailSpecialties => 'التخصصات';
+
+  @override
+  String get detailLocation => 'الموقع';
+
+  @override
+  String get detailContact => 'التواصل';
+
+  @override
+  String get detailPhone => 'الهاتف';
+
+  @override
+  String get detailEmail => 'البريد الإلكتروني';
+
+  @override
+  String get detailWebsite => 'الموقع الإلكتروني';
+
+  @override
+  String get detailServices => 'الخدمات';
+
+  @override
+  String get noServices => 'لا توجد خدمات مدرجة.';
+
+  @override
+  String get detailRelated => 'مقدمو رعاية مرتبطون';
+
+  @override
+  String serviceDuration(int minutes) {
+    return '$minutes دقيقة';
+  }
+
+  @override
+  String get bookService => 'احجز';
+
+  @override
+  String get bookingPatientsOnly => 'الحجز متاح لحسابات المرضى فقط.';
+
+  @override
+  String get bookingTitle => 'حجز موعد';
+
+  @override
+  String get bookingChooseDay => 'اختر اليوم';
+
+  @override
+  String get bookingChooseTime => 'اختر الوقت';
+
+  @override
+  String get bookingNoSlots => 'لا توجد مواعيد متاحة حالياً.';
+
+  @override
+  String get bookingNoSlotsHint =>
+      'يحدد مقدم الرعاية المواعيد المتاحة. حاول مرة أخرى لاحقاً.';
+
+  @override
+  String get bookingRefresh => 'تحديث المواعيد';
+
+  @override
+  String get bookingNote => 'ملاحظة لمقدم الرعاية (اختياري)';
+
+  @override
+  String bookingNoteTooLong(int max) {
+    return 'يجب ألا تتجاوز الملاحظة $max حرفاً.';
+  }
+
+  @override
+  String get bookingSummary => 'موعدك';
+
+  @override
+  String get bookingSelectSlot => 'اختر وقتاً للمتابعة.';
+
+  @override
+  String get bookingTimezoneNote => 'تُعرض الأوقات حسب المنطقة الزمنية لجهازك.';
+
+  @override
+  String get bookingConfirm => 'تأكيد الحجز';
+
+  @override
+  String get bookingConfirming => 'جارٍ الحجز…';
+
+  @override
+  String get bookingSuccessTitle => 'تم إرسال الحجز';
+
+  @override
+  String get bookingSuccessBody => 'يمكنك متابعة حالته من قسم المواعيد.';
+
+  @override
+  String get bookingViewReservation => 'عرض الموعد';
+
+  @override
+  String get bookingSlotTaken =>
+      'لم يعد هذا الوقت متاحاً. تم تحديث القائمة، يرجى اختيار وقت آخر.';
+
+  @override
+  String get errorProviderUnavailable =>
+      'لا يقبل مقدم الرعاية الحجوزات حالياً.';
+
+  @override
+  String get errorServiceUnavailable => 'هذه الخدمة غير متاحة للحجز حالياً.';
+
+  @override
+  String get errorNotFound => 'لم نعثر على ما تبحث عنه.';
+
+  @override
+  String get errorCannotCancel => 'لا يمكن إلغاء هذا الموعد بعد الآن.';
+
+  @override
+  String get reservationsTitle => 'مواعيدي';
+
+  @override
+  String get reservationsUpcoming => 'القادمة';
+
+  @override
+  String get reservationsPast => 'السابقة والمغلقة';
+
+  @override
+  String get reservationsEmptyTitle => 'لا توجد مواعيد بعد';
+
+  @override
+  String get reservationsEmptyBody => 'عند حجز موعد سيظهر هنا.';
+
+  @override
+  String get reservationsFindCare => 'ابحث عن مقدم رعاية';
+
+  @override
+  String get reservationDetailTitle => 'الموعد';
+
+  @override
+  String get reservationProvider => 'مقدم الرعاية';
+
+  @override
+  String get reservationService => 'الخدمة';
+
+  @override
+  String get reservationWhen => 'التاريخ والوقت';
+
+  @override
+  String get reservationDuration => 'المدة';
+
+  @override
+  String get reservationPrice => 'السعر';
+
+  @override
+  String get reservationNote => 'ملاحظتك';
+
+  @override
+  String get reservationStatus => 'الحالة';
+
+  @override
+  String get reservationHistory => 'سجل الحالة';
+
+  @override
+  String get reservationViewProvider => 'عرض مقدم الرعاية';
+
+  @override
+  String get statusPending => 'قيد الانتظار';
+
+  @override
+  String get statusConfirmed => 'مؤكد';
+
+  @override
+  String get statusCompleted => 'مكتمل';
+
+  @override
+  String get statusRejected => 'مرفوض';
+
+  @override
+  String get statusCancelled => 'ملغى';
+
+  @override
+  String get statusNoShow => 'لم يحضر';
+
+  @override
+  String get statusUnknown => 'غير معروف';
+
+  @override
+  String get cancelReservation => 'إلغاء الموعد';
+
+  @override
+  String get cancellingReservation => 'جارٍ الإلغاء…';
+
+  @override
+  String get cancelConfirmTitle => 'إلغاء هذا الموعد؟';
+
+  @override
+  String get cancelConfirmBody => 'لا يمكن التراجع عن هذا الإجراء.';
+
+  @override
+  String get cancelConfirmAction => 'إلغاء الموعد';
+
+  @override
+  String get cancelKeep => 'الإبقاء على الموعد';
+
+  @override
+  String get cancelSuccess => 'تم إلغاء الموعد.';
 }

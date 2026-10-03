@@ -433,6 +433,636 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing here yet'**
   String get emptyTitle;
+
+  /// No description provided for @navDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Find care'**
+  String get navDiscover;
+
+  /// No description provided for @navReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointments'**
+  String get navReservations;
+
+  /// No description provided for @discoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a provider'**
+  String get discoverTitle;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name'**
+  String get searchHint;
+
+  /// No description provided for @searchClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get searchClear;
+
+  /// No description provided for @filtersButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersButton;
+
+  /// No description provided for @filtersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter providers'**
+  String get filtersTitle;
+
+  /// No description provided for @filtersApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get filtersApply;
+
+  /// No description provided for @filtersReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get filtersReset;
+
+  /// No description provided for @filterKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider kind'**
+  String get filterKind;
+
+  /// No description provided for @kindPractitioner.
+  ///
+  /// In en, this message translates to:
+  /// **'Practitioner'**
+  String get kindPractitioner;
+
+  /// No description provided for @kindFacility.
+  ///
+  /// In en, this message translates to:
+  /// **'Facility'**
+  String get kindFacility;
+
+  /// No description provided for @filterType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get filterType;
+
+  /// No description provided for @filterSpecialty.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialty'**
+  String get filterSpecialty;
+
+  /// No description provided for @filterGovernorate.
+  ///
+  /// In en, this message translates to:
+  /// **'Governorate'**
+  String get filterGovernorate;
+
+  /// No description provided for @filterCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get filterCity;
+
+  /// No description provided for @filterAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get filterAny;
+
+  /// No description provided for @filterLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the options.'**
+  String get filterLoadFailed;
+
+  /// No description provided for @sortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortLabel;
+
+  /// No description provided for @sortNameAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (A–Z)'**
+  String get sortNameAsc;
+
+  /// No description provided for @sortNameDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (Z–A)'**
+  String get sortNameDesc;
+
+  /// No description provided for @sortNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get sortNewest;
+
+  /// No description provided for @sortOldest.
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest'**
+  String get sortOldest;
+
+  /// No description provided for @providerTypeDoctor.
+  ///
+  /// In en, this message translates to:
+  /// **'Doctor'**
+  String get providerTypeDoctor;
+
+  /// No description provided for @providerTypeNurse.
+  ///
+  /// In en, this message translates to:
+  /// **'Nurse'**
+  String get providerTypeNurse;
+
+  /// No description provided for @providerTypeTherapist.
+  ///
+  /// In en, this message translates to:
+  /// **'Therapist'**
+  String get providerTypeTherapist;
+
+  /// No description provided for @providerTypeHospital.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital'**
+  String get providerTypeHospital;
+
+  /// No description provided for @providerTypeMedicalCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical center'**
+  String get providerTypeMedicalCenter;
+
+  /// No description provided for @providerTypePharmacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharmacy'**
+  String get providerTypePharmacy;
+
+  /// No description provided for @providerTypeLaboratory.
+  ///
+  /// In en, this message translates to:
+  /// **'Laboratory'**
+  String get providerTypeLaboratory;
+
+  /// No description provided for @providerTypeBeautyCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Beauty center'**
+  String get providerTypeBeautyCenter;
+
+  /// No description provided for @discoverEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No providers found'**
+  String get discoverEmptyTitle;
+
+  /// No description provided for @discoverEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing your search or filters.'**
+  String get discoverEmptyBody;
+
+  /// No description provided for @clearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get clearFilters;
+
+  /// No description provided for @resultsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} results'**
+  String resultsCount(int count);
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMore;
+
+  /// No description provided for @loadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load more results.'**
+  String get loadMoreFailed;
+
+  /// No description provided for @ratingSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{rating} · {count} reviews'**
+  String ratingSummary(String rating, int count);
+
+  /// No description provided for @noReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'No reviews yet'**
+  String get noReviews;
+
+  /// No description provided for @verifiedSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified {date}'**
+  String verifiedSince(String date);
+
+  /// No description provided for @providerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get providerTitle;
+
+  /// No description provided for @detailAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get detailAbout;
+
+  /// No description provided for @detailSpecialties.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialties'**
+  String get detailSpecialties;
+
+  /// No description provided for @detailLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get detailLocation;
+
+  /// No description provided for @detailContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get detailContact;
+
+  /// No description provided for @detailPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get detailPhone;
+
+  /// No description provided for @detailEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get detailEmail;
+
+  /// No description provided for @detailWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get detailWebsite;
+
+  /// No description provided for @detailServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get detailServices;
+
+  /// No description provided for @noServices.
+  ///
+  /// In en, this message translates to:
+  /// **'No services are listed.'**
+  String get noServices;
+
+  /// No description provided for @detailRelated.
+  ///
+  /// In en, this message translates to:
+  /// **'Related providers'**
+  String get detailRelated;
+
+  /// No description provided for @serviceDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String serviceDuration(int minutes);
+
+  /// No description provided for @bookService.
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get bookService;
+
+  /// No description provided for @bookingPatientsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only patient accounts can book appointments.'**
+  String get bookingPatientsOnly;
+
+  /// No description provided for @bookingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Book an appointment'**
+  String get bookingTitle;
+
+  /// No description provided for @bookingChooseDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a day'**
+  String get bookingChooseDay;
+
+  /// No description provided for @bookingChooseTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a time'**
+  String get bookingChooseTime;
+
+  /// No description provided for @bookingNoSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'No appointments are available right now.'**
+  String get bookingNoSlots;
+
+  /// No description provided for @bookingNoSlotsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability is set by the provider. Check again later.'**
+  String get bookingNoSlotsHint;
+
+  /// No description provided for @bookingRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh availability'**
+  String get bookingRefresh;
+
+  /// No description provided for @bookingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note for the provider (optional)'**
+  String get bookingNote;
+
+  /// No description provided for @bookingNoteTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'The note must be at most {max} characters.'**
+  String bookingNoteTooLong(int max);
+
+  /// No description provided for @bookingSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Your appointment'**
+  String get bookingSummary;
+
+  /// No description provided for @bookingSelectSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a time to continue.'**
+  String get bookingSelectSlot;
+
+  /// No description provided for @bookingTimezoneNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Times are shown in your device\'s time zone.'**
+  String get bookingTimezoneNote;
+
+  /// No description provided for @bookingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm booking'**
+  String get bookingConfirm;
+
+  /// No description provided for @bookingConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking…'**
+  String get bookingConfirming;
+
+  /// No description provided for @bookingSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking sent'**
+  String get bookingSuccessTitle;
+
+  /// No description provided for @bookingSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can follow its status under Appointments.'**
+  String get bookingSuccessBody;
+
+  /// No description provided for @bookingViewReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'View appointment'**
+  String get bookingViewReservation;
+
+  /// No description provided for @bookingSlotTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'That time is no longer available. The list has been refreshed; please pick another time.'**
+  String get bookingSlotTaken;
+
+  /// No description provided for @errorProviderUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider is not accepting bookings right now.'**
+  String get errorProviderUnavailable;
+
+  /// No description provided for @errorServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This service is not available for booking right now.'**
+  String get errorServiceUnavailable;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find that.'**
+  String get errorNotFound;
+
+  /// No description provided for @errorCannotCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'This appointment can no longer be cancelled.'**
+  String get errorCannotCancel;
+
+  /// No description provided for @reservationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My appointments'**
+  String get reservationsTitle;
+
+  /// No description provided for @reservationsUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get reservationsUpcoming;
+
+  /// No description provided for @reservationsPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Past and closed'**
+  String get reservationsPast;
+
+  /// No description provided for @reservationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No appointments yet'**
+  String get reservationsEmptyTitle;
+
+  /// No description provided for @reservationsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When you book an appointment it will appear here.'**
+  String get reservationsEmptyBody;
+
+  /// No description provided for @reservationsFindCare.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a provider'**
+  String get reservationsFindCare;
+
+  /// No description provided for @reservationDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointment'**
+  String get reservationDetailTitle;
+
+  /// No description provided for @reservationProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get reservationProvider;
+
+  /// No description provided for @reservationService.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get reservationService;
+
+  /// No description provided for @reservationWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'Date and time'**
+  String get reservationWhen;
+
+  /// No description provided for @reservationDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get reservationDuration;
+
+  /// No description provided for @reservationPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get reservationPrice;
+
+  /// No description provided for @reservationNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your note'**
+  String get reservationNote;
+
+  /// No description provided for @reservationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get reservationStatus;
+
+  /// No description provided for @reservationHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Status history'**
+  String get reservationHistory;
+
+  /// No description provided for @reservationViewProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'View provider'**
+  String get reservationViewProvider;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get statusPending;
+
+  /// No description provided for @statusConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get statusConfirmed;
+
+  /// No description provided for @statusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get statusCompleted;
+
+  /// No description provided for @statusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get statusRejected;
+
+  /// No description provided for @statusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get statusCancelled;
+
+  /// No description provided for @statusNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No show'**
+  String get statusNoShow;
+
+  /// No description provided for @statusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get statusUnknown;
+
+  /// No description provided for @cancelReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel appointment'**
+  String get cancelReservation;
+
+  /// No description provided for @cancellingReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelling…'**
+  String get cancellingReservation;
+
+  /// No description provided for @cancelConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this appointment?'**
+  String get cancelConfirmTitle;
+
+  /// No description provided for @cancelConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone.'**
+  String get cancelConfirmBody;
+
+  /// No description provided for @cancelConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel appointment'**
+  String get cancelConfirmAction;
+
+  /// No description provided for @cancelKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep appointment'**
+  String get cancelKeep;
+
+  /// No description provided for @cancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'The appointment was cancelled.'**
+  String get cancelSuccess;
 }
 
 class _AppLocalizationsDelegate

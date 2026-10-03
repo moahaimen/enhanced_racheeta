@@ -69,5 +69,148 @@
   "roleLabelAdmin": "Racheeta administrator",
   "roleLabelUnknown": "Account",
   "configErrorTitle": "The app is not configured",
-  "emptyTitle": "Nothing here yet"
+  "emptyTitle": "Nothing here yet",
+  "navDiscover": "Find care",
+  "navReservations": "Appointments",
+  "discoverTitle": "Find a provider",
+  "searchHint": "Search by name",
+  "searchClear": "Clear search",
+  "filtersButton": "Filters",
+  "filtersTitle": "Filter providers",
+  "filtersApply": "Apply",
+  "filtersReset": "Reset",
+  "filterKind": "Provider kind",
+  "kindPractitioner": "Practitioner",
+  "kindFacility": "Facility",
+  "filterType": "Type",
+  "filterSpecialty": "Specialty",
+  "filterGovernorate": "Governorate",
+  "filterCity": "City",
+  "filterAny": "Any",
+  "filterLoadFailed": "Could not load the options.",
+  "sortLabel": "Sort by",
+  "sortNameAsc": "Name (A–Z)",
+  "sortNameDesc": "Name (Z–A)",
+  "sortNewest": "Newest",
+  "sortOldest": "Oldest",
+  "providerTypeDoctor": "Doctor",
+  "providerTypeNurse": "Nurse",
+  "providerTypeTherapist": "Therapist",
+  "providerTypeHospital": "Hospital",
+  "providerTypeMedicalCenter": "Medical center",
+  "providerTypePharmacy": "Pharmacy",
+  "providerTypeLaboratory": "Laboratory",
+  "providerTypeBeautyCenter": "Beauty center",
+  "discoverEmptyTitle": "No providers found",
+  "discoverEmptyBody": "Try changing your search or filters.",
+  "clearFilters": "Clear filters",
+  "resultsCount": "{count} results",
+  "@resultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadMore": "Load more",
+  "loadMoreFailed": "Could not load more results.",
+  "ratingSummary": "{rating} · {count} reviews",
+  "@ratingSummary": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noReviews": "No reviews yet",
+  "verifiedSince": "Verified {date}",
+  "@verifiedSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerTitle": "Provider",
+  "detailAbout": "About",
+  "detailSpecialties": "Specialties",
+  "detailLocation": "Location",
+  "detailContact": "Contact",
+  "detailPhone": "Phone",
+  "detailEmail": "Email",
+  "detailWebsite": "Website",
+  "detailServices": "Services",
+  "noServices": "No services are listed.",
+  "detailRelated": "Related providers",
+  "serviceDuration": "{minutes} min",
+  "@serviceDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "bookService": "Book",
+  "bookingPatientsOnly": "Only patient accounts can book appointments.",
+  "bookingTitle": "Book an appointment",
+  "bookingChooseDay": "Choose a day",
+  "bookingChooseTime": "Choose a time",
+  "bookingNoSlots": "No appointments are available right now.",
+  "bookingNoSlotsHint": "Availability is set by the provider. Check again later.",
+  "bookingRefresh": "Refresh availability",
+  "bookingNote": "Note for the provider (optional)",
+  "bookingNoteTooLong": "The note must be at most {max} characters.",
+  "@bookingNoteTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingSummary": "Your appointment",
+  "bookingSelectSlot": "Select a time to continue.",
+  "bookingTimezoneNote": "Times are shown in your device's time zone.",
+  "bookingConfirm": "Confirm booking",
+  "bookingConfirming": "Booking…",
+  "bookingSuccessTitle": "Booking sent",
+  "bookingSuccessBody": "You can follow its status under Appointments.",
+  "bookingViewReservation": "View appointment",
+  "bookingSlotTaken": "That time is no longer available. The list has been refreshed; please pick another time.",
+  "errorProviderUnavailable": "This provider is not accepting bookings right now.",
+  "errorServiceUnavailable": "This service is not available for booking right now.",
+  "errorNotFound": "We couldn't find that.",
+  "errorCannotCancel": "This appointment can no longer be cancelled.",
+  "reservationsTitle": "My appointments",
+  "reservationsUpcoming": "Upcoming",
+  "reservationsPast": "Past and closed",
+  "reservationsEmptyTitle": "No appointments yet",
+  "reservationsEmptyBody": "When you book an appointment it will appear here.",
+  "reservationsFindCare": "Find a provider",
+  "reservationDetailTitle": "Appointment",
+  "reservationProvider": "Provider",
+  "reservationService": "Service",
+  "reservationWhen": "Date and time",
+  "reservationDuration": "Duration",
+  "reservationPrice": "Price",
+  "reservationNote": "Your note",
+  "reservationStatus": "Status",
+  "reservationHistory": "Status history",
+  "reservationViewProvider": "View provider",
+  "statusPending": "Pending",
+  "statusConfirmed": "Confirmed",
+  "statusCompleted": "Completed",
+  "statusRejected": "Rejected",
+  "statusCancelled": "Cancelled",
+  "statusNoShow": "No show",
+  "statusUnknown": "Unknown",
+  "cancelReservation": "Cancel appointment",
+  "cancellingReservation": "Cancelling…",
+  "cancelConfirmTitle": "Cancel this appointment?",
+  "cancelConfirmBody": "This cannot be undone.",
+  "cancelConfirmAction": "Cancel appointment",
+  "cancelKeep": "Keep appointment",
+  "cancelSuccess": "The appointment was cancelled."
 }

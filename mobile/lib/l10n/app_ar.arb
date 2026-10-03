@@ -69,5 +69,148 @@
   "roleLabelAdmin": "مدير رشيتة",
   "roleLabelUnknown": "حساب",
   "configErrorTitle": "التطبيق غير مُهيّأ",
-  "emptyTitle": "لا يوجد شيء هنا بعد"
+  "emptyTitle": "لا يوجد شيء هنا بعد",
+  "navDiscover": "البحث عن رعاية",
+  "navReservations": "مواعيدي",
+  "discoverTitle": "ابحث عن مقدم رعاية",
+  "searchHint": "ابحث بالاسم",
+  "searchClear": "مسح البحث",
+  "filtersButton": "تصفية",
+  "filtersTitle": "تصفية مقدمي الرعاية",
+  "filtersApply": "تطبيق",
+  "filtersReset": "إعادة ضبط",
+  "filterKind": "فئة مقدم الرعاية",
+  "kindPractitioner": "ممارس",
+  "kindFacility": "منشأة",
+  "filterType": "النوع",
+  "filterSpecialty": "التخصص",
+  "filterGovernorate": "المحافظة",
+  "filterCity": "المدينة",
+  "filterAny": "الكل",
+  "filterLoadFailed": "تعذّر تحميل الخيارات.",
+  "sortLabel": "ترتيب حسب",
+  "sortNameAsc": "الاسم (أ–ي)",
+  "sortNameDesc": "الاسم (ي–أ)",
+  "sortNewest": "الأحدث",
+  "sortOldest": "الأقدم",
+  "providerTypeDoctor": "طبيب",
+  "providerTypeNurse": "ممرض",
+  "providerTypeTherapist": "معالج",
+  "providerTypeHospital": "مستشفى",
+  "providerTypeMedicalCenter": "مركز طبي",
+  "providerTypePharmacy": "صيدلية",
+  "providerTypeLaboratory": "مختبر",
+  "providerTypeBeautyCenter": "مركز تجميل",
+  "discoverEmptyTitle": "لم يتم العثور على مقدمي رعاية",
+  "discoverEmptyBody": "جرّب تغيير البحث أو عوامل التصفية.",
+  "clearFilters": "مسح عوامل التصفية",
+  "resultsCount": "{count} نتيجة",
+  "@resultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loadMore": "عرض المزيد",
+  "loadMoreFailed": "تعذّر تحميل المزيد من النتائج.",
+  "ratingSummary": "{rating} · {count} تقييم",
+  "@ratingSummary": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noReviews": "لا توجد تقييمات بعد",
+  "verifiedSince": "موثّق منذ {date}",
+  "@verifiedSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerTitle": "مقدم الرعاية",
+  "detailAbout": "نبذة",
+  "detailSpecialties": "التخصصات",
+  "detailLocation": "الموقع",
+  "detailContact": "التواصل",
+  "detailPhone": "الهاتف",
+  "detailEmail": "البريد الإلكتروني",
+  "detailWebsite": "الموقع الإلكتروني",
+  "detailServices": "الخدمات",
+  "noServices": "لا توجد خدمات مدرجة.",
+  "detailRelated": "مقدمو رعاية مرتبطون",
+  "serviceDuration": "{minutes} دقيقة",
+  "@serviceDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "bookService": "احجز",
+  "bookingPatientsOnly": "الحجز متاح لحسابات المرضى فقط.",
+  "bookingTitle": "حجز موعد",
+  "bookingChooseDay": "اختر اليوم",
+  "bookingChooseTime": "اختر الوقت",
+  "bookingNoSlots": "لا توجد مواعيد متاحة حالياً.",
+  "bookingNoSlotsHint": "يحدد مقدم الرعاية المواعيد المتاحة. حاول مرة أخرى لاحقاً.",
+  "bookingRefresh": "تحديث المواعيد",
+  "bookingNote": "ملاحظة لمقدم الرعاية (اختياري)",
+  "bookingNoteTooLong": "يجب ألا تتجاوز الملاحظة {max} حرفاً.",
+  "@bookingNoteTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingSummary": "موعدك",
+  "bookingSelectSlot": "اختر وقتاً للمتابعة.",
+  "bookingTimezoneNote": "تُعرض الأوقات حسب المنطقة الزمنية لجهازك.",
+  "bookingConfirm": "تأكيد الحجز",
+  "bookingConfirming": "جارٍ الحجز…",
+  "bookingSuccessTitle": "تم إرسال الحجز",
+  "bookingSuccessBody": "يمكنك متابعة حالته من قسم المواعيد.",
+  "bookingViewReservation": "عرض الموعد",
+  "bookingSlotTaken": "لم يعد هذا الوقت متاحاً. تم تحديث القائمة، يرجى اختيار وقت آخر.",
+  "errorProviderUnavailable": "لا يقبل مقدم الرعاية الحجوزات حالياً.",
+  "errorServiceUnavailable": "هذه الخدمة غير متاحة للحجز حالياً.",
+  "errorNotFound": "لم نعثر على ما تبحث عنه.",
+  "errorCannotCancel": "لا يمكن إلغاء هذا الموعد بعد الآن.",
+  "reservationsTitle": "مواعيدي",
+  "reservationsUpcoming": "القادمة",
+  "reservationsPast": "السابقة والمغلقة",
+  "reservationsEmptyTitle": "لا توجد مواعيد بعد",
+  "reservationsEmptyBody": "عند حجز موعد سيظهر هنا.",
+  "reservationsFindCare": "ابحث عن مقدم رعاية",
+  "reservationDetailTitle": "الموعد",
+  "reservationProvider": "مقدم الرعاية",
+  "reservationService": "الخدمة",
+  "reservationWhen": "التاريخ والوقت",
+  "reservationDuration": "المدة",
+  "reservationPrice": "السعر",
+  "reservationNote": "ملاحظتك",
+  "reservationStatus": "الحالة",
+  "reservationHistory": "سجل الحالة",
+  "reservationViewProvider": "عرض مقدم الرعاية",
+  "statusPending": "قيد الانتظار",
+  "statusConfirmed": "مؤكد",
+  "statusCompleted": "مكتمل",
+  "statusRejected": "مرفوض",
+  "statusCancelled": "ملغى",
+  "statusNoShow": "لم يحضر",
+  "statusUnknown": "غير معروف",
+  "cancelReservation": "إلغاء الموعد",
+  "cancellingReservation": "جارٍ الإلغاء…",
+  "cancelConfirmTitle": "إلغاء هذا الموعد؟",
+  "cancelConfirmBody": "لا يمكن التراجع عن هذا الإجراء.",
+  "cancelConfirmAction": "إلغاء الموعد",
+  "cancelKeep": "الإبقاء على الموعد",
+  "cancelSuccess": "تم إلغاء الموعد."
 }

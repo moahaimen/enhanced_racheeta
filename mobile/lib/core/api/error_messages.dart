@@ -5,7 +5,18 @@ import 'api_exception.dart';
 /// are never shown; the machine `code` decides, with the server's (already localised) message used
 /// only for validation errors it wrote for the user.
 String apiErrorMessage(AppLocalizations l10n, ApiException error) {
-  if (error.code == 'no_active_account') return l10n.errorInvalidCredentials;
+  switch (error.code) {
+    case 'no_active_account':
+      return l10n.errorInvalidCredentials;
+    case 'slot_unavailable' || 'slot_conflict':
+      return l10n.bookingSlotTaken;
+    case 'provider_unavailable':
+      return l10n.errorProviderUnavailable;
+    case 'service_unavailable':
+      return l10n.errorServiceUnavailable;
+    case 'invalid_transition':
+      return l10n.errorCannotCancel;
+  }
   switch (error.kind) {
     case ApiErrorKind.network:
       return l10n.errorNetwork;
@@ -19,10 +30,13 @@ String apiErrorMessage(AppLocalizations l10n, ApiException error) {
       return l10n.errorServer;
     case ApiErrorKind.unauthorized:
       return l10n.sessionExpired;
-    case ApiErrorKind.validation:
-    case ApiErrorKind.rejected:
     case ApiErrorKind.notFound:
+      // Same text whether the resource is missing or not yours: no existence disclosure.
+      return l10n.errorNotFound;
+    case ApiErrorKind.validation:
       return error.message.isNotEmpty ? error.message : l10n.errorUnknown;
+    case ApiErrorKind.rejected:
+      return l10n.errorUnknown;
     case ApiErrorKind.cancelled:
       return l10n.errorUnknown;
   }
