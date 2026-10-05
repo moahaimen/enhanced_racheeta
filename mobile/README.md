@@ -2,9 +2,10 @@
 
 The Racheeta patient/provider app. **Phase 11A** is the foundation (app shell, configuration, one
 API client, email/password authentication, session management, localization (Arabic RTL / English)
-and reusable UI). **Phase 11B (this change) adds the patient side**: provider discovery, provider
-detail, appointment booking and "My appointments" with cancellation. Provider-side screens, the
-marketplace/jobs/real estate and chat/notifications arrive in 11C–11E (see `docs/MASTER_PLAN.md`);
+and reusable UI). **Phase 11B** adds the patient side (provider discovery, detail, booking, "My appointments" with
+cancellation). **Phase 11C (this change) adds the provider and facility side**: dashboard,
+appointment availability and the bookings a provider received, with status transitions. The
+marketplace/jobs/real estate and chat/notifications arrive in 11D–11E (see `docs/MASTER_PLAN.md`);
 nothing unfinished is exposed in the app.
 
 - Flutter **3.47.6** / Dart **3.13.5** (pinned in `pubspec.yaml`, CI and `docs/DECISIONS.md`)
@@ -29,6 +30,7 @@ lib/
     home/  account/  shell/  signed-in screens and role-aware navigation
     discovery/               provider search, filters, detail, booking (data · application · presentation)
     reservations/            patient appointments list/detail, booking and cancel actions
+    provider/                provider & facility workspace: dashboard, availability, received bookings
   shared/                    theme, buttons, text field, loading/error/empty views, dialogs
   l10n/                      app_en.arb, app_ar.arb (+ generated code, committed)
 test/                        unit + widget tests (no network, no real credentials)
@@ -64,9 +66,10 @@ flutter test
 
 Regenerate localization code after editing an `.arb` file: `flutter gen-l10n` (output committed).
 
-## Not in 11B
+## Not in 11C
 
-Provider-side workspace (11C), marketplace, jobs and real estate (11D), chat, notifications and FCM
+Profile and service editing, facility membership management (the endpoints exist), marketplace, jobs
+and real estate (11D), chat, notifications and FCM
 device registration (11E), payments and store release. Android/iOS signing and Firebase configuration are deliberately
 absent from the repository. The IBM Plex Sans Arabic font from the design system is not bundled
 yet (system font is used); bundling it is a follow-up.
@@ -84,3 +87,20 @@ yet (system font is used); bundling it is a follow-up.
   need real async (`dio`) from a test body (e.g. `logout()` / `login()`) must be wrapped in
   `tester.runAsync`, and `pumpAndSettle` must not be used while a request is deliberately hanging.
   `test/openapi_contract_test.dart` reads `../docs/api/openapi.yaml` (run tests from `mobile/`).
+
+## Provider & facility workspace (11C)
+
+- Destinations *Dashboard*, *Availability* and *Bookings* appear only for accounts whose `/me` lists
+  `reservations.manage_received` (provider role); the backend additionally needs a provider profile
+  (403 → guidance). The dashboard (doctor or facility) is chosen by `GET /dashboards/`. Details:
+  `docs/RESERVATIONS.md` "Mobile provider and facility (Phase 11C)", ADR-055.
+- **Availability** is created from an active service with a duration, a date and a start time picked
+  in the device's time zone (sent as UTC). Overlap, future-time and in-use removal are the backend's.
+- **Bookings**: the provider's received reservations; transitions are offered from status and start
+  time as a hint, the backend decides, destructive ones need confirmation.
+- **Isolation**: provider data is keyed by account id, local state resets on an account change, and
+  a mutation finishing under another account is dropped (never shown, never invalidating).
+- **Testing**: besides the 11B notes — account switching is simulated with `switchAccountTo`
+  (a `/me` refresh that returns another account while the screen stays mounted), local pickers must
+  not use the shared progress button, and buttons from `AsyncActionButton` are full-width by theme
+  (don't put them in an unbounded `Row`).

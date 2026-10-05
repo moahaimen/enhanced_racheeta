@@ -1,11 +1,24 @@
 # Current State
 
 Date: 2026-10-03
-Branch: `feat/phase11b-patient-reservations` (from `main` `9282db373239d65ddc4dd7f1ea17e8721a8a0855`, the Phase 11A merge; post-merge CI #301 green)
+Branch: `feat/phase11c-provider-facility` (from `main` `82ae94d020394158ddcd8f1c6a85ffa7134e6b0a`, the Phase 11B merge; post-merge CI #308 green)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phases 9A–9C, Phase 10 and Phase 11A are DONE and merged** (11A: PR #14).
-- **Phase 11 — Flutter mobile is CURRENT, subphase 11B** (patient discovery and reservations). Draft PR; not merged. Do not merge 11B until exact-head CI and independent review are green and the owner explicitly says **`merge it`**. Do not start 11C.
+- **Phases 9A–9C, Phase 10, Phase 11A (PR #14) and Phase 11B (PR #15; accepted head `0acaf51950410daac12e5975d2f59157e521e531`, merge `82ae94d020394158ddcd8f1c6a85ffa7134e6b0a`, post-merge CI #308) are DONE and merged.**
+- **Phase 11 — Flutter mobile is CURRENT, subphase 11C** (provider & facility workspace). Draft PR; not merged. Do not merge 11C until exact-head CI and independent review are green and the owner explicitly says **`merge it`**. Do not start 11D.
+
+## Phase 11C summary — provider & facility workspace (see ADR-055)
+
+- `mobile/lib/features/provider/` (data · application · presentation), destinations *Dashboard*, *Availability*, *Bookings* shown only when `/me` lists `reservations.manage_received`; routes `/workspace`, `/workspace/availability`, `/workspace/availability/new`, `/workspace/reservations`, `/workspace/reservations/:id` (flat, not nested).
+- Endpoints used (all existing, no backend change): `GET /dashboards/`, `/dashboards/doctor|facility`, `GET /providers/me/services`, `GET|POST /reservations/provider/availability`, `DELETE /reservations/provider/availability/{id}`, `GET /reservations/provider`, `/reservations/provider/{id}`, `POST /reservations/provider/{id}/transition`.
+- Permission: UI gate is the `/me` capability; the backend requires role PROVIDER **and** a provider profile (403 → "create your provider profile on the website"). The dashboard kind comes from the server's index (facility wins over doctor), never from a role label. Individual providers and facilities share the same availability/reservation endpoints; the only difference is the dashboard (facility adds membership counts) — no facility-wide practitioner aggregation exists in the API and none is invented.
+- Transitions: PENDING → CONFIRMED (before start) / REJECTED / CANCELLED; CONFIRMED → COMPLETED and NO_SHOW (after start) / CANCELLED; offered as a hint from status + start time, the backend decides (`invalid_transition` is shown and the record refetched). Destructive ones need a confirmation dialog.
+- Availability: only an active service with a duration can be used; the start is picked in device-local time and sent as UTC (`localToUtcProvider`); overlap, "must be in the future" and in-use removal are the backend's (`slot_conflict`, `invalid_availability`, `slot_unavailable` → own messages). The provider list endpoint has no filter and includes inactive/past slots, so the screen shows active, not-yet-ended slots from the loaded pages (page size 100) with an explicit "load more" note.
+- Account isolation: provider data families are keyed by account id (a new account starts from loading, never from the previous value); list notifiers rebuild on account change; screen-local state resets via `ref.listen(accountIdProvider)`; mutations run through `_asAccount` (capture the account, drop a result and skip invalidation if the account changed); tested with the account switched through a `/me` refresh while the screen stays mounted.
+- Latent 11B leak fixed here: `reservationDetailProvider` is now keyed by (account, id).
+- Gaps (recorded, not invented): no profile or service editing on mobile; facility membership endpoints exist (`/providers/me/memberships*`) but staff management is out of 11C; no `reason` on transitions in the UI (the API accepts one); the availability list has no filter/booking state; no per-slot "reserved" flag.
+- Not run on an Android emulator/device yet: the first attempt (emulator + scratch backend) was aborted when the debug APK build exhausted free disk on the dev machine; verification so far is widget/unit/contract tests only.
+- Tests: 283 Flutter tests (scripted HTTP adapter, injected clock/wall clock/local→UTC; dio calls from test bodies under `tester.runAsync`; never `pumpAndSettle` while a button shows a progress indicator for a dialog), OpenAPI contract tests over `docs/api/openapi.yaml`.
 
 ## Phase 11B summary — patient discovery and reservations (see ADR-054)
 

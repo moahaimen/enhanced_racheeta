@@ -134,6 +134,14 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Privacy in the client:** the patient note is sent only on booking and shown only to its owner; logs carry method/path/status only; `Reservation.toString` carries no personal data; server error bodies are never displayed.
 - **Clock correctness:** timestamps without an offset are rejected so an appointment can never be silently read in the wrong zone.
 
+## Mobile provider and facility flows (Phase 11C)
+
+- **Authorization stays on the server.** The workspace is shown only when `/me` lists `reservations.manage_received` (a hint, followed live through permission changes, logout and account switching); every call is still authorized by the backend (PROVIDER role and a provider profile, ownership from the token). A deep link to a workspace route as a patient shows a refusal and sends no request.
+- **No cross-account state.** Provider data is keyed by the signed-in account id, list notifiers rebuild on an account change, and screen-local input/messages are reset. Mutations capture the initiating account: if another account is signed in when the call finishes, the result is dropped (no success or error text, no invalidation). Tested with the account switched through a `/me` refresh while the screen stays mounted and the new account's response held back.
+- **Scoped 404.** Another provider's reservation or slot is a plain 404 and is shown as one generic text; the existence of a record is never disclosed.
+- **No retry of mutations, no double submits.** Slot creation, removal and status transitions are single requests; buttons show progress and ignore further taps; destructive transitions need a confirmation.
+- **Privacy:** only fields of the provider reservation schema are shown (the patient's name and note, as the web provider screen does); contact fields the contract does not define are not rendered; logs carry method/path/status only and `ProviderReservation.toString` carries no personal data.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session
