@@ -257,3 +257,11 @@ services.
 - **PostGIS / proximity search** — coordinates are stored only; added when
   radius search is genuinely required.
 - Seller verification, listing deletion, map integration.
+
+## Mobile (Phase 11D)
+
+The Flutter app (`mobile/lib/features/real_estate/`) consumes the existing API only; it adds no endpoint or field.
+
+- **Public catalogue** (`GET /real-estate/listings`, no token): `search`, `transaction_type`, `property_type`, `governorate`, `ordering` (`price`, `-price`), paginated; detail shows the public fields, the seller summary and **only the contact values the listing's contact method makes public**, as plain text (no link is opened). Price/area are the backend's decimal strings (price on request when null) with the backend currency.
+- **Seller workspace** (capability `real_estate.manage_own_listings`): `GET /real-estate/owner/dashboard`, own listings list/detail (publication status, visibility, expiry) and `POST .../publish` / `.../unpublish` (unpublish confirmed). Backend rules (`invalid_transition`, completeness, expiry) are shown as fixed messages; another seller's listing is a 404.
+- Not in mobile: listing create/edit/delete, images, maps/coordinates, seller verification, chat.

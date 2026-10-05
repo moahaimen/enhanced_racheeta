@@ -142,6 +142,16 @@ No weakening of earlier decisions was needed to make tests pass.
 - **No retry of mutations, no double submits.** Slot creation, removal and status transitions are single requests; buttons show progress and ignore further taps; destructive transitions need a confirmation.
 - **Privacy:** only fields of the provider reservation schema are shown (the patient's name and note, as the web provider screen does); contact fields the contract does not define are not rendered; logs carry method/path/status only and `ProviderReservation.toString` carries no personal data.
 
+## Mobile marketplace, jobs and real-estate flows (Phase 11D)
+
+- **Authorization stays on the server.** Explore entries and workspaces are shown from `/me` capabilities (marketplace browse, company, seller) and, for recruiters, from the server's dashboard index; they are hints, followed live through logout and account switching. Every call is authorized by the backend (verified provider for the catalogue, medical-company/seller/organisation ownership for workspaces, active membership for recruiter calls).
+- **No cross-account state.** Marketplace, jobs and real-estate data are keyed by account id; list notifiers and search forms rebuild or reset on an account change; typed application notes, messages and "applied" state are discarded; buttons are keyed per account so a request still pending for A cannot disable B's button. Mutations capture the initiating account (`runAsAccount`): another account (or an unmounted screen) when the answer arrives means the result is dropped, nothing is invalidated and no message is shown.
+- **Scoped 404.** Another organisation's job, another company's product or another seller's listing is a plain 404, shown as one generic text.
+- **No retry of mutations, no double submits.** Apply, withdraw, close, publish/unpublish and activate/deactivate are single requests; buttons show progress and ignore further taps; withdraw, close, unpublish and deactivate need a confirmation.
+- **Error privacy.** Server `detail`/messages are never shown; typed codes map to fixed localized text. Logs carry method/path/status only.
+- **Data minimization.** The seeker's résumé `snapshot` of an application is never modelled or shown; recruiter application figures that the backend withholds stay hidden (never shown as zero); contact values appear only as the API returns them (the listing's own public contact method) and are not turned into links.
+- **No uploads, no external links.** No media is requested and no URL is opened; there is nothing to leak via referrers or intents.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

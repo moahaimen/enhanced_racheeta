@@ -3,9 +3,8 @@
 The Racheeta patient/provider app. **Phase 11A** is the foundation (app shell, configuration, one
 API client, email/password authentication, session management, localization (Arabic RTL / English)
 and reusable UI). **Phase 11B** adds the patient side (provider discovery, detail, booking, "My appointments" with
-cancellation). **Phase 11C (this change) adds the provider and facility side**: dashboard,
-appointment availability and the bookings a provider received, with status transitions. The
-marketplace/jobs/real estate and chat/notifications arrive in 11D–11E (see `docs/MASTER_PLAN.md`);
+cancellation). **Phase 11C** adds the provider and facility side (dashboard, availability, received bookings).
+**Phase 11D (this change) adds the marketplace, medical jobs and real estate** (public catalogues, own-record workspaces and the one-request lifecycle actions) behind an *Explore* section on Home. Chat/notifications arrive in 11E (see `docs/MASTER_PLAN.md`);
 nothing unfinished is exposed in the app.
 
 - Flutter **3.47.6** / Dart **3.13.5** (pinned in `pubspec.yaml`, CI and `docs/DECISIONS.md`)
@@ -31,6 +30,8 @@ lib/
     discovery/               provider search, filters, detail, booking (data · application · presentation)
     reservations/            patient appointments list/detail, booking and cancel actions
     provider/                provider & facility workspace: dashboard, availability, received bookings
+    explore/                 Home "Explore" entries gated by capabilities / dashboard index
+    real_estate/  marketplace/  jobs/   11D domains (data · application · presentation)
   shared/                    theme, buttons, text field, loading/error/empty views, dialogs
   l10n/                      app_en.arb, app_ar.arb (+ generated code, committed)
 test/                        unit + widget tests (no network, no real credentials)
@@ -66,10 +67,9 @@ flutter test
 
 Regenerate localization code after editing an `.arb` file: `flutter gen-l10n` (output committed).
 
-## Not in 11C
+## Not in 11D
 
-Profile and service editing, facility membership management (the endpoints exist), marketplace, jobs
-and real estate (11D), chat, notifications and FCM
+Create/edit forms for products, jobs and listings, applicant management, résumé/profile editing, images and uploads, external links, profile and service editing, facility membership management (the endpoints exist), chat, notifications and FCM
 device registration (11E), payments and store release. Android/iOS signing and Firebase configuration are deliberately
 absent from the repository. The IBM Plex Sans Arabic font from the design system is not bundled
 yet (system font is used); bundling it is a follow-up.
@@ -104,3 +104,12 @@ yet (system font is used); bundling it is a follow-up.
   (a `/me` refresh that returns another account while the screen stays mounted), local pickers must
   not use the shared progress button, and buttons from `AsyncActionButton` are full-width by theme
   (don't put them in an unbounded `Row`).
+
+## Marketplace, jobs and real estate (11D)
+
+- **Explore** (Home): Jobs and Real estate for everyone; Marketplace (`marketplace.view_targeted_products`), Company workspace (`marketplace.manage_own_products`), Seller workspace (`real_estate.manage_own_listings`) from `/me`; Recruiter workspace when the server's `GET /dashboards/` lists `recruiter` (membership is not a capability). Hints only; the backend authorizes. Details: `docs/MARKETPLACE.md`, `docs/JOBS.md`, `docs/REAL_ESTATE.md` "Mobile (Phase 11D)", ADR-056.
+- **Search/filters/pagination:** `SearchQuery` + `SearchFilterBar` (debounced 400 ms) + `PagedListView` on `PagedNotifier`; only documented query parameters are sent (the marketplace has a category filter and no search); a new query or account restarts at page 1 and a late answer for an old query is dropped.
+- **Mutations:** `runAsAccount` (capture the account, run once, drop the result if the account changed or the screen was unmounted); never retried; buttons keyed per account; withdraw/close/unpublish/deactivate confirmed.
+- **Dates and money:** job deadlines are calendar DATES (never zone-converted); prices/salaries are the backend decimal strings with the backend currency.
+- **Testing:** `FakeBackend` scripts, `switchAccountTo` (keeps the route mounted while `/me` changes account). `test/openapi_contract_test.dart` also reads `../backend/apps/*/types.py` to pin the vocabularies.
+- **Android check (local scratch backend):** `flutter build apk --debug --target-platform android-arm64`, install on the emulator, `--dart-define` not needed (default `http://10.0.2.2:8000`); run the backend with `ALLOWED_HOSTS` including `10.0.2.2`.
