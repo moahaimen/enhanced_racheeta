@@ -1063,6 +1063,480 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The appointment was cancelled.'**
   String get cancelSuccess;
+
+  /// No description provided for @navWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get navWorkspace;
+
+  /// No description provided for @navSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability'**
+  String get navSchedule;
+
+  /// No description provided for @navBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get navBookings;
+
+  /// No description provided for @providerOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This area is for provider accounts.'**
+  String get providerOnly;
+
+  /// No description provided for @providerProfileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your provider profile on the Racheeta website to use this area.'**
+  String get providerProfileMissing;
+
+  /// No description provided for @dashboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboardTitle;
+
+  /// No description provided for @dashboardVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get dashboardVerification;
+
+  /// No description provided for @verificationUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not verified'**
+  String get verificationUnverified;
+
+  /// No description provided for @verificationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get verificationPending;
+
+  /// No description provided for @verificationVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get verificationVerified;
+
+  /// No description provided for @verificationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get verificationRejected;
+
+  /// No description provided for @verificationSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get verificationSuspended;
+
+  /// No description provided for @dashboardVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible to patients'**
+  String get dashboardVisible;
+
+  /// No description provided for @dashboardHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visible to patients'**
+  String get dashboardHidden;
+
+  /// No description provided for @dashboardReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservations'**
+  String get dashboardReservations;
+
+  /// No description provided for @dashboardTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get dashboardTotal;
+
+  /// No description provided for @dashboardUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get dashboardUpcoming;
+
+  /// No description provided for @dashboardUpcomingList.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming appointments'**
+  String get dashboardUpcomingList;
+
+  /// No description provided for @dashboardNoUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming appointments.'**
+  String get dashboardNoUpcoming;
+
+  /// No description provided for @dashboardReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews'**
+  String get dashboardReviews;
+
+  /// No description provided for @dashboardOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers'**
+  String get dashboardOffers;
+
+  /// No description provided for @offersTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total offers'**
+  String get offersTotal;
+
+  /// No description provided for @offersRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running now'**
+  String get offersRunning;
+
+  /// No description provided for @offersScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled'**
+  String get offersScheduled;
+
+  /// No description provided for @dashboardUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get dashboardUnread;
+
+  /// No description provided for @unreadNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get unreadNotifications;
+
+  /// No description provided for @unreadMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get unreadMessages;
+
+  /// No description provided for @dashboardPractitioners.
+  ///
+  /// In en, this message translates to:
+  /// **'Practitioners'**
+  String get dashboardPractitioners;
+
+  /// No description provided for @practitionersActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get practitionersActive;
+
+  /// No description provided for @practitionersIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming requests'**
+  String get practitionersIncoming;
+
+  /// No description provided for @practitionersOutgoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Outgoing invitations'**
+  String get practitionersOutgoing;
+
+  /// No description provided for @scheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability'**
+  String get scheduleTitle;
+
+  /// No description provided for @scheduleAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add availability'**
+  String get scheduleAdd;
+
+  /// No description provided for @scheduleEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming availability'**
+  String get scheduleEmptyTitle;
+
+  /// No description provided for @scheduleEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the times patients can book.'**
+  String get scheduleEmptyBody;
+
+  /// No description provided for @scheduleNoneLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming times in the pages loaded so far.'**
+  String get scheduleNoneLoaded;
+
+  /// No description provided for @slotRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get slotRemove;
+
+  /// No description provided for @slotRemoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Removing…'**
+  String get slotRemoving;
+
+  /// No description provided for @slotRemoveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this time?'**
+  String get slotRemoveConfirmTitle;
+
+  /// No description provided for @slotRemoveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Patients will no longer be able to book it.'**
+  String get slotRemoveConfirmBody;
+
+  /// No description provided for @slotRemoveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get slotRemoveAction;
+
+  /// No description provided for @slotKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get slotKeep;
+
+  /// No description provided for @slotRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'The time was removed.'**
+  String get slotRemoved;
+
+  /// No description provided for @slotCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability added.'**
+  String get slotCreated;
+
+  /// No description provided for @slotFormTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add availability'**
+  String get slotFormTitle;
+
+  /// No description provided for @slotService.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get slotService;
+
+  /// No description provided for @slotPickDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a date'**
+  String get slotPickDate;
+
+  /// No description provided for @slotPickTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a start time'**
+  String get slotPickTime;
+
+  /// No description provided for @slotCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create availability'**
+  String get slotCreate;
+
+  /// No description provided for @slotCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get slotCreating;
+
+  /// No description provided for @slotNoServices.
+  ///
+  /// In en, this message translates to:
+  /// **'You need an active service with a duration before adding availability. Set one up on the Racheeta website.'**
+  String get slotNoServices;
+
+  /// No description provided for @slotSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a service, a date and a start time.'**
+  String get slotSelectAll;
+
+  /// No description provided for @slotBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to availability'**
+  String get slotBack;
+
+  /// No description provided for @errorSlotOverlap.
+  ///
+  /// In en, this message translates to:
+  /// **'This time overlaps another active time.'**
+  String get errorSlotOverlap;
+
+  /// No description provided for @errorSlotPast.
+  ///
+  /// In en, this message translates to:
+  /// **'The start time must be in the future.'**
+  String get errorSlotPast;
+
+  /// No description provided for @errorSlotService.
+  ///
+  /// In en, this message translates to:
+  /// **'This service can\'t be used for availability. It must be active and have a duration.'**
+  String get errorSlotService;
+
+  /// No description provided for @errorSlotInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'A live booking uses this time, so it can\'t be removed.'**
+  String get errorSlotInUse;
+
+  /// No description provided for @bookingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get bookingsTitle;
+
+  /// No description provided for @bookingsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get bookingsEmptyTitle;
+
+  /// No description provided for @bookingsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings from patients will appear here.'**
+  String get bookingsEmptyBody;
+
+  /// No description provided for @bookingDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get bookingDetailTitle;
+
+  /// No description provided for @patientLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient'**
+  String get patientLabel;
+
+  /// No description provided for @patientNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient\'s note'**
+  String get patientNoteLabel;
+
+  /// No description provided for @actionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get actionConfirm;
+
+  /// No description provided for @actionConfirming.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming…'**
+  String get actionConfirming;
+
+  /// No description provided for @actionReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get actionReject;
+
+  /// No description provided for @actionCancelBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get actionCancelBooking;
+
+  /// No description provided for @actionComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as completed'**
+  String get actionComplete;
+
+  /// No description provided for @actionNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as no-show'**
+  String get actionNoShow;
+
+  /// No description provided for @actionUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating…'**
+  String get actionUpdating;
+
+  /// No description provided for @confirmRejectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this booking?'**
+  String get confirmRejectTitle;
+
+  /// No description provided for @confirmRejectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The patient will see the new status. This cannot be undone.'**
+  String get confirmRejectBody;
+
+  /// No description provided for @confirmNoShowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as no-show?'**
+  String get confirmNoShowTitle;
+
+  /// No description provided for @confirmNoShowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The patient will see the new status. This cannot be undone.'**
+  String get confirmNoShowBody;
+
+  /// No description provided for @confirmCancelBookingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this booking?'**
+  String get confirmCancelBookingTitle;
+
+  /// No description provided for @confirmCancelBookingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The patient will see the new status. This cannot be undone.'**
+  String get confirmCancelBookingBody;
+
+  /// No description provided for @confirmKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep booking'**
+  String get confirmKeep;
+
+  /// No description provided for @transitionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'The booking was updated.'**
+  String get transitionDone;
+
+  /// No description provided for @errorTransitionRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'This booking can\'t be changed that way right now.'**
+  String get errorTransitionRefused;
 }
 
 class _AppLocalizationsDelegate

@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/states.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/reservation_actions.dart';
 import '../application/reservation_providers.dart';
 import '../data/reservation_models.dart';
@@ -25,7 +26,8 @@ class ReservationDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final detail = ref.watch(reservationDetailProvider(reservationId));
+    final key = (account: ref.watch(accountIdProvider), id: reservationId);
+    final detail = ref.watch(reservationDetailProvider(key));
     // While reloading (after a cancellation) the last value stays on screen so the page state
     // (its confirmation message) survives; the refreshed record replaces it when it arrives.
     if (detail.hasValue) {
@@ -40,8 +42,7 @@ class ReservationDetailPage extends ConsumerWidget {
           message: error is ApiException
               ? apiErrorMessage(l10n, error)
               : l10n.errorUnknown,
-          onRetry: () async =>
-              ref.invalidate(reservationDetailProvider(reservationId)),
+          onRetry: () async => ref.invalidate(reservationDetailProvider(key)),
         ),
       );
     }
@@ -95,7 +96,7 @@ class _DetailState extends ConsumerState<_Detail> {
         _isError = true;
       });
       // The backend refused (or the state changed elsewhere): show what is true now.
-      ref.invalidate(reservationDetailProvider(widget.reservation.id));
+      ref.invalidate(reservationDetailProvider);
     }
   }
 

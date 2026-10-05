@@ -161,6 +161,16 @@ Map<String, Object?> pageJson(
 final List<Override> clockOverrides = [
   nowProvider.overrideWithValue(() => testNow),
   wallClockProvider.overrideWithValue((utc) => utc.toUtc().add(testOffset)),
+  // the inverse: a date/time picked in the UTC+3 wall clock, as a UTC instant
+  localToUtcProvider.overrideWithValue(
+    (wall) => DateTime.utc(
+      wall.year,
+      wall.month,
+      wall.day,
+      wall.hour,
+      wall.minute,
+    ).subtract(testOffset),
+  ),
 ];
 
 /// Scripts the session endpoints so the app starts signed in as [accountJsonBody].

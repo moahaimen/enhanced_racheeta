@@ -520,4 +520,251 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancelSuccess => 'The appointment was cancelled.';
+
+  @override
+  String get navWorkspace => 'Dashboard';
+
+  @override
+  String get navSchedule => 'Availability';
+
+  @override
+  String get navBookings => 'Bookings';
+
+  @override
+  String get providerOnly => 'This area is for provider accounts.';
+
+  @override
+  String get providerProfileMissing =>
+      'Create your provider profile on the Racheeta website to use this area.';
+
+  @override
+  String get dashboardTitle => 'Dashboard';
+
+  @override
+  String get dashboardVerification => 'Verification';
+
+  @override
+  String get verificationUnverified => 'Not verified';
+
+  @override
+  String get verificationPending => 'Pending review';
+
+  @override
+  String get verificationVerified => 'Verified';
+
+  @override
+  String get verificationRejected => 'Rejected';
+
+  @override
+  String get verificationSuspended => 'Suspended';
+
+  @override
+  String get dashboardVisible => 'Visible to patients';
+
+  @override
+  String get dashboardHidden => 'Not visible to patients';
+
+  @override
+  String get dashboardReservations => 'Reservations';
+
+  @override
+  String get dashboardTotal => 'Total';
+
+  @override
+  String get dashboardUpcoming => 'Upcoming';
+
+  @override
+  String get dashboardUpcomingList => 'Upcoming appointments';
+
+  @override
+  String get dashboardNoUpcoming => 'No upcoming appointments.';
+
+  @override
+  String get dashboardReviews => 'Reviews';
+
+  @override
+  String get dashboardOffers => 'Offers';
+
+  @override
+  String get offersTotal => 'Total offers';
+
+  @override
+  String get offersRunning => 'Running now';
+
+  @override
+  String get offersScheduled => 'Scheduled';
+
+  @override
+  String get dashboardUnread => 'Unread';
+
+  @override
+  String get unreadNotifications => 'Notifications';
+
+  @override
+  String get unreadMessages => 'Messages';
+
+  @override
+  String get dashboardPractitioners => 'Practitioners';
+
+  @override
+  String get practitionersActive => 'Active';
+
+  @override
+  String get practitionersIncoming => 'Incoming requests';
+
+  @override
+  String get practitionersOutgoing => 'Outgoing invitations';
+
+  @override
+  String get scheduleTitle => 'Availability';
+
+  @override
+  String get scheduleAdd => 'Add availability';
+
+  @override
+  String get scheduleEmptyTitle => 'No upcoming availability';
+
+  @override
+  String get scheduleEmptyBody => 'Add the times patients can book.';
+
+  @override
+  String get scheduleNoneLoaded =>
+      'No upcoming times in the pages loaded so far.';
+
+  @override
+  String get slotRemove => 'Remove';
+
+  @override
+  String get slotRemoving => 'Removing…';
+
+  @override
+  String get slotRemoveConfirmTitle => 'Remove this time?';
+
+  @override
+  String get slotRemoveConfirmBody =>
+      'Patients will no longer be able to book it.';
+
+  @override
+  String get slotRemoveAction => 'Remove';
+
+  @override
+  String get slotKeep => 'Keep';
+
+  @override
+  String get slotRemoved => 'The time was removed.';
+
+  @override
+  String get slotCreated => 'Availability added.';
+
+  @override
+  String get slotFormTitle => 'Add availability';
+
+  @override
+  String get slotService => 'Service';
+
+  @override
+  String get slotPickDate => 'Choose a date';
+
+  @override
+  String get slotPickTime => 'Choose a start time';
+
+  @override
+  String get slotCreate => 'Create availability';
+
+  @override
+  String get slotCreating => 'Adding…';
+
+  @override
+  String get slotNoServices =>
+      'You need an active service with a duration before adding availability. Set one up on the Racheeta website.';
+
+  @override
+  String get slotSelectAll => 'Choose a service, a date and a start time.';
+
+  @override
+  String get slotBack => 'Back to availability';
+
+  @override
+  String get errorSlotOverlap => 'This time overlaps another active time.';
+
+  @override
+  String get errorSlotPast => 'The start time must be in the future.';
+
+  @override
+  String get errorSlotService =>
+      'This service can\'t be used for availability. It must be active and have a duration.';
+
+  @override
+  String get errorSlotInUse =>
+      'A live booking uses this time, so it can\'t be removed.';
+
+  @override
+  String get bookingsTitle => 'Bookings';
+
+  @override
+  String get bookingsEmptyTitle => 'No bookings yet';
+
+  @override
+  String get bookingsEmptyBody => 'Bookings from patients will appear here.';
+
+  @override
+  String get bookingDetailTitle => 'Booking';
+
+  @override
+  String get patientLabel => 'Patient';
+
+  @override
+  String get patientNoteLabel => 'Patient\'s note';
+
+  @override
+  String get actionConfirm => 'Confirm';
+
+  @override
+  String get actionConfirming => 'Confirming…';
+
+  @override
+  String get actionReject => 'Reject';
+
+  @override
+  String get actionCancelBooking => 'Cancel booking';
+
+  @override
+  String get actionComplete => 'Mark as completed';
+
+  @override
+  String get actionNoShow => 'Mark as no-show';
+
+  @override
+  String get actionUpdating => 'Updating…';
+
+  @override
+  String get confirmRejectTitle => 'Reject this booking?';
+
+  @override
+  String get confirmRejectBody =>
+      'The patient will see the new status. This cannot be undone.';
+
+  @override
+  String get confirmNoShowTitle => 'Mark as no-show?';
+
+  @override
+  String get confirmNoShowBody =>
+      'The patient will see the new status. This cannot be undone.';
+
+  @override
+  String get confirmCancelBookingTitle => 'Cancel this booking?';
+
+  @override
+  String get confirmCancelBookingBody =>
+      'The patient will see the new status. This cannot be undone.';
+
+  @override
+  String get confirmKeep => 'Keep booking';
+
+  @override
+  String get transitionDone => 'The booking was updated.';
+
+  @override
+  String get errorTransitionRefused =>
+      'This booking can\'t be changed that way right now.';
 }

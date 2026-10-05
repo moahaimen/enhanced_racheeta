@@ -277,6 +277,39 @@ void main() {
     });
 
     test(
+      'deleteNoContent sends DELETE with the bearer token and accepts 204',
+      () async {
+        await signIn(h);
+        h.backend.on('DELETE', '/slot/1', (_) => FakeBackend.noContent());
+        await h.container.read(apiClientProvider).deleteNoContent('/slot/1');
+        final sent = h.backend.to('DELETE', '/slot/1').single;
+        expect(sent.authorization, 'Bearer access-1');
+        expect(sent.body, isNull);
+      },
+    );
+
+    test(
+      'deleteNoContent maps a refusal to a typed exception and does not retry',
+      () async {
+        await signIn(h);
+        h.backend.on(
+          'DELETE',
+          '/slot/1',
+          (_) => FakeBackend.error(409, 'slot_unavailable'),
+        );
+        await expectLater(
+          h.container.read(apiClientProvider).deleteNoContent('/slot/1'),
+          throwsA(
+            isA<ApiException>()
+                .having((e) => e.code, 'code', 'slot_unavailable')
+                .having((e) => e.kind, 'kind', ApiErrorKind.rejected),
+          ),
+        );
+        expect(h.backend.count('DELETE', '/slot/1'), 1);
+      },
+    );
+
+    test(
       'getPage parses the pagination envelope and sends page/page_size',
       () async {
         await signIn(h);

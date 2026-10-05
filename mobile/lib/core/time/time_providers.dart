@@ -10,3 +10,7 @@ final nowProvider = Provider<DateTime Function()>(
 
 /// Injectable UTC → wall-clock conversion (the device's local time in production).
 final wallClockProvider = Provider<WallClock>((ref) => deviceWallClock);
+
+/// Injectable local → UTC conversion for a date/time the user picked (device time zone in
+/// production).
+final localToUtcProvider = Provider<LocalToUtc>((ref) => deviceLocalToUtc);

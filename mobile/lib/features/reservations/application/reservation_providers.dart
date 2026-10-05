@@ -34,10 +34,16 @@ final reservationListProvider =
       retry: noRetry,
     );
 
+/// A patient reservation, keyed by (account, id). The account is part of the key so that when the
+/// signed-in account changes the new account starts from a loading state instead of seeing the
+/// previous account's reservation while its own request is in flight.
+typedef ReservationDetailKey = ({String? account, String id});
+
 final reservationDetailProvider = FutureProvider.autoDispose
-    .family<Reservation, String>((ref, id) {
-      ref.watch(accountIdProvider);
+    .family<Reservation, ReservationDetailKey>((ref, key) {
       final token = CancelToken();
       ref.onDispose(() => token.cancel('disposed'));
-      return ref.watch(reservationsApiProvider).detail(id, cancelToken: token);
+      return ref
+          .watch(reservationsApiProvider)
+          .detail(key.id, cancelToken: token);
     }, retry: noRetry);

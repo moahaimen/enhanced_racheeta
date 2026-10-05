@@ -5,7 +5,8 @@
 ///   string would be silently read as *local* time by `DateTime.parse`, so it is rejected;
 /// * keeps every instant as UTC internally and sends UTC to the API;
 /// * converts to the **device's** local time only for display (`toWallClock`), including the
-///   calendar day used to group appointment slots.
+///   calendar day used to group appointment slots, and converts a date/time the user *picked* back
+///   to UTC (`deviceLocalToUtc`) before sending it.
 library;
 
 final RegExp _hasOffset = RegExp(
@@ -28,6 +29,18 @@ String toWireInstant(DateTime instant) => instant.toUtc().toIso8601String();
 typedef WallClock = DateTime Function(DateTime utc);
 
 DateTime deviceWallClock(DateTime utc) => utc.toUtc().toLocal();
+
+/// The inverse of [WallClock]: the UTC instant of a wall-clock date and time the user picked in the
+/// device's time zone (used when a provider chooses when an appointment slot starts).
+typedef LocalToUtc = DateTime Function(DateTime wallClock);
+
+DateTime deviceLocalToUtc(DateTime wallClock) => DateTime(
+  wallClock.year,
+  wallClock.month,
+  wallClock.day,
+  wallClock.hour,
+  wallClock.minute,
+).toUtc();
 
 /// A calendar day (no time) used to group slots by the user's local day.
 DateTime dayOf(DateTime wallClock) =>

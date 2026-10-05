@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../auth/data/auth_models.dart';
+import '../provider/provider_capability.dart';
 
 /// One entry of the signed-in navigation. Later subphases (11B–11E) append their destinations
 /// here; each declares who may see it. Availability is derived from the account returned by
@@ -70,11 +71,43 @@ final ShellDestination reservationsDestination = ShellDestination(
   isAvailableFor: (account) => account.hasPermission('reservations.create_own'),
 );
 
+/// 11C provider / facility destinations, shown only to accounts whose `/me` lists the provider
+/// capability (the backend still requires a provider profile on every call).
+final ShellDestination workspaceDestination = ShellDestination(
+  id: 'workspace',
+  path: '/workspace',
+  icon: Icons.dashboard_outlined,
+  selectedIcon: Icons.dashboard,
+  label: (l10n) => l10n.navWorkspace,
+  isAvailableFor: (account) => account.hasPermission(providerCapability),
+);
+
+final ShellDestination scheduleDestination = ShellDestination(
+  id: 'schedule',
+  path: '/workspace/availability',
+  icon: Icons.edit_calendar_outlined,
+  selectedIcon: Icons.edit_calendar,
+  label: (l10n) => l10n.navSchedule,
+  isAvailableFor: (account) => account.hasPermission(providerCapability),
+);
+
+final ShellDestination providerBookingsDestination = ShellDestination(
+  id: 'provider-bookings',
+  path: '/workspace/reservations',
+  icon: Icons.assignment_outlined,
+  selectedIcon: Icons.assignment,
+  label: (l10n) => l10n.navBookings,
+  isAvailableFor: (account) => account.hasPermission(providerCapability),
+);
+
 /// Everything the shell can show, in display order. Later subphases append here.
 final List<ShellDestination> appDestinations = <ShellDestination>[
   _home,
   discoverDestination,
   reservationsDestination,
+  workspaceDestination,
+  scheduleDestination,
+  providerBookingsDestination,
   _account,
 ];
 

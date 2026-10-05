@@ -139,3 +139,50 @@ No `can_cancel` field; no idempotency key on `POST /reservations`; no provider t
 images and coordinates are not rendered; no rescheduling; no status filter on `GET /reservations/me`.
 `ReservationPatient.provider_id` is documented as always present but the backend nulls it when a
 provider is deleted, so the app renders such a reservation from its snapshots.
+
+## Mobile provider and facility (Phase 11C)
+
+The Flutter app (`mobile/`) offers the **provider side** to accounts whose `/me` lists
+`reservations.manage_received`: a dashboard, appointment availability, and the bookings the
+provider received. It uses the endpoints in the *API* section unchanged; the backend stays
+authoritative for every decision. Individual providers and facilities use the same endpoints (both
+are `PROVIDER` accounts with a provider profile; a facility is a `FACILITY`-kind profile). The only
+difference is the dashboard: the server's `GET /dashboards/` says whether to open the doctor or the
+facility one, and a facility dashboard adds its own membership counts.
+
+- **Availability.** A slot is created from an **active service that has a duration**, a date and a
+  start time chosen in the device's time zone; the app sends the start as a UTC instant and the
+  backend computes the end (start + duration). Overlap with another active slot (`slot_conflict`),
+  "must start in the future" (`invalid_availability`) and unusable services (`service_unavailable`)
+  are the backend's rules and have their own messages. Removing a slot calls
+  `DELETE /reservations/provider/availability/{id}`; a slot used by a live reservation is refused
+  (`slot_unavailable`, "a live booking uses this time"). Nothing is generated locally: the list is
+  reloaded from the backend after each change. `GET /reservations/provider/availability` has no
+  filter and includes inactive and past slots (soonest first), so the screen requests 100 per page and
+  shows the **active, not-yet-ended** slots of the pages loaded so far, grouped by local day, with an
+  explicit note and *Load more* when older entries fill the first pages.
+- **Bookings.** `GET /reservations/provider` (paginated, newest appointment first) and
+  `/reservations/provider/{id}`: patient name, service, local time, price, duration, the patient's
+  note and the transition history, exactly the fields of the provider reservation schema.
+- **Transitions.** `POST /reservations/provider/{id}/transition {status}`. The backend state machine
+  (`PROVIDER_TRANSITIONS` and the time rules in `transition_as_provider`) is: PENDING → CONFIRMED
+  (only before the appointment starts), REJECTED, CANCELLED; CONFIRMED → COMPLETED and NO_SHOW (only
+  after it started), CANCELLED; nothing else. The app offers buttons from the current status and
+  start time as a **hint**; a refusal (`invalid_transition`) is shown and the record refetched.
+  Reject, cancel and no-show ask for confirmation. While one transition runs the others are locked.
+  After a success the detail, the list and the dashboard are reloaded.
+- **No automatic retry and no double submit.** Slot creation, slot removal and transitions are one
+  request per deliberate tap, the button shows progress and ignores further taps, and a failure is
+  reported once.
+- **Account isolation.** Data is keyed by the signed-in account, local screen state is reset when the
+  account changes, and a mutation that finishes after the account changed is dropped without showing
+  anything or invalidating anything (see ADR-055).
+- **Timezone.** The 11B policy applies: offsets required, UTC on the wire, device-local display. A
+  date/time the provider picks is converted back to UTC with the injectable `localToUtcProvider`.
+
+### Known gaps (not invented around)
+
+No facility-wide aggregation of its practitioners' reservations (the API has no such relation);
+facility membership management endpoints exist but are not part of 11C; no profile or service
+editing on mobile; the transition `reason` (accepted by the API) is not collected; the availability
+list has no filter and no "reserved" flag per slot.

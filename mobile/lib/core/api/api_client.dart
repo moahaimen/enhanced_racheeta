@@ -115,6 +115,16 @@ class ApiClient {
     );
   }
 
+  /// `DELETE` for endpoints that answer 204 / no body (never retried by this method; the single
+  /// post-refresh replay only happens after a 401, i.e. before the server processed the call).
+  Future<void> deleteNoContent(
+    String path, {
+    bool auth = true,
+    CancelToken? cancelToken,
+  }) async {
+    await _request('DELETE', path, auth: auth, cancelToken: cancelToken);
+  }
+
   /// One page of a list endpoint (`?page=`, `?page_size=`). The backend caps `page_size` at 100.
   Future<Page<T>> getPage<T>(
     String path, {

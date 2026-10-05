@@ -15,6 +15,11 @@ import '../features/home/presentation/home_page.dart';
 import '../features/reservations/presentation/reservation_detail_page.dart';
 import '../features/reservations/presentation/reservations_page.dart';
 import '../features/shell/app_shell.dart';
+import '../features/provider/presentation/availability_page.dart';
+import '../features/provider/presentation/dashboard_page.dart';
+import '../features/provider/presentation/provider_reservation_detail_page.dart';
+import '../features/provider/presentation/provider_reservations_page.dart';
+import '../features/provider/presentation/slot_form_page.dart';
 import '../shared/widgets/app_scaffold.dart';
 import '../shared/widgets/states.dart';
 
@@ -25,6 +30,10 @@ abstract final class AppRoutes {
   static const account = '/account';
   static const providers = '/providers';
   static const reservations = '/reservations';
+  static const workspace = '/workspace';
+  static const workspaceAvailability = '/workspace/availability';
+  static const workspaceAvailabilityNew = '/workspace/availability/new';
+  static const workspaceReservations = '/workspace/reservations';
 }
 
 /// Where a given session state is allowed to be. The router is a pure function of the session:
@@ -88,6 +97,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ],
               ),
             ],
+          ),
+          // 11C provider / facility workspace. Flat routes (not nested) so opening one screen
+          // never builds, and fetches for, the others underneath it.
+          GoRoute(
+            path: AppRoutes.workspace,
+            builder: (_, _) => const WorkspacePage(),
+          ),
+          GoRoute(
+            path: AppRoutes.workspaceAvailability,
+            builder: (_, _) => const AvailabilityPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.workspaceAvailabilityNew,
+            builder: (_, _) => const SlotFormPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.workspaceReservations,
+            builder: (_, _) => const ProviderReservationsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.workspaceReservations}/:id',
+            builder: (_, state) => ProviderReservationDetailPage(
+              reservationId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: AppRoutes.reservations,
