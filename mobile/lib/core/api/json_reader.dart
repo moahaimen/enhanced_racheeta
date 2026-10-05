@@ -63,6 +63,14 @@ final class JsonReader {
     return value is String && value.isNotEmpty ? parseInstant(value) : null;
   }
 
+  /// A backend DATE (`YYYY-MM-DD`); null when absent. See `parseCalendarDate`.
+  DateTime? calendarDateOrNull(String key) {
+    final value = _map[key];
+    return value is String && value.isNotEmpty
+        ? parseCalendarDate(value)
+        : null;
+  }
+
   JsonReader? objectOrNull(String key) {
     final value = _map[key];
     return value is Map<String, Object?> ? JsonReader._(value, key) : null;

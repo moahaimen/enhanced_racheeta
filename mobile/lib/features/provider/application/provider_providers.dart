@@ -22,11 +22,6 @@ final Provider<bool> canUseProviderWorkspaceProvider = Provider<bool>((ref) {
       session.account.hasPermission(providerCapability);
 });
 
-/// A record id scoped to the signed-in account. Families keyed by this never hand one account's
-/// cached value to another: when the account changes, the key changes, so the new account starts
-/// from a loading state instead of seeing the previous account's data while it reloads.
-typedef AccountScoped<T> = ({String? account, T value});
-
 /// The dashboard to show, decided by the server (`GET /dashboards/`): `null` when the account has
 /// no provider dashboard (for example no provider profile yet).
 final providerDashboardProvider = FutureProvider.autoDispose

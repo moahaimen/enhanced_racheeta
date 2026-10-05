@@ -1537,6 +1537,420 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This booking can\'t be changed that way right now.'**
   String get errorTransitionRefused;
+
+  /// No description provided for @searchGenericHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchGenericHint;
+
+  /// No description provided for @filtersGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersGenericTitle;
+
+  /// No description provided for @realEstateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Real estate'**
+  String get realEstateTitle;
+
+  /// No description provided for @realEstateSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search title, description or district'**
+  String get realEstateSearchHint;
+
+  /// No description provided for @realEstateFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter properties'**
+  String get realEstateFiltersTitle;
+
+  /// No description provided for @filterTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction'**
+  String get filterTransaction;
+
+  /// No description provided for @transactionSale.
+  ///
+  /// In en, this message translates to:
+  /// **'For sale'**
+  String get transactionSale;
+
+  /// No description provided for @transactionRent.
+  ///
+  /// In en, this message translates to:
+  /// **'For rent'**
+  String get transactionRent;
+
+  /// No description provided for @filterPropertyType.
+  ///
+  /// In en, this message translates to:
+  /// **'Property type'**
+  String get filterPropertyType;
+
+  /// No description provided for @propertyClinic.
+  ///
+  /// In en, this message translates to:
+  /// **'Clinic'**
+  String get propertyClinic;
+
+  /// No description provided for @propertyApartmentForClinic.
+  ///
+  /// In en, this message translates to:
+  /// **'Apartment for a clinic'**
+  String get propertyApartmentForClinic;
+
+  /// No description provided for @propertyMedicalBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical building'**
+  String get propertyMedicalBuilding;
+
+  /// No description provided for @propertyPharmacyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharmacy location'**
+  String get propertyPharmacyLocation;
+
+  /// No description provided for @propertyLaboratoryLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Laboratory location'**
+  String get propertyLaboratoryLocation;
+
+  /// No description provided for @propertyMedicalCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical center'**
+  String get propertyMedicalCenter;
+
+  /// No description provided for @propertyHospitalBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital building'**
+  String get propertyHospitalBuilding;
+
+  /// No description provided for @propertyCommercialMedical.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial medical property'**
+  String get propertyCommercialMedical;
+
+  /// No description provided for @propertyInvestmentLand.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical investment land'**
+  String get propertyInvestmentLand;
+
+  /// No description provided for @sortPriceAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: low to high'**
+  String get sortPriceAsc;
+
+  /// No description provided for @sortPriceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: high to low'**
+  String get sortPriceDesc;
+
+  /// No description provided for @realEstateEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No properties found'**
+  String get realEstateEmptyTitle;
+
+  /// No description provided for @priceOnRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Price on request'**
+  String get priceOnRequest;
+
+  /// No description provided for @areaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get areaLabel;
+
+  /// No description provided for @areaValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{area} m²'**
+  String areaValue(String area);
+
+  /// No description provided for @districtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'District'**
+  String get districtLabel;
+
+  /// No description provided for @suitableForLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Suitable for'**
+  String get suitableForLabel;
+
+  /// No description provided for @facilitiesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Facilities'**
+  String get facilitiesLabel;
+
+  /// No description provided for @listedByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed by'**
+  String get listedByLabel;
+
+  /// No description provided for @sellerOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get sellerOwner;
+
+  /// No description provided for @sellerAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get sellerAgent;
+
+  /// No description provided for @useClinic.
+  ///
+  /// In en, this message translates to:
+  /// **'Clinic'**
+  String get useClinic;
+
+  /// No description provided for @usePharmacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharmacy'**
+  String get usePharmacy;
+
+  /// No description provided for @useLaboratory.
+  ///
+  /// In en, this message translates to:
+  /// **'Laboratory'**
+  String get useLaboratory;
+
+  /// No description provided for @useMedicalCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical center'**
+  String get useMedicalCenter;
+
+  /// No description provided for @useHospital.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospital'**
+  String get useHospital;
+
+  /// No description provided for @useGeneralMedical.
+  ///
+  /// In en, this message translates to:
+  /// **'General medical use'**
+  String get useGeneralMedical;
+
+  /// No description provided for @useMedicalInvestment.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical investment'**
+  String get useMedicalInvestment;
+
+  /// No description provided for @listingDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Property'**
+  String get listingDetailTitle;
+
+  /// No description provided for @listingValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing valid until'**
+  String get listingValidUntil;
+
+  /// No description provided for @sellerWorkspaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Property owner'**
+  String get sellerWorkspaceTitle;
+
+  /// No description provided for @sellerOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This area is for property-owner accounts.'**
+  String get sellerOnly;
+
+  /// No description provided for @sellerProfileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your seller profile on the Racheeta website to use this area.'**
+  String get sellerProfileMissing;
+
+  /// No description provided for @sellerListingsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total listings'**
+  String get sellerListingsTotal;
+
+  /// No description provided for @sellerDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Drafts'**
+  String get sellerDraft;
+
+  /// No description provided for @sellerPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get sellerPublished;
+
+  /// No description provided for @sellerVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible to the public'**
+  String get sellerVisible;
+
+  /// No description provided for @sellerExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get sellerExpired;
+
+  /// No description provided for @ownerListingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My listings'**
+  String get ownerListingsTitle;
+
+  /// No description provided for @ownerListingsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no listings yet'**
+  String get ownerListingsEmpty;
+
+  /// No description provided for @ownerListingsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create listings on the Racheeta website; you can publish them here.'**
+  String get ownerListingsEmptyBody;
+
+  /// No description provided for @ownerListingDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My listing'**
+  String get ownerListingDetailTitle;
+
+  /// No description provided for @statusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get statusDraft;
+
+  /// No description provided for @statusPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get statusPublished;
+
+  /// No description provided for @badgeVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible'**
+  String get badgeVisible;
+
+  /// No description provided for @badgeNotVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Not visible'**
+  String get badgeNotVisible;
+
+  /// No description provided for @badgeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get badgeExpired;
+
+  /// No description provided for @listingPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get listingPublish;
+
+  /// No description provided for @listingPublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing…'**
+  String get listingPublishing;
+
+  /// No description provided for @listingUnpublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublish'**
+  String get listingUnpublish;
+
+  /// No description provided for @listingUnpublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublishing…'**
+  String get listingUnpublishing;
+
+  /// No description provided for @confirmUnpublishTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublish this listing?'**
+  String get confirmUnpublishTitle;
+
+  /// No description provided for @confirmUnpublishBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It will no longer be visible to the public.'**
+  String get confirmUnpublishBody;
+
+  /// No description provided for @confirmKeepPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep published'**
+  String get confirmKeepPublished;
+
+  /// No description provided for @listingPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'The listing was published.'**
+  String get listingPublished;
+
+  /// No description provided for @listingUnpublished.
+  ///
+  /// In en, this message translates to:
+  /// **'The listing was unpublished.'**
+  String get listingUnpublished;
+
+  /// No description provided for @errorListingNotPublishable.
+  ///
+  /// In en, this message translates to:
+  /// **'This listing can\'t be published yet. Complete it on the Racheeta website.'**
+  String get errorListingNotPublishable;
+
+  /// No description provided for @errorSellerNotEligible.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t manage listings right now.'**
+  String get errorSellerNotEligible;
+
+  /// No description provided for @exploreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get exploreTitle;
+
+  /// No description provided for @errorListingTransition.
+  ///
+  /// In en, this message translates to:
+  /// **'This listing can\'t be changed that way right now.'**
+  String get errorListingTransition;
 }
 
 class _AppLocalizationsDelegate

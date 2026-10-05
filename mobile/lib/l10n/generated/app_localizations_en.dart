@@ -767,4 +767,219 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorTransitionRefused =>
       'This booking can\'t be changed that way right now.';
+
+  @override
+  String get searchGenericHint => 'Search';
+
+  @override
+  String get filtersGenericTitle => 'Filters';
+
+  @override
+  String get realEstateTitle => 'Real estate';
+
+  @override
+  String get realEstateSearchHint => 'Search title, description or district';
+
+  @override
+  String get realEstateFiltersTitle => 'Filter properties';
+
+  @override
+  String get filterTransaction => 'Transaction';
+
+  @override
+  String get transactionSale => 'For sale';
+
+  @override
+  String get transactionRent => 'For rent';
+
+  @override
+  String get filterPropertyType => 'Property type';
+
+  @override
+  String get propertyClinic => 'Clinic';
+
+  @override
+  String get propertyApartmentForClinic => 'Apartment for a clinic';
+
+  @override
+  String get propertyMedicalBuilding => 'Medical building';
+
+  @override
+  String get propertyPharmacyLocation => 'Pharmacy location';
+
+  @override
+  String get propertyLaboratoryLocation => 'Laboratory location';
+
+  @override
+  String get propertyMedicalCenter => 'Medical center';
+
+  @override
+  String get propertyHospitalBuilding => 'Hospital building';
+
+  @override
+  String get propertyCommercialMedical => 'Commercial medical property';
+
+  @override
+  String get propertyInvestmentLand => 'Medical investment land';
+
+  @override
+  String get sortPriceAsc => 'Price: low to high';
+
+  @override
+  String get sortPriceDesc => 'Price: high to low';
+
+  @override
+  String get realEstateEmptyTitle => 'No properties found';
+
+  @override
+  String get priceOnRequest => 'Price on request';
+
+  @override
+  String get areaLabel => 'Area';
+
+  @override
+  String areaValue(String area) {
+    return '$area m²';
+  }
+
+  @override
+  String get districtLabel => 'District';
+
+  @override
+  String get suitableForLabel => 'Suitable for';
+
+  @override
+  String get facilitiesLabel => 'Facilities';
+
+  @override
+  String get listedByLabel => 'Listed by';
+
+  @override
+  String get sellerOwner => 'Owner';
+
+  @override
+  String get sellerAgent => 'Agent';
+
+  @override
+  String get useClinic => 'Clinic';
+
+  @override
+  String get usePharmacy => 'Pharmacy';
+
+  @override
+  String get useLaboratory => 'Laboratory';
+
+  @override
+  String get useMedicalCenter => 'Medical center';
+
+  @override
+  String get useHospital => 'Hospital';
+
+  @override
+  String get useGeneralMedical => 'General medical use';
+
+  @override
+  String get useMedicalInvestment => 'Medical investment';
+
+  @override
+  String get listingDetailTitle => 'Property';
+
+  @override
+  String get listingValidUntil => 'Listing valid until';
+
+  @override
+  String get sellerWorkspaceTitle => 'Property owner';
+
+  @override
+  String get sellerOnly => 'This area is for property-owner accounts.';
+
+  @override
+  String get sellerProfileMissing =>
+      'Create your seller profile on the Racheeta website to use this area.';
+
+  @override
+  String get sellerListingsTotal => 'Total listings';
+
+  @override
+  String get sellerDraft => 'Drafts';
+
+  @override
+  String get sellerPublished => 'Published';
+
+  @override
+  String get sellerVisible => 'Visible to the public';
+
+  @override
+  String get sellerExpired => 'Expired';
+
+  @override
+  String get ownerListingsTitle => 'My listings';
+
+  @override
+  String get ownerListingsEmpty => 'You have no listings yet';
+
+  @override
+  String get ownerListingsEmptyBody =>
+      'Create listings on the Racheeta website; you can publish them here.';
+
+  @override
+  String get ownerListingDetailTitle => 'My listing';
+
+  @override
+  String get statusDraft => 'Draft';
+
+  @override
+  String get statusPublished => 'Published';
+
+  @override
+  String get badgeVisible => 'Visible';
+
+  @override
+  String get badgeNotVisible => 'Not visible';
+
+  @override
+  String get badgeExpired => 'Expired';
+
+  @override
+  String get listingPublish => 'Publish';
+
+  @override
+  String get listingPublishing => 'Publishing…';
+
+  @override
+  String get listingUnpublish => 'Unpublish';
+
+  @override
+  String get listingUnpublishing => 'Unpublishing…';
+
+  @override
+  String get confirmUnpublishTitle => 'Unpublish this listing?';
+
+  @override
+  String get confirmUnpublishBody =>
+      'It will no longer be visible to the public.';
+
+  @override
+  String get confirmKeepPublished => 'Keep published';
+
+  @override
+  String get listingPublished => 'The listing was published.';
+
+  @override
+  String get listingUnpublished => 'The listing was unpublished.';
+
+  @override
+  String get errorListingNotPublishable =>
+      'This listing can\'t be published yet. Complete it on the Racheeta website.';
+
+  @override
+  String get errorSellerNotEligible =>
+      'Your account can\'t manage listings right now.';
+
+  @override
+  String get exploreTitle => 'Explore';
+
+  @override
+  String get errorListingTransition =>
+      'This listing can\'t be changed that way right now.';
 }

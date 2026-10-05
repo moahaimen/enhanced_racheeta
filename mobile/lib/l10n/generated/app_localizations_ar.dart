@@ -758,4 +758,217 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errorTransitionRefused =>
       'لا يمكن تغيير هذا الحجز بهذه الطريقة الآن.';
+
+  @override
+  String get searchGenericHint => 'بحث';
+
+  @override
+  String get filtersGenericTitle => 'التصفية';
+
+  @override
+  String get realEstateTitle => 'العقارات';
+
+  @override
+  String get realEstateSearchHint => 'ابحث في العنوان أو الوصف أو الحي';
+
+  @override
+  String get realEstateFiltersTitle => 'تصفية العقارات';
+
+  @override
+  String get filterTransaction => 'نوع الصفقة';
+
+  @override
+  String get transactionSale => 'للبيع';
+
+  @override
+  String get transactionRent => 'للإيجار';
+
+  @override
+  String get filterPropertyType => 'نوع العقار';
+
+  @override
+  String get propertyClinic => 'عيادة';
+
+  @override
+  String get propertyApartmentForClinic => 'شقة لعيادة';
+
+  @override
+  String get propertyMedicalBuilding => 'مبنى طبي';
+
+  @override
+  String get propertyPharmacyLocation => 'موقع صيدلية';
+
+  @override
+  String get propertyLaboratoryLocation => 'موقع مختبر';
+
+  @override
+  String get propertyMedicalCenter => 'مركز طبي';
+
+  @override
+  String get propertyHospitalBuilding => 'مبنى مستشفى';
+
+  @override
+  String get propertyCommercialMedical => 'عقار تجاري طبي';
+
+  @override
+  String get propertyInvestmentLand => 'أرض استثمار طبي';
+
+  @override
+  String get sortPriceAsc => 'السعر: من الأقل';
+
+  @override
+  String get sortPriceDesc => 'السعر: من الأعلى';
+
+  @override
+  String get realEstateEmptyTitle => 'لا توجد عقارات';
+
+  @override
+  String get priceOnRequest => 'السعر عند الطلب';
+
+  @override
+  String get areaLabel => 'المساحة';
+
+  @override
+  String areaValue(String area) {
+    return '$area م²';
+  }
+
+  @override
+  String get districtLabel => 'الحي';
+
+  @override
+  String get suitableForLabel => 'مناسب لـ';
+
+  @override
+  String get facilitiesLabel => 'المرافق';
+
+  @override
+  String get listedByLabel => 'معروض من';
+
+  @override
+  String get sellerOwner => 'مالك';
+
+  @override
+  String get sellerAgent => 'وسيط';
+
+  @override
+  String get useClinic => 'عيادة';
+
+  @override
+  String get usePharmacy => 'صيدلية';
+
+  @override
+  String get useLaboratory => 'مختبر';
+
+  @override
+  String get useMedicalCenter => 'مركز طبي';
+
+  @override
+  String get useHospital => 'مستشفى';
+
+  @override
+  String get useGeneralMedical => 'استخدام طبي عام';
+
+  @override
+  String get useMedicalInvestment => 'استثمار طبي';
+
+  @override
+  String get listingDetailTitle => 'العقار';
+
+  @override
+  String get listingValidUntil => 'الإعلان ساري حتى';
+
+  @override
+  String get sellerWorkspaceTitle => 'مالك العقار';
+
+  @override
+  String get sellerOnly => 'هذه المنطقة مخصصة لحسابات مالكي العقارات.';
+
+  @override
+  String get sellerProfileMissing =>
+      'أنشئ ملف البائع على موقع رشيتة لاستخدام هذه المنطقة.';
+
+  @override
+  String get sellerListingsTotal => 'إجمالي الإعلانات';
+
+  @override
+  String get sellerDraft => 'مسودات';
+
+  @override
+  String get sellerPublished => 'منشورة';
+
+  @override
+  String get sellerVisible => 'ظاهرة للعامة';
+
+  @override
+  String get sellerExpired => 'منتهية';
+
+  @override
+  String get ownerListingsTitle => 'إعلاناتي';
+
+  @override
+  String get ownerListingsEmpty => 'ليس لديك إعلانات بعد';
+
+  @override
+  String get ownerListingsEmptyBody =>
+      'أنشئ الإعلانات على موقع رشيتة، ويمكنك نشرها من هنا.';
+
+  @override
+  String get ownerListingDetailTitle => 'إعلاني';
+
+  @override
+  String get statusDraft => 'مسودة';
+
+  @override
+  String get statusPublished => 'منشور';
+
+  @override
+  String get badgeVisible => 'ظاهر';
+
+  @override
+  String get badgeNotVisible => 'غير ظاهر';
+
+  @override
+  String get badgeExpired => 'منتهٍ';
+
+  @override
+  String get listingPublish => 'نشر';
+
+  @override
+  String get listingPublishing => 'جارٍ النشر…';
+
+  @override
+  String get listingUnpublish => 'إلغاء النشر';
+
+  @override
+  String get listingUnpublishing => 'جارٍ إلغاء النشر…';
+
+  @override
+  String get confirmUnpublishTitle => 'إلغاء نشر هذا الإعلان؟';
+
+  @override
+  String get confirmUnpublishBody => 'لن يكون ظاهراً للعامة بعد الآن.';
+
+  @override
+  String get confirmKeepPublished => 'إبقاؤه منشوراً';
+
+  @override
+  String get listingPublished => 'تم نشر الإعلان.';
+
+  @override
+  String get listingUnpublished => 'تم إلغاء نشر الإعلان.';
+
+  @override
+  String get errorListingNotPublishable =>
+      'لا يمكن نشر هذا الإعلان بعد. أكمله على موقع رشيتة.';
+
+  @override
+  String get errorSellerNotEligible => 'لا يمكن لحسابك إدارة الإعلانات الآن.';
+
+  @override
+  String get exploreTitle => 'استكشف';
+
+  @override
+  String get errorListingTransition =>
+      'لا يمكن تغيير هذا الإعلان بهذه الطريقة الآن.';
 }

@@ -45,3 +45,20 @@ DateTime deviceLocalToUtc(DateTime wallClock) => DateTime(
 /// A calendar day (no time) used to group slots by the user's local day.
 DateTime dayOf(DateTime wallClock) =>
     DateTime(wallClock.year, wallClock.month, wallClock.day);
+
+final RegExp _calendarDate = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
+/// A backend DATE (`YYYY-MM-DD`, e.g. a job application deadline): a calendar day with no time and
+/// no zone. It is NOT an instant, so it is shown as the same calendar day everywhere and is never
+/// converted between zones. Anything else is rejected rather than guessed.
+DateTime parseCalendarDate(String text) {
+  if (!_calendarDate.hasMatch(text)) {
+    throw FormatException('Not a calendar date: "$text".');
+  }
+  final parsed = DateTime.parse(text);
+  // `DateTime.parse` accepts month 13 style input by normalising; re-check the round trip.
+  if (parsed.toIso8601String().substring(0, 10) != text) {
+    throw FormatException('Not a calendar date: "$text".');
+  }
+  return DateTime(parsed.year, parsed.month, parsed.day);
+}
