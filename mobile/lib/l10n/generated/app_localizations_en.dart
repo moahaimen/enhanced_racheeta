@@ -982,4 +982,126 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorListingTransition =>
       'This listing can\'t be changed that way right now.';
+
+  @override
+  String get marketplaceTitle => 'Marketplace';
+
+  @override
+  String get marketplaceFiltersTitle => 'Filter products';
+
+  @override
+  String get marketplaceFilterCategory => 'Category';
+
+  @override
+  String get marketplaceEmptyTitle => 'No products available';
+
+  @override
+  String get marketplaceEmptyBody =>
+      'Products appear when their category targets your profile.';
+
+  @override
+  String get errorMarketplaceBrowse =>
+      'A verified provider profile is required to browse the marketplace.';
+
+  @override
+  String get productDetailTitle => 'Product';
+
+  @override
+  String get brandLabel => 'Brand';
+
+  @override
+  String get modelLabel => 'Model';
+
+  @override
+  String get categoryLabel => 'Category';
+
+  @override
+  String get supplierLabel => 'Supplier';
+
+  @override
+  String get companyWorkspaceTitle => 'Company workspace';
+
+  @override
+  String get companyOnly => 'This area is for medical company accounts.';
+
+  @override
+  String get companyProfileMissing =>
+      'Create your company profile on the Racheeta website to use this area.';
+
+  @override
+  String get companyCanPublish => 'You can publish products.';
+
+  @override
+  String get companyCannotPublish =>
+      'Publishing is unavailable until your company is verified.';
+
+  @override
+  String get productsTotal => 'Total products';
+
+  @override
+  String get productsActive => 'Active';
+
+  @override
+  String get productsInactive => 'Inactive';
+
+  @override
+  String get productsExposable => 'Visible to providers';
+
+  @override
+  String get companyProductsTitle => 'My products';
+
+  @override
+  String get companyProductsEmpty => 'You have no products yet';
+
+  @override
+  String get companyProductsEmptyBody =>
+      'Create products on the Racheeta website; you can activate them here.';
+
+  @override
+  String get companyProductDetailTitle => 'My product';
+
+  @override
+  String get productStatusActive => 'Active';
+
+  @override
+  String get productStatusInactive => 'Inactive';
+
+  @override
+  String get productActivate => 'Activate';
+
+  @override
+  String get productActivating => 'Activating…';
+
+  @override
+  String get productDeactivate => 'Deactivate';
+
+  @override
+  String get productDeactivating => 'Deactivating…';
+
+  @override
+  String get confirmDeactivateTitle => 'Deactivate this product?';
+
+  @override
+  String get confirmDeactivateBody => 'Providers will no longer see it.';
+
+  @override
+  String get confirmKeepActive => 'Keep active';
+
+  @override
+  String get productActivated => 'The product was activated.';
+
+  @override
+  String get productDeactivated => 'The product was deactivated.';
+
+  @override
+  String get errorCompanyNotVerified =>
+      'Your company must be verified before products can be activated.';
+
+  @override
+  String get errorCategoryUnavailable =>
+      'This product\'s category can\'t be used for publishing right now.';
+
+  @override
+  String get errorProductTransition =>
+      'This product can\'t be changed that way right now.';
 }

@@ -105,15 +105,6 @@ class _Dashboard extends ConsumerWidget {
   }
 }
 
-String verificationLabel(AppLocalizations l10n, String code) => switch (code) {
-  'UNVERIFIED' => l10n.verificationUnverified,
-  'PENDING' => l10n.verificationPending,
-  'VERIFIED' => l10n.verificationVerified,
-  'REJECTED' => l10n.verificationRejected,
-  'SUSPENDED' => l10n.verificationSuspended,
-  _ => code,
-};
-
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.children, super.key});
   final String title;

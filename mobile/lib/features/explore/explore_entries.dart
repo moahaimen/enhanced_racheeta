@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../auth/data/auth_models.dart';
+import '../marketplace/provider_capability.dart';
 import '../real_estate/provider_capability.dart';
 
 /// One entry point on the Home screen's *Explore* section. The bottom bar stays small; everything
@@ -25,6 +26,22 @@ class ExploreEntry {
 }
 
 final List<ExploreEntry> exploreEntries = <ExploreEntry>[
+  ExploreEntry(
+    id: 'marketplace',
+    path: '/marketplace',
+    icon: Icons.storefront_outlined,
+    label: (l10n) => l10n.marketplaceTitle,
+    isAvailableFor: (account, dashboards) =>
+        account.hasPermission(marketplaceBrowseCapability),
+  ),
+  ExploreEntry(
+    id: 'company-workspace',
+    path: '/company',
+    icon: Icons.business_center_outlined,
+    label: (l10n) => l10n.companyWorkspaceTitle,
+    isAvailableFor: (account, dashboards) =>
+        account.hasPermission(marketplaceCompanyCapability),
+  ),
   ExploreEntry(
     id: 'real-estate',
     path: '/real-estate',

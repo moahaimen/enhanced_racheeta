@@ -146,3 +146,83 @@ Map<String, Object?> ownerDashboardJson() => {
   'listings_sale': 4,
   'listings_rent': 2,
 };
+
+const productId = '66666666-0000-4000-8000-000000000001';
+const providerBrowseId = 'abababab-abab-4bab-8bab-abababababab';
+const otherProviderBrowseId = 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
+
+/// A verified provider's `/me` (the marketplace capability is in the PROVIDER role registry).
+Map<String, Object?> browsingProviderJson({
+  String id = providerBrowseId,
+  String name = 'Dr Browser',
+}) => _account(id, name, 'PROVIDER', [
+  'accounts.view_self',
+  'accounts.edit_self',
+  'providers.search',
+  'marketplace.view_targeted_products',
+]);
+
+Map<String, Object?> categoryJson({
+  String id = 'cat-1',
+  String ar = 'مستلزمات التشخيص',
+  String en = 'Diagnostic supplies',
+}) => {
+  'id': id,
+  'slug': en.toLowerCase().replaceAll(' ', '-'),
+  'name_ar': ar,
+  'name_en': en,
+  'parent_id': null,
+  'sort_order': 0,
+  'can_publish': true,
+};
+
+Map<String, Object?> productPublicJson({
+  String id = productId,
+  String title = 'Digital thermometer',
+  String? price = '25000.00',
+  String brand = 'MedTemp',
+  String model = 'MT-200',
+  Map<String, Object?>? category,
+}) => {
+  'id': id,
+  'title': title,
+  'description': 'Fast contactless reading.',
+  'brand': brand,
+  'model_name': model,
+  'price': price,
+  'currency': 'IQD',
+  'category': category ?? categoryJson(),
+  'company': {
+    'id': 'company-1',
+    'name': 'Al Shifa Supplies',
+    'governorate': placeJson('g1', 'بغداد', 'Baghdad'),
+    'city': placeJson('c1', 'الكرادة', 'Karrada'),
+    'website': 'https://shifa.example.test',
+    'public_email': 'sales@shifa.example.test',
+    'phone': '+9647700000009',
+  },
+  'created_at': '2026-09-20T10:00:00Z',
+  'updated_at': '2026-09-20T10:00:00Z',
+};
+
+Map<String, Object?> productOwnerJson({
+  String id = productId,
+  String title = 'My thermometer',
+  bool active = false,
+  String? price = '25000.00',
+}) => {
+  ...productPublicJson(id: id, title: title, price: price)..remove('company'),
+  'is_active': active,
+};
+
+Map<String, Object?> companyDashboardJson({
+  String status = 'VERIFIED',
+  bool canPublish = true,
+}) => {
+  'verification_status': status,
+  'can_publish': canPublish,
+  'products_total': 7,
+  'products_active': 4,
+  'products_inactive': 3,
+  'products_exposable': 2,
+};

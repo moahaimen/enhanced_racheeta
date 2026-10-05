@@ -971,4 +971,122 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errorListingTransition =>
       'لا يمكن تغيير هذا الإعلان بهذه الطريقة الآن.';
+
+  @override
+  String get marketplaceTitle => 'السوق الطبي';
+
+  @override
+  String get marketplaceFiltersTitle => 'تصفية المنتجات';
+
+  @override
+  String get marketplaceFilterCategory => 'الفئة';
+
+  @override
+  String get marketplaceEmptyTitle => 'لا توجد منتجات متاحة';
+
+  @override
+  String get marketplaceEmptyBody => 'تظهر المنتجات عندما تستهدف فئتها ملفك.';
+
+  @override
+  String get errorMarketplaceBrowse => 'يلزم ملف مقدم خدمة موثق لتصفح السوق.';
+
+  @override
+  String get productDetailTitle => 'المنتج';
+
+  @override
+  String get brandLabel => 'العلامة التجارية';
+
+  @override
+  String get modelLabel => 'الطراز';
+
+  @override
+  String get categoryLabel => 'الفئة';
+
+  @override
+  String get supplierLabel => 'المورّد';
+
+  @override
+  String get companyWorkspaceTitle => 'مساحة الشركة';
+
+  @override
+  String get companyOnly => 'هذه المنطقة مخصصة لحسابات الشركات الطبية.';
+
+  @override
+  String get companyProfileMissing =>
+      'أنشئ ملف الشركة على موقع رشيتة لاستخدام هذه المنطقة.';
+
+  @override
+  String get companyCanPublish => 'يمكنك نشر المنتجات.';
+
+  @override
+  String get companyCannotPublish => 'النشر غير متاح حتى يتم توثيق شركتك.';
+
+  @override
+  String get productsTotal => 'إجمالي المنتجات';
+
+  @override
+  String get productsActive => 'فعالة';
+
+  @override
+  String get productsInactive => 'غير فعالة';
+
+  @override
+  String get productsExposable => 'ظاهرة لمقدمي الخدمة';
+
+  @override
+  String get companyProductsTitle => 'منتجاتي';
+
+  @override
+  String get companyProductsEmpty => 'ليس لديك منتجات بعد';
+
+  @override
+  String get companyProductsEmptyBody =>
+      'أنشئ المنتجات على موقع رشيتة، ويمكنك تفعيلها من هنا.';
+
+  @override
+  String get companyProductDetailTitle => 'منتجي';
+
+  @override
+  String get productStatusActive => 'فعال';
+
+  @override
+  String get productStatusInactive => 'غير فعال';
+
+  @override
+  String get productActivate => 'تفعيل';
+
+  @override
+  String get productActivating => 'جارٍ التفعيل…';
+
+  @override
+  String get productDeactivate => 'إلغاء التفعيل';
+
+  @override
+  String get productDeactivating => 'جارٍ إلغاء التفعيل…';
+
+  @override
+  String get confirmDeactivateTitle => 'إلغاء تفعيل هذا المنتج؟';
+
+  @override
+  String get confirmDeactivateBody => 'لن يراه مقدمو الخدمة بعد الآن.';
+
+  @override
+  String get confirmKeepActive => 'إبقاؤه فعالاً';
+
+  @override
+  String get productActivated => 'تم تفعيل المنتج.';
+
+  @override
+  String get productDeactivated => 'تم إلغاء تفعيل المنتج.';
+
+  @override
+  String get errorCompanyNotVerified => 'يجب توثيق شركتك قبل تفعيل المنتجات.';
+
+  @override
+  String get errorCategoryUnavailable =>
+      'لا يمكن استخدام فئة هذا المنتج للنشر الآن.';
+
+  @override
+  String get errorProductTransition =>
+      'لا يمكن تغيير هذا المنتج بهذه الطريقة الآن.';
 }

@@ -25,6 +25,11 @@ import '../features/real_estate/presentation/owner_listing_detail_page.dart';
 import '../features/real_estate/presentation/owner_listings_page.dart';
 import '../features/real_estate/presentation/real_estate_page.dart';
 import '../features/real_estate/presentation/seller_workspace_page.dart';
+import '../features/marketplace/presentation/company_product_detail_page.dart';
+import '../features/marketplace/presentation/company_products_page.dart';
+import '../features/marketplace/presentation/company_workspace_page.dart';
+import '../features/marketplace/presentation/marketplace_page.dart';
+import '../features/marketplace/presentation/product_detail_page.dart';
 import '../shared/widgets/app_scaffold.dart';
 import '../shared/widgets/states.dart';
 
@@ -35,6 +40,8 @@ abstract final class AppRoutes {
   static const account = '/account';
   static const providers = '/providers';
   static const reservations = '/reservations';
+  static const marketplace = '/marketplace';
+  static const company = '/company';
   static const realEstate = '/real-estate';
   static const seller = '/seller';
   static const workspace = '/workspace';
@@ -151,6 +158,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '${AppRoutes.seller}/listings/:id',
             builder: (_, state) =>
                 OwnerListingDetailPage(listingId: state.pathParameters['id']!),
+          ),
+          // 11D marketplace: the provider catalogue and the medical-company workspace (flat routes).
+          GoRoute(
+            path: AppRoutes.marketplace,
+            builder: (_, _) => const MarketplacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.marketplace}/product/:id',
+            builder: (_, state) =>
+                ProductDetailPage(productId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: AppRoutes.company,
+            builder: (_, _) => const CompanyWorkspacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.company}/products',
+            builder: (_, _) => const CompanyProductsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.company}/products/:id',
+            builder: (_, state) => CompanyProductDetailPage(
+              productId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: AppRoutes.reservations,

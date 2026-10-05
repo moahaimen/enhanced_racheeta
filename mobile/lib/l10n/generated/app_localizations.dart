@@ -1951,6 +1951,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This listing can\'t be changed that way right now.'**
   String get errorListingTransition;
+
+  /// No description provided for @marketplaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketplace'**
+  String get marketplaceTitle;
+
+  /// No description provided for @marketplaceFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter products'**
+  String get marketplaceFiltersTitle;
+
+  /// No description provided for @marketplaceFilterCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get marketplaceFilterCategory;
+
+  /// No description provided for @marketplaceEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No products available'**
+  String get marketplaceEmptyTitle;
+
+  /// No description provided for @marketplaceEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Products appear when their category targets your profile.'**
+  String get marketplaceEmptyBody;
+
+  /// No description provided for @errorMarketplaceBrowse.
+  ///
+  /// In en, this message translates to:
+  /// **'A verified provider profile is required to browse the marketplace.'**
+  String get errorMarketplaceBrowse;
+
+  /// No description provided for @productDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Product'**
+  String get productDetailTitle;
+
+  /// No description provided for @brandLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Brand'**
+  String get brandLabel;
+
+  /// No description provided for @modelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get modelLabel;
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get categoryLabel;
+
+  /// No description provided for @supplierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get supplierLabel;
+
+  /// No description provided for @companyWorkspaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Company workspace'**
+  String get companyWorkspaceTitle;
+
+  /// No description provided for @companyOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This area is for medical company accounts.'**
+  String get companyOnly;
+
+  /// No description provided for @companyProfileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your company profile on the Racheeta website to use this area.'**
+  String get companyProfileMissing;
+
+  /// No description provided for @companyCanPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'You can publish products.'**
+  String get companyCanPublish;
+
+  /// No description provided for @companyCannotPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing is unavailable until your company is verified.'**
+  String get companyCannotPublish;
+
+  /// No description provided for @productsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total products'**
+  String get productsTotal;
+
+  /// No description provided for @productsActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get productsActive;
+
+  /// No description provided for @productsInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get productsInactive;
+
+  /// No description provided for @productsExposable.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible to providers'**
+  String get productsExposable;
+
+  /// No description provided for @companyProductsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My products'**
+  String get companyProductsTitle;
+
+  /// No description provided for @companyProductsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no products yet'**
+  String get companyProductsEmpty;
+
+  /// No description provided for @companyProductsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create products on the Racheeta website; you can activate them here.'**
+  String get companyProductsEmptyBody;
+
+  /// No description provided for @companyProductDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My product'**
+  String get companyProductDetailTitle;
+
+  /// No description provided for @productStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get productStatusActive;
+
+  /// No description provided for @productStatusInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get productStatusInactive;
+
+  /// No description provided for @productActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate'**
+  String get productActivate;
+
+  /// No description provided for @productActivating.
+  ///
+  /// In en, this message translates to:
+  /// **'Activating…'**
+  String get productActivating;
+
+  /// No description provided for @productDeactivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivate'**
+  String get productDeactivate;
+
+  /// No description provided for @productDeactivating.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivating…'**
+  String get productDeactivating;
+
+  /// No description provided for @confirmDeactivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivate this product?'**
+  String get confirmDeactivateTitle;
+
+  /// No description provided for @confirmDeactivateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Providers will no longer see it.'**
+  String get confirmDeactivateBody;
+
+  /// No description provided for @confirmKeepActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep active'**
+  String get confirmKeepActive;
+
+  /// No description provided for @productActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'The product was activated.'**
+  String get productActivated;
+
+  /// No description provided for @productDeactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'The product was deactivated.'**
+  String get productDeactivated;
+
+  /// No description provided for @errorCompanyNotVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company must be verified before products can be activated.'**
+  String get errorCompanyNotVerified;
+
+  /// No description provided for @errorCategoryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This product\'s category can\'t be used for publishing right now.'**
+  String get errorCategoryUnavailable;
+
+  /// No description provided for @errorProductTransition.
+  ///
+  /// In en, this message translates to:
+  /// **'This product can\'t be changed that way right now.'**
+  String get errorProductTransition;
 }
 
 class _AppLocalizationsDelegate
