@@ -39,14 +39,21 @@ Future<T> runAsAccount<T>(
   try {
     result = await call();
   } on ApiException {
-    if (ref.read(accountIdProvider) != startedAs) {
-      throw const StaleSessionException();
-    }
+    if (!_stillSignedInAs(ref, startedAs)) throw const StaleSessionException();
     rethrow;
   }
-  if (ref.read(accountIdProvider) != startedAs) {
-    throw const StaleSessionException();
-  }
+  if (!_stillSignedInAs(ref, startedAs)) throw const StaleSessionException();
   invalidate();
   return result;
+}
+
+/// Whether [account] is still the signed-in account. A screen that was unmounted while the call
+/// ran (an account switch can replace a gated route) can no longer prove that, so the result is
+/// treated as stale rather than risking it reaching another account.
+bool _stillSignedInAs(WidgetRef ref, String account) {
+  try {
+    return ref.read(accountIdProvider) == account;
+  } on StateError {
+    return false;
+  }
 }

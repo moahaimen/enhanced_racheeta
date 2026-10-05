@@ -226,3 +226,165 @@ Map<String, Object?> companyDashboardJson({
   'products_inactive': 3,
   'products_exposable': 2,
 };
+
+const jobId = '77777777-0000-4000-8000-000000000001';
+const applicationId = '88888888-0000-4000-8000-000000000001';
+
+Map<String, Object?> employerJson({String name = 'Al Noor Hospital'}) => {
+  'id': 'employer-1',
+  'name': name,
+  'organization_type': 'HOSPITAL',
+  'description': '',
+  'governorate': placeJson('g1', 'بغداد', 'Baghdad'),
+  'city': placeJson('c1', 'الكرادة', 'Karrada'),
+  'is_recruitment_agency': false,
+  'is_verified': true,
+  'provider_profile_id': '22222222-2222-4222-8222-222222222222',
+};
+
+/// A `JobCard` (list item).
+Map<String, Object?> jobCardJson({
+  String id = jobId,
+  String title = 'Staff nurse',
+  String profession = 'NURSE',
+  String employment = 'FULL_TIME',
+  String workMode = 'ON_SITE',
+  bool salaryVisible = true,
+  String? salaryMin = '1200000.00',
+  String? salaryMax = '1800000.00',
+  String? deadline = '2026-10-05',
+  bool featured = false,
+}) => {
+  'id': id,
+  'title': title,
+  'employer': employerJson(),
+  'hiring_employer': null,
+  'hiring_organization_name': '',
+  'profession': profession,
+  'general_specialty': {
+    'id': 's1',
+    'slug': 'nursing',
+    'name_ar': 'تمريض',
+    'name_en': 'Nursing',
+    'parent': null,
+  },
+  'detailed_specialty': 'ICU',
+  'governorate': placeJson('g1', 'بغداد', 'Baghdad'),
+  'city': placeJson('c1', 'الكرادة', 'Karrada'),
+  'employment_type': employment,
+  'work_mode': workMode,
+  'shift_type': 'ROTATING',
+  'minimum_degree': 'BACHELOR',
+  'minimum_experience_years': 2,
+  'salary_min': salaryMin,
+  'salary_max': salaryMax,
+  'salary_currency': 'IQD',
+  'salary_visible': salaryVisible,
+  'is_featured': featured,
+  'published_at': '2026-09-20T10:00:00Z',
+  'application_deadline': deadline,
+};
+
+/// A `JobPublic` (detail).
+Map<String, Object?> jobPublicJson({
+  String id = jobId,
+  bool isOpen = true,
+  String title = 'Staff nurse',
+}) => {
+  ...jobCardJson(id: id, title: title),
+  'description': 'Care for patients in the ICU.',
+  'responsibilities': 'Monitor vitals.',
+  'requirements': 'Valid licence.',
+  'workplace_text': 'Third floor',
+  'number_of_openings': 3,
+  'is_open': isOpen,
+};
+
+/// A `JobEmployer` (the organisation's own view).
+Map<String, Object?> employerJobJson({
+  String id = jobId,
+  String title = 'Staff nurse',
+  String status = 'PUBLISHED',
+  int applications = 4,
+}) => {
+  ...jobPublicJson(id: id, title: title),
+  'status': status,
+  'moderation_note': '',
+  'moderation_flags': <Object?>[],
+  'featured_until': null,
+  'submitted_at': '2026-09-20T09:00:00Z',
+  'closed_at': null,
+  'applications_count': applications,
+  'transitions': <Object?>[],
+  'created_at': '2026-09-20T09:00:00Z',
+  'updated_at': '2026-09-20T09:00:00Z',
+};
+
+Map<String, Object?> applicationJson({
+  String id = applicationId,
+  String status = 'SUBMITTED',
+  String title = 'Staff nurse',
+}) => {
+  'id': id,
+  'job': jobCardJson(title: title),
+  'status': status,
+  'cover_text': 'I would like to join.',
+  'snapshot': {'private': 'résumé data that must never be shown'},
+  'submitted_at': '2026-10-02T08:00:00Z',
+  'transitions': <Object?>[],
+  'interviews': <Object?>[],
+};
+
+Map<String, Object?> recruiterDashboardJson({bool withApplications = true}) => {
+  'organization': {
+    'id': 'employer-1',
+    'name': 'Al Noor Hospital',
+    'verification_status': 'VERIFIED',
+    'recruitment_status': 'ACTIVE',
+    'can_recruit': true,
+    'my_role': 'RECRUITER',
+  },
+  'jobs': {
+    'total': 9,
+    'by_status': {
+      'DRAFT': 1,
+      'PENDING_ADMIN_REVIEW': 0,
+      'PUBLISHED': 5,
+      'CLOSED': 2,
+      'EXPIRED': 1,
+      'REJECTED': 0,
+      'SUSPENDED': 0,
+      'ARCHIVED': 0,
+    },
+    'open_now': 4,
+  },
+  'applications_access': withApplications ? null : 'billing_plan_required',
+  'applications': withApplications
+      ? {
+          'total': 31,
+          'by_status': {
+            'SUBMITTED': 10,
+            'REVIEWING': 5,
+            'SHORTLISTED': 4,
+            'INTERVIEW': 2,
+            'ACCEPTED': 3,
+            'REJECTED': 6,
+            'WITHDRAWN': 1,
+          },
+          'awaiting_review': 15,
+          'last_7_days': 8,
+        }
+      : null,
+  'interviews': withApplications
+      ? {
+          'total': 6,
+          'by_status': {
+            'PROPOSED': 2,
+            'ACCEPTED': 3,
+            'DECLINED': 1,
+            'CANCELLED': 0,
+          },
+        }
+      : null,
+  'seats': {'active_members': 3, 'enabled': true, 'limit': 5},
+};

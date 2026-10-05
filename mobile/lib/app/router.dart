@@ -30,6 +30,12 @@ import '../features/marketplace/presentation/company_products_page.dart';
 import '../features/marketplace/presentation/company_workspace_page.dart';
 import '../features/marketplace/presentation/marketplace_page.dart';
 import '../features/marketplace/presentation/product_detail_page.dart';
+import '../features/jobs/presentation/job_detail_page.dart';
+import '../features/jobs/presentation/jobs_page.dart';
+import '../features/jobs/presentation/my_applications_page.dart';
+import '../features/jobs/presentation/recruiter_job_detail_page.dart';
+import '../features/jobs/presentation/recruiter_jobs_page.dart';
+import '../features/jobs/presentation/recruiter_workspace_page.dart';
 import '../shared/widgets/app_scaffold.dart';
 import '../shared/widgets/states.dart';
 
@@ -40,6 +46,8 @@ abstract final class AppRoutes {
   static const account = '/account';
   static const providers = '/providers';
   static const reservations = '/reservations';
+  static const jobs = '/jobs';
+  static const recruiter = '/recruiter';
   static const marketplace = '/marketplace';
   static const company = '/company';
   static const realEstate = '/real-estate';
@@ -182,6 +190,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => CompanyProductDetailPage(
               productId: state.pathParameters['id']!,
             ),
+          ),
+          // 11D jobs: public search, the seeker's applications and the recruiter workspace (flat
+          // routes; `applications` is registered before the `:id` route so it is never an id).
+          GoRoute(path: AppRoutes.jobs, builder: (_, _) => const JobsPage()),
+          GoRoute(
+            path: '${AppRoutes.jobs}/applications',
+            builder: (_, _) => const MyApplicationsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.jobs}/:id',
+            builder: (_, state) =>
+                JobDetailPage(jobId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: AppRoutes.recruiter,
+            builder: (_, _) => const RecruiterWorkspacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.recruiter}/jobs',
+            builder: (_, _) => const RecruiterJobsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.recruiter}/jobs/:id',
+            builder: (_, state) =>
+                RecruiterJobDetailPage(jobId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: AppRoutes.reservations,

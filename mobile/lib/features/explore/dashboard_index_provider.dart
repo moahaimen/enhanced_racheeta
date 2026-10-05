@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_exception.dart';
 import '../../core/paging/paged_notifier.dart';
 import '../provider/application/provider_providers.dart';
 
@@ -14,12 +13,8 @@ final dashboardIndexProvider = FutureProvider.autoDispose
       if (accountId == null) return const <String>{};
       final token = CancelToken();
       ref.onDispose(() => token.cancel('disposed'));
-      try {
-        final index = await ref
-            .watch(providerApiProvider)
-            .dashboardIndex(cancelToken: token);
-        return index.dashboards.toSet();
-      } on ApiException {
-        return const <String>{};
-      }
+      final index = await ref
+          .watch(providerApiProvider)
+          .dashboardIndex(cancelToken: token);
+      return index.dashboards.toSet();
     }, retry: noRetry);

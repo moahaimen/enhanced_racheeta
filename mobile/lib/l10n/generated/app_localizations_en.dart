@@ -1104,4 +1104,429 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorProductTransition =>
       'This product can\'t be changed that way right now.';
+
+  @override
+  String get professionDoctor => 'Doctor';
+
+  @override
+  String get professionDentist => 'Dentist';
+
+  @override
+  String get professionPharmacist => 'Pharmacist';
+
+  @override
+  String get professionNurse => 'Nurse';
+
+  @override
+  String get professionMidwife => 'Midwife';
+
+  @override
+  String get professionLabTechnician => 'Laboratory technician';
+
+  @override
+  String get professionRadiologyTechnician => 'Radiology technician';
+
+  @override
+  String get professionAnesthesiaTechnician => 'Anesthesia technician';
+
+  @override
+  String get professionPhysiotherapist => 'Physiotherapist';
+
+  @override
+  String get professionNutritionist => 'Nutritionist';
+
+  @override
+  String get professionPsychologist => 'Psychologist';
+
+  @override
+  String get professionMedicalAssistant => 'Medical assistant';
+
+  @override
+  String get professionAdministrative => 'Administrative';
+
+  @override
+  String get professionOther => 'Other';
+
+  @override
+  String get employmentFullTime => 'Full time';
+
+  @override
+  String get employmentPartTime => 'Part time';
+
+  @override
+  String get employmentContract => 'Contract';
+
+  @override
+  String get employmentTemporary => 'Temporary';
+
+  @override
+  String get employmentInternship => 'Internship';
+
+  @override
+  String get employmentLocum => 'Locum';
+
+  @override
+  String get workModeOnSite => 'On site';
+
+  @override
+  String get workModeRemote => 'Remote';
+
+  @override
+  String get workModeHybrid => 'Hybrid';
+
+  @override
+  String get shiftDay => 'Day';
+
+  @override
+  String get shiftNight => 'Night';
+
+  @override
+  String get shiftRotating => 'Rotating';
+
+  @override
+  String get shiftFlexible => 'Flexible';
+
+  @override
+  String get shiftOnCall => 'On call';
+
+  @override
+  String get degreeDiploma => 'Diploma';
+
+  @override
+  String get degreeBachelor => 'Bachelor';
+
+  @override
+  String get degreeHigherDiploma => 'Higher diploma';
+
+  @override
+  String get degreeMaster => 'Master';
+
+  @override
+  String get degreePhd => 'PhD';
+
+  @override
+  String get degreeBoard => 'Board certification';
+
+  @override
+  String get degreeOther => 'Other';
+
+  @override
+  String get jobStatusDraft => 'Draft';
+
+  @override
+  String get jobStatusPendingAdminReview => 'Pending review';
+
+  @override
+  String get jobStatusPublished => 'Published';
+
+  @override
+  String get jobStatusClosed => 'Closed';
+
+  @override
+  String get jobStatusExpired => 'Expired';
+
+  @override
+  String get jobStatusRejected => 'Rejected';
+
+  @override
+  String get jobStatusSuspended => 'Suspended';
+
+  @override
+  String get jobStatusArchived => 'Archived';
+
+  @override
+  String get applicationStatusSubmitted => 'Submitted';
+
+  @override
+  String get applicationStatusReviewing => 'Under review';
+
+  @override
+  String get applicationStatusShortlisted => 'Shortlisted';
+
+  @override
+  String get applicationStatusInterview => 'Interview';
+
+  @override
+  String get applicationStatusAccepted => 'Accepted';
+
+  @override
+  String get applicationStatusRejected => 'Rejected';
+
+  @override
+  String get applicationStatusWithdrawn => 'Withdrawn';
+
+  @override
+  String get jobsTitle => 'Jobs';
+
+  @override
+  String get jobsSearchHint => 'Search jobs';
+
+  @override
+  String get jobsFiltersTitle => 'Filter jobs';
+
+  @override
+  String get filterProfession => 'Profession';
+
+  @override
+  String get filterEmploymentType => 'Employment type';
+
+  @override
+  String get filterWorkMode => 'Work mode';
+
+  @override
+  String get jobsEmptyTitle => 'No jobs found';
+
+  @override
+  String get jobDetailTitle => 'Job';
+
+  @override
+  String get jobEmployerLabel => 'Employer';
+
+  @override
+  String jobOnBehalfOf(String name) {
+    return 'On behalf of $name';
+  }
+
+  @override
+  String get jobSalaryLabel => 'Salary';
+
+  @override
+  String jobSalaryRange(String min, String max, String currency) {
+    return '$min – $max $currency';
+  }
+
+  @override
+  String jobSalaryFrom(String min, String currency) {
+    return 'From $min $currency';
+  }
+
+  @override
+  String jobSalaryUpTo(String max, String currency) {
+    return 'Up to $max $currency';
+  }
+
+  @override
+  String get jobDeadlineLabel => 'Apply by';
+
+  @override
+  String get jobOpeningsLabel => 'Openings';
+
+  @override
+  String get jobExperienceLabel => 'Minimum experience';
+
+  @override
+  String jobExperienceYears(int years) {
+    return '$years years';
+  }
+
+  @override
+  String get jobDegreeLabel => 'Minimum degree';
+
+  @override
+  String get jobShiftLabel => 'Shift';
+
+  @override
+  String get jobSpecialtyLabel => 'Specialty';
+
+  @override
+  String get jobResponsibilitiesLabel => 'Responsibilities';
+
+  @override
+  String get jobRequirementsLabel => 'Requirements';
+
+  @override
+  String get jobWorkplaceLabel => 'Workplace';
+
+  @override
+  String get jobFeaturedBadge => 'Featured';
+
+  @override
+  String get jobClosedNotice => 'This job is not open for applications.';
+
+  @override
+  String get applyTitle => 'Apply for this job';
+
+  @override
+  String get applyCoverText => 'Cover note (optional)';
+
+  @override
+  String applyCoverTooLong(int max) {
+    return 'The note must be at most $max characters.';
+  }
+
+  @override
+  String get applyAction => 'Send application';
+
+  @override
+  String get applyPending => 'Sending…';
+
+  @override
+  String get applySent => 'Your application was sent.';
+
+  @override
+  String get applyViewMine => 'View my applications';
+
+  @override
+  String get errorProfileRequired =>
+      'Create your professional profile on the Racheeta website to apply.';
+
+  @override
+  String get errorJobNotOpen => 'This job is no longer open for applications.';
+
+  @override
+  String get errorDeadlinePassed => 'The application deadline has passed.';
+
+  @override
+  String get errorAlreadyApplied => 'You have already applied to this job.';
+
+  @override
+  String get errorContactNotAllowed =>
+      'Remove phone numbers, e-mail addresses and links from the note.';
+
+  @override
+  String get errorApplicationLimit =>
+      'Your plan doesn\'t allow more applications right now.';
+
+  @override
+  String get myApplicationsTitle => 'My applications';
+
+  @override
+  String get myApplicationsEmpty => 'You haven\'t applied to any job yet';
+
+  @override
+  String get myApplicationsEmptyBody => 'Applications you send appear here.';
+
+  @override
+  String applicationSubmittedOn(String date) {
+    return 'Sent $date';
+  }
+
+  @override
+  String get applicationWithdraw => 'Withdraw';
+
+  @override
+  String get applicationWithdrawing => 'Withdrawing…';
+
+  @override
+  String get confirmWithdrawTitle => 'Withdraw this application?';
+
+  @override
+  String get confirmWithdrawBody =>
+      'The employer will see it as withdrawn. This cannot be undone.';
+
+  @override
+  String get confirmKeepApplication => 'Keep application';
+
+  @override
+  String get applicationWithdrawn => 'The application was withdrawn.';
+
+  @override
+  String get errorApplicationTransition =>
+      'This application can\'t be changed that way right now.';
+
+  @override
+  String get recruiterWorkspaceTitle => 'Recruiter workspace';
+
+  @override
+  String get recruiterOnly =>
+      'This area is for recruiting-organisation members.';
+
+  @override
+  String get recruiterProfileMissing =>
+      'You are not a member of a recruiting organisation.';
+
+  @override
+  String get recruiterOrganization => 'Organisation';
+
+  @override
+  String get recruiterMyRole => 'My role';
+
+  @override
+  String get recruiterRecruitmentStatus => 'Recruitment';
+
+  @override
+  String get recruiterCanRecruit => 'This organisation can recruit.';
+
+  @override
+  String get recruiterCannotRecruit =>
+      'This organisation can\'t recruit right now.';
+
+  @override
+  String get recruiterJobsHeading => 'Jobs';
+
+  @override
+  String get recruiterOpenNow => 'Open now';
+
+  @override
+  String get recruiterApplicationsHeading => 'Applications';
+
+  @override
+  String get recruiterAwaitingReview => 'Awaiting review';
+
+  @override
+  String get recruiterLast7Days => 'Last 7 days';
+
+  @override
+  String get recruiterApplicationsWithheld =>
+      'Application figures are not available for this account.';
+
+  @override
+  String get recruiterInterviewsHeading => 'Interviews';
+
+  @override
+  String get recruiterSeatsHeading => 'Seats';
+
+  @override
+  String get recruiterSeatsActive => 'Active members';
+
+  @override
+  String get recruiterSeatsLimit => 'Limit';
+
+  @override
+  String get recruiterOpenJobs => 'Organisation jobs';
+
+  @override
+  String get recruiterJobsTitle => 'Organisation jobs';
+
+  @override
+  String get recruiterJobsEmpty => 'No jobs yet';
+
+  @override
+  String get recruiterJobsEmptyBody =>
+      'Create jobs on the Racheeta website; you can follow and close them here.';
+
+  @override
+  String get recruiterJobDetailTitle => 'Organisation job';
+
+  @override
+  String get recruiterApplicationsCount => 'Applications received';
+
+  @override
+  String get filterJobStatus => 'Status';
+
+  @override
+  String get jobClose => 'Close job';
+
+  @override
+  String get jobClosing => 'Closing…';
+
+  @override
+  String get confirmCloseJobTitle => 'Close this job?';
+
+  @override
+  String get confirmCloseJobBody => 'It will stop accepting applications.';
+
+  @override
+  String get confirmKeepJob => 'Keep open';
+
+  @override
+  String get jobClosedDone => 'The job was closed.';
+
+  @override
+  String get errorMembershipInactive =>
+      'Your membership no longer allows this action.';
+
+  @override
+  String get errorJobTransition =>
+      'This job can\'t be changed that way right now.';
 }

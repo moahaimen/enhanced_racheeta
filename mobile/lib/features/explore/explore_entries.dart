@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../auth/data/auth_models.dart';
+import '../jobs/provider_capability.dart';
 import '../marketplace/provider_capability.dart';
 import '../real_estate/provider_capability.dart';
 
@@ -26,6 +27,21 @@ class ExploreEntry {
 }
 
 final List<ExploreEntry> exploreEntries = <ExploreEntry>[
+  ExploreEntry(
+    id: 'jobs',
+    path: '/jobs',
+    icon: Icons.work_outline,
+    label: (l10n) => l10n.jobsTitle,
+    isAvailableFor: (account, dashboards) => true,
+  ),
+  ExploreEntry(
+    id: 'recruiter-workspace',
+    path: '/recruiter',
+    icon: Icons.groups_outlined,
+    label: (l10n) => l10n.recruiterWorkspaceTitle,
+    isAvailableFor: (account, dashboards) =>
+        dashboards.contains(recruiterDashboardKey),
+  ),
   ExploreEntry(
     id: 'marketplace',
     path: '/marketplace',

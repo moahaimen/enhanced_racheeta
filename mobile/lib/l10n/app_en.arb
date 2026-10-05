@@ -405,5 +405,199 @@
   "productDeactivated": "The product was deactivated.",
   "errorCompanyNotVerified": "Your company must be verified before products can be activated.",
   "errorCategoryUnavailable": "This product's category can't be used for publishing right now.",
-  "errorProductTransition": "This product can't be changed that way right now."
+  "errorProductTransition": "This product can't be changed that way right now.",
+  "professionDoctor": "Doctor",
+  "professionDentist": "Dentist",
+  "professionPharmacist": "Pharmacist",
+  "professionNurse": "Nurse",
+  "professionMidwife": "Midwife",
+  "professionLabTechnician": "Laboratory technician",
+  "professionRadiologyTechnician": "Radiology technician",
+  "professionAnesthesiaTechnician": "Anesthesia technician",
+  "professionPhysiotherapist": "Physiotherapist",
+  "professionNutritionist": "Nutritionist",
+  "professionPsychologist": "Psychologist",
+  "professionMedicalAssistant": "Medical assistant",
+  "professionAdministrative": "Administrative",
+  "professionOther": "Other",
+  "employmentFullTime": "Full time",
+  "employmentPartTime": "Part time",
+  "employmentContract": "Contract",
+  "employmentTemporary": "Temporary",
+  "employmentInternship": "Internship",
+  "employmentLocum": "Locum",
+  "workModeOnSite": "On site",
+  "workModeRemote": "Remote",
+  "workModeHybrid": "Hybrid",
+  "shiftDay": "Day",
+  "shiftNight": "Night",
+  "shiftRotating": "Rotating",
+  "shiftFlexible": "Flexible",
+  "shiftOnCall": "On call",
+  "degreeDiploma": "Diploma",
+  "degreeBachelor": "Bachelor",
+  "degreeHigherDiploma": "Higher diploma",
+  "degreeMaster": "Master",
+  "degreePhd": "PhD",
+  "degreeBoard": "Board certification",
+  "degreeOther": "Other",
+  "jobStatusDraft": "Draft",
+  "jobStatusPendingAdminReview": "Pending review",
+  "jobStatusPublished": "Published",
+  "jobStatusClosed": "Closed",
+  "jobStatusExpired": "Expired",
+  "jobStatusRejected": "Rejected",
+  "jobStatusSuspended": "Suspended",
+  "jobStatusArchived": "Archived",
+  "applicationStatusSubmitted": "Submitted",
+  "applicationStatusReviewing": "Under review",
+  "applicationStatusShortlisted": "Shortlisted",
+  "applicationStatusInterview": "Interview",
+  "applicationStatusAccepted": "Accepted",
+  "applicationStatusRejected": "Rejected",
+  "applicationStatusWithdrawn": "Withdrawn",
+  "jobsTitle": "Jobs",
+  "jobsSearchHint": "Search jobs",
+  "jobsFiltersTitle": "Filter jobs",
+  "filterProfession": "Profession",
+  "filterEmploymentType": "Employment type",
+  "filterWorkMode": "Work mode",
+  "jobsEmptyTitle": "No jobs found",
+  "jobDetailTitle": "Job",
+  "jobEmployerLabel": "Employer",
+  "jobOnBehalfOf": "On behalf of {name}",
+  "@jobOnBehalfOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "jobSalaryLabel": "Salary",
+  "jobSalaryRange": "{min} – {max} {currency}",
+  "@jobSalaryRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "jobSalaryFrom": "From {min} {currency}",
+  "@jobSalaryFrom": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "jobSalaryUpTo": "Up to {max} {currency}",
+  "@jobSalaryUpTo": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "jobDeadlineLabel": "Apply by",
+  "jobOpeningsLabel": "Openings",
+  "jobExperienceLabel": "Minimum experience",
+  "jobExperienceYears": "{years} years",
+  "@jobExperienceYears": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "jobDegreeLabel": "Minimum degree",
+  "jobShiftLabel": "Shift",
+  "jobSpecialtyLabel": "Specialty",
+  "jobResponsibilitiesLabel": "Responsibilities",
+  "jobRequirementsLabel": "Requirements",
+  "jobWorkplaceLabel": "Workplace",
+  "jobFeaturedBadge": "Featured",
+  "jobClosedNotice": "This job is not open for applications.",
+  "applyTitle": "Apply for this job",
+  "applyCoverText": "Cover note (optional)",
+  "applyCoverTooLong": "The note must be at most {max} characters.",
+  "@applyCoverTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "applyAction": "Send application",
+  "applyPending": "Sending…",
+  "applySent": "Your application was sent.",
+  "applyViewMine": "View my applications",
+  "errorProfileRequired": "Create your professional profile on the Racheeta website to apply.",
+  "errorJobNotOpen": "This job is no longer open for applications.",
+  "errorDeadlinePassed": "The application deadline has passed.",
+  "errorAlreadyApplied": "You have already applied to this job.",
+  "errorContactNotAllowed": "Remove phone numbers, e-mail addresses and links from the note.",
+  "errorApplicationLimit": "Your plan doesn't allow more applications right now.",
+  "myApplicationsTitle": "My applications",
+  "myApplicationsEmpty": "You haven't applied to any job yet",
+  "myApplicationsEmptyBody": "Applications you send appear here.",
+  "applicationSubmittedOn": "Sent {date}",
+  "@applicationSubmittedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "applicationWithdraw": "Withdraw",
+  "applicationWithdrawing": "Withdrawing…",
+  "confirmWithdrawTitle": "Withdraw this application?",
+  "confirmWithdrawBody": "The employer will see it as withdrawn. This cannot be undone.",
+  "confirmKeepApplication": "Keep application",
+  "applicationWithdrawn": "The application was withdrawn.",
+  "errorApplicationTransition": "This application can't be changed that way right now.",
+  "recruiterWorkspaceTitle": "Recruiter workspace",
+  "recruiterOnly": "This area is for recruiting-organisation members.",
+  "recruiterProfileMissing": "You are not a member of a recruiting organisation.",
+  "recruiterOrganization": "Organisation",
+  "recruiterMyRole": "My role",
+  "recruiterRecruitmentStatus": "Recruitment",
+  "recruiterCanRecruit": "This organisation can recruit.",
+  "recruiterCannotRecruit": "This organisation can't recruit right now.",
+  "recruiterJobsHeading": "Jobs",
+  "recruiterOpenNow": "Open now",
+  "recruiterApplicationsHeading": "Applications",
+  "recruiterAwaitingReview": "Awaiting review",
+  "recruiterLast7Days": "Last 7 days",
+  "recruiterApplicationsWithheld": "Application figures are not available for this account.",
+  "recruiterInterviewsHeading": "Interviews",
+  "recruiterSeatsHeading": "Seats",
+  "recruiterSeatsActive": "Active members",
+  "recruiterSeatsLimit": "Limit",
+  "recruiterOpenJobs": "Organisation jobs",
+  "recruiterJobsTitle": "Organisation jobs",
+  "recruiterJobsEmpty": "No jobs yet",
+  "recruiterJobsEmptyBody": "Create jobs on the Racheeta website; you can follow and close them here.",
+  "recruiterJobDetailTitle": "Organisation job",
+  "recruiterApplicationsCount": "Applications received",
+  "filterJobStatus": "Status",
+  "jobClose": "Close job",
+  "jobClosing": "Closing…",
+  "confirmCloseJobTitle": "Close this job?",
+  "confirmCloseJobBody": "It will stop accepting applications.",
+  "confirmKeepJob": "Keep open",
+  "jobClosedDone": "The job was closed.",
+  "errorMembershipInactive": "Your membership no longer allows this action.",
+  "errorJobTransition": "This job can't be changed that way right now."
 }

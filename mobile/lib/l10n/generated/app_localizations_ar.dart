@@ -1089,4 +1089,423 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errorProductTransition =>
       'لا يمكن تغيير هذا المنتج بهذه الطريقة الآن.';
+
+  @override
+  String get professionDoctor => 'طبيب';
+
+  @override
+  String get professionDentist => 'طبيب أسنان';
+
+  @override
+  String get professionPharmacist => 'صيدلاني';
+
+  @override
+  String get professionNurse => 'ممرض';
+
+  @override
+  String get professionMidwife => 'قابلة';
+
+  @override
+  String get professionLabTechnician => 'فني مختبر';
+
+  @override
+  String get professionRadiologyTechnician => 'فني أشعة';
+
+  @override
+  String get professionAnesthesiaTechnician => 'فني تخدير';
+
+  @override
+  String get professionPhysiotherapist => 'أخصائي علاج طبيعي';
+
+  @override
+  String get professionNutritionist => 'أخصائي تغذية';
+
+  @override
+  String get professionPsychologist => 'أخصائي نفسي';
+
+  @override
+  String get professionMedicalAssistant => 'مساعد طبي';
+
+  @override
+  String get professionAdministrative => 'إداري';
+
+  @override
+  String get professionOther => 'أخرى';
+
+  @override
+  String get employmentFullTime => 'دوام كامل';
+
+  @override
+  String get employmentPartTime => 'دوام جزئي';
+
+  @override
+  String get employmentContract => 'عقد';
+
+  @override
+  String get employmentTemporary => 'مؤقت';
+
+  @override
+  String get employmentInternship => 'تدريب';
+
+  @override
+  String get employmentLocum => 'بديل مؤقت';
+
+  @override
+  String get workModeOnSite => 'في الموقع';
+
+  @override
+  String get workModeRemote => 'عن بُعد';
+
+  @override
+  String get workModeHybrid => 'هجين';
+
+  @override
+  String get shiftDay => 'نهاري';
+
+  @override
+  String get shiftNight => 'ليلي';
+
+  @override
+  String get shiftRotating => 'متناوب';
+
+  @override
+  String get shiftFlexible => 'مرن';
+
+  @override
+  String get shiftOnCall => 'استدعاء';
+
+  @override
+  String get degreeDiploma => 'دبلوم';
+
+  @override
+  String get degreeBachelor => 'بكالوريوس';
+
+  @override
+  String get degreeHigherDiploma => 'دبلوم عالٍ';
+
+  @override
+  String get degreeMaster => 'ماجستير';
+
+  @override
+  String get degreePhd => 'دكتوراه';
+
+  @override
+  String get degreeBoard => 'بورد';
+
+  @override
+  String get degreeOther => 'أخرى';
+
+  @override
+  String get jobStatusDraft => 'مسودة';
+
+  @override
+  String get jobStatusPendingAdminReview => 'قيد مراجعة الإدارة';
+
+  @override
+  String get jobStatusPublished => 'منشورة';
+
+  @override
+  String get jobStatusClosed => 'مغلقة';
+
+  @override
+  String get jobStatusExpired => 'منتهية';
+
+  @override
+  String get jobStatusRejected => 'مرفوضة';
+
+  @override
+  String get jobStatusSuspended => 'موقوفة';
+
+  @override
+  String get jobStatusArchived => 'مؤرشفة';
+
+  @override
+  String get applicationStatusSubmitted => 'مقدَّم';
+
+  @override
+  String get applicationStatusReviewing => 'قيد المراجعة';
+
+  @override
+  String get applicationStatusShortlisted => 'في القائمة المختصرة';
+
+  @override
+  String get applicationStatusInterview => 'مقابلة';
+
+  @override
+  String get applicationStatusAccepted => 'مقبول';
+
+  @override
+  String get applicationStatusRejected => 'مرفوض';
+
+  @override
+  String get applicationStatusWithdrawn => 'مسحوب';
+
+  @override
+  String get jobsTitle => 'الوظائف';
+
+  @override
+  String get jobsSearchHint => 'ابحث عن وظيفة';
+
+  @override
+  String get jobsFiltersTitle => 'تصفية الوظائف';
+
+  @override
+  String get filterProfession => 'المهنة';
+
+  @override
+  String get filterEmploymentType => 'نوع التوظيف';
+
+  @override
+  String get filterWorkMode => 'نمط العمل';
+
+  @override
+  String get jobsEmptyTitle => 'لا توجد وظائف';
+
+  @override
+  String get jobDetailTitle => 'الوظيفة';
+
+  @override
+  String get jobEmployerLabel => 'جهة العمل';
+
+  @override
+  String jobOnBehalfOf(String name) {
+    return 'نيابةً عن $name';
+  }
+
+  @override
+  String get jobSalaryLabel => 'الراتب';
+
+  @override
+  String jobSalaryRange(String min, String max, String currency) {
+    return '$min – $max $currency';
+  }
+
+  @override
+  String jobSalaryFrom(String min, String currency) {
+    return 'من $min $currency';
+  }
+
+  @override
+  String jobSalaryUpTo(String max, String currency) {
+    return 'حتى $max $currency';
+  }
+
+  @override
+  String get jobDeadlineLabel => 'آخر موعد للتقديم';
+
+  @override
+  String get jobOpeningsLabel => 'عدد الشواغر';
+
+  @override
+  String get jobExperienceLabel => 'الخبرة الدنيا';
+
+  @override
+  String jobExperienceYears(int years) {
+    return '$years سنوات';
+  }
+
+  @override
+  String get jobDegreeLabel => 'الشهادة الدنيا';
+
+  @override
+  String get jobShiftLabel => 'الدوام';
+
+  @override
+  String get jobSpecialtyLabel => 'التخصص';
+
+  @override
+  String get jobResponsibilitiesLabel => 'المسؤوليات';
+
+  @override
+  String get jobRequirementsLabel => 'المتطلبات';
+
+  @override
+  String get jobWorkplaceLabel => 'مكان العمل';
+
+  @override
+  String get jobFeaturedBadge => 'مميزة';
+
+  @override
+  String get jobClosedNotice => 'هذه الوظيفة غير مفتوحة للتقديم.';
+
+  @override
+  String get applyTitle => 'قدّم على هذه الوظيفة';
+
+  @override
+  String get applyCoverText => 'رسالة تقديم (اختيارية)';
+
+  @override
+  String applyCoverTooLong(int max) {
+    return 'يجب ألا تتجاوز الرسالة $max حرفاً.';
+  }
+
+  @override
+  String get applyAction => 'إرسال الطلب';
+
+  @override
+  String get applyPending => 'جارٍ الإرسال…';
+
+  @override
+  String get applySent => 'تم إرسال طلبك.';
+
+  @override
+  String get applyViewMine => 'عرض طلباتي';
+
+  @override
+  String get errorProfileRequired => 'أنشئ ملفك المهني على موقع رشيتة للتقديم.';
+
+  @override
+  String get errorJobNotOpen => 'لم تعد هذه الوظيفة مفتوحة للتقديم.';
+
+  @override
+  String get errorDeadlinePassed => 'انتهى الموعد النهائي للتقديم.';
+
+  @override
+  String get errorAlreadyApplied => 'لقد قدّمت على هذه الوظيفة من قبل.';
+
+  @override
+  String get errorContactNotAllowed =>
+      'أزل أرقام الهاتف والبريد الإلكتروني والروابط من الرسالة.';
+
+  @override
+  String get errorApplicationLimit => 'خطتك لا تسمح بالمزيد من الطلبات حالياً.';
+
+  @override
+  String get myApplicationsTitle => 'طلباتي';
+
+  @override
+  String get myApplicationsEmpty => 'لم تقدّم على أي وظيفة بعد';
+
+  @override
+  String get myApplicationsEmptyBody => 'تظهر هنا الطلبات التي ترسلها.';
+
+  @override
+  String applicationSubmittedOn(String date) {
+    return 'أُرسل في $date';
+  }
+
+  @override
+  String get applicationWithdraw => 'سحب الطلب';
+
+  @override
+  String get applicationWithdrawing => 'جارٍ سحب الطلب…';
+
+  @override
+  String get confirmWithdrawTitle => 'سحب هذا الطلب؟';
+
+  @override
+  String get confirmWithdrawBody =>
+      'ستراه جهة العمل كطلب مسحوب. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get confirmKeepApplication => 'إبقاء الطلب';
+
+  @override
+  String get applicationWithdrawn => 'تم سحب الطلب.';
+
+  @override
+  String get errorApplicationTransition =>
+      'لا يمكن تغيير هذا الطلب بهذه الطريقة الآن.';
+
+  @override
+  String get recruiterWorkspaceTitle => 'مساحة التوظيف';
+
+  @override
+  String get recruiterOnly => 'هذه المنطقة مخصصة لأعضاء جهات التوظيف.';
+
+  @override
+  String get recruiterProfileMissing => 'لست عضواً في جهة توظيف.';
+
+  @override
+  String get recruiterOrganization => 'الجهة';
+
+  @override
+  String get recruiterMyRole => 'دوري';
+
+  @override
+  String get recruiterRecruitmentStatus => 'التوظيف';
+
+  @override
+  String get recruiterCanRecruit => 'يمكن لهذه الجهة التوظيف.';
+
+  @override
+  String get recruiterCannotRecruit => 'لا يمكن لهذه الجهة التوظيف الآن.';
+
+  @override
+  String get recruiterJobsHeading => 'الوظائف';
+
+  @override
+  String get recruiterOpenNow => 'مفتوحة الآن';
+
+  @override
+  String get recruiterApplicationsHeading => 'الطلبات';
+
+  @override
+  String get recruiterAwaitingReview => 'بانتظار المراجعة';
+
+  @override
+  String get recruiterLast7Days => 'آخر 7 أيام';
+
+  @override
+  String get recruiterApplicationsWithheld =>
+      'أرقام الطلبات غير متاحة لهذا الحساب.';
+
+  @override
+  String get recruiterInterviewsHeading => 'المقابلات';
+
+  @override
+  String get recruiterSeatsHeading => 'المقاعد';
+
+  @override
+  String get recruiterSeatsActive => 'الأعضاء النشطون';
+
+  @override
+  String get recruiterSeatsLimit => 'الحد الأقصى';
+
+  @override
+  String get recruiterOpenJobs => 'وظائف الجهة';
+
+  @override
+  String get recruiterJobsTitle => 'وظائف الجهة';
+
+  @override
+  String get recruiterJobsEmpty => 'لا توجد وظائف بعد';
+
+  @override
+  String get recruiterJobsEmptyBody =>
+      'أنشئ الوظائف على موقع رشيتة، ويمكنك متابعتها وإغلاقها من هنا.';
+
+  @override
+  String get recruiterJobDetailTitle => 'وظيفة الجهة';
+
+  @override
+  String get recruiterApplicationsCount => 'الطلبات المستلمة';
+
+  @override
+  String get filterJobStatus => 'الحالة';
+
+  @override
+  String get jobClose => 'إغلاق الوظيفة';
+
+  @override
+  String get jobClosing => 'جارٍ الإغلاق…';
+
+  @override
+  String get confirmCloseJobTitle => 'إغلاق هذه الوظيفة؟';
+
+  @override
+  String get confirmCloseJobBody => 'ستتوقف عن استقبال الطلبات.';
+
+  @override
+  String get confirmKeepJob => 'إبقاؤها مفتوحة';
+
+  @override
+  String get jobClosedDone => 'تم إغلاق الوظيفة.';
+
+  @override
+  String get errorMembershipInactive => 'عضويتك لم تعد تسمح بهذا الإجراء.';
+
+  @override
+  String get errorJobTransition =>
+      'لا يمكن تغيير هذه الوظيفة بهذه الطريقة الآن.';
 }
