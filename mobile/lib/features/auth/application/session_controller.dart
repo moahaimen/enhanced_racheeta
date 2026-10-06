@@ -20,6 +20,9 @@ class SessionController extends Notifier<SessionState> {
   late AuthApi _authApi;
   late SafeLogger _logger;
 
+  /// How long the pre-logout hook may take before sign-out proceeds without it.
+  static const Duration logoutHookTimeout = Duration(seconds: 3);
+
   int _ticket = 0;
 
   /// Completes when the start-up restoration finished (used by tests).
@@ -107,6 +110,13 @@ class SessionController extends Notifier<SessionState> {
   /// Signs out. Local state is cleared FIRST (and in-flight requests aborted); revoking the
   /// refresh token on the server is best effort and can never keep the user signed in.
   Future<void> logout() async {
+    // While the credentials still exist: e.g. unregister this device's push token. Bounded, and a
+    // failure never blocks signing out.
+    try {
+      await ref.read(beforeLogoutProvider)().timeout(logoutHookTimeout);
+    } on Object {
+      // best effort
+    }
     _ticket++;
     final refresh = await _core.endSession();
     if (ref.mounted) state = const SessionAnonymous();

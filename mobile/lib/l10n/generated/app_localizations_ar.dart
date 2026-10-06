@@ -1508,4 +1508,130 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errorJobTransition =>
       'لا يمكن تغيير هذه الوظيفة بهذه الطريقة الآن.';
+
+  @override
+  String get notificationsTitle => 'الإشعارات';
+
+  @override
+  String get notificationsEmpty => 'لا توجد إشعارات بعد';
+
+  @override
+  String get notificationsEmptyBody => 'تظهر هنا التحديثات الخاصة بحجوزاتك.';
+
+  @override
+  String get notificationsMarkAll => 'تحديد الكل كمقروء';
+
+  @override
+  String get notificationsMarkingAll => 'جارٍ التحديد…';
+
+  @override
+  String notificationsAllMarked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم تحديد $count إشعارات كمقروءة.',
+      one: 'تم تحديد إشعار واحد كمقروء.',
+      zero: 'لا شيء لتحديده.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsUnreadCount(int count) {
+    return '$count غير مقروء';
+  }
+
+  @override
+  String get notificationUnread => 'غير مقروء';
+
+  @override
+  String get notificationRead => 'مقروء';
+
+  @override
+  String get notificationFallbackTitle => 'إشعار';
+
+  @override
+  String get errorNotificationMark => 'تعذّر تحديث الإشعار. حاول مجدداً.';
+
+  @override
+  String get pushPromptTitle => 'تفعيل الإشعارات الفورية';
+
+  @override
+  String get pushPromptBody =>
+      'اسمح بالإشعارات ليصلك تنبيه عند حدوث جديد. وتبقى كل التفاصيل هنا حتى بدونها.';
+
+  @override
+  String get pushPromptAction => 'السماح بالإشعارات';
+
+  @override
+  String get pushDeniedHint =>
+      'الإشعارات الفورية متوقفة لهذا التطبيق. يمكنك تفعيلها من إعدادات النظام، وتبقى كل التفاصيل ظاهرة هنا.';
+
+  @override
+  String get chatTitle => 'الرسائل';
+
+  @override
+  String get conversationTitle => 'محادثة';
+
+  @override
+  String get chatEmpty => 'لا توجد محادثات بعد';
+
+  @override
+  String get chatEmptyBody =>
+      'تظهر هنا المحادثات الخاصة بحجوزاتك بعد بدء إحداها.';
+
+  @override
+  String get chatContextReservation => 'محادثة حجز';
+
+  @override
+  String get chatContextOther => 'محادثة';
+
+  @override
+  String get chatNoMessages => 'لا توجد رسائل بعد. ابدأ بالتحية.';
+
+  @override
+  String get chatLoadOlder => 'تحميل رسائل أقدم';
+
+  @override
+  String get chatLoadOlderFailed => 'تعذّر تحميل الرسائل الأقدم.';
+
+  @override
+  String get chatComposerLabel => 'الرسالة';
+
+  @override
+  String get chatSend => 'إرسال';
+
+  @override
+  String get chatSending => 'جارٍ الإرسال…';
+
+  @override
+  String get chatErrorBlank => 'اكتب رسالة أولاً.';
+
+  @override
+  String chatErrorTooLong(int max) {
+    return 'يمكن أن تصل الرسالة إلى $max حرفاً كحد أقصى.';
+  }
+
+  @override
+  String get chatErrorSend => 'لم تُرسل رسالتك. حاول مجدداً.';
+
+  @override
+  String get chatYou => 'أنت';
+
+  @override
+  String chatUnread(int count) {
+    return '$count غير مقروءة';
+  }
+
+  @override
+  String get chatMessageProvider => 'مراسلة مقدّم الخدمة';
+
+  @override
+  String get chatMessagePatient => 'مراسلة المريض';
+
+  @override
+  String get chatOpening => 'جارٍ الفتح…';
+
+  @override
+  String get chatOpenFailed => 'تعذّر فتح المحادثة.';
 }

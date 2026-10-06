@@ -35,6 +35,14 @@ final loggerProvider = Provider<SafeLogger>((ref) => const SafeLogger());
 
 final autoRestoreSessionProvider = Provider<bool>((ref) => true);
 
+/// Work that must happen while the signed-in account's credentials still exist, just before they
+/// are cleared on logout (for example unregistering this device's push token, which the backend
+/// only accepts from the owning account). The composition root overrides it; it is time-bounded
+/// and best effort, so it can never keep the user signed in.
+final beforeLogoutProvider = Provider<Future<void> Function()>(
+  (ref) => () async {},
+);
+
 final dioProvider = Provider<Dio>((ref) {
   final dio = buildDio(ref.watch(appConfigProvider));
   ref.onDispose(() => dio.close(force: true));
