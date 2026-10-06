@@ -11,7 +11,10 @@ import '../features/auth/presentation/restoring_page.dart';
 import '../features/discovery/presentation/booking_page.dart';
 import '../features/discovery/presentation/discovery_page.dart';
 import '../features/discovery/presentation/provider_detail_page.dart';
+import '../features/chat/presentation/conversation_page.dart';
+import '../features/chat/presentation/conversations_page.dart';
 import '../features/home/presentation/home_page.dart';
+import '../features/notifications/presentation/notifications_page.dart';
 import '../features/reservations/presentation/reservation_detail_page.dart';
 import '../features/reservations/presentation/reservations_page.dart';
 import '../features/shell/app_shell.dart';
@@ -52,6 +55,8 @@ abstract final class AppRoutes {
   static const company = '/company';
   static const realEstate = '/real-estate';
   static const seller = '/seller';
+  static const notifications = '/notifications';
+  static const chat = '/chat';
   static const workspace = '/workspace';
   static const workspaceAvailability = '/workspace/availability';
   static const workspaceAvailabilityNew = '/workspace/availability/new';
@@ -215,6 +220,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '${AppRoutes.recruiter}/jobs/:id',
             builder: (_, state) =>
                 RecruiterJobDetailPage(jobId: state.pathParameters['id']!),
+          ),
+          // 11E communication: the persistent notification centre and generic conversations.
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (_, _) => const NotificationsPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.chat,
+            builder: (_, _) => const ConversationsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.chat}/:id',
+            builder: (_, state) =>
+                ConversationPage(conversationId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: AppRoutes.reservations,

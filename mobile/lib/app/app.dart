@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../features/auth/application/providers.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../shared/theme/app_theme.dart';
+import 'push_bootstrap.dart';
 import 'router.dart';
 
 /// Root widget: theme, localisation (Arabic RTL / English) and the session-aware router.
@@ -14,6 +15,7 @@ class RacheetaApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(pushBootstrapProvider);
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       theme: buildRacheetaTheme(),
