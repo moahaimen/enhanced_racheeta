@@ -159,3 +159,7 @@ No test contacts Firebase.
   vs the deadline). Skipped when `firebase-admin` is not installed (the default CI image); run it
   locally with the SDK on the path.
 * OpenAPI contract tests for the device endpoints.
+
+## Mobile (Phase 11E)
+
+The app registers its FCM token with `POST /notifications/push-devices/` (idempotent upsert, `platform: ANDROID`) for the signed-in account once OS notification permission is granted, again on a token refresh, and unregisters it with `POST /notifications/push-devices/unregister/` before logout (best effort, 3 s bound). Firebase is initialised from `--dart-define FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID`; without them push is disabled. Payload handling: `type=notification` → open the notification centre; `type=chat_message` + valid `conversation_id` → open that thread; unknown or malformed → ignored; a foreground push only refreshes backend state. See ADR-057.

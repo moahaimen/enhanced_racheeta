@@ -4,7 +4,8 @@ The Racheeta patient/provider app. **Phase 11A** is the foundation (app shell, c
 API client, email/password authentication, session management, localization (Arabic RTL / English)
 and reusable UI). **Phase 11B** adds the patient side (provider discovery, detail, booking, "My appointments" with
 cancellation). **Phase 11C** adds the provider and facility side (dashboard, availability, received bookings).
-**Phase 11D (this change) adds the marketplace, medical jobs and real estate** (public catalogues, own-record workspaces and the one-request lifecycle actions) behind an *Explore* section on Home. Chat/notifications arrive in 11E (see `docs/MASTER_PLAN.md`);
+**Phase 11D** adds the marketplace, medical jobs and real estate behind an *Explore* section on Home.
+**Phase 11E (this change) adds chat, the persistent notification centre and the FCM client** (see below). Release hardening is 11F (see `docs/MASTER_PLAN.md`);
 nothing unfinished is exposed in the app.
 
 - Flutter **3.47.6** / Dart **3.13.5** (pinned in `pubspec.yaml`, CI and `docs/DECISIONS.md`)
@@ -32,6 +33,7 @@ lib/
     provider/                provider & facility workspace: dashboard, availability, received bookings
     explore/                 Home "Explore" entries gated by capabilities / dashboard index
     real_estate/  marketplace/  jobs/   11D domains (data · application · presentation)
+    notifications/  chat/  push/   11E: notification centre, conversations, FCM client
   shared/                    theme, buttons, text field, loading/error/empty views, dialogs
   l10n/                      app_en.arb, app_ar.arb (+ generated code, committed)
 test/                        unit + widget tests (no network, no real credentials)
@@ -67,9 +69,9 @@ flutter test
 
 Regenerate localization code after editing an `.arb` file: `flutter gen-l10n` (output committed).
 
-## Not in 11D
+## Not in 11E
 
-Create/edit forms for products, jobs and listings, applicant management, résumé/profile editing, images and uploads, external links, profile and service editing, facility membership management (the endpoints exist), chat, notifications and FCM
+Attachments, group chat, starting a conversation other than from a reservation, local-notification display, iOS push (APNs), release signing/store (11F), plus: create/edit forms for products, jobs and listings, applicant management, résumé/profile editing, images and uploads, external links, profile and service editing, facility membership management (the endpoints exist), chat, notifications and FCM
 device registration (11E), payments and store release. Android/iOS signing and Firebase configuration are deliberately
 absent from the repository. The IBM Plex Sans Arabic font from the design system is not bundled
 yet (system font is used); bundling it is a follow-up.
@@ -113,3 +115,10 @@ yet (system font is used); bundling it is a follow-up.
 - **Dates and money:** job deadlines are calendar DATES (never zone-converted); prices/salaries are the backend decimal strings with the backend currency.
 - **Testing:** `FakeBackend` scripts, `switchAccountTo` (keeps the route mounted while `/me` changes account). `test/openapi_contract_test.dart` also reads `../backend/apps/*/types.py` to pin the vocabularies.
 - **Android check (local scratch backend):** `flutter build apk --debug --target-platform android-arm64`, install on the emulator, `--dart-define` not needed (default `http://10.0.2.2:8000`); run the backend with `ALLOWED_HOSTS` including `10.0.2.2`.
+
+## Chat, notifications and push (11E)
+
+- **Where:** Home → Explore → *Notifications* / *Messages* (badges are the backend's counts); *Message the provider/patient* on reservation details. Details: `docs/NOTIFICATIONS.md`, `docs/CHAT.md`, `docs/PUSH.md` "Mobile (Phase 11E)", ADR-057.
+- **Persistence is the truth:** push is a hint; a foreground push only refreshes. Mutations (`mark read`, `mark all`, `send`, `open conversation`) use `runAsAccount`; the composer, draft and busy state are per account.
+- **FCM configuration (optional):** build with `--dart-define=FIREBASE_API_KEY=… --dart-define=FIREBASE_APP_ID=… --dart-define=FIREBASE_MESSAGING_SENDER_ID=… --dart-define=FIREBASE_PROJECT_ID=…` (public client identifiers of YOUR Firebase project; never a service-account key). Without them push is disabled and everything else works. No `google-services.json` or Gradle plugin is used.
+- **Testing:** `FakePushSource` (test/support/comms_support.dart) scripts permission, token, refresh, foreground, opened and initial messages; the coordinator and registration are tested without Firebase.

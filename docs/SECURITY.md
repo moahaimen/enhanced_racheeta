@@ -152,6 +152,14 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Data minimization.** The seeker's résumé `snapshot` of an application is never modelled or shown; recruiter application figures that the backend withholds stay hidden (never shown as zero); contact values appear only as the API returns them (the listing's own public contact method) and are not turned into links.
 - **No uploads, no external links.** No media is requested and no URL is opened; there is nothing to leak via referrers or intents.
 
+## Mobile notifications, chat and push flows (Phase 11E)
+
+- **Server-scoped, account-keyed.** The backend scopes notifications and conversations to the caller; the app keys every list, thread, count, composer draft and message to the signed-in account, so another account's data, draft or in-flight send never appears after `/me` changes on a mounted route. Sending, marking read and opening a conversation use `runAsAccount` (one request, late success/error dropped, nothing invalidated).
+- **Push never bypasses authorization.** A push is a hint; its data is validated (known `type`, UUID ids) and only selects a normal route whose own gate and the backend still apply. The tap coordinator holds a tap only while the session restores, never across a sign-out, and delivers it once.
+- **Token handling.** The FCM token is held in memory only, never logged or persisted by the app, registered only for the signed-in account (with OS permission) and unregistered before logout. Stale asynchronous steps are discarded by `(account, epoch)`. No Firebase Admin credential, `google-services.json` or key is in the repository; client identifiers come from build defines.
+- **Privacy.** Message bodies are never logged (`ChatMessage.toString` omits them); server messages are never shown (blank/too-long map to fixed text); a conversation of someone else is a plain 404 shown as one generic text; the notification list never carries the raw payload, recipient or dedupe key.
+- **No retry of mutations.** Mark read, mark all, send and open-conversation are single requests; the automatic read cursor is one attempt per newly observed sequence.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session

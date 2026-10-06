@@ -123,3 +123,7 @@ Django admin lists notifications for inspection only (no add, change or delete).
 - WebSockets, Channels, ASGI consumers, Redis, Celery or any worker.
 - Notifications for other modules (jobs, invitations, interviews, offers, reviews, advertising, marketplace, real estate).
 - Per-user notification preferences, e-mail or SMS delivery, retention/pruning of old rows.
+
+## Mobile (Phase 11E)
+
+The Flutter app (`mobile/lib/features/notifications/`) consumes the existing API only. *Notifications* (Home → Explore) lists the account's persistent notifications (backend order, newest first, paginated) with read/unread styling and a device-local time; the unread count is `GET /notifications/unread-count/`. Tapping an unread row sends one `POST /notifications/{id}/read/` and then reloads the list and the count; *Mark all as read* is one `POST /notifications/read-all/`. Known events (`RESERVATION_CREATED`, `RESERVATION_STATUS_CHANGED` on resource `RESERVATION` with a UUID id) open the reservation (provider side for accounts with `reservations.manage_received`, patient side for `reservations.create_own`); anything else is shown and marked but not navigable. Unknown categories, events or resource types never break the list. Titles/bodies are the server's localized text (the client schema has no raw payload).

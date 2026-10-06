@@ -132,3 +132,7 @@ The unread badge refreshes on authenticated pathname navigation and after succes
 - group chat.
 - arbitrary public user-to-user messaging.
 - migration or replacement of recruitment `RecruitmentMessage`.
+
+## Mobile (Phase 11E)
+
+The Flutter app (`mobile/lib/features/chat/`) consumes the existing API only. *Messages* lists the account's conversations (latest activity first, other participant, context label, unread badge from the server's `unread_count`); a thread loads the latest page (page 1) and prepends older pages (page 2…) without reordering by anything but `sequence`; sending is one `POST` with the trimmed text (1..2000, enforced as a convenience, the backend decides); reading is the explicit `POST .../read/` cursor. Authorship is the server's `is_mine`; "mine" is the end side in both directions (RTL safe). Conversations start only from a reservation (*Message the provider/patient* on the reservation details → `POST /chat/reservations/{id}/conversation`). Not in mobile: attachments, group chat, typing/online state, starting a conversation any other way.
