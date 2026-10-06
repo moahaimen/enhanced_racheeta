@@ -29,7 +29,8 @@ void main() {
           account: providerAccountJson(),
           script: (b) => dashboardsFor(b),
         );
-        expect(h.backend.count('GET', _index), 1);
+        // one index request from Home's Explore section, one from the dashboard itself
+        expect(h.backend.count('GET', _index), 2);
         expect(h.backend.count('GET', _doctor), 1);
         expect(h.backend.count('GET', _facility), 0);
 
@@ -310,10 +311,11 @@ void main() {
         script: (b) => dashboardsFor(b),
       );
       expect(h.backend.count('GET', _doctor), 1);
+      final indexBefore = h.backend.count('GET', _index);
       await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
       await tester.pumpAndSettle();
       expect(h.backend.count('GET', _doctor), 2);
-      expect(h.backend.count('GET', _index), 2);
+      expect(h.backend.count('GET', _index), indexBefore + 1);
     });
   });
 
@@ -381,7 +383,9 @@ void main() {
           find.text('This area is for provider accounts.'),
           findsOneWidget,
         );
-        expect(h.backend.count('GET', _index), 0);
+        // the provider screens made no provider-side request at all
+        expect(h.backend.count('GET', _doctor), 0);
+        expect(h.backend.count('GET', _facility), 0);
         expect(h.backend.count('GET', '/api/v1/reservations/provider'), 0);
       },
     );

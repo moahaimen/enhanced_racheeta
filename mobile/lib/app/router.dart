@@ -20,6 +20,22 @@ import '../features/provider/presentation/dashboard_page.dart';
 import '../features/provider/presentation/provider_reservation_detail_page.dart';
 import '../features/provider/presentation/provider_reservations_page.dart';
 import '../features/provider/presentation/slot_form_page.dart';
+import '../features/real_estate/presentation/listing_detail_page.dart';
+import '../features/real_estate/presentation/owner_listing_detail_page.dart';
+import '../features/real_estate/presentation/owner_listings_page.dart';
+import '../features/real_estate/presentation/real_estate_page.dart';
+import '../features/real_estate/presentation/seller_workspace_page.dart';
+import '../features/marketplace/presentation/company_product_detail_page.dart';
+import '../features/marketplace/presentation/company_products_page.dart';
+import '../features/marketplace/presentation/company_workspace_page.dart';
+import '../features/marketplace/presentation/marketplace_page.dart';
+import '../features/marketplace/presentation/product_detail_page.dart';
+import '../features/jobs/presentation/job_detail_page.dart';
+import '../features/jobs/presentation/jobs_page.dart';
+import '../features/jobs/presentation/my_applications_page.dart';
+import '../features/jobs/presentation/recruiter_job_detail_page.dart';
+import '../features/jobs/presentation/recruiter_jobs_page.dart';
+import '../features/jobs/presentation/recruiter_workspace_page.dart';
 import '../shared/widgets/app_scaffold.dart';
 import '../shared/widgets/states.dart';
 
@@ -30,6 +46,12 @@ abstract final class AppRoutes {
   static const account = '/account';
   static const providers = '/providers';
   static const reservations = '/reservations';
+  static const jobs = '/jobs';
+  static const recruiter = '/recruiter';
+  static const marketplace = '/marketplace';
+  static const company = '/company';
+  static const realEstate = '/real-estate';
+  static const seller = '/seller';
   static const workspace = '/workspace';
   static const workspaceAvailability = '/workspace/availability';
   static const workspaceAvailabilityNew = '/workspace/availability/new';
@@ -121,6 +143,78 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => ProviderReservationDetailPage(
               reservationId: state.pathParameters['id']!,
             ),
+          ),
+          // 11D real estate: public catalogue and the property-owner workspace (flat routes).
+          GoRoute(
+            path: AppRoutes.realEstate,
+            builder: (_, _) => const RealEstatePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.realEstate}/listing/:id',
+            builder: (_, state) =>
+                ListingDetailPage(listingId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: AppRoutes.seller,
+            builder: (_, _) => const SellerWorkspacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.seller}/listings',
+            builder: (_, _) => const OwnerListingsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.seller}/listings/:id',
+            builder: (_, state) =>
+                OwnerListingDetailPage(listingId: state.pathParameters['id']!),
+          ),
+          // 11D marketplace: the provider catalogue and the medical-company workspace (flat routes).
+          GoRoute(
+            path: AppRoutes.marketplace,
+            builder: (_, _) => const MarketplacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.marketplace}/product/:id',
+            builder: (_, state) =>
+                ProductDetailPage(productId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: AppRoutes.company,
+            builder: (_, _) => const CompanyWorkspacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.company}/products',
+            builder: (_, _) => const CompanyProductsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.company}/products/:id',
+            builder: (_, state) => CompanyProductDetailPage(
+              productId: state.pathParameters['id']!,
+            ),
+          ),
+          // 11D jobs: public search, the seeker's applications and the recruiter workspace (flat
+          // routes; `applications` is registered before the `:id` route so it is never an id).
+          GoRoute(path: AppRoutes.jobs, builder: (_, _) => const JobsPage()),
+          GoRoute(
+            path: '${AppRoutes.jobs}/applications',
+            builder: (_, _) => const MyApplicationsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.jobs}/:id',
+            builder: (_, state) =>
+                JobDetailPage(jobId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: AppRoutes.recruiter,
+            builder: (_, _) => const RecruiterWorkspacePage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.recruiter}/jobs',
+            builder: (_, _) => const RecruiterJobsPage(),
+          ),
+          GoRoute(
+            path: '${AppRoutes.recruiter}/jobs/:id',
+            builder: (_, state) =>
+                RecruiterJobDetailPage(jobId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: AppRoutes.reservations,

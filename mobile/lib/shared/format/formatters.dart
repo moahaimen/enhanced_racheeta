@@ -27,3 +27,15 @@ String formatMoney(String price, String currency, String locale) {
 
 String formatRating(double rating, String locale) =>
     NumberFormat('0.0', locale).format(rating);
+
+/// A calendar day (no time, no zone conversion) such as a job deadline.
+String formatCalendarDate(DateTime day, String locale) =>
+    DateFormat.yMMMd(locale).format(day);
+
+/// A decimal area/number string grouped per locale; falls back to the raw text.
+String formatDecimal(String value, String locale) {
+  final parsed = num.tryParse(value);
+  return parsed == null
+      ? value
+      : NumberFormat.decimalPattern(locale).format(parsed);
+}

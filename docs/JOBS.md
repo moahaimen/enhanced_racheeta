@@ -269,3 +269,13 @@ Notifications on recruitment events (Phase 9), analytics dashboards, saved
 searches/alerts, recruiter invitations by name, job-seeker paid plans pricing,
 scheduled expiry jobs (read-time expiry is sufficient today), reservations
 (Phase 4, free).
+
+## Mobile (Phase 11D)
+
+The Flutter app (`mobile/lib/features/jobs/`) consumes the existing API only; it adds no endpoint or field.
+
+- **Public search** (`GET /jobs`, no token): `q`, `profession`, `employment_type`, `work_mode`, `governorate`, paginated; featured first (backend ordering). Detail (`GET /jobs/{id}`) shows the public fields; salary only when `salary_visible`; the application deadline is a calendar DATE (never zone-converted). Vocabularies are labelled in Arabic/English; unknown future codes render as the raw code.
+- **Applying:** an internal form with an optional cover note (max 2000, checked before sending; the backend rejects contact details — `contact_information_not_allowed`). One `POST /jobs/{id}/apply`, never retried, duplicate taps blocked; `already_applied`, `job_not_open`, `deadline_passed`, `entitlement_required`/`usage_limit_reached` and a 403 (no job-seeker profile — create it on the website) have fixed messages. No external apply link is opened.
+- **My applications:** `GET /jobs/me/applications` (the résumé `snapshot` is never shown), withdraw (`POST .../withdraw`, confirmed; offered only for open statuses as a hint).
+- **Recruiter workspace:** shown when `GET /dashboards/` lists `recruiter`; `GET /dashboards/recruiter` (organisation, jobs, applications — withheld figures stay hidden, never zero —, interviews, seats), organisation jobs (`status` filter), detail and **close** (confirmed; `membership_inactive`, `invalid_transition` → fixed messages; another organisation's job is a 404).
+- Not in mobile: job create/edit/submit/archive/feature, applicant lists and transitions, interviews, invitations, résumé/profile editing, billing and verification requests, talent search.

@@ -147,3 +147,11 @@ Audit events: `marketplace.company.created`,
 - **Advertising, paid placement, payments** — built in Phase 8 as sponsored product campaigns (`ADVERTISING.md`). Organic targeting is unchanged: a campaign can only narrow `ProductQuerySet.targeted_for` and never forces a product into the organic catalogue.
 - Stock, cart, checkout, orders, shipping, purchase requests, chat — not in the
   requirement.
+
+## Mobile (Phase 11D)
+
+The Flutter app (`mobile/lib/features/marketplace/`) consumes the existing API only; it adds no endpoint or field.
+
+- **Provider catalogue** (capability `marketplace.view_targeted_products`; backend: verified providers only): `GET /marketplace/categories` (unpaginated reference data), `GET /marketplace/products` (paginated, newest first, **category filter only — the API has no search, so the app has none**), `GET /marketplace/products/{id}` (404 outside the provider's audience). Shows title, brand, model, description, price with the backend currency, category and the company summary (website/e-mail/phone as plain text, never opened as links).
+- **Company workspace** (capability `marketplace.manage_own_products`): `GET /marketplace/company/dashboard` (verification status, `can_publish`, product counts), own products list/detail, `POST .../activate` and `POST .../deactivate` (deactivation confirmed). The backend decides (`company_not_verified`, `category_unavailable`, `invalid_transition`/`invalid_product` map to fixed messages; a foreign id is a plain 404). The Phase 10 `/dashboards/company` (which includes advertising) is not used.
+- Not in mobile: product create/edit, verification request, images/uploads, advertising, cart/checkout/payments.
