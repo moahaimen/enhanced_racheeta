@@ -1,7 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:racheeta_mobile/features/auth/data/auth_models.dart';
+import 'package:racheeta_mobile/features/chat/data/chat_api.dart';
+import 'package:racheeta_mobile/features/notifications/data/notification_models.dart';
+import 'package:racheeta_mobile/features/push/push_routes.dart';
 import 'package:racheeta_mobile/features/jobs/presentation/job_labels.dart';
+
+import 'support/comms_support.dart' show notificationJson;
+import 'support/fake_backend.dart' show accountJson;
+
 import 'package:racheeta_mobile/features/real_estate/presentation/real_estate_labels.dart';
 
 /// The committed OpenAPI file (`docs/api/openapi.yaml`) is the contract. These tests read it and
@@ -58,6 +66,66 @@ Set<String> _operations(String path) {
     r'^    (get|post|put|patch|delete):',
     multiLine: true,
   ).allMatches(match!.group(1)!).map((m) => m.group(1)!).toSet();
+}
+
+/// Query parameter names declared for [method] on [path].
+Set<String> queryParams(String path, [String method = 'get']) {
+  final path0 = RegExp(
+    '^  ${RegExp.escape(path)}:\n(.*?)(?=^  /|^components:|(?![\\s\\S]))',
+    multiLine: true,
+    dotAll: true,
+  ).firstMatch(_yaml);
+  expect(path0, isNotNull, reason: 'path $path is missing');
+  final op = RegExp(
+    '^    $method:\n(.*?)(?=^    (?:get|post|put|patch|delete):|(?![\\s\\S]))',
+    multiLine: true,
+    dotAll: true,
+  ).firstMatch(path0!.group(1)!);
+  expect(op, isNotNull, reason: '$method $path is missing');
+  return RegExp(
+    r'^      - (?:in: query\n        name|name): (\w+)\n',
+    multiLine: true,
+  ).allMatches(op!.group(1)!).map((m) => m.group(1)!).toSet();
+}
+
+/// The `security:` block of one operation.
+String security(String path, String method) {
+  final path0 = RegExp(
+    '^  ${RegExp.escape(path)}:\n(.*?)(?=^  /|^components:|(?![\\s\\S]))',
+    multiLine: true,
+    dotAll: true,
+  ).firstMatch(_yaml)!;
+  final op = RegExp(
+    '^    $method:\n(.*?)(?=^    (?:get|post|put|patch|delete):|(?![\\s\\S]))',
+    multiLine: true,
+    dotAll: true,
+  ).firstMatch(path0.group(1)!)!;
+  return RegExp(
+        r'^      security:\n((?:      - .*\n)+)',
+        multiLine: true,
+      ).firstMatch(op.group(1)!)?.group(1) ??
+      '';
+}
+
+/// The values of a backend `models.TextChoices` class.
+Set<String> choices(String file, String className) {
+  final source = File('../backend/apps/$file').readAsStringSync();
+  final block = RegExp(
+    '^class $className\\(models.TextChoices\\):\n((?:    .*\n|\n)+)',
+    multiLine: true,
+  ).firstMatch(source);
+  expect(block, isNotNull, reason: '$className is missing in $file');
+  return RegExp(
+    r'^    \w+ = \(?\s*"(\w+)"',
+    multiLine: true,
+  ).allMatches(block!.group(1)!).map((m) => m.group(1)!).toSet();
+}
+
+void check(String name, Set<String> fields, {bool required = true}) {
+  expect(_properties(name), containsAll(fields), reason: name);
+  if (required) {
+    expect(_required(name), containsAll(fields), reason: '$name required');
+  }
 }
 
 void main() {
@@ -408,66 +476,6 @@ void main() {
   });
 
   group('Phase 11D — marketplace, jobs and real estate', () {
-    /// Query parameter names declared for [method] on [path].
-    Set<String> queryParams(String path, [String method = 'get']) {
-      final path0 = RegExp(
-        '^  ${RegExp.escape(path)}:\n(.*?)(?=^  /|^components:|(?![\\s\\S]))',
-        multiLine: true,
-        dotAll: true,
-      ).firstMatch(_yaml);
-      expect(path0, isNotNull, reason: 'path $path is missing');
-      final op = RegExp(
-        '^    $method:\n(.*?)(?=^    (?:get|post|put|patch|delete):|(?![\\s\\S]))',
-        multiLine: true,
-        dotAll: true,
-      ).firstMatch(path0!.group(1)!);
-      expect(op, isNotNull, reason: '$method $path is missing');
-      return RegExp(
-        r'^      - (?:in: query\n        name|name): (\w+)\n',
-        multiLine: true,
-      ).allMatches(op!.group(1)!).map((m) => m.group(1)!).toSet();
-    }
-
-    /// The `security:` block of one operation.
-    String security(String path, String method) {
-      final path0 = RegExp(
-        '^  ${RegExp.escape(path)}:\n(.*?)(?=^  /|^components:|(?![\\s\\S]))',
-        multiLine: true,
-        dotAll: true,
-      ).firstMatch(_yaml)!;
-      final op = RegExp(
-        '^    $method:\n(.*?)(?=^    (?:get|post|put|patch|delete):|(?![\\s\\S]))',
-        multiLine: true,
-        dotAll: true,
-      ).firstMatch(path0.group(1)!)!;
-      return RegExp(
-            r'^      security:\n((?:      - .*\n)+)',
-            multiLine: true,
-          ).firstMatch(op.group(1)!)?.group(1) ??
-          '';
-    }
-
-    /// The values of a backend `models.TextChoices` class.
-    Set<String> choices(String file, String className) {
-      final source = File('../backend/apps/$file').readAsStringSync();
-      final block = RegExp(
-        '^class $className\\(models.TextChoices\\):\n((?:    .*\n|\n)+)',
-        multiLine: true,
-      ).firstMatch(source);
-      expect(block, isNotNull, reason: '$className is missing in $file');
-      return RegExp(
-        r'^    \w+ = \(?\s*"(\w+)"',
-        multiLine: true,
-      ).allMatches(block!.group(1)!).map((m) => m.group(1)!).toSet();
-    }
-
-    void check(String name, Set<String> fields, {bool required = true}) {
-      expect(_properties(name), containsAll(fields), reason: name);
-      if (required) {
-        expect(_required(name), containsAll(fields), reason: '$name required');
-      }
-    }
-
     test('every 11D endpoint is documented with the method the app uses', () {
       const expected = <String, Set<String>>{
         '/api/v1/marketplace/categories': {'get'},
@@ -858,6 +866,212 @@ void main() {
       ]) {
         expect(permissions, contains(code));
       }
+    });
+  });
+
+  group('Phase 11E — notifications, chat and push devices', () {
+    test('every 11E endpoint is documented with the method the app uses', () {
+      const expected = <String, Set<String>>{
+        '/api/v1/notifications/': {'get'},
+        '/api/v1/notifications/unread-count/': {'get'},
+        '/api/v1/notifications/{id}/read/': {'post'},
+        '/api/v1/notifications/read-all/': {'post'},
+        '/api/v1/notifications/push-devices/': {'post'},
+        '/api/v1/notifications/push-devices/unregister/': {'post'},
+        '/api/v1/chat/conversations/': {'get'},
+        '/api/v1/chat/conversations/{id}/messages/': {'get', 'post'},
+        '/api/v1/chat/conversations/{id}/read/': {'post'},
+        '/api/v1/chat/unread-count/': {'get'},
+        '/api/v1/chat/reservations/{reservation_id}/conversation': {'post'},
+      };
+      expected.forEach((path, methods) {
+        expect(_operations(path), containsAll(methods), reason: path);
+        for (final method in methods) {
+          expect(
+            security(path, method),
+            contains('jwtAuth'),
+            reason: '$method $path needs the token',
+          );
+        }
+      });
+    });
+
+    test('lists are paginated with page and page_size', () {
+      for (final path in [
+        '/api/v1/notifications/',
+        '/api/v1/chat/conversations/',
+        '/api/v1/chat/conversations/{id}/messages/',
+      ]) {
+        expect(
+          queryParams(path),
+          containsAll(['page', 'page_size']),
+          reason: path,
+        );
+      }
+      expect(_schema('PaginatedChatMessage'), contains('ChatMessage'));
+    });
+
+    test(
+      'notification fields the model reads strictly, and the enums behind them',
+      () {
+        check('Notification', {
+          'id',
+          'category',
+          'event_type',
+          'title',
+          'body',
+          'resource_type',
+          'resource_id',
+          'is_read',
+          'read_at',
+          'created_at',
+        });
+        // the client schema never carries the raw payload, the recipient or the dedupe key
+        for (final hidden in ['payload', 'recipient', 'dedupe_key']) {
+          expect(_properties('Notification'), isNot(contains(hidden)));
+        }
+        check('UnreadCount', {'count'});
+        check('MarkAllRead', {'updated'});
+        expect(
+          _schema('NotificationCategoryEnum'),
+          contains('- RESERVATION\n'),
+        );
+        final events = choices(
+          'notifications/types.py',
+          'NotificationEventType',
+        );
+        for (final event in events) {
+          expect(_schema('NotificationEventTypeEnum'), contains('- $event\n'));
+        }
+      },
+    );
+
+    test('every backend notification event the app can open is one the router knows', () {
+      final account = Account.fromJson(accountJson());
+      for (final event in choices(
+        'notifications/types.py',
+        'NotificationEventType',
+      )) {
+        final route = routeForNotification(
+          AppNotification.fromJson(notificationJson(event: event)),
+          account,
+        );
+        expect(route, isNotNull, reason: '$event should open its reservation');
+      }
+      expect(choices('notifications/types.py', 'NotificationResourceType'), {
+        'RESERVATION',
+      });
+    });
+
+    test(
+      'push-device schemas: token, platform, ownership and the unregister body',
+      () {
+        expect(_properties('PushDeviceRegisterRequest'), {'token', 'platform'});
+        expect(_required('PushDeviceRegisterRequest'), {'token', 'platform'});
+        expect(
+          _schema('PushDeviceRegisterRequest'),
+          contains('maxLength: 1024'),
+        );
+        expect(_schema('PushPlatformEnum'), contains('- ANDROID\n'));
+        expect(choices('notifications/types.py', 'PushPlatform'), {
+          'ANDROID',
+          'IOS',
+          'WEB',
+        });
+        expect(_properties('PushDeviceUnregisterRequest'), {'token'});
+        expect(_required('PushDeviceUnregisterRequest'), {'token'});
+        // the response never returns the token or the owner
+        expect(_properties('PushDevice'), isNot(contains('token')));
+        expect(_properties('PushDevice'), isNot(contains('account')));
+        // register is an idempotent upsert (the contract the app relies on to sync repeatedly)
+        expect(
+          _yaml,
+          contains('Idempotent upsert owned by the authenticated caller'),
+        );
+        // unregister answers 204 for known, unknown and foreign tokens alike
+        expect(_yaml, contains('answered\n        identically (204)'));
+      },
+    );
+
+    test(
+      'the push payload keys the router reads are the ones the backend sends',
+      () {
+        final source = File('../backend/apps/notifications/push_service.py')
+            .readAsStringSync();
+        for (final fragment in [
+          '"type": "notification"',
+          '"notification_id"',
+          '"event_type"',
+          '"type": "chat_message"',
+          '"conversation_id"',
+        ]) {
+          expect(source, contains(fragment), reason: fragment);
+        }
+      },
+    );
+
+    test(
+      'conversation and message schemas carry the fields the models read',
+      () {
+        check('ChatConversation', {
+          'id',
+          'context_type',
+          'context_id',
+          'other_participant',
+          'last_sequence',
+          'last_read_sequence',
+          'unread_count',
+          'last_message_at',
+          'created_at',
+        });
+        check('ChatAccount', {'id', 'full_name', 'role'});
+        check('ChatMessage', {
+          'id',
+          'sequence',
+          'sender',
+          'is_mine',
+          'body',
+          'created_at',
+        });
+        check('ChatUnreadCount', {'count'});
+        check('ChatReadState', {'last_read_sequence'});
+        expect(choices('chat/types.py', 'ConversationContextType'), {
+          'RESERVATION',
+        });
+      },
+    );
+
+    test('send and read requests: body 1..2000, through_sequence >= 0', () {
+      expect(_properties('ChatMessageCreateRequest'), {'body'});
+      expect(_required('ChatMessageCreateRequest'), {'body'});
+      final send = _schema('ChatMessageCreateRequest');
+      expect(send, contains('minLength: 1'));
+      expect(send, contains('maxLength: $maxChatMessageLength'));
+      expect(maxChatMessageLength, 2000);
+      expect(_properties('ChatReadRequestRequest'), {'through_sequence'});
+      expect(_required('ChatReadRequestRequest'), {'through_sequence'});
+      expect(_schema('ChatReadRequestRequest'), contains('minimum: 0'));
+    });
+
+    test('message paging: latest page first, chronological inside each page', () {
+      final block = RegExp(
+        r'^  /api/v1/chat/conversations/\{id\}/messages/:\n(.*?)(?=^  /)',
+        multiLine: true,
+        dotAll: true,
+      ).firstMatch(_yaml)!.group(1)!;
+      expect(
+        block,
+        contains(
+          'Latest page is page 1; messages inside each page are chronological.',
+        ),
+      );
+      final service = File('../backend/apps/chat/services.py')
+          .readAsStringSync();
+      expect(
+        service,
+        contains('through_sequence > conversation.last_sequence'),
+      );
+      expect(service, contains('if len(body) > 2000'));
     });
   });
 }
