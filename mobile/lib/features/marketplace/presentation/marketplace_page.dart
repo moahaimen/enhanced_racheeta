@@ -10,6 +10,7 @@ import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/paged_list.dart';
 import '../../../shared/widgets/search_filter_bar.dart';
 import '../../../shared/widgets/states.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/marketplace_providers.dart';
 import '../data/marketplace_api.dart';
 import 'marketplace_errors.dart';
@@ -43,6 +44,7 @@ class MarketplacePage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SearchFilterBar(
+            scopeKey: ref.watch(accountIdProvider),
             query: query,
             showSearch: false,
             filtersTitle: l10n.marketplaceFiltersTitle,

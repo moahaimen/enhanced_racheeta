@@ -10,6 +10,7 @@ import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/paged_list.dart';
 import '../../../shared/widgets/search_filter_bar.dart';
 import '../../discovery/application/discovery_providers.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/jobs_providers.dart';
 import '../data/jobs_api.dart';
 import 'job_labels.dart';
@@ -33,6 +34,7 @@ class JobsPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SearchFilterBar(
+            scopeKey: ref.watch(accountIdProvider),
             query: query,
             searchLabel: l10n.jobsSearchHint,
             filtersTitle: l10n.jobsFiltersTitle,

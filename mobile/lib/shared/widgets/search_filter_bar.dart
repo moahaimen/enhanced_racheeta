@@ -35,11 +35,18 @@ class FilterField {
 /// Search box (debounced) plus a filter-sheet button with an active-filter badge. It edits a
 /// [SearchQuery]; whoever owns the query decides what to do with it (normally a notifier that the
 /// list controller watches, so a changed query restarts the list).
+///
+/// [scopeKey] is an opaque identity of whoever the query belongs to (the screens pass the
+/// signed-in account id). When it changes while this bar stays mounted, everything typed or drafted
+/// under the old scope is dropped: the pending debounce is cancelled, the box is re-synced to the
+/// new query, and an open filter sheet is closed and its result ignored, so a value created under
+/// account A can never update account B's query.
 class SearchFilterBar extends ConsumerStatefulWidget {
   const SearchFilterBar({
     required this.query,
     required this.onChanged,
     required this.fieldsBuilder,
+    required this.scopeKey,
     this.searchLabel,
     this.filtersTitle,
     this.showSearch = true,
@@ -53,6 +60,7 @@ class SearchFilterBar extends ConsumerStatefulWidget {
   final String? searchLabel;
   final String? filtersTitle;
   final bool showSearch;
+  final Object? scopeKey;
 
   @override
   ConsumerState<SearchFilterBar> createState() => _SearchFilterBarState();
@@ -64,10 +72,17 @@ class _SearchFilterBarState extends ConsumerState<SearchFilterBar> {
     text: widget.query.search,
   );
   Timer? _timer;
+  BuildContext? _sheetContext;
 
   @override
   void didUpdateWidget(SearchFilterBar old) {
     super.didUpdateWidget(old);
+    if (widget.scopeKey != old.scopeKey) {
+      // New scope: nothing typed or drafted under the old one may reach the new query.
+      _timer?.cancel();
+      _text.text = widget.query.search;
+      _closeOpenSheet();
+    }
     // The owner reset the query (e.g. the account changed): keep the box in step.
     if (widget.query.search != old.query.search &&
         widget.query.search != _text.text) {
@@ -82,6 +97,19 @@ class _SearchFilterBarState extends ConsumerState<SearchFilterBar> {
     super.dispose();
   }
 
+  /// Closes the filter sheet of the previous scope (only that route, after this frame).
+  void _closeOpenSheet() {
+    final sheet = _sheetContext;
+    if (sheet == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!sheet.mounted) return;
+      final route = ModalRoute.of(sheet);
+      if (route != null && route.isActive) {
+        Navigator.of(sheet).removeRoute(route);
+      }
+    });
+  }
+
   void _apply(String text) {
     _timer?.cancel();
     if (widget.query.search == text) return;
@@ -89,17 +117,25 @@ class _SearchFilterBarState extends ConsumerState<SearchFilterBar> {
   }
 
   Future<void> _openFilters() async {
+    final openedFor = widget.scopeKey;
     final next = await showModalBottomSheet<SearchQuery>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _FilterSheet(
-        initial: widget.query,
-        title: widget.filtersTitle,
-        fieldsBuilder: widget.fieldsBuilder,
-      ),
+      builder: (sheetContext) {
+        _sheetContext = sheetContext;
+        return _FilterSheet(
+          initial: widget.query,
+          title: widget.filtersTitle,
+          fieldsBuilder: widget.fieldsBuilder,
+        );
+      },
     );
-    if (next != null && mounted) widget.onChanged(next);
+    _sheetContext = null;
+    // A draft made under another scope (account) is never applied to the current one.
+    if (next != null && mounted && widget.scopeKey == openedFor) {
+      widget.onChanged(next);
+    }
   }
 
   @override

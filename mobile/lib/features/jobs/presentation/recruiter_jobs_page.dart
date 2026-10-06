@@ -9,6 +9,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/paged_list.dart';
 import '../../../shared/widgets/search_filter_bar.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/jobs_providers.dart';
 import '../data/jobs_api.dart';
 import 'job_labels.dart';
@@ -43,6 +44,7 @@ class _List extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SearchFilterBar(
+            scopeKey: ref.watch(accountIdProvider),
             query: query,
             showSearch: false,
             filtersTitle: l10n.recruiterJobsTitle,

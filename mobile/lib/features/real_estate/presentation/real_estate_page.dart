@@ -10,6 +10,7 @@ import '../../../shared/widgets/paged_list.dart';
 import '../../../shared/widgets/search_filter_bar.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../discovery/application/discovery_providers.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/real_estate_providers.dart';
 import '../data/real_estate_api.dart';
 import 'listing_tile.dart';
@@ -33,6 +34,7 @@ class RealEstatePage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SearchFilterBar(
+            scopeKey: ref.watch(accountIdProvider),
             query: query,
             searchLabel: l10n.realEstateSearchHint,
             filtersTitle: l10n.realEstateFiltersTitle,
