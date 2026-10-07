@@ -113,3 +113,68 @@ jobs:
         run: flutter analyze --fatal-infos
       - name: Tests
         run: flutter test
+
+
+  mobile-release-android:
+    name: Mobile release build (Android)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      # Ephemeral CI-only signing. Production keystores/passwords belong in the owner's secret
+      # manager / CI secrets and are never committed.
+      RACHEETA_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/racheeta-ci.jks
+      RACHEETA_ANDROID_STORE_PASSWORD: ci-only-password
+      RACHEETA_ANDROID_KEY_ALIAS: ci
+      RACHEETA_ANDROID_KEY_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Generate ephemeral CI signing key
+        run: >
+          keytool -genkeypair -v
+          -keystore "$RACHEETA_ANDROID_KEYSTORE_PATH"
+          -storepass "$RACHEETA_ANDROID_STORE_PASSWORD"
+          -keypass "$RACHEETA_ANDROID_KEY_PASSWORD"
+          -alias "$RACHEETA_ANDROID_KEY_ALIAS"
+          -keyalg RSA -keysize 2048 -validity 1
+          -dname "CN=Racheeta CI, O=CI, C=IQ"
+      - name: Build production-mode app bundle
+        run: >
+          flutter build appbundle --release
+          --dart-define=APP_ENV=production
+          --dart-define=API_BASE_URL=https://api.ci.invalid
+      - name: Report bundle size
+        run: ls -lh build/app/outputs/bundle/release/app-release.aab
+
+  mobile-release-ios:
+    name: Mobile release build (iOS, no codesign)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Build production-mode iOS app without signing
+        run: >
+          flutter build ios --release --no-codesign
+          --dart-define=APP_ENV=production
+          --dart-define=API_BASE_URL=https://api.ci.invalid

@@ -4,6 +4,30 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseStorePath = System.getenv("RACHEETA_ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = System.getenv("RACHEETA_ANDROID_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("RACHEETA_ANDROID_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("RACHEETA_ANDROID_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStorePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
+// Debug/profile work without production credentials. A release task fails closed instead of ever
+// falling back to the debug key.
+val releaseRequested = gradle.startParameter.taskNames.any {
+    it.contains("release", ignoreCase = true)
+}
+if (releaseRequested && !hasReleaseSigning) {
+    throw GradleException(
+        "Android release signing is required. Set RACHEETA_ANDROID_KEYSTORE_PATH, " +
+            "RACHEETA_ANDROID_STORE_PASSWORD, RACHEETA_ANDROID_KEY_ALIAS and " +
+            "RACHEETA_ANDROID_KEY_PASSWORD."
+    )
+}
+
 android {
     namespace = "app.racheeta.racheeta_mobile"
     compileSdk = flutter.compileSdkVersion
@@ -15,25 +39,32 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Stable store identity. Changing this after publication creates a different application.
         applicationId = "app.racheeta.racheeta_mobile"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                null
+            }
         }
     }
 }
