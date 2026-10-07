@@ -50,10 +50,14 @@ class FirebaseConfig {
 
 /// Initialises Firebase from [config] and returns the real source, or the disabled one when the
 /// build has no configuration or initialisation fails (push is then simply unavailable).
-Future<PushSource> createPushSource(FirebaseConfig? config) async {
+Future<PushSource> createPushSource(
+  FirebaseConfig? config, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
   if (config == null) return const DisabledPushSource();
   try {
-    await Firebase.initializeApp(options: config.toOptions());
+    // Start-up must never wait on Firebase: a slow or hung initialisation just means no push.
+    await Firebase.initializeApp(options: config.toOptions()).timeout(timeout);
     return FirebasePushSource(FirebaseMessaging.instance);
   } on Object {
     return const DisabledPushSource();

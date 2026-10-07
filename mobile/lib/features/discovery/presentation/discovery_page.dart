@@ -11,6 +11,7 @@ import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/async_action_button.dart';
 import '../../../shared/widgets/states.dart';
+import '../../auth/application/account_scope.dart';
 import '../application/discovery_providers.dart';
 import '../data/discovery_api.dart';
 import '../data/discovery_models.dart';
@@ -54,10 +55,21 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     _timer = Timer(_debounce, () => _applySearch(text));
   }
 
+  /// The search text, a pending debounce and an open filter sheet all belong to the account that
+  /// created them: when the account changes (the filters were reset by their owner) the pending
+  /// debounce is cancelled and the box follows the reset query.
+  void _resetForAccountChange() {
+    _timer?.cancel();
+    _search.text = ref.read(discoveryFiltersProvider).search;
+    setState(() {});
+  }
+
   Future<void> _openFilters() async {
     final current = ref.read(discoveryFiltersProvider);
+    final openedFor = ref.read(accountIdProvider);
     final result = await showFiltersSheet(context, current);
-    if (result != null && mounted) {
+    // A draft made under another account is never applied to the current one.
+    if (result != null && mounted && ref.read(accountIdProvider) == openedFor) {
       ref.read(discoveryFiltersProvider.notifier).update(result);
     }
   }
@@ -65,6 +77,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    ref.listen<String?>(accountIdProvider, (previous, next) {
+      if (previous != next) _resetForAccountChange();
+    });
     final filters = ref.watch(discoveryFiltersProvider);
     final results = ref.watch(providerSearchProvider);
     final activeFilters = filters.activeFilterCount;

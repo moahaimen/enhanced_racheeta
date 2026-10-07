@@ -1,11 +1,19 @@
 # Current State
 
-Date: 2026-10-06
-Branch: `feat/phase11e-chat-notifications-fcm` (from `main` `47bbaeb815357d396b47c91565cfa053e509b7c0`, the Phase 11D merge; post-merge CI #318 green)
+Date: 2026-10-07
+Branch: `feat/phase11f-mobile-release-hardening` (from `main` `5805713cbb119579681448dbc16773ed1cc85cb2`, the Phase 11E merge; post-merge CI #331 and #332 green)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phases 9A–9C, Phase 10, Phase 11A (PR #14), 11B (PR #15), 11C (PR #16) and Phase 11D (PR #17; accepted head `ed99dae41ccc4cb6fe1ce0f7e680b3c61b571f8e`, merge `47bbaeb815357d396b47c91565cfa053e509b7c0`, post-merge CI #318) are DONE and merged.**
-- **Phase 11 — Flutter mobile is CURRENT, subphase 11E** (chat, notifications, FCM client). Draft PR; not merged; awaiting independent P1/P2 review. Do not merge 11E until exact-head CI and review are green and the owner explicitly says **`merge it`**. **11F (release hardening) is NOT STARTED — do not start it.**
+- **Phases 9A–9C, Phase 10 and Phase 11A–11E are DONE and merged** (11D: PR #17, merge `47bbaeb`; 11E: PR #18, accepted head `c2d658a4a25b4fc927258c5ac146967c79f0c5b0`, merge `5805713cbb119579681448dbc16773ed1cc85cb2`, post-merge CI #331/#332 green).
+- **Phase 11 — Flutter mobile is CURRENT, subphase 11F** (release hardening). Draft PR; not merged; awaiting independent P1/P2 review. Do not merge 11F until exact-head CI and review are green and the owner explicitly says **`merge it`**. **Phase 12 is NOT STARTED — do not start it.**
+
+## Phase 11F summary — mobile release hardening (see ADR-058, `docs/MOBILE_RELEASE.md`)
+
+- Everything release-related is in `docs/MOBILE_RELEASE.md` (configuration, signing, permissions, backup, privacy, Firebase, iOS, accessibility/text-scale/RTL findings, performance, release matrix, evidence, blockers, store checklist). Code: `mobile/android/app/{build.gradle.kts,proguard-rules.pro,src/main/AndroidManifest.xml,src/main/res/xml/*}`, `mobile/android/key.properties.example`, `mobile/tool/verify_release_apk.py`, CI job `mobile-release`, `AppConfig`, `SelectableValue`, theme tokens, discovery account scoping.
+- Release builds FAIL without signing credentials (`key.properties` or `RACHEETA_KEYSTORE_*`); the only bypass is the explicit smoke switch `ORG_GRADLE_PROJECT_racheetaAllowDebugSignedRelease=true` (never a production artifact). Never commit a keystore or `key.properties`.
+- Build with SEPARATE `--dart-define` arguments (in zsh an unquoted variable is not split and produces the "app is not configured" screen).
+- Still external: production signing key, final application id decision, production API URL, Firebase client values + backend Admin credential, brand icon/splash, store metadata and privacy declarations, iOS signing/APNs, real-device and real-FCM verification.
+- Tests: 758 Flutter tests, including `accessibility_audit_test`, `text_scale_audit_test`, `release_smoke_test`, `release_hygiene_test`, `discovery_account_scope_test`.
 
 ## Phase 11E summary — chat, notifications and FCM client (see ADR-057)
 

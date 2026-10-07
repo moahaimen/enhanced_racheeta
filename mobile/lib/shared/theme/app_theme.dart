@@ -13,11 +13,12 @@ abstract final class RacheetaColors {
   static const neutral50 = Color(0xFFF7F9F9);
   static const neutral200 = Color(0xFFE2E7E9);
   static const neutral300 = Color(0xFFCBD3D6);
-  static const neutral500 = Color(0xFF6B7A80);
+  // Text-safe values (WCAG AA >= 4.5:1 on white and on neutral50); the web tokens differ slightly.
+  static const neutral500 = Color(0xFF627076);
   static const neutral600 = Color(0xFF4A575C);
   static const neutral800 = Color(0xFF22302F);
-  static const success = Color(0xFF1E8E5A);
-  static const warning = Color(0xFFB7791F);
+  static const success = Color(0xFF187A4E);
+  static const warning = Color(0xFF956000);
   static const error = Color(0xFFC4383B);
   static const info = Color(0xFF2F6FB7);
 }

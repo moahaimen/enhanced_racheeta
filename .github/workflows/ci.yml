@@ -113,3 +113,52 @@ jobs:
         run: flutter analyze --fatal-infos
       - name: Tests
         run: flutter test
+
+  mobile-release:
+    name: Mobile release smoke (Android)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      # Keep Gradle's heap modest on the shared runner (gradle.properties asks for 8 GB).
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g"
+      # NON-production staging values: the build only has to prove the release configuration works.
+      RELEASE_DEFINES: "--dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://api.example.invalid"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Accept Android SDK licenses
+        run: yes | flutter doctor --android-licenses > /dev/null || true
+      - name: A release build without production signing must FAIL (fail closed)
+        run: |
+          set +e
+          flutter build apk --release --target-platform android-arm64 $RELEASE_DEFINES > /tmp/unsigned.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::a release build succeeded without release signing credentials"; exit 1
+          fi
+          grep -q "Release signing is not configured" /tmp/unsigned.log \
+            || (tail -40 /tmp/unsigned.log; echo "::error::build failed for another reason"; exit 1)
+      - name: Release APK (explicit NON-production smoke signing)
+        env:
+          ORG_GRADLE_PROJECT_racheetaAllowDebugSignedRelease: "true"
+        run: flutter build apk --release --target-platform android-arm64 $RELEASE_DEFINES
+      - name: Verify the release APK (id, permissions, backup, exports, no dev URL)
+        run: python3 tool/verify_release_apk.py build/app/outputs/flutter-apk/app-release.apk
+      - name: Release App Bundle (explicit NON-production smoke signing)
+        env:
+          ORG_GRADLE_PROJECT_racheetaAllowDebugSignedRelease: "true"
+        run: flutter build appbundle --release $RELEASE_DEFINES
+      # Artifacts are NOT uploaded: this job proves the release path compiles, nothing is published.

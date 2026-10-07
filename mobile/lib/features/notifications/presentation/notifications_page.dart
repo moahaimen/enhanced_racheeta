@@ -200,9 +200,16 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                   ),
                 ),
               ),
-            Row(
+            // A Wrap, not a Row: at large text sizes the count and the action flow onto two lines
+            // instead of one squeezing the other off screen.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    end: RacheetaSpacing.md,
+                  ),
                   child: Text(
                     unread.hasValue
                         ? l10n.notificationsUnreadCount(unread.requireValue)

@@ -16,6 +16,7 @@ import '../data/job_models.dart';
 import 'job_labels.dart';
 import 'job_tile.dart';
 import 'jobs_errors.dart';
+import '../../../shared/widgets/selectable_value.dart';
 
 /// Longest cover note the backend accepts (`ApplyRequest.cover_text`, maxLength 2000).
 const int maxCoverTextLength = 2000;
@@ -71,7 +72,7 @@ class JobFacts extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          SelectableText(value),
+          SelectableValue(value),
         ],
       ),
     );
@@ -88,7 +89,7 @@ class JobFacts extends StatelessWidget {
                     child: Text(label, style: theme.textTheme.titleMedium),
                   ),
                   const SizedBox(height: RacheetaSpacing.sm),
-                  SelectableText(value),
+                  SelectableValue(value),
                 ],
               ),
             ),
@@ -174,7 +175,7 @@ class JobFacts extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(RacheetaSpacing.lg),
-              child: SelectableText(job.description!),
+              child: SelectableValue(job.description!),
             ),
           ),
         ],

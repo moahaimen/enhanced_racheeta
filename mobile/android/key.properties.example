@@ -1,0 +1,7 @@
+# Copy to android/key.properties (git-ignored) and fill in YOUR release keystore. Never commit the
+# keystore or this file. In CI use the RACHEETA_KEYSTORE_PATH / RACHEETA_KEYSTORE_PASSWORD /
+# RACHEETA_KEY_ALIAS / RACHEETA_KEY_PASSWORD environment variables instead.
+storeFile=/absolute/path/to/racheeta-release.jks
+storePassword=CHANGE_ME
+keyAlias=racheeta
+keyPassword=CHANGE_ME

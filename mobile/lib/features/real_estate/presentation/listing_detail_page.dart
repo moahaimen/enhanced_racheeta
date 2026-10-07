@@ -13,6 +13,7 @@ import '../data/real_estate_models.dart';
 import 'listing_tile.dart';
 import 'real_estate_errors.dart';
 import 'real_estate_labels.dart';
+import '../../../shared/widgets/selectable_value.dart';
 
 /// One public listing, exactly the fields the public API exposes (the contact values are only the
 /// ones the seller's contact method makes public).
@@ -87,7 +88,7 @@ class ListingBody extends ConsumerWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          SelectableText(value),
+          SelectableValue(value),
         ],
       ),
     );
@@ -159,7 +160,7 @@ class ListingBody extends ConsumerWidget {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(RacheetaSpacing.lg),
-                child: SelectableText(listing.description),
+                child: SelectableValue(listing.description),
               ),
             ),
           ],

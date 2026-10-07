@@ -106,5 +106,127 @@ void main() {
         );
       }
     });
+
+    group('release safety', () {
+      test('a production release without an explicit URL fails (no default, no localhost)', () {
+        expect(
+          () => AppConfig.fromEnvironment(
+            appEnv: 'production',
+            apiBaseUrl: '',
+            releaseMode: true,
+          ),
+          throwsA(isA<ConfigurationError>()),
+        );
+        // the default environment (no --dart-define) is development, which a release rejects
+        expect(
+          () => AppConfig.fromEnvironment(
+            appEnv: 'development',
+            apiBaseUrl: '',
+            releaseMode: true,
+          ),
+          throwsA(isA<ConfigurationError>()),
+        );
+        expect(
+          () => AppConfig.fromEnvironment(
+            appEnv: 'production',
+            apiBaseUrl: '   ',
+            releaseMode: true,
+          ),
+          throwsA(isA<ConfigurationError>()),
+        );
+      });
+
+      test('release, staging and production never accept localhost or the emulator alias, even over https', () {
+        for (final host in [
+          'https://localhost',
+          'https://LOCALHOST:8443',
+          'https://10.0.2.2',
+          'https://10.0.2.2:8000',
+          'https://127.0.0.1',
+          'https://127.1.2.3',
+          'https://[::1]',
+          'https://0.0.0.0',
+          'https://api.localhost',
+        ]) {
+          for (final (env, release) in [
+            ('production', true),
+            ('production', false),
+            ('staging', true),
+            ('staging', false),
+          ]) {
+            expect(
+              () => AppConfig.fromEnvironment(
+                appEnv: env,
+                apiBaseUrl: host,
+                releaseMode: release,
+              ),
+              throwsA(isA<ConfigurationError>()),
+              reason: '$host in $env release=$release',
+            );
+          }
+        }
+      });
+
+      test(
+        'a debug development build may still use the local development API',
+        () {
+          for (final url in [
+            'http://10.0.2.2:8000',
+            'http://localhost:8000',
+            'https://127.0.0.1:8443',
+          ]) {
+            expect(
+              AppConfig.fromEnvironment(
+                appEnv: 'development',
+                apiBaseUrl: url,
+                releaseMode: false,
+              ).apiBaseUrl,
+              url,
+            );
+          }
+        },
+      );
+
+      test(
+        'the URL must be a plain origin: no credentials, query or fragment',
+        () {
+          for (final url in [
+            'https://user:pw@api.example.com',
+            'https://user@api.example.com',
+            'https://api.example.com?x=1',
+            'https://api.example.com/#frag',
+          ]) {
+            expect(
+              () => AppConfig.fromEnvironment(
+                appEnv: 'production',
+                apiBaseUrl: url,
+                releaseMode: true,
+              ),
+              throwsA(isA<ConfigurationError>()),
+              reason: url,
+            );
+          }
+        },
+      );
+
+      test('a valid production release URL is accepted and the error is a safe message', () {
+        final config = AppConfig.fromEnvironment(
+          appEnv: 'production',
+          apiBaseUrl: 'https://api.racheeta.example',
+          releaseMode: true,
+        );
+        expect(config.environment, AppEnvironment.production);
+        try {
+          AppConfig.fromEnvironment(
+            appEnv: 'production',
+            apiBaseUrl: 'https://user:topsecret@api.example.com',
+            releaseMode: true,
+          );
+          fail('expected a ConfigurationError');
+        } on ConfigurationError catch (error) {
+          expect(error.message, isNot(contains('topsecret')));
+        }
+      });
+    });
   });
 }

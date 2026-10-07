@@ -49,7 +49,11 @@ class AppConfig {
   }) {
     final environment = AppEnvironment.parse(appEnv);
     var url = apiBaseUrl.trim();
-    if (url.isEmpty && environment == AppEnvironment.development) {
+    // The development fallback exists only in non-release builds: `kReleaseMode` is a compile-time
+    // constant, so release code does not even contain the emulator address.
+    if (!kReleaseMode &&
+        url.isEmpty &&
+        environment == AppEnvironment.development) {
       url = 'http://10.0.2.2:8000';
     }
     final config = AppConfig(
@@ -99,6 +103,32 @@ class AppConfig {
         'A release build cannot use APP_ENV=development.',
       );
     }
+    if (uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment) {
+      throw const ConfigurationError(
+        'API_BASE_URL must be a plain origin: no credentials, query or fragment.',
+      );
+    }
+    // A build that is not the local development environment must never point at the developer
+    // machine or the Android-emulator host alias, even by an explicit (copy-pasted) value.
+    if ((releaseMode || environment != AppEnvironment.development) &&
+        _isLocalHost(uri.host)) {
+      throw const ConfigurationError(
+        'API_BASE_URL must not point at localhost or the emulator host alias '
+        'outside APP_ENV=development in a debug build.',
+      );
+    }
+  }
+
+  static bool _isLocalHost(String host) {
+    final h = host.toLowerCase();
+    return h == 'localhost' ||
+        h.endsWith('.localhost') ||
+        h == '10.0.2.2' ||
+        h == '10.0.3.2' ||
+        h == '0.0.0.0' ||
+        h == '::1' ||
+        h == '[::1]' ||
+        h.startsWith('127.');
   }
 
   static String _normalise(String value) =>
