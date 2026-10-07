@@ -124,7 +124,6 @@ jobs:
     env:
       # Ephemeral CI-only signing. Production keystores/passwords belong in the owner's secret
       # manager / CI secrets and are never committed.
-      RACHEETA_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/racheeta-ci.jks
       RACHEETA_ANDROID_STORE_PASSWORD: ci-only-password
       RACHEETA_ANDROID_KEY_ALIAS: ci
       RACHEETA_ANDROID_KEY_PASSWORD: ci-only-password
@@ -142,14 +141,16 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get --enforce-lockfile
       - name: Generate ephemeral CI signing key
-        run: >
-          keytool -genkeypair -v
-          -keystore "$RACHEETA_ANDROID_KEYSTORE_PATH"
-          -storepass "$RACHEETA_ANDROID_STORE_PASSWORD"
-          -keypass "$RACHEETA_ANDROID_KEY_PASSWORD"
-          -alias "$RACHEETA_ANDROID_KEY_ALIAS"
-          -keyalg RSA -keysize 2048 -validity 1
-          -dname "CN=Racheeta CI, O=CI, C=IQ"
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/racheeta-ci.jks"
+          echo "RACHEETA_ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$RACHEETA_ANDROID_STORE_PASSWORD" \
+            -keypass "$RACHEETA_ANDROID_KEY_PASSWORD" \
+            -alias "$RACHEETA_ANDROID_KEY_ALIAS" \
+            -keyalg RSA -keysize 2048 -validity 1 \
+            -dname "CN=Racheeta CI, O=CI, C=IQ"
       - name: Build production-mode app bundle
         run: >
           flutter build appbundle --release
