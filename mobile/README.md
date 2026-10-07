@@ -5,7 +5,7 @@ API client, email/password authentication, session management, localization (Ara
 and reusable UI). **Phase 11B** adds the patient side (provider discovery, detail, booking, "My appointments" with
 cancellation). **Phase 11C** adds the provider and facility side (dashboard, availability, received bookings).
 **Phase 11D** adds the marketplace, medical jobs and real estate behind an *Explore* section on Home.
-**Phase 11E (this change) adds chat, the persistent notification centre and the FCM client** (see below). Release hardening is 11F (see `docs/MASTER_PLAN.md`);
+**Phase 11E adds chat, the persistent notification centre and the FCM client** (see below). **Phase 11F hardens release builds** (see `docs/MOBILE_RELEASE.md`);
 nothing unfinished is exposed in the app.
 
 - Flutter **3.47.6** / Dart **3.13.5** (pinned in `pubspec.yaml`, CI and `docs/DECISIONS.md`)
@@ -68,6 +68,14 @@ flutter test
 ```
 
 Regenerate localization code after editing an `.arb` file: `flutter gen-l10n` (output committed).
+
+## Release hardening (11F)
+
+- Version: **1.0.0+1**; display name **Racheeta**.
+- Android release signing is supplied only through the documented `RACHEETA_ANDROID_*` environment variables; no debug-signing fallback exists.
+- Release Android requires INTERNET and forbids cleartext; debug alone allows the local emulator HTTP backend.
+- CI compiles Android release AAB and iOS release without codesigning in addition to the normal Flutter suite.
+- Production/store credentials, final branding and real Firebase/APNs setup are manual owner prerequisites. See `docs/MOBILE_RELEASE.md`.
 
 ## Not in 11E
 

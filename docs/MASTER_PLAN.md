@@ -1128,7 +1128,7 @@ Create dashboards for:
 - No migrations, no new infrastructure.
 - Merged via PR #13 (merge commit `94dc2e39572a984d5e1d68b0602fe74de34096d8`, post-merge CI #298 successful).
 
-## Phase 11 — Mobile Integration (CURRENT — 11E implemented, awaiting review)
+## Phase 11 — Mobile Integration (CURRENT — 11F release hardening)
 
 Build a new Flutter architecture with:
 
@@ -1146,8 +1146,8 @@ Delivered as independently reviewed subphases (each its own branch and draft PR;
 | 11B | Patient discovery and reservations | merged via PR #15 (accepted head `0acaf51950410daac12e5975d2f59157e521e531`, merge `82ae94d020394158ddcd8f1c6a85ffa7134e6b0a`, post-merge CI #308 green) |
 | 11C | Provider & facility workspace | merged via PR #16 (accepted head `fa0d74135d527b8e50f2f8ac04fc90fe796e2c20`, merge `2899900b88062f539281b566c28c428baae07c1e`, post-merge CI #313 green) |
 | 11D | Marketplace, jobs and real estate | merged via PR #17 (accepted head `ed99dae41ccc4cb6fe1ce0f7e680b3c61b571f8e`, merge `47bbaeb815357d396b47c91565cfa053e509b7c0`, post-merge CI #318 green) |
-| 11E | Chat, notifications and FCM device registration | implemented on `feat/phase11e-chat-notifications-fcm` (draft PR, not merged; awaiting independent review) |
-| 11F | Release hardening (signing, store builds, performance, accessibility audit) | not started |
+| 11E | Chat, notifications and FCM device registration | merged via PR #18 (accepted head `c2d658a4a25b4fc927258c5ac146967c79f0c5b0`, merge `5805713cbb119579681448dbc16773ed1cc85cb2`, post-merge CI #331 green) |
+| 11F | Release hardening (signing, store builds, performance, accessibility audit) | CURRENT on `feat/phase11f-release-hardening` |
 
 **11A implementation (see `mobile/README.md`, ADR-052/053, `AUTHENTICATION.md` "Mobile client", `SECURITY.md` "Mobile client"):** Flutter 3.47.6, Riverpod, go_router, dio, flutter_secure_storage; access token in memory only, rotating refresh token in secure storage; single-flight refresh; stale-response protection across logout and account switching; role-aware navigation derived from `/me`; Arabic (RTL) and English. No feature beyond sign-in, session, home and account is exposed; no FCM registration, no Firebase login.
 
