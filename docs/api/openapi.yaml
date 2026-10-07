@@ -3704,9 +3704,14 @@ paths:
   /api/v1/notifications/push-devices/:
     post:
       operationId: notifications_push_devices_create
-      description: Idempotent upsert owned by the authenticated caller. If the token
+      description: 'Idempotent upsert owned by the authenticated caller. If the token
         was registered by another account it is transferred to the caller and the
         previous owner stops receiving pushes through it. The token is never returned.
+        Ordering: the request carries a client `ownership_seq`; under the token lock
+        it is applied only if it is greater than the stored one. An older, equal (by
+        a different owner) or missing sequence on a sequenced token changes nothing
+        and is answered 409 `stale_ownership`; an exact replay by the owner is returned
+        unchanged (200).'
       summary: Register or refresh this device's push token
       tags:
       - notifications
@@ -3728,12 +3733,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/PushDevice'
           description: ''
+        '409':
+          description: '`stale_ownership`: a newer operation governs the token.'
   /api/v1/notifications/push-devices/unregister/:
     post:
       operationId: notifications_push_devices_unregister_create
       description: Deactivates the caller's own registration of this token. Tokens
         that are unknown or owned by someone else change nothing and are answered
-        identically (204).
+        identically (204), and so do stale ones. With an `ownership_seq` greater than
+        the stored one the owner's registration is deactivated and the sequence stored,
+        so an older register arriving later cannot resurrect it; for a token the server
+        has not seen yet an inactive ordering marker is recorded.
       summary: Unregister this device's push token (call before logout)
       tags:
       - notifications
@@ -12792,8 +12802,8 @@ components:
     PushDeviceRegisterRequest:
       type: object
       description: |-
-        The only client input: the opaque FCM token and a bounded platform.
-        Ownership is always the authenticated caller; there is no account field.
+        The only client input: the opaque FCM token, a bounded platform and the ownership
+        sequence. Ownership is always the authenticated caller; there is no account field.
       properties:
         token:
           type: string
@@ -12801,6 +12811,16 @@ components:
           maxLength: 1024
         platform:
           $ref: '#/components/schemas/PushPlatformEnum'
+        ownership_seq:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          description: 'Client ownership sequence: strictly increasing per installation
+            (persisted by the client, never reset by an account switch, logout or
+            restart). Under the token lock an operation is applied only if its value
+            is greater than the one stored for the token; an older, equal or missing
+            value on a sequenced token changes nothing.'
       required:
       - platform
       - token
@@ -12812,6 +12832,25 @@ components:
           type: string
           minLength: 1
           maxLength: 1024
+        ownership_seq:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          description: 'Client ownership sequence: strictly increasing per installation
+            (persisted by the client, never reset by an account switch, logout or
+            restart). Under the token lock an operation is applied only if its value
+            is greater than the one stored for the token; an older, equal or missing
+            value on a sequenced token changes nothing.'
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/PushPlatformEnum'
+          description: |-
+            Only used when a sequenced unregister arrives for a token the server has not seen yet and must leave an inactive ordering marker (default ANDROID).
+
+            * `ANDROID` - Android
+            * `IOS` - iOS
+            * `WEB` - Web
       required:
       - token
     PushPlatformEnum:

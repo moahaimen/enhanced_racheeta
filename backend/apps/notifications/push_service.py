@@ -45,13 +45,43 @@ _CHAT_TITLE = {"ar": "رسالة جديدة", "en": "New message"}
 
 
 # --- registration -------------------------------------------------------------------------
+#
+# Ownership ordering protocol
+# ---------------------------
+# A token's owner/active state is changed by two operations: register and unregister. HTTP gives
+# no ordering between requests (a request can be delayed, retried or arrive after a newer one that
+# committed first), so each operation carries a client sequence (`ownership_seq`, strictly
+# increasing per installation) and the decision is made under the token row lock:
+#
+#   * the row has no stored sequence (never sequenced / legacy): any request is applied, as before;
+#   * the row has a stored sequence S: a request is applied only if it carries a sequence > S.
+#     An older, EQUAL or MISSING sequence changes nothing at all (owner, platform, active state,
+#     timestamps and the stored sequence stay exactly as they were) — a legacy unsequenced request
+#     can therefore never supersede sequenced ownership, and an exact replay is idempotent.
+#
+# Consequences: the final state depends on the sequences, not on arrival or commit order; a
+# register that overtakes nothing cannot resurrect a token a newer unregister already deactivated;
+# and an unregister that arrives BEFORE the register it follows leaves an inactive ordering marker
+# (a row for the caller with `is_active = False`) so the late, older register is rejected.
 
 
-def register_device(account, *, token: str, platform: str) -> PushDevice:
-    """Idempotent upsert; the account is always the authenticated caller.
+class StaleOwnership(Exception):
+    """A registration lost to a newer (or equal, or unsequenced-on-sequenced) operation."""
+
+
+def _accepts(device: PushDevice, seq: int | None) -> bool:
+    if device.ownership_seq is None:
+        return True  # legacy row: unchanged behaviour
+    return seq is not None and seq > device.ownership_seq
+
+
+def register_device(account, *, token: str, platform: str, ownership_seq: int | None = None):
+    """Idempotent, ordered upsert; the account is always the authenticated caller.
 
     The token is globally unique in the database. If it belonged to another account it
     is *transferred*: the previous owner immediately stops receiving pushes through it.
+    Raises `StaleOwnership` (HTTP 409) when a newer operation already governs the token; an exact
+    replay by the current owner is returned unchanged.
     """
     with transaction.atomic():
         device = PushDevice.objects.select_for_update().filter(token=token).first()
@@ -59,10 +89,13 @@ def register_device(account, *, token: str, platform: str) -> PushDevice:
             try:
                 with transaction.atomic():
                     device = PushDevice.objects.create(
-                        account=account, token=token, platform=platform
+                        account=account,
+                        token=token,
+                        platform=platform,
+                        ownership_seq=ownership_seq,
                     )
             except IntegrityError:
-                # A concurrent registration created it first; lock and take it over.
+                # A concurrent operation created it first; lock and decide against its sequence.
                 device = PushDevice.objects.select_for_update().get(token=token)
             else:
                 audit_services.record(
@@ -75,14 +108,26 @@ def register_device(account, *, token: str, platform: str) -> PushDevice:
                 _enforce_device_cap(account, keep=device.pk)
                 return device
 
+        if not _accepts(device, ownership_seq):
+            if (
+                ownership_seq is not None
+                and ownership_seq == device.ownership_seq
+                and device.account_id == account.pk
+                and device.is_active
+            ):
+                return device  # exact replay by the owner: idempotent, nothing changes
+            raise StaleOwnership
+
         transferred = device.account_id != account.pk
         device.account = account
         device.platform = platform
         device.is_active = True
         device.last_registered_at = timezone.now()
-        device.save(
-            update_fields=["account", "platform", "is_active", "last_registered_at", "updated_at"]
-        )
+        fields = ["account", "platform", "is_active", "last_registered_at", "updated_at"]
+        if ownership_seq is not None:
+            device.ownership_seq = ownership_seq
+            fields.append("ownership_seq")
+        device.save(update_fields=fields)
         if transferred:
             audit_services.record(
                 actor=account,
@@ -106,23 +151,72 @@ def _enforce_device_cap(account, *, keep: UUID) -> None:
         PushDevice.objects.filter(pk__in=surplus).update(is_active=False)
 
 
-def unregister_device(account, *, token: str) -> bool:
-    """Deactivate the caller's own registration. Foreign or unknown tokens change nothing;
-    the caller cannot tell the difference (the API answers identically)."""
+# Inactive rows (unregistered devices and ordering markers) are bounded per account.
+MAX_INACTIVE_DEVICES = 50
+
+
+def _prune_inactive(account, *, keep: UUID) -> None:
+    surplus = list(
+        PushDevice.objects.filter(account=account, is_active=False)
+        .exclude(pk=keep)
+        .order_by("-updated_at", "-id")
+        .values_list("pk", flat=True)[MAX_INACTIVE_DEVICES - 1 :]
+    )
+    if surplus:
+        PushDevice.objects.filter(pk__in=surplus).delete()
+
+
+def unregister_device(
+    account, *, token: str, ownership_seq: int | None = None, platform: str = "ANDROID"
+) -> bool:
+    """Ordered deactivation of the caller's own registration; returns whether it deactivated.
+
+    * Foreign tokens change nothing (the caller cannot tell the difference); a sequence is never
+      recorded on another account's registration.
+    * A stale, equal or missing sequence on a sequenced token changes nothing.
+    * A newer sequence by the owner deactivates the registration AND stores the sequence, so an
+      older register arriving later is rejected (it cannot resurrect the account).
+    * A sequenced unregister for a token the server has not seen yet records an inactive ordering
+      marker for the caller, so the register it follows cannot be applied after it.
+    """
     with transaction.atomic():
-        device = PushDevice.objects.select_for_update().filter(token=token, account=account).first()
-        if device is None or not device.is_active:
+        device = PushDevice.objects.select_for_update().filter(token=token).first()
+        if device is None:
+            if ownership_seq is None:
+                return False
+            try:
+                with transaction.atomic():
+                    marker = PushDevice.objects.create(
+                        account=account,
+                        token=token,
+                        platform=platform,
+                        is_active=False,
+                        ownership_seq=ownership_seq,
+                    )
+            except IntegrityError:
+                device = PushDevice.objects.select_for_update().get(token=token)
+            else:
+                _prune_inactive(account, keep=marker.pk)
+                return False
+
+        if device.account_id != account.pk or not _accepts(device, ownership_seq):
             return False
+        was_active = device.is_active
         device.is_active = False
-        device.save(update_fields=["is_active", "updated_at"])
-        audit_services.record(
-            actor=account,
-            action="push_device.unregistered",
-            target=device,
-            summary="device unregistered",
-            data={"platform": device.platform},
-        )
-        return True
+        fields = ["is_active", "updated_at"]
+        if ownership_seq is not None:
+            device.ownership_seq = ownership_seq
+            fields.append("ownership_seq")
+        device.save(update_fields=fields)
+        if was_active:
+            audit_services.record(
+                actor=account,
+                action="push_device.unregistered",
+                target=device,
+                summary="device unregistered",
+                data={"platform": device.platform},
+            )
+        return was_active
 
 
 # --- delivery -----------------------------------------------------------------------------
