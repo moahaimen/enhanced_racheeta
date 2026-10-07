@@ -176,7 +176,7 @@ def unregister_device(
                 return False
             try:
                 with transaction.atomic():
-                    marker = PushDevice.objects.create(
+                    PushDevice.objects.create(
                         account=account,
                         token=token,
                         platform=platform,
