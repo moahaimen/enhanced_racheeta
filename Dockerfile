@@ -26,6 +26,9 @@ WORKDIR /app
 COPY backend/requirements/ requirements/
 RUN pip install -r requirements/production.txt
 
+# Code stays root-owned and read-only to the runtime user; only collectstatic's output is
+# writable at build time. The container runs as the unprivileged `app` user (no shell login,
+# no secrets baked in: see .dockerignore and the placeholder values below).
 COPY backend/ ./
 COPY scripts/start.sh ./start.sh
 COPY --from=web /web/dist ./webapp_dist
@@ -33,8 +36,7 @@ COPY --from=web /web/dist ./webapp_dist
 # collectstatic needs settings to import; these placeholder values are never
 # used at runtime (real values are injected by the platform environment).
 RUN SECRET_KEY=build-time-placeholder DATABASE_URL=postgres://x:x@localhost/x \
-    python manage.py collectstatic --noinput \
-    && chown -R app:app /app
+    python manage.py collectstatic --noinput
 
 USER app
 EXPOSE 8000
