@@ -151,20 +151,10 @@ def _enforce_device_cap(account, *, keep: UUID) -> None:
         PushDevice.objects.filter(pk__in=surplus).update(is_active=False)
 
 
-# Inactive rows (unregistered devices and ordering markers) are bounded per account.
-MAX_INACTIVE_DEVICES = 50
-
-
-def _prune_inactive(account, *, keep: UUID) -> None:
-    surplus = list(
-        PushDevice.objects.filter(account=account, is_active=False)
-        .exclude(pk=keep)
-        .order_by("-updated_at", "-id")
-        .values_list("pk", flat=True)[MAX_INACTIVE_DEVICES - 1 :]
-    )
-    if surplus:
-        PushDevice.objects.filter(pk__in=surplus).delete()
-
+# Sequenced inactive rows are durable ownership-ordering state, not disposable history.
+# Deleting one would forget the highest accepted ownership_seq for that token and could let an
+# older delayed register become authoritative later. They therefore have no count- or time-based
+# pruning in this protocol.
 
 def unregister_device(
     account, *, token: str, ownership_seq: int | None = None, platform: str = "ANDROID"
@@ -196,7 +186,8 @@ def unregister_device(
             except IntegrityError:
                 device = PushDevice.objects.select_for_update().get(token=token)
             else:
-                _prune_inactive(account, keep=marker.pk)
+                # This row is an ownership tombstone. Keep it durably: its stored sequence is what
+                # makes any older delayed registration for this token stale.
                 return False
 
         if device.account_id != account.pk or not _accepts(device, ownership_seq):

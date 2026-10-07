@@ -184,13 +184,42 @@ def test_replayed_unregister_is_idempotent(a):
 
 
 @pytest.mark.django_db
-def test_markers_are_bounded_per_account(a):
+def test_ordering_marker_survives_cleanup_pressure_and_blocks_stale_register(a):
+    protected = "protected-marker-" + "p" * 48
+    assert unregister(a, 20, token=protected) is False
+    marker = row(protected)
+    assert marker.is_active is False and marker.ownership_seq == 20
+
+    # This exceeded the old 50-row pruning cap and deleted the protected tombstone.
     for i in range(1, 60):
-        unregister(a, i, token=f"marker-{i:03d}-" + "m" * 40)
-    inactive = PushDevice.objects.filter(account=a, is_active=False).count()
-    assert inactive <= push_service.MAX_INACTIVE_DEVICES
-    # the newest marker always survives
-    assert PushDevice.objects.filter(token__startswith="marker-059-").exists()
+        unregister(a, 100 + i, token=f"pressure-marker-{i:03d}-" + "m" * 32)
+
+    marker = row(protected)
+    assert marker.is_active is False and marker.ownership_seq == 20
+    with pytest.raises(StaleOwnership):
+        register(a, 10, token=protected)
+    marker.refresh_from_db()
+    assert marker.is_active is False and marker.ownership_seq == 20
+
+
+@pytest.mark.django_db
+def test_unregistered_sequenced_device_survives_cleanup_pressure_and_cannot_resurrect(a):
+    protected = "protected-device-" + "d" * 48
+    register(a, 10, token=protected)
+    assert unregister(a, 20, token=protected) is True
+    device = row(protected)
+    assert device.is_active is False and device.ownership_seq == 20
+
+    # Sequenced inactive registrations are ordering tombstones too, not disposable device history.
+    for i in range(1, 60):
+        unregister(a, 200 + i, token=f"pressure-device-{i:03d}-" + "q" * 32)
+
+    device = row(protected)
+    assert device.is_active is False and device.ownership_seq == 20
+    with pytest.raises(StaleOwnership):
+        register(a, 10, token=protected)
+    device.refresh_from_db()
+    assert device.is_active is False and device.ownership_seq == 20
 
 
 # --- legacy (unsequenced) requests -----------------------------------------------------

@@ -46,8 +46,7 @@ unique** (one token → at most one owner) and non-empty.
   only for the owner with a newer sequence (deactivates and stores the sequence, so a late older
   register cannot resurrect the account); stale, foreign and unknown cases are all `204` and a
   sequence is never recorded on another account's registration. A sequenced unregister for a token
-  the server has not seen yet records an **inactive ordering marker** for the caller (bounded to 50
-  inactive rows per account), so a register that is overtaken by its own unregister is rejected when
+  the server has not seen yet records an **inactive ordering marker** for the caller (retained durably with no count- or time-based expiry, because the stored sequence is ownership-ordering state), so a register that is overtaken by its own unregister is rejected when
   it finally arrives.
 * **Legacy (unsequenced) requests.** A row that has never been sequenced behaves exactly as before
   (any request applies). The first sequenced request makes the row sequenced; from then on an
