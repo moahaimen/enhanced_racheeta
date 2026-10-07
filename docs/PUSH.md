@@ -15,7 +15,7 @@
 ## Data model — `PushDevice`
 
 `account` (FK, CASCADE), `token` (≤1024, opaque credential-like value), `platform`
-(`ANDROID` / `IOS` / `WEB`, bounded choices), `is_active`, `last_registered_at`, timestamps.
+(`ANDROID` / `IOS` / `WEB`, bounded choices), `is_active`, `last_registered_at`, `ownership_seq` (ordering, see below), timestamps.
 No device name/model/fingerprint is collected. Database constraints: **`token` is globally
 unique** (one token → at most one owner) and non-empty.
 
@@ -32,6 +32,27 @@ unique** (one token → at most one owner) and non-empty.
   deactivated) which also bounds fan-out.
 * Unregister deactivates only the caller's own registration. Unknown and foreign tokens
   are answered identically (`204`), so ownership cannot be probed.
+* **Ordering (`ownership_seq`, Phase 11E).** Both ownership operations (register and unregister)
+  carry an optional client sequence — an integer in `1..2^63-1`, strictly increasing per
+  installation (the mobile client persists `max(lastPersisted + 1, clock µs)`; it is never reset by
+  an account switch, logout, restart or clock rollback). `PushDevice.ownership_seq` (nullable
+  `bigint`, migration `0003_pushdevice_ownership_seq`, never returned) stores the highest applied
+  value. **Under the token row lock** an operation changes the owner or the active state only if
+  its sequence is **greater** than the stored one; an older, equal or missing sequence on a
+  sequenced row changes *nothing* (owner, platform, `is_active`, timestamps and the stored value
+  stay as they were). The final state therefore depends on the sequences, not on request arrival
+  or commit order. Register: applied → `200`; exact replay by the active owner → `200` unchanged;
+  anything stale → **`409 stale_ownership`** (no token or owner in the body). Unregister: applied
+  only for the owner with a newer sequence (deactivates and stores the sequence, so a late older
+  register cannot resurrect the account); stale, foreign and unknown cases are all `204` and a
+  sequence is never recorded on another account's registration. A sequenced unregister for a token
+  the server has not seen yet records an **inactive ordering marker** for the caller (bounded to 50
+  inactive rows per account), so a register that is overtaken by its own unregister is rejected when
+  it finally arrives.
+* **Legacy (unsequenced) requests.** A row that has never been sequenced behaves exactly as before
+  (any request applies). The first sequenced request makes the row sequenced; from then on an
+  unsequenced request can never supersede it (register → `409`, unregister → no change), so a
+  legacy client cannot defeat the ordering.
 * Tokens are never returned by any API, never logged in full (last 6 chars at most),
   never placed in payloads or audit rows, and masked in Django admin (inspection-only).
 
@@ -39,8 +60,8 @@ unique** (one token → at most one owner) and non-empty.
 
 | Endpoint | Body | Result |
 |---|---|---|
-| `POST push-devices/` | `{token, platform}` | `200 {id, platform, is_active, last_registered_at}` |
-| `POST push-devices/unregister/` | `{token}` | `204` |
+| `POST push-devices/` | `{token, platform, ownership_seq?}` | `200 {id, platform, is_active, last_registered_at}`; `409 stale_ownership` when a newer operation governs the token |
+| `POST push-devices/unregister/` | `{token, ownership_seq?, platform?}` | `204` (always: applied, stale, foreign or unknown) |
 
 Clients should call unregister **before** logout. Logout itself never depends on
 Firebase or on this call; the transfer rule covers a missed call.
@@ -162,4 +183,4 @@ No test contacts Firebase.
 
 ## Mobile (Phase 11E)
 
-The app registers its FCM token with `POST /notifications/push-devices/` (idempotent upsert, `platform: ANDROID`) for the signed-in account once OS notification permission is granted, again on a token refresh, and unregisters it with `POST /notifications/push-devices/unregister/` before logout (best effort, 3 s bound). Because the register endpoint transfers the token to the caller with no client ordering, all ownership requests are serialised, not aborted by the session ending, and re-asserted for the current account after any stale or unobserved request (ADR-057); notification permission is re-checked on every sync, including token refreshes. Firebase is initialised from `--dart-define FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID`; without them push is disabled. Payload handling: `type=notification` → open the notification centre; `type=chat_message` + valid `conversation_id` → open that thread; unknown or malformed → ignored; a foreground push only refreshes backend state. See ADR-057.
+The app registers its FCM token with `POST /notifications/push-devices/` (idempotent upsert, `platform: ANDROID`) for the signed-in account once OS notification permission is granted, again on a token refresh, and unregisters it with `POST /notifications/push-devices/unregister/` before logout (best effort, 3 s bound). Because the register endpoint transfers the token to the caller with no client ordering, every register and unregister carries a freshly allocated, persisted, strictly increasing `ownership_seq` (see "Token ownership" above), so a request that lands late — even one the client gave up on — can never take the token back from a newer operation; the client also serialises its ownership requests and does not abort them when the session ends. Notification permission is re-checked on every sync, including token refreshes. Firebase is initialised from `--dart-define FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_PROJECT_ID`; without them push is disabled. Payload handling: `type=notification` → open the notification centre; `type=chat_message` + valid `conversation_id` → open that thread; unknown or malformed → ignored; a foreground push only refreshes backend state. See ADR-057.

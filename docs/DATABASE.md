@@ -117,9 +117,9 @@ nullable), `price` decimal(12,2) ≥ 0 (`providers_service_price_nonneg`),
 
 | `notifications_notification` | `recipient` FK (`CASCADE`), `category`, `event_type`, optional `resource_type`/`resource_id`, safe JSON `payload`, backend-only `dedupe_key`, nullable `read_at`. Constraints: `notification_dedupe_key_unique` (unique), `notification_resource_coherent` (type and id both empty or both populated). Indexes: (recipient, read_at), (recipient, -created_at). No title/body columns: text is rendered at read time |
 
-| `notifications_pushdevice` | `account` FK (`CASCADE`), `token` (≤1024), `platform` (`ANDROID`/`IOS`/`WEB`), `is_active`, `last_registered_at`. Constraints: `push_device_token_unique` (one owner per token), `push_device_token_not_empty`; index on (`account`, `is_active`). |
+| `notifications_pushdevice` | `account` FK (`CASCADE`), `token` (≤1024), `platform` (`ANDROID`/`IOS`/`WEB`), `is_active`, `last_registered_at`, `ownership_seq` (nullable bigint: highest applied client ordering sequence; see `PUSH.md`). Constraints: `push_device_token_unique` (one owner per token), `push_device_token_not_empty`, `push_device_ownership_seq_positive`; index on (`account`, `is_active`). |
 
-Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`, `advertising/0001`, `notifications/0001`, `notifications/0002_push_device`.
+Migrations: `audit/0001`, `billing/0001`, `billing/0002_seed_plans` (data), `jobs/0001`, `real_estate/0001`, `advertising/0001`, `notifications/0001`, `notifications/0002_push_device`, `notifications/0003_pushdevice_ownership_seq`.
 
 ### SimpleJWT
 
