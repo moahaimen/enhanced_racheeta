@@ -5,7 +5,8 @@ API client, email/password authentication, session management, localization (Ara
 and reusable UI). **Phase 11B** adds the patient side (provider discovery, detail, booking, "My appointments" with
 cancellation). **Phase 11C** adds the provider and facility side (dashboard, availability, received bookings).
 **Phase 11D** adds the marketplace, medical jobs and real estate behind an *Explore* section on Home.
-**Phase 11E (this change) adds chat, the persistent notification centre and the FCM client** (see below). Release hardening is 11F (see `docs/MASTER_PLAN.md`);
+**Phase 11E** adds chat, the persistent notification centre and the FCM client.
+**Phase 11F (this change) is release hardening** (signing, store builds, audits) — see `docs/MOBILE_RELEASE.md`;
 nothing unfinished is exposed in the app.
 
 - Flutter **3.47.6** / Dart **3.13.5** (pinned in `pubspec.yaml`, CI and `docs/DECISIONS.md`)
@@ -123,3 +124,11 @@ yet (system font is used); bundling it is a follow-up.
 - **Token ownership:** every register/unregister carries `ownership_seq` from `PushOwnershipSequence` (persisted in preferences, `max(last+1, clock µs)`, never reset by logout/account switch); the server applies an operation only if it is newer, so a late request can never take the token back (ADR-057).
 - **FCM configuration (optional):** build with `--dart-define=FIREBASE_API_KEY=… --dart-define=FIREBASE_APP_ID=… --dart-define=FIREBASE_MESSAGING_SENDER_ID=… --dart-define=FIREBASE_PROJECT_ID=…` (public client identifiers of YOUR Firebase project; never a service-account key). Without them push is disabled and everything else works. No `google-services.json` or Gradle plugin is used.
 - **Testing:** `FakePushSource` (test/support/comms_support.dart) scripts permission, token, refresh, foreground, opened and initial messages; the coordinator and registration are tested without Firebase.
+
+## Release (11F)
+
+- Full guide: `docs/MOBILE_RELEASE.md`. Release builds need an explicit `APP_ENV` (not `development`) and an https `API_BASE_URL`, each as its **own** `--dart-define`.
+- Signing: copy `android/key.properties.example` to `android/key.properties` (git-ignored) or set `RACHEETA_KEYSTORE_PATH`, `RACHEETA_KEYSTORE_PASSWORD`, `RACHEETA_KEY_ALIAS`, `RACHEETA_KEY_PASSWORD`. Without them `flutter build apk|appbundle --release` fails. For a NON-production compile check only: `ORG_GRADLE_PROJECT_racheetaAllowDebugSignedRelease=true`.
+- Verify a built APK: `ANDROID_HOME=… python3 tool/verify_release_apk.py build/app/outputs/flutter-apk/app-release.apk`.
+- Audits that run in `flutter test`: `accessibility_audit_test` (tap targets, labels, contrast), `text_scale_audit_test` (1.0/1.5/2.0×), `release_smoke_test` (account switch in flight, session expiry), `release_hygiene_test` (logging, manifest, signing, pins, disposal).
+- Text-safe colour tokens (`warning`, `success`, `neutral500`) differ slightly from the web tokens to meet WCAG AA text contrast.

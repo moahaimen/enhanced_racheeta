@@ -161,6 +161,15 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Privacy.** Message bodies are never logged (`ChatMessage.toString` omits them); server messages are never shown (blank/too-long map to fixed text); a conversation of someone else is a plain 404 shown as one generic text; the notification list never carries the raw payload, recipient or dedupe key.
 - **No retry of mutations.** Mark read, mark all, send and open-conversation are single requests; the automatic read cursor is one attempt per newly observed sequence.
 
+## Mobile release hardening (Phase 11F)
+
+- **Configuration:** release builds require an explicit https API origin; development environment, loopback/emulator hosts and credential-bearing URLs are rejected; the development fallback is not compiled into release (`docs/MOBILE_RELEASE.md` §1).
+- **Signing:** no keystore, password or `key.properties` in Git (ignored, guarded by a test); release builds fail without credentials; the smoke-signing switch is explicit and non-production.
+- **Android surface:** permissions limited to `INTERNET`, `POST_NOTIFICATIONS` and the FCM-merged ones; only the launcher activity is exported by the app and library receivers are permission-protected; not debuggable; `usesCleartextTraffic=false` (debug-only opt-in); `allowBackup=false` with empty extraction rules.
+- **Privacy:** release builds log nothing (`SafeLogger` is debug-only); no code prints; no log call interpolates a token, e-mail, body or payload (source-scan test); no URL launcher/WebView/analytics package.
+- **Artifact verification:** `mobile/tool/verify_release_apk.py` and the CI job `mobile-release` check the compiled release APK.
+- **Not covered:** certificate pinning (not implemented), root/jailbreak detection (out of scope), real-device penetration testing.
+
 ## HTTP hardening (`DEBUG=false`)
 
 `SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session
