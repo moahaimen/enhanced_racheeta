@@ -86,6 +86,9 @@ class FakePushSource implements PushSource {
   PushPermission permissionAfterRequest = PushPermission.granted;
   String? fixedToken;
 
+  /// When set, `permission()` waits for it (simulates a slow OS permission read at start-up).
+  Completer<void>? permissionGate;
+
   /// When set, `token()` waits for it (simulates a slow token issue).
   Completer<String?>? tokenGate;
   int tokenCalls = 0;
@@ -103,7 +106,11 @@ class FakePushSource implements PushSource {
   bool get isAvailable => available;
 
   @override
-  Future<PushPermission> permission() async => currentPermission;
+  Future<PushPermission> permission() async {
+    final gate = permissionGate;
+    if (gate != null) await gate.future;
+    return currentPermission;
+  }
 
   @override
   Future<PushPermission> requestPermission() async {

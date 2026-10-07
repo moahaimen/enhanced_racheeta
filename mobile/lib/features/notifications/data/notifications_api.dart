@@ -48,24 +48,27 @@ class NotificationsApi {
   );
 
   /// `POST /notifications/push-devices/` — idempotent upsert of this device's FCM token for the
-  /// authenticated caller (a token owned by another account is transferred to the caller).
+  /// account that owns [bearer] (a token owned by another account is transferred to it). This is a
+  /// server-side ownership mutation, so it is sent *detached* from the session (see
+  /// `ApiClient.postDetached`) and only ever by the serialised push-ownership lane.
   Future<void> registerDevice(
     String token, {
+    required String bearer,
     String platform = 'ANDROID',
-    CancelToken? cancelToken,
-  }) => _client.post<void>(
+  }) => _client.postDetached<void>(
     '/api/v1/notifications/push-devices/',
+    bearer: bearer,
     body: {'token': token, 'platform': platform},
     parse: (_) {},
-    cancelToken: cancelToken,
   );
 
-  /// `POST /notifications/push-devices/unregister/` (204): deactivates the caller's own
-  /// registration of this token; unknown or foreign tokens change nothing.
-  Future<void> unregisterDevice(String token, {CancelToken? cancelToken}) =>
-      _client.postNoContent(
+  /// `POST /notifications/push-devices/unregister/` (204): deactivates the registration of the
+  /// account that owns [bearer]; unknown or foreign tokens change nothing. Detached like
+  /// [registerDevice] so it can complete after the session ended.
+  Future<void> unregisterDevice(String token, {required String bearer}) =>
+      _client.postNoContentDetached(
         '/api/v1/notifications/push-devices/unregister/',
+        bearer: bearer,
         body: {'token': token},
-        cancelToken: cancelToken,
       );
 }

@@ -39,6 +39,11 @@ final autoRestoreSessionProvider = Provider<bool>((ref) => true);
 /// are cleared on logout (for example unregistering this device's push token, which the backend
 /// only accepts from the owning account). The composition root overrides it; it is time-bounded
 /// and best effort, so it can never keep the user signed in.
+/// How long logout waits for the pre-logout hook before signing out without it.
+final logoutHookTimeoutProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 3),
+);
+
 final beforeLogoutProvider = Provider<Future<void> Function()>(
   (ref) => () async {},
 );

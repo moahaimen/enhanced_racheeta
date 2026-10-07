@@ -28,8 +28,8 @@ ResponseBody _device() => FakeBackend.json(200, {
   'last_registered_at': '2026-10-03T08:00:00Z',
 });
 
-Future<void> _settle() =>
-    Future<void>.delayed(const Duration(milliseconds: 60));
+Future<void> _settle([int ms = 60]) =>
+    Future<void>.delayed(Duration(milliseconds: ms));
 
 /// Boots the real session + push wiring against a scripted backend, with a fake FCM source.
 Future<Harness> _boot(
@@ -177,6 +177,78 @@ void main() {
     });
   });
 
+  group('token refresh respects notification permission', () {
+    for (final permission in [
+      PushPermission.denied,
+      PushPermission.notDetermined,
+    ]) {
+      test('${permission.name}: a token refresh registers nothing', () async {
+        final source = FakePushSource(currentPermission: permission);
+        final h = await _boot(source);
+        source.refreshes.add('fake-fcm-token-2');
+        source.refreshes.add('fake-fcm-token-3');
+        await _settle();
+        expect(h.backend.count('POST', _register), 0);
+        expect(_state(h).registered, isFalse);
+        expect(_state(h).permission, permission);
+      });
+    }
+
+    test('granted: a token refresh still registers the new token', () async {
+      final source = FakePushSource();
+      final h = await _boot(source);
+      source.refreshes.add('fake-fcm-token-9');
+      await _settle();
+      final posts = h.backend.to('POST', _register);
+      expect((posts.last.body! as Map)['token'], 'fake-fcm-token-9');
+    });
+
+    test('a refresh that arrives before start-up has read the OS permission still honours it (denied)', () async {
+      final gate = Completer<void>();
+      final source = FakePushSource(currentPermission: PushPermission.denied)
+        ..permissionGate = gate;
+      final h = await _boot(source);
+      source.refreshes.add('fake-fcm-token-2');
+      await _settle();
+      gate.complete();
+      await _settle();
+      expect(h.backend.count('POST', _register), 0);
+    });
+
+    test('a refresh that arrives before start-up finished registers once when granted', () async {
+      final gate = Completer<void>();
+      final source = FakePushSource()..permissionGate = gate;
+      final h = await _boot(source);
+      source.fixedToken =
+          'fake-fcm-token-2'; // FCM now issues the rotated token
+      source.refreshes.add('fake-fcm-token-2');
+      await _settle();
+      gate.complete();
+      await _settle();
+      final posts = h.backend.to('POST', _register);
+      expect(posts.map((p) => (p.body! as Map)['token']).toSet(), {
+        'fake-fcm-token-2',
+      });
+      expect(_state(h).registered, isTrue);
+    });
+
+    test(
+      'a refresh after the user denies the prompt registers nothing',
+      () async {
+        final source = FakePushSource(
+          currentPermission: PushPermission.notDetermined,
+        )..permissionAfterRequest = PushPermission.denied;
+        final h = await _boot(source);
+        await h.container
+            .read(pushRegistrationProvider.notifier)
+            .requestPermission();
+        source.refreshes.add('fake-fcm-token-2');
+        await _settle();
+        expect(h.backend.count('POST', _register), 0);
+      },
+    );
+  });
+
   group('races', () {
     test('token arrives after logout: nothing is registered for the signed-out session', () async {
       final gate = Completer<String?>();
@@ -206,31 +278,28 @@ void main() {
       expect(_state(h).registered, isTrue);
     });
 
-    test('A\'s registration finishing after the switch to B never marks B registered', () async {
+    test('A\'s registration finishing after the switch to B never marks B registered; B registers after it', () async {
       final gateA = Completer<void>();
-      final gateB = Completer<void>();
       var calls = 0;
       final source = FakePushSource();
       final h = await _boot(
         source,
         script: (b) => b.on('POST', _register, (_) async {
-          final mine = ++calls;
-          await (mine == 1 ? gateA : gateB).future;
+          if (++calls == 1) await gateA.future;
           return _device();
         }),
       );
       expect(calls, 1, reason: 'A\'s registration is in flight');
       await _switchTo(h, _b);
-      expect(calls, 2, reason: 'B starts its own registration');
-      gateA.complete();
-      await _settle();
       expect(
-        _state(h).registered,
-        isFalse,
-        reason: 'A\'s completion must not count for B',
+        calls,
+        1,
+        reason: 'ownership requests are serialised: B waits for A\'s to finish',
       );
-      gateB.complete();
-      await _settle();
+      expect(_state(h).registered, isFalse);
+      gateA.complete();
+      await _settle(150);
+      expect(calls, 2, reason: 'B registers once A\'s request is done');
       expect(_state(h).registered, isTrue);
     });
 

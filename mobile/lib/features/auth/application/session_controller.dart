@@ -20,9 +20,6 @@ class SessionController extends Notifier<SessionState> {
   late AuthApi _authApi;
   late SafeLogger _logger;
 
-  /// How long the pre-logout hook may take before sign-out proceeds without it.
-  static const Duration logoutHookTimeout = Duration(seconds: 3);
-
   int _ticket = 0;
 
   /// Completes when the start-up restoration finished (used by tests).
@@ -113,7 +110,9 @@ class SessionController extends Notifier<SessionState> {
     // While the credentials still exist: e.g. unregister this device's push token. Bounded, and a
     // failure never blocks signing out.
     try {
-      await ref.read(beforeLogoutProvider)().timeout(logoutHookTimeout);
+      await ref
+          .read(beforeLogoutProvider)()
+          .timeout(ref.read(logoutHookTimeoutProvider));
     } on Object {
       // best effort
     }
