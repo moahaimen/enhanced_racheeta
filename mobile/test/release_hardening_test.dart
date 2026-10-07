@@ -63,23 +63,26 @@ void main() {
         final controller = TextEditingController();
         addTearDown(controller.dispose);
         final semantics = tester.ensureSemantics();
-        addTearDown(semantics.dispose);
-        await tester.pumpWidget(
-          _host(
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  AppTextField(controller: controller, label: 'Email'),
-                  const SizedBox(height: 24),
-                  PrimaryButton(label: 'Continue', onPressed: _noop),
-                ],
+        try {
+          await tester.pumpWidget(
+            _host(
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    AppTextField(controller: controller, label: 'Email'),
+                    const SizedBox(height: 24),
+                    PrimaryButton(label: 'Continue', onPressed: _noop),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          );
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        } finally {
+          semantics.dispose();
+        }
       },
     );
 
