@@ -80,10 +80,14 @@ void main() {
       final h = await _boot(source);
       final posts = h.backend.to('POST', _register);
       expect(posts, hasLength(1));
-      expect(posts.single.body, {
-        'token': 'fake-fcm-token-1',
-        'platform': 'ANDROID',
-      });
+      final body = posts.single.body! as Map;
+      expect(body['token'], 'fake-fcm-token-1');
+      expect(body['platform'], 'ANDROID');
+      expect(
+        body['ownership_seq'],
+        isA<int>().having((v) => v, 'positive', greaterThan(0)),
+      );
+      expect(body.keys.toSet(), {'token', 'platform', 'ownership_seq'});
       expect(posts.single.authorization, startsWith('Bearer '));
       expect(_state(h).registered, isTrue);
     });
@@ -326,7 +330,15 @@ void main() {
       await h.container.read(sessionControllerProvider.notifier).logout();
       final unregisters = h.backend.to('POST', _unregister);
       expect(unregisters, hasLength(1));
-      expect(unregisters.single.body, {'token': 'fake-fcm-token-1'});
+      final body = unregisters.single.body! as Map;
+      expect(body['token'], 'fake-fcm-token-1');
+      expect(body['ownership_seq'], isA<int>());
+      expect(body.keys.toSet(), {'token', 'platform', 'ownership_seq'});
+      // the unregister's sequence is newer than the registration's
+      final registered =
+          (h.backend.to('POST', _register).single.body! as Map)['ownership_seq']
+              as int;
+      expect(body['ownership_seq'] as int, greaterThan(registered));
       expect(
         unregisters.single.authorization,
         startsWith('Bearer '),

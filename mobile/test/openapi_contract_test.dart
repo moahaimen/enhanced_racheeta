@@ -966,7 +966,11 @@ void main() {
     test(
       'push-device schemas: token, platform, ownership and the unregister body',
       () {
-        expect(_properties('PushDeviceRegisterRequest'), {'token', 'platform'});
+        expect(_properties('PushDeviceRegisterRequest'), {
+          'token',
+          'platform',
+          'ownership_seq',
+        });
         expect(_required('PushDeviceRegisterRequest'), {'token', 'platform'});
         expect(
           _schema('PushDeviceRegisterRequest'),
@@ -978,7 +982,11 @@ void main() {
           'IOS',
           'WEB',
         });
-        expect(_properties('PushDeviceUnregisterRequest'), {'token'});
+        expect(_properties('PushDeviceUnregisterRequest'), {
+          'token',
+          'ownership_seq',
+          'platform',
+        });
         expect(_required('PushDeviceUnregisterRequest'), {'token'});
         // the response never returns the token or the owner
         expect(_properties('PushDevice'), isNot(contains('token')));
@@ -992,6 +1000,53 @@ void main() {
         expect(_yaml, contains('answered\n        identically (204)'));
       },
     );
+
+    test('ownership ordering: BOTH ownership endpoints carry the same bounded integer sequence, and register documents the typed stale answer', () {
+      for (final name in [
+        'PushDeviceRegisterRequest',
+        'PushDeviceUnregisterRequest',
+      ]) {
+        final block = _schema(name);
+        final seq = RegExp(
+          r'^        ownership_seq:\n((?:          .*\n)+)',
+          multiLine: true,
+        ).firstMatch(block);
+        expect(seq, isNotNull, reason: '$name declares ownership_seq');
+        final text = seq!.group(1)!;
+        expect(text, contains('type: integer'));
+        expect(text, contains('minimum: 1'));
+        expect(text, contains('maximum: 9223372036854775807'));
+        expect(text, contains('format: int64'));
+        // optional: an unsequenced (legacy) request is still a valid request shape
+        expect(_required(name), isNot(contains('ownership_seq')));
+      }
+      // register: 200 (applied / exact replay) and the typed 409 for a superseded request
+      final register = RegExp(
+        r'^  /api/v1/notifications/push-devices/:\n(.*?)(?=^  /)',
+        multiLine: true,
+        dotAll: true,
+      ).firstMatch(_yaml)!.group(1)!;
+      expect(register, contains("'409':"));
+      expect(register, contains('stale_ownership'));
+      // unregister keeps answering 204 for applied, stale and foreign requests
+      final unregister = RegExp(
+        r'^  /api/v1/notifications/push-devices/unregister/:\n(.*?)(?=^  /)',
+        multiLine: true,
+        dotAll: true,
+      ).firstMatch(_yaml)!.group(1)!;
+      expect(unregister, contains("'204':"));
+      expect(unregister, isNot(contains("'409':")));
+      // the field name the app sends on both endpoints is exactly the documented one
+      final api = File('lib/features/notifications/data/notifications_api.dart')
+          .readAsStringSync();
+      expect("'ownership_seq'".allMatches(api), hasLength(2));
+      // the backend implements the documented rule under the token lock
+      final service = File('../backend/apps/notifications/push_service.py')
+          .readAsStringSync();
+      expect(service, contains('seq > device.ownership_seq'));
+      expect(service, contains('select_for_update'));
+      expect(service, contains('raise StaleOwnership'));
+    });
 
     test(
       'the push payload keys the router reads are the ones the backend sends',

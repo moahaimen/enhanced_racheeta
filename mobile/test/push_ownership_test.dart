@@ -9,13 +9,19 @@ import 'package:racheeta_mobile/features/push/push_timing.dart';
 import 'support/comms_support.dart';
 import 'support/fake_backend.dart';
 
-/// Server-side ownership simulation for the FCM token.
+/// Server-side ownership simulation for the FCM token, implementing the backend's ordering
+/// protocol (`backend/apps/notifications/push_service.py`).
 ///
-/// The backend owns ONE globally unique token and transfers it to whichever authenticated account
-/// registers it; it knows nothing about client ordering. These tests model exactly that: the
-/// "server" applies each request at the moment its handler is released (its *commit*), identifies
-/// the account from the bearer token, and the assertions are about who OWNS the token at the end —
-/// not about client-side state.
+/// The "server" owns ONE token row `(owner, active, seq)`. A request is applied at the moment its
+/// handler is released (its arrival/commit), the account is taken from the bearer token, and the
+/// decision is made against the stored sequence under the (implicit) row lock:
+///
+/// * stored seq null → applied; stored seq S → applied only if the request's seq > S;
+/// * an older/equal/missing seq changes nothing (register answers 409 `stale_ownership`, an exact
+///   replay by the active owner is 200, unregister answers 204);
+/// * an unregister for an unknown token leaves an inactive ordering marker.
+///
+/// The assertions are about who OWNS the token at the end, never about client-side state.
 const _register = '/api/v1/notifications/push-devices/';
 const _unregister = '/api/v1/notifications/push-devices/unregister/';
 const _login = '/api/v1/auth/login';
@@ -25,20 +31,28 @@ class TokenServer {
   /// bearer → logical account
   final Map<String, String> accountOf = {'Bearer aA': 'A', 'Bearer aB': 'B'};
 
-  /// The current owner of the (single) token; null = nobody / inactive.
-  String? owner;
+  String? _owner;
+  bool _active = false;
+  int? _seq;
+
+  /// The account that currently receives pushes through the token (null: nobody).
+  String? get owner => _active ? _owner : null;
+  int? get storedSeq => _seq;
+
   final List<String> log = <String>[];
+
+  /// Every sequence the server received, in arrival order, per endpoint.
+  final List<int> registerSeqs = <int>[];
+  final List<int> unregisterSeqs = <int>[];
   int registerCalls = 0;
   int unregisterCalls = 0;
 
-  /// register call number (1-based) → gate holding its COMMIT.
+  /// register call number (1-based) → gate holding its arrival at the server.
   final Map<int, Completer<void>> registerGates = {};
 
-  /// register call number → the client sees a transport error but the server commits later,
-  /// when the returned completer is completed (a request that lingers in the network).
+  /// register call number → the client sees a transport error but the request still reaches the
+  /// server later, when the completer is completed (a request lingering in the network).
   final Map<int, Completer<void>> stragglers = {};
-
-  final Map<int, Completer<void>> unregisterGates = {};
 
   ResponseBody _device() => FakeBackend.json(200, {
     'id': 'f1',
@@ -47,33 +61,66 @@ class TokenServer {
     'last_registered_at': '2026-10-03T08:00:00Z',
   });
 
+  ResponseBody _stale() => FakeBackend.json(409, {
+    'error': {
+      'code': 'stale_ownership',
+      'message': 'This registration was superseded by a newer one.',
+    },
+  });
+
+  /// Returns true when the register was applied.
+  bool _applyRegister(String who, int? seq, int call, {required bool late}) {
+    final tag = '$who#$call${late ? '(late)' : ''}';
+    final stored = _seq;
+    final accepts = stored == null || (seq != null && seq > stored);
+    if (!accepts) {
+      final replay = seq != null && seq == stored && _owner == who && _active;
+      log.add('${replay ? 'replay' : 'rejected:stale'}:register:$tag');
+      return replay;
+    }
+    _owner = who;
+    _active = true;
+    if (seq != null) _seq = seq;
+    log.add('commit:register:$tag');
+    return true;
+  }
+
   Future<ResponseBody> onRegister(SeenRequest r) async {
     final call = ++registerCalls;
     final who = accountOf[r.authorization] ?? '?';
+    final seq = (r.body! as Map)['ownership_seq'] as int?;
+    if (seq != null) registerSeqs.add(seq);
     final straggler = stragglers[call];
     if (straggler != null) {
       unawaited(
-        straggler.future.then((_) {
-          owner = who;
-          log.add('commit:register:$who#$call(late)');
-        }),
+        straggler.future.then(
+          (_) => _applyRegister(who, seq, call, late: true),
+        ),
       );
       return FakeBackend.networkDown(r);
     }
     final gate = registerGates[call];
     if (gate != null) await gate.future;
-    owner = who;
-    log.add('commit:register:$who#$call');
-    return _device();
+    return _applyRegister(who, seq, call, late: false) ? _device() : _stale();
   }
 
   Future<ResponseBody> onUnregister(SeenRequest r) async {
-    final call = ++unregisterCalls;
+    unregisterCalls++;
     final who = accountOf[r.authorization] ?? '?';
-    final gate = unregisterGates[call];
-    if (gate != null) await gate.future;
-    if (owner == who) {
-      owner = null;
+    final seq = (r.body! as Map)['ownership_seq'] as int?;
+    if (seq != null) unregisterSeqs.add(seq);
+    final stored = _seq;
+    if (_owner == null) {
+      if (seq != null) {
+        _owner = who; // inactive ordering marker
+        _active = false;
+        _seq = seq;
+        log.add('marker:unregister:$who');
+      }
+    } else if (_owner == who &&
+        (stored == null || (seq != null && seq > stored))) {
+      _active = false;
+      if (seq != null) _seq = seq;
       log.add('commit:unregister:$who');
     } else {
       log.add('noop:unregister:$who');
@@ -116,9 +163,9 @@ Future<Rig> _rig({
                 .unregisterForLogout(),
       ),
       logoutHookTimeoutProvider.overrideWithValue(hookTimeout),
-      pushRepairDelayProvider.overrideWithValue(
-        const Duration(milliseconds: 300),
-      ),
+      // far beyond any test: correctness must come from the server's sequence ordering, never
+      // from the delayed repair
+      pushRepairDelayProvider.overrideWithValue(const Duration(minutes: 30)),
     ],
   );
   addTearDown(h.dispose);
@@ -180,7 +227,8 @@ void main() {
       // B's registration must NOT reach the server while A's is still in flight
       expect(r.server.registerCalls, 1);
       expect(r.server.owner, isNull);
-      r.server.registerGates[1]!.complete(); // A's request finally commits
+      r.server.registerGates[1]!
+          .complete(); // A's request finally reaches the server
       await _settle(200);
       expect(r.server.owner, 'B', reason: r.server.log.join(', '));
       _expectAOnlyBeforeB(r.server);
@@ -242,21 +290,60 @@ void main() {
       },
     );
 
-    test('a request whose outcome the client never saw (a straggler that commits late) is repaired for the current account', () async {
+    test('KEY: a request the client gave up on commits AFTER B registered — the server rejects it as stale and B stays the owner, with no repair involved', () async {
       final r = await _rig();
       r.server.stragglers[1] = Completer<void>();
       await r.login(
         'A',
-      ); // A's POST fails on the client; the server will still commit it later
+      ); // A's POST fails on the client; it is still in the network
       await r.session.logout();
       await r.login('B');
       expect(r.server.owner, 'B', reason: 'B registered after A\'s failure');
       r.server.stragglers[1]!
-          .complete(); // the straggler lands AFTER B and steals the token
+          .complete(); // the old A request finally reaches the server
       await _settle(50);
-      expect(r.server.owner, 'A', reason: 'the straggler overtook B');
-      await _settle(500); // the bounded repair re-registers the current account
+      // immediately, without waiting for any repair (it is set 30 minutes away):
       expect(r.server.owner, 'B', reason: r.server.log.join(', '));
+      expect(r.server.log, contains('rejected:stale:register:A#1(late)'));
+      expect(
+        r.server.log.where((e) => e.startsWith('commit:register:A')),
+        isEmpty,
+      );
+    });
+
+    test('a lost register of A that lands after A\'s logout cannot resurrect A (and B then registers fine)', () async {
+      final r = await _rig();
+      r.server.stragglers[1] = Completer<void>();
+      await r.login('A');
+      await r.session.logout(); // unregister(A) carries a newer sequence
+      r.server.stragglers[1]!
+          .complete(); // the lost register lands after the unregister
+      await _settle(50);
+      expect(r.server.owner, isNull, reason: r.server.log.join(', '));
+      await r.login('B');
+      expect(r.server.owner, 'B');
+    });
+
+    test('every ownership request carries a sequence; sequences increase across account switches and logouts', () async {
+      final r = await _rig();
+      for (final who in ['A', 'B', 'A']) {
+        await r.login(who);
+        await r.session.logout();
+        await _settle();
+      }
+      final all = [...r.server.registerSeqs, ...r.server.unregisterSeqs]
+        ..sort();
+      expect(r.server.registerSeqs, hasLength(3));
+      expect(r.server.unregisterSeqs, hasLength(3));
+      expect(all.toSet(), hasLength(6), reason: 'no value is ever reused');
+      // in send order the sequences strictly increase: register, unregister, register, ...
+      var previous = 0;
+      for (var i = 0; i < 3; i++) {
+        expect(r.server.registerSeqs[i], greaterThan(previous));
+        previous = r.server.registerSeqs[i];
+        expect(r.server.unregisterSeqs[i], greaterThan(previous));
+        previous = r.server.unregisterSeqs[i];
+      }
     });
 
     test(

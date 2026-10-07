@@ -7,6 +7,7 @@ import '../../core/logging/safe_logger.dart';
 import '../auth/application/account_scope.dart';
 import '../auth/application/providers.dart';
 import '../notifications/application/notifications_providers.dart';
+import 'push_sequence.dart';
 import 'push_source.dart';
 import 'push_timing.dart';
 
@@ -31,30 +32,29 @@ typedef PushOwner = ({String account, String token});
 
 /// The ONE place that mutates which account owns this installation's FCM token on the server.
 ///
-/// **The race this exists for.** `POST /notifications/push-devices/` transfers the (globally
-/// unique) token to whichever account calls it, and the server has no notion of client ordering.
-/// Dropping a stale *response* on the client does not undo a *write*: if account A's request is
-/// still in flight when B signs in, B's request could commit first and A's later, handing the token
-/// back to A. The protocol below makes that impossible whenever a request's outcome is observed:
+/// **Correctness comes from the server's sequence ordering.** Every register and unregister
+/// carries `ownership_seq`, allocated by [PushOwnershipSequence] (persisted, strictly increasing
+/// across accounts, logouts, restarts and clock changes). Under the token row lock the server
+/// applies an operation only if its sequence is greater than the one stored for the token, and an
+/// older/equal/unsequenced one changes nothing. So the final owner depends on the sequences, not
+/// on which HTTP request arrives or commits first — including a request the client gave up on
+/// (timeout, transport error) that lands after a newer one: it is rejected as stale.
 ///
-/// 1. **One ownership request at a time.** Every register / unregister runs through [run], a FIFO
-///    lane, and the next one starts only after the previous returned (a response or its own
-///    timeout). B's registration therefore cannot reach the server before A's has finished.
-/// 2. **Never cancelled by the session.** These requests use `ApiClient.postDetached`: ending the
-///    session does not abort them client-side, so the lane really waits for the server's answer
-///    instead of starting the next request while an abandoned one may still commit.
-/// 3. **Intent, not a captured account.** A queued registration decides *when its turn comes*
-///    which account is current; if the account changed while a request was in flight it simply
-///    registers for the new current account afterwards ("repair").
-/// 4. **Logout is ordered.** The unregister is queued behind any in-flight registration, with the
-///    signing-out account's own bearer captured up front, so it still completes after credentials
-///    are cleared (and after the logout hook's time bound expired).
-/// 5. **Unobservable outcomes.** A timeout or transport error after the request was sent leaves the
-///    server state unknown (the request may still be processed later). The belief is then marked
-///    unknown (the next sync always re-registers) and one more registration is scheduled after
-///    [pushRepairDelayProvider], longer than any request can linger. This bounded, idempotent
-///    re-registration is what converges the owner in that residual case; a strict proof there would
-///    need server-side ordering (see docs/DECISIONS.md ADR-057).
+/// The lane below is therefore no longer what makes ownership correct; it keeps the client tidy:
+///
+/// 1. **One ownership request at a time, in order,** so each request's sequence is allocated when
+///    it is about to be sent and sequences increase in send order; the next request waits for the
+///    previous one's own outcome or timeout.
+/// 2. **Never cancelled by the session** (`ApiClient.postDetached`): ending the session does not
+///    abort a request client-side.
+/// 3. **Intent, not a captured account:** a queued registration decides at its turn which account
+///    is current (and registers it after a request for a previous account finished).
+/// 4. **Logout is ordered:** the unregister is queued behind an in-flight registration and carries
+///    the signing-out account's own bearer, captured up front.
+/// 5. **Resilience, not correctness:** a request whose outcome was never seen leaves the belief
+///    "unknown" (the next sync re-registers) and schedules ONE bounded repair after
+///    [pushRepairDelayProvider] in case the *current* account's own registration was the lost one.
+///    A stale straggler can no longer take the token back, repair or not.
 class PushOwnershipLane {
   Future<void> _tail = Future<void>.value();
   Timer? _repair;
@@ -219,9 +219,12 @@ class PushRegistration extends Notifier<PushState> {
       if (bearer == null) return;
 
       try {
+        // A fresh sequence for THIS request, persisted before it is sent; the server applies it
+        // only if it is newer than whatever it already holds for the token.
+        final seq = await ref.read(pushOwnershipSequenceProvider).next();
         await ref
             .read(notificationsApiProvider)
-            .registerDevice(token, bearer: bearer);
+            .registerDevice(token, bearer: bearer, ownershipSeq: seq);
         lane
           ..owner = (account: account, token: token)
           ..unknown = false
@@ -238,7 +241,8 @@ class PushRegistration extends Notifier<PushState> {
             'push registration outcome unknown (${error.kind.name})',
           );
         } else {
-          // A definitive refusal: nothing changed on the server.
+          // A definitive refusal (including `stale_ownership`: a newer operation already governs
+          // the token): nothing changed on the server.
           _logger.info('push registration refused (${error.kind.name})');
         }
       }
@@ -277,6 +281,7 @@ class PushRegistration extends Notifier<PushState> {
     }
     final lane = ref.read(pushOwnershipLaneProvider);
     final api = ref.read(notificationsApiProvider);
+    final sequence = ref.read(pushOwnershipSequenceProvider);
     final logger = _logger;
     return lane.run(() async {
       try {
@@ -285,7 +290,12 @@ class PushRegistration extends Notifier<PushState> {
           onTimeout: () => null,
         );
         if (token == null || token.isEmpty) return;
-        await api.unregisterDevice(token, bearer: bearer);
+        // Allocated when its turn comes, so it is greater than any registration sent before it.
+        await api.unregisterDevice(
+          token,
+          bearer: bearer,
+          ownershipSeq: await sequence.next(),
+        );
         if (lane.owner?.account == account) lane.owner = null;
       } on Object catch (error) {
         lane.unknown = true;

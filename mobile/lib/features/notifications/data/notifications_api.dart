@@ -47,28 +47,35 @@ class NotificationsApi {
     cancelToken: cancelToken,
   );
 
-  /// `POST /notifications/push-devices/` — idempotent upsert of this device's FCM token for the
-  /// account that owns [bearer] (a token owned by another account is transferred to it). This is a
-  /// server-side ownership mutation, so it is sent *detached* from the session (see
-  /// `ApiClient.postDetached`) and only ever by the serialised push-ownership lane.
+  /// `POST /notifications/push-devices/` — idempotent, ORDERED upsert of this device's FCM token
+  /// for the account that owns [bearer] (a token owned by another account is transferred to it).
+  /// [ownershipSeq] is the strictly increasing installation sequence: the server applies the
+  /// request only if it is newer than the one stored for the token, so the final owner does not
+  /// depend on request arrival order (a superseded request is answered `409 stale_ownership`).
+  /// Sent *detached* from the session (see `ApiClient.postDetached`) by the push-ownership lane.
   Future<void> registerDevice(
     String token, {
     required String bearer,
+    required int ownershipSeq,
     String platform = 'ANDROID',
   }) => _client.postDetached<void>(
     '/api/v1/notifications/push-devices/',
     bearer: bearer,
-    body: {'token': token, 'platform': platform},
+    body: {'token': token, 'platform': platform, 'ownership_seq': ownershipSeq},
     parse: (_) {},
   );
 
-  /// `POST /notifications/push-devices/unregister/` (204): deactivates the registration of the
-  /// account that owns [bearer]; unknown or foreign tokens change nothing. Detached like
-  /// [registerDevice] so it can complete after the session ended.
-  Future<void> unregisterDevice(String token, {required String bearer}) =>
-      _client.postNoContentDetached(
-        '/api/v1/notifications/push-devices/unregister/',
-        bearer: bearer,
-        body: {'token': token},
-      );
+  /// `POST /notifications/push-devices/unregister/` (204): ordered like [registerDevice]; a newer
+  /// sequence deactivates the owner's registration and stores the sequence, so an older register
+  /// that arrives later cannot resurrect it. Detached so it can complete after the session ended.
+  Future<void> unregisterDevice(
+    String token, {
+    required String bearer,
+    required int ownershipSeq,
+    String platform = 'ANDROID',
+  }) => _client.postNoContentDetached(
+    '/api/v1/notifications/push-devices/unregister/',
+    bearer: bearer,
+    body: {'token': token, 'platform': platform, 'ownership_seq': ownershipSeq},
+  );
 }
