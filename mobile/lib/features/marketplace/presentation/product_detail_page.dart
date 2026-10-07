@@ -12,6 +12,7 @@ import '../application/marketplace_providers.dart';
 import '../data/marketplace_models.dart';
 import 'marketplace_errors.dart';
 import 'product_tile.dart';
+import '../../../shared/widgets/selectable_value.dart';
 
 /// One catalogue product exactly as the API exposes it (including the supplier's public contact
 /// details the B2B schema carries). Websites are shown as text: the app opens no external links.
@@ -81,7 +82,7 @@ class ProductBody extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          SelectableText(value),
+          SelectableValue(value),
         ],
       ),
     );
@@ -131,7 +132,7 @@ class ProductBody extends StatelessWidget {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(RacheetaSpacing.lg),
-                child: SelectableText(product.description),
+                child: SelectableValue(product.description),
               ),
             ),
           ],

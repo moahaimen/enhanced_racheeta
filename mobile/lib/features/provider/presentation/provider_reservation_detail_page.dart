@@ -205,7 +205,8 @@ class _DetailState extends ConsumerState<_Detail> {
                   if (r.patientNote.isNotEmpty)
                     _Row(l10n.patientNoteLabel, r.patientNote),
                   const SizedBox(height: RacheetaSpacing.sm),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text('${l10n.reservationStatus}: '),
                       StatusChip(status: r.status, l10n: l10n),

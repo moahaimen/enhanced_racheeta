@@ -158,7 +158,10 @@ class _DetailState extends ConsumerState<_Detail> {
                   if (r.patientNote.isNotEmpty)
                     _Row(l10n.reservationNote, r.patientNote),
                   const SizedBox(height: RacheetaSpacing.sm),
-                  Row(
+                  // A Wrap, not a Row: the label plus the chip is wider than a phone in Arabic and at
+                  // large text sizes, and must flow onto a second line instead of overflowing.
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text('${l10n.reservationStatus}: '),
                       StatusChip(status: r.status, l10n: l10n),
