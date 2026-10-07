@@ -240,7 +240,7 @@ def test_json_log_line_shape_and_request_id():
 
 
 def test_json_logging_redacts_credentials_and_cannot_leak_extras():
-    secret_jwt = "eyJhbGciOi.eyJzdWIiOjF9.c2lnbmF0dXJl"
+    secret_jwt = "eyJhbGciOi.eyJzdWIiOjF9.c2lnbmF0dXJl"  # gitleaks:allow (fake test fixture)
     record = _record(
         f"auth Bearer {secret_jwt} token=abc123 password: hunter2 user a.b@example.com ok"
     )
@@ -514,3 +514,16 @@ def test_prune_deletes_only_expired_tokens_and_is_idempotent(account, capsys):
     call_command("prune_expired_tokens")  # second run: nothing to do, no error
     assert OutstandingToken.objects.count() == 2
     assert "deleted 0" in capsys.readouterr().out
+
+
+def test_gunicorn_access_log_cannot_record_query_strings_or_referers():
+    """Reset/verify tokens ride in the page URL's query string (docs/SECURITY.md)."""
+    import re
+    import runpy
+    from pathlib import Path
+
+    conf = runpy.run_path(str(Path(__file__).resolve().parents[1] / "config" / "gunicorn.conf.py"))
+    atoms = set(re.findall(r"%\((\w+)\)", conf["access_log_format"]))
+    # h remote addr, m method, U path without query, s status, b size, L duration
+    assert atoms <= {"h", "m", "U", "s", "b", "L"}, atoms
+    assert conf["accesslog"] == "-" and conf["errorlog"] == "-"  # stdout/stderr only

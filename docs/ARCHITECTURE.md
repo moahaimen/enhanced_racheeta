@@ -32,7 +32,7 @@ racheeta-platform/
 ├── backend/            Django project
 │   ├── config/         settings.py, urls.py, api_v1.py, asgi.py, wsgi.py
 │   ├── apps/
-│   │   ├── core/       shared base models, pagination, error envelope, /health/
+│   │   ├── core/       shared base models, pagination, error envelope, /health/ + /ready/, request ids, CSP, JSON logging, config checks
 │   │   ├── accounts/   Account model, roles, JWT auth, /me, reset, verification, Firebase adapter
 │   │   ├── geography/  Country → Governorate → City reference data (Iraq seeded)
 │   │   ├── specialties/ bilingual Specialty list (seeded, optional parent)
@@ -77,7 +77,7 @@ racheeta-platform/
 | Static / SPA | WhiteNoise with manifest storage for Django assets; `SPA_DIST_DIR` for the React build. |
 | Media | `FileSystemStorage` placeholder for development only. Production must use S3-compatible storage **(planned)**. |
 | ASGI | `config/asgi.py` exists; production runs WSGI gunicorn today. Switch to an ASGI server when async views/WebSockets arrive. |
-| Health | `GET /health/` → `{"status": "ok"}`. Deliberately does not check the database. |
+| Health | `GET /health/` → `{"status": "ok"}` (liveness; deliberately does not check the database). `GET /ready/` → `{"status": "ready"}` or 503 `{"status": "unavailable"}` (readiness: one `SELECT 1` under a 2 s statement timeout). Railway gates deployments on `/ready/` (ADR-060). |
 
 ### Base models (`apps/core/models.py`)
 

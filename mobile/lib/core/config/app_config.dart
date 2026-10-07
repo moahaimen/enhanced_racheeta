@@ -108,6 +108,15 @@ class AppConfig {
         'API_BASE_URL must be a plain origin: no credentials, query or fragment.',
       );
     }
+    // Every request path already starts with `/api/v1/`; a base URL with a path of its own
+    // (`https://host/api`, `https://host/v1`) would be prepended to it and silently misroute
+    // every call. Only a bare origin (an optional trailing slash is fine) is accepted.
+    if (uri.path.replaceAll('/', '').isNotEmpty) {
+      throw const ConfigurationError(
+        'API_BASE_URL must be an origin only, without a path '
+        '(example: https://api.example.com, not https://api.example.com/api).',
+      );
+    }
     // A build that is not the local development environment must never point at the developer
     // machine or the Android-emulator host alias, even by an explicit (copy-pasted) value.
     if ((releaseMode || environment != AppEnvironment.development) &&

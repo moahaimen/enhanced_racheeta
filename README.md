@@ -37,8 +37,13 @@ Full instructions: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 | [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | Roles and capability codes |
 | [docs/SECURITY.md](docs/SECURITY.md) | Rules and where each is enforced |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema and migration rules |
-| [docs/RAILWAY.md](docs/RAILWAY.md) | Deployment configuration |
-| [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) | Database backup and restore |
+| [docs/RAILWAY.md](docs/RAILWAY.md) | Deployment configuration and variables |
+| [docs/STAGING.md](docs/STAGING.md) | Staging environment and acceptance checklist |
+| [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) | Production runbook, go/no-go, rollback tiers |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Monitoring, routine tasks, incidents, secrets |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Query plans, load harness, measured results |
+| [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) | Database backup, restore and off-site copies |
+| [docs/DATA_MIGRATION.md](docs/DATA_MIGRATION.md) | Legacy data migration (not authorized) |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local setup and commands |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision log |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Milestone progress |

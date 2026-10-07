@@ -11,7 +11,7 @@ supported or tested.
   constraints. Frontend validation is a convenience, not a guarantee.
 - New domain entities extend `apps.core.models.BaseModel` (UUID id + timestamps).
 - Soft deletion only when there is a business reason; document it in the model.
-- Add indexes with the query that needs them, not speculatively.
+- Add indexes with the query that needs them, not speculatively. Phase 12A re-audited the hot read queries with `EXPLAIN (ANALYZE, BUFFERS)` on 5,000–5,000–3,000 synthetic rows and added **none**; the one query that is O(table) (job text search) and its trigger for a `pg_trgm` index are recorded in `docs/PERFORMANCE.md`. Phase 12A made no schema change.
 
 ## Current schema (application tables)
 

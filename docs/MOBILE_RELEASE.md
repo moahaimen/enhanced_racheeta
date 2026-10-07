@@ -12,7 +12,7 @@ The app reads two compile-time values (`--dart-define`, never secrets):
 | Define | Values | Rule |
 |---|---|---|
 | `APP_ENV` | `development` (default), `staging`, `production` | a **release** build rejects `development` |
-| `API_BASE_URL` | absolute origin, e.g. `https://api.example.com` | required for staging/production; **no default**; `https` only (cleartext `http` only in a *debug* `development` build) |
+| `API_BASE_URL` | absolute **origin only**, e.g. `https://api.example.com` (no path: a path such as `/api` would be prepended to every `/api/v1/…` request and is refused at startup; a trailing `/` is accepted and removed) | required for staging/production; **no default**; `https` only (cleartext `http` only in a *debug* `development` build) |
 
 `AppConfig.validate` (tested in `test/app_config_test.dart`) additionally refuses, for release builds
 and for staging/production in any mode: `localhost`, `*.localhost`, `127.*`, `::1`, `0.0.0.0`,
@@ -91,6 +91,8 @@ broken session; the only other state is the UI language and the push-ownership c
 cheap to recreate). Nothing of value is lost. (Note for review: a restored `racheeta.push_ownership_seq`
 would be harmless — the counter is `max(last+1, clock)` — but keeping it out of backups avoids any
 cross-device surprise.)
+
+**Phase 12A re-review (2026-10-07): no change needed.** All five data domains (`root`, `file`, `database`, `sharedpref`, `external`) are excluded for both Android ≤ 11 (`backup_rules.xml`) and Android 12+ (`data_extraction_rules.xml`, cloud backup and device transfer); the compiled manifest is checked by `tool/verify_release_apk.py` in CI (`allowBackup` must be false). No new on-device store was added since 11F, so nothing new needs excluding; revisit if a feature ever stores user files locally.
 
 ## 6. Logging and privacy
 

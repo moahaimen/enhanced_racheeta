@@ -2,6 +2,9 @@
 Django==5.2.17
 djangorestframework==3.18.1
 djangorestframework_simplejwt==5.5.1
+# Transitive dependency of simplejwt, pinned so image builds are reproducible and the advisories
+# fixed in 2.15.0 (PYSEC-2026-4141/4183) stay fixed. See docs/SECURITY.md "Dependency scanning".
+PyJWT==2.15.1
 drf-spectacular==0.30.0
 django-cors-headers==4.9.0
 django-environ==0.14.0
