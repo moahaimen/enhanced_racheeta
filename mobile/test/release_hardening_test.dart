@@ -14,9 +14,8 @@ Widget _host(Widget child, {double textScale = 1}) => MaterialApp(
   localizationsDelegates: AppLocalizations.localizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   builder: (context, child) => MediaQuery(
-    data: MediaQuery.of(
-      context,
-    ).copyWith(textScaler: TextScaler.linear(textScale)),
+    data: MediaQuery.of(context)
+        .copyWith(textScaler: TextScaler.linear(textScale)),
     child: child!,
   ),
   home: Scaffold(body: child),
@@ -39,12 +38,10 @@ void main() {
     });
 
     test('Android release has network access but forbids cleartext', () {
-      final main = File(
-        'android/app/src/main/AndroidManifest.xml',
-      ).readAsStringSync();
-      final debug = File(
-        'android/app/src/debug/AndroidManifest.xml',
-      ).readAsStringSync();
+      final main = File('android/app/src/main/AndroidManifest.xml')
+          .readAsStringSync();
+      final debug = File('android/app/src/debug/AndroidManifest.xml')
+          .readAsStringSync();
       expect(main, contains('android.permission.INTERNET'));
       expect(main, contains('android:usesCleartextTraffic="false"'));
       expect(debug, contains('android:usesCleartextTraffic="true"'));
@@ -60,30 +57,31 @@ void main() {
   });
 
   group('accessibility and rendering hardening', () {
-    testWidgets('shared form controls meet tap-target and labelling guidelines', (
-      tester,
-    ) async {
-      final controller = TextEditingController();
-      addTearDown(controller.dispose);
-      final semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
-      await tester.pumpWidget(
-        _host(
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                AppTextField(controller: controller, label: 'Email'),
-                const SizedBox(height: 24),
-                PrimaryButton(label: 'Continue', onPressed: _noop),
-              ],
+    testWidgets(
+      'shared form controls meet tap-target and labelling guidelines',
+      (tester) async {
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+        final semantics = tester.ensureSemantics();
+        addTearDown(semantics.dispose);
+        await tester.pumpWidget(
+          _host(
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  AppTextField(controller: controller, label: 'Email'),
+                  const SizedBox(height: 24),
+                  PrimaryButton(label: 'Continue', onPressed: _noop),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    });
+        );
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      },
+    );
 
     testWidgets('core controls remain usable at 200% text scaling', (
       tester,
