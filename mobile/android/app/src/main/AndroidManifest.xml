@@ -1,11 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network access. Flutter's template declares this only in the debug/profile manifests, so a
+         release build without it could not reach the API at all. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Android 13+: runtime permission to show notifications (requested from the notification
          centre, never at start-up; the app works without it). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Release policy (see docs/MOBILE_RELEASE.md):
+         * allowBackup=false and empty extraction rules: the refresh token is Keystore-bound
+           (unusable on another device) and the only other state is the UI language, so backups
+           can only restore a broken session;
+         * usesCleartextTraffic=false: no plain-HTTP traffic is declared (the debug manifest opts
+           in for the local development API only; API_BASE_URL validation also forbids http in
+           release builds);
+         * only the launcher activity is exported; library components keep their own safe flags. -->
     <application
-        android:label="racheeta_mobile"
+        android:label="Racheeta"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

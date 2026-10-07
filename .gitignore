@@ -6,6 +6,8 @@
 *.key
 *.p12
 *.jks
+*.keystore
+mobile/android/key.properties
 firebase-*.json
 service-account*.json
 google-services.json
