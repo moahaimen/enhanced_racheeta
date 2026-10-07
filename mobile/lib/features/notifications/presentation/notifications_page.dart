@@ -36,12 +36,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   String? _message;
   bool _isError = false;
   final Set<String> _marking = <String>{};
+  bool _markAllBusy = false;
 
   /// Messages and in-flight marks belong to one account.
   void _resetForAccountChange() => setState(() {
     _message = null;
     _isError = false;
     _marking.clear();
+    _markAllBusy = false;
   });
 
   Future<void> _open(AppNotification notification) async {
@@ -81,9 +83,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   Future<void> _markAll() async {
+    if (_markAllBusy) return; // one request per deliberate action
     final l10n = AppLocalizations.of(context);
     final accountId = ref.read(accountIdProvider);
-    setState(() => _message = null);
+    setState(() {
+      _markAllBusy = true;
+      _message = null;
+    });
     try {
       final updated = await markAllNotificationsRead(ref);
       if (!mounted || ref.read(accountIdProvider) != accountId) return;
@@ -92,13 +98,18 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         _isError = false;
       });
     } on StaleSessionException {
-      // dropped
+      // another account is signed in: nothing of A's may show
     } on ApiException {
       if (!mounted || ref.read(accountIdProvider) != accountId) return;
       setState(() {
         _message = l10n.errorNotificationMark;
         _isError = true;
       });
+    } finally {
+      // Only the account that started it may clear its busy flag (B's was reset on the switch).
+      if (mounted && ref.read(accountIdProvider) == accountId) {
+        setState(() => _markAllBusy = false);
+      }
     }
   }
 
@@ -207,8 +218,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                   child: TextButton.icon(
                     key: const Key('notifications-mark-all'),
                     icon: const Icon(Icons.done_all),
-                    label: Text(l10n.notificationsMarkAll),
-                    onPressed: (unread.value ?? 1) == 0 ? null : _markAll,
+                    label: Text(
+                      _markAllBusy
+                          ? l10n.notificationsMarkingAll
+                          : l10n.notificationsMarkAll,
+                    ),
+                    onPressed: ((unread.value ?? 1) == 0 || _markAllBusy)
+                        ? null
+                        : _markAll,
                   ),
                 ),
               ],

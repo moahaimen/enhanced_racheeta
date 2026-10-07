@@ -383,6 +383,128 @@ void main() {
     });
   });
 
+  group('mark all read: one request per deliberate action', () {
+    testWidgets('a second tap while the first is pending sends nothing', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      var calls = 0;
+      final h = await pumpPatientApp(
+        tester,
+        path: '/notifications',
+        size: _tall,
+        script: (b) {
+          _basic(b);
+          b.on('POST', _readAll, (_) async {
+            calls++;
+            await gate.future;
+            return FakeBackend.json(200, {'updated': 2});
+          });
+        },
+      );
+      await tester.tap(find.byKey(const Key('notifications-mark-all')));
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('notifications-mark-all')))
+            .onPressed,
+        isNull,
+        reason: 'disabled while pending',
+      );
+      expect(find.text('Marking…'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const Key('notifications-mark-all')),
+        warnIfMissed: false,
+      );
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(calls, 1);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(h.backend.count('POST', _readAll), 1);
+      expect(find.text('2 notifications marked as read.'), findsOneWidget);
+      expect(find.text('Mark all as read'), findsOneWidget);
+    });
+
+    testWidgets(
+      'A\'s pending mark-all never disables B\'s control or changes B\'s message',
+      (tester) async {
+        final gateA = Completer<void>();
+        var calls = 0;
+        final h = await pumpPatientApp(
+          tester,
+          path: '/notifications',
+          size: _tall,
+          script: (b) {
+            _basic(b);
+            b.on('POST', _readAll, (_) async {
+              final mine = ++calls;
+              if (mine == 1) {
+                await gateA.future;
+                return FakeBackend.json(200, {'updated': 5});
+              }
+              return FakeBackend.json(200, {'updated': 1});
+            });
+          },
+        );
+        await tester.tap(find.byKey(const Key('notifications-mark-all')));
+        await tester.pump(const Duration(milliseconds: 30));
+        await switchAccountTo(tester, h, _b);
+        await tester.pumpAndSettle();
+        final button = find.byKey(const Key('notifications-mark-all'));
+        expect(
+          tester.widget<TextButton>(button).onPressed,
+          isNotNull,
+          reason: 'a fresh, enabled control for B',
+        );
+        expect(find.text('Marking…'), findsNothing);
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(calls, 2, reason: 'B\'s own request');
+        expect(find.text('1 notification marked as read.'), findsOneWidget);
+        // A's late answer arrives now: it must change nothing for B
+        gateA.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('5 notifications marked as read.'), findsNothing);
+        expect(find.text('1 notification marked as read.'), findsOneWidget);
+        expect(tester.widget<TextButton>(button).onPressed, isNotNull);
+      },
+    );
+
+    testWidgets('a late failure of A\'s mark-all is not shown to B', (
+      tester,
+    ) async {
+      final gateA = Completer<void>();
+      final h = await pumpPatientApp(
+        tester,
+        path: '/notifications',
+        size: _tall,
+        script: (b) {
+          _basic(b);
+          b.on('POST', _readAll, (_) async {
+            await gateA.future;
+            return FakeBackend.error(500, 'server_error');
+          });
+        },
+      );
+      await tester.tap(find.byKey(const Key('notifications-mark-all')));
+      await tester.pump(const Duration(milliseconds: 30));
+      await switchAccountTo(tester, h, _b);
+      await tester.pumpAndSettle();
+      gateA.complete();
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't update the notification. Try again."),
+        findsNothing,
+      );
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('notifications-mark-all')))
+            .onPressed,
+        isNotNull,
+      );
+    });
+  });
+
   group('opening a notification', () {
     testWidgets('a patient is taken to the reservation, validated and gated', (
       tester,
