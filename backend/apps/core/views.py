@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import DatabaseError, connection, transaction
 from django.http import FileResponse, Http404, HttpRequest, JsonResponse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
@@ -11,6 +12,28 @@ def health(_request: HttpRequest) -> JsonResponse:
     a DB outage should surface as API errors, not as the platform restarting
     a perfectly healthy process."""
     return JsonResponse({"status": "ok"})
+
+
+@require_GET
+@never_cache
+def ready(_request: HttpRequest) -> JsonResponse:
+    """Readiness probe: can this instance safely take traffic? (PostgreSQL answers.)
+
+    Distinct from `/health/` (liveness, no dependencies): a database outage must make a *new*
+    deployment fail its readiness check instead of replacing a working one, without making the
+    platform restart a healthy process. The body is deliberately minimal — no host, SQL or
+    exception text ever leaves this function.
+    """
+    try:
+        # A database that accepts the connection but never answers must not hang the worker:
+        # bound the probe query itself (SET LOCAL needs the surrounding transaction).
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("SET LOCAL statement_timeout = 2000")
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except DatabaseError:
+        return JsonResponse({"status": "unavailable"}, status=503)
+    return JsonResponse({"status": "ready"})
 
 
 @require_GET

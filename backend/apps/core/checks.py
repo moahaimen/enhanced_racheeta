@@ -74,3 +74,93 @@ def check_push_sender(app_configs, **kwargs):
             )
         ]
     return []
+
+
+@register(Tags.security)
+def check_proxy_trust(app_configs, **kwargs):
+    """Behind a TLS-terminating proxy the client address comes from X-Forwarded-For.
+
+    DRF keys anonymous throttles on that address. With `NUM_PROXIES = 0` it uses REMOTE_ADDR,
+    i.e. the proxy itself: every visitor would share one login/password-reset bucket. Without a
+    trusted count it would instead believe the whole header, which a client can rotate to dodge
+    the throttle.
+    """
+    if settings.DEBUG or not getattr(settings, "SECURE_PROXY_SSL", False):
+        return []
+    proxies = settings.REST_FRAMEWORK.get("NUM_PROXIES")
+    if not proxies:
+        return [
+            Error(
+                "SECURE_PROXY_SSL is true (a reverse proxy is in front) but TRUSTED_PROXY_COUNT is "
+                "0: throttles would key on the proxy address. Set TRUSTED_PROXY_COUNT to the "
+                "number of proxies in front of gunicorn (Railway: 1; verify in staging, "
+                "docs/RAILWAY.md).",
+                id="racheeta.E005",
+            )
+        ]
+    return []
+
+
+@register(Tags.security)
+def check_production_hosts_and_secret(app_configs, **kwargs):
+    if settings.DEBUG:
+        return []
+    errors = []
+    if "*" in settings.ALLOWED_HOSTS or not settings.ALLOWED_HOSTS:
+        errors.append(
+            Error(
+                "ALLOWED_HOSTS is empty or contains '*' while DEBUG is False.",
+                id="racheeta.E006",
+            )
+        )
+    secret = settings.SECRET_KEY
+    if len(secret) < 50 or secret.startswith(("change-me", "build-time-placeholder")):
+        errors.append(
+            Warning(
+                "SECRET_KEY looks weak or like a placeholder; use 64+ random characters "
+                "(it signs JWTs, password-reset tokens and sessions).",
+                id="racheeta.W002",
+            )
+        )
+    return errors
+
+
+@register(Tags.security)
+def check_csrf_origins_https(app_configs, **kwargs):
+    if settings.DEBUG:
+        return []
+    insecure = [o for o in settings.CSRF_TRUSTED_ORIGINS if not o.startswith("https://")]
+    if insecure:
+        return [
+            Error(
+                "CSRF_TRUSTED_ORIGINS must be https:// origins in production "
+                f"(found {len(insecure)} that are not).",
+                id="racheeta.E007",
+            )
+        ]
+    return []
+
+
+@register(Tags.security)
+def check_email_timeout(app_configs, **kwargs):
+    if not settings.DEBUG and not settings.EMAIL_TIMEOUT:
+        return [
+            Error(
+                "EMAIL_TIMEOUT is not set: a stalled SMTP server would hold a worker indefinitely.",
+                id="racheeta.E008",
+            )
+        ]
+    return []
+
+
+@register(Tags.security)
+def check_api_docs_exposure(app_configs, **kwargs):
+    if not settings.DEBUG and getattr(settings, "API_DOCS_ENABLED", False):
+        return [
+            Warning(
+                "API_DOCS_ENABLED is true in production: /api/docs/ and /api/schema/ are public "
+                "and served without a Content-Security-Policy.",
+                id="racheeta.W003",
+            )
+        ]
+    return []

@@ -43,6 +43,10 @@ class AccountInactive(Exception):
     pass
 
 
+class EmailDeliveryFailed(Exception):
+    """The e-mail provider could not be reached (timeout, refusal, outage)."""
+
+
 # ---- sessions --------------------------------------------------------------
 
 
@@ -65,9 +69,16 @@ def request_password_reset(email: str) -> None:
     if account is None:
         logger.info("password reset requested for unknown or inactive email")
         return
-    emails.send_password_reset_email(
-        account, uid=encode_uid(account), token=password_reset_token.make_token(account)
-    )
+    try:
+        emails.send_password_reset_email(
+            account, uid=encode_uid(account), token=password_reset_token.make_token(account)
+        )
+    except Exception:
+        # A mail outage must not turn this endpoint into an account-existence oracle (an error
+        # only when the account exists). Log it (no link, no token) and answer like any other
+        # request; the user simply asks again.
+        logger.exception("password reset email delivery failed account=%s", account.pk)
+        return
     logger.info("password reset email sent account=%s", account.pk)
 
 
@@ -100,9 +111,13 @@ def confirm_password_reset(uid: str, token: str, new_password: str) -> Account:
 def request_email_verification(account: Account) -> None:
     if account.email_verified:
         raise AlreadyVerified
-    emails.send_email_verification_email(
-        account, uid=encode_uid(account), token=email_verification_token.make_token(account)
-    )
+    try:
+        emails.send_email_verification_email(
+            account, uid=encode_uid(account), token=email_verification_token.make_token(account)
+        )
+    except Exception as exc:
+        logger.exception("email verification delivery failed account=%s", account.pk)
+        raise EmailDeliveryFailed from exc
     logger.info("email verification sent account=%s", account.pk)
 
 

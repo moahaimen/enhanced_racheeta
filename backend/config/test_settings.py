@@ -12,6 +12,8 @@ os.environ.setdefault("ALLOWED_HOSTS", "testserver,localhost")
 # only keeps the production email check (racheeta.E001) satisfied under DEBUG=false.
 os.environ.setdefault("EMAIL_URL", "smtp://localhost:25")
 os.environ.setdefault("FRONTEND_URL", "https://app.test")
+# Keep a developer's local .env (http dev origins) from tripping racheeta.E007.
+os.environ.setdefault("CSRF_TRUSTED_ORIGINS", "https://app.test")
 
 from config.settings import *  # noqa: E402, F403
 
@@ -32,6 +34,7 @@ REST_FRAMEWORK = {  # noqa: F405
         "recruitment_messages": "10000/min",
         "chat_messages": "10000/min",
         "push_devices": "10000/min",
+        "user_writes": "10000/min",
     },
 }
 # No collectstatic in tests: serve admin/DRF assets straight from app finders.

@@ -39,6 +39,13 @@ env = environ.Env(
     FIREBASE_VERIFIER=(str, "apps.accounts.firebase.DisabledVerifier"),
     FIREBASE_CREDENTIALS_FILE=(str, ""),
     PUSH_SENDER=(str, "apps.notifications.push.DisabledPushSender"),
+    # Phase 12A: production hardening knobs (all optional; safe defaults).
+    DB_CONNECT_TIMEOUT=(int, 5),
+    EMAIL_TIMEOUT=(int, 10),
+    TRUSTED_PROXY_COUNT=(int, 0),
+    API_DOCS_ENABLED=(bool, False),
+    CSP_CONNECT_SRC=(list, []),
+    LOG_FORMAT=(str, "json"),
 )
 
 # Load repo-root .env if present (developer machines only; harmless elsewhere).
@@ -60,6 +67,11 @@ for _var in ("RAILWAY_PUBLIC_DOMAIN", "RAILWAY_PRIVATE_DOMAIN"):
     _domain = env(_var, default="")
     if _domain and _domain not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_domain)
+
+# Railway's deployment health check calls the container with this Host header (and over plain
+# HTTP, see SECURE_REDIRECT_EXEMPT below); without it the very first deployment would be refused.
+if env("SECURE_PROXY_SSL", default=False) and "healthcheck.railway.app" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("healthcheck.railway.app")
 
 INSTALLED_APPS = [
     # Django
@@ -98,7 +110,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "apps.core.middleware.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "apps.core.middleware.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -139,6 +153,8 @@ DATABASES = {
 DATABASES["default"]["CONN_MAX_AGE"] = env("DB_CONN_MAX_AGE")
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 DATABASES["default"].setdefault("OPTIONS", {})
+# A database that does not answer must fail a request, not hang a worker forever.
+DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", env("DB_CONNECT_TIMEOUT"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -182,7 +198,15 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
-    "DEFAULT_THROTTLE_CLASSES": (),
+    # Only state-changing requests of authenticated accounts are throttled by default; reads are
+    # not (no evidence they need it) and views with their own scopes keep them.
+    "DEFAULT_THROTTLE_CLASSES": ("apps.core.throttling.UserWritesThrottle",),
+    # How many reverse proxies sit in front of gunicorn (Railway: set TRUSTED_PROXY_COUNT=1 and
+    # verify in staging). 0 = trust nothing and key throttles on REMOTE_ADDR; behind a proxy that
+    # makes every client share the proxy's address, which `manage.py check` refuses
+    # (racheeta.E005). Never leave it unset behind a proxy, and never trust X-Forwarded-For blindly:
+    # a client could otherwise rotate the header to dodge the login throttle.
+    "NUM_PROXIES": env("TRUSTED_PROXY_COUNT"),
     "DEFAULT_THROTTLE_RATES": {
         "auth": "10/min",
         "password_reset": "5/min",
@@ -194,6 +218,7 @@ REST_FRAMEWORK = {
         "recruitment_messages": "60/hour",
         "chat_messages": "120/hour",
         "push_devices": "60/hour",
+        "user_writes": "600/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -217,6 +242,11 @@ SIMPLE_JWT = {
     "TOKEN_OBTAIN_SERIALIZER": "apps.accounts.serializers.LoginSerializer",
     "TOKEN_REFRESH_SERIALIZER": "apps.accounts.serializers.RefreshSerializer",
 }
+
+# The interactive API docs / schema endpoints are served only in development or when explicitly
+# enabled (docs/SECURITY.md "Public API documentation"); the committed docs/api/openapi.yaml is
+# the contract. They are never needed by the web or mobile apps.
+API_DOCS_ENABLED = DEBUG or env("API_DOCS_ENABLED")
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Racheeta API",
@@ -269,6 +299,9 @@ PASSWORD_RESET_TIMEOUT = env("PASSWORD_RESET_TIMEOUT_MINUTES") * 60
 # A production deployment must not use the console backend (see apps.core.checks).
 # ---------------------------------------------------------------------------
 vars().update(env.email_url("EMAIL_URL"))
+# Django's default is NO timeout: a stalled SMTP server would hold a request (and a gunicorn worker)
+# until gunicorn kills it. Transactional e-mail is sent synchronously (docs/DECISIONS.md ADR-059).
+EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
@@ -278,6 +311,8 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = False  # Bearer tokens, not cookies, for the API.
+# Extra origins the web app may call (Content-Security-Policy connect-src); empty = same origin.
+CSP_CONNECT_SRC = env("CSP_CONNECT_SRC")
 
 # ---------------------------------------------------------------------------
 # Security hardening (active whenever DEBUG is false)
@@ -289,14 +324,22 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     X_FRAME_OPTIONS = "DENY"
-    SECURE_REFERRER_POLICY = "same-origin"
+    # no-referrer: e-mail links carry one-time tokens in the query string; never forward them.
+    SECURE_REFERRER_POLICY = "no-referrer"
     if SECURE_PROXY_SSL:
         # Railway terminates TLS at its edge and forwards X-Forwarded-Proto.
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
         SECURE_SSL_REDIRECT = True
+        # Railway's health check arrives over plain HTTP without X-Forwarded-Proto; redirecting it
+        # would fail every deployment. Only these two paths are exempt (they reveal nothing).
+        SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^ready/$"]
         SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30  # 30 days; raise after verifying HTTPS
         SECURE_HSTS_INCLUDE_SUBDOMAINS = True
         SECURE_HSTS_PRELOAD = False
+
+# HSTS preload is a one-way public commitment (browsers ship the list); it is deliberately NOT
+# enabled until a real HTTPS deployment has run with a long HSTS max-age (docs/SECURITY.md).
+SILENCED_SYSTEM_CHECKS = ["security.W021"]
 
 # ---------------------------------------------------------------------------
 # Internationalisation — Arabic-first, English-ready
@@ -344,12 +387,14 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-        },
+        "json": {"()": "apps.core.logging.JsonFormatter"},
+        "standard": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json" if env("LOG_FORMAT") == "json" else "standard",
+        },
     },
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL")},
     "loggers": {

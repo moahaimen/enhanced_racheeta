@@ -1,0 +1,71 @@
+# Keep the build context small and keep local state, secrets and build output OUT of the image.
+# (The Dockerfile copies only backend/, web/ and scripts/start.sh; this also stops the context
+# upload from containing everything else, and stops COPY backend/ from picking up local files.)
+
+# --- VCS / CI / docs / other apps
+.git
+.github
+docs
+mobile
+infrastructure
+*.md
+!backend/requirements/*.txt
+
+# --- secrets and credentials (never in an image)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+**/key.properties
+firebase-*.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# --- local databases, uploads, collected static, build output
+**/*.sqlite3
+**/db.sqlite3
+backend/media
+backend/staticfiles
+backend/webapp_dist
+web/dist
+web/node_modules
+**/node_modules
+*.apk
+*.aab
+*.dump
+*.sql
+
+# --- Python/Node caches and virtualenvs
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.coverage
+**/htmlcov
+**/coverage
+**/*.tsbuildinfo
+
+# --- tests are not shipped
+backend/tests
+backend/conftest.py
+backend/config/test_settings.py
+backend/apps/**/tests
+backend/requirements/dev.txt
+web/src/**/*.test.ts
+web/src/**/*.test.tsx
+web/src/test
+
+# --- editor / OS
+.idea
+.vscode
+.DS_Store

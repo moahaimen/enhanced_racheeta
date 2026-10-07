@@ -44,6 +44,12 @@ class ServiceUnavailable(APIException):
     default_code = "firebase_not_configured"
 
 
+class EmailUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "The email service is temporarily unavailable. Try again shortly."
+    default_code = "email_unavailable"
+
+
 class AuthThrottleMixin:
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth"
@@ -212,7 +218,10 @@ class EmailVerificationRequestView(APIView):
 
     @extend_schema(
         request=None,
-        responses={202: DetailSerializer},
+        responses={
+            202: DetailSerializer,
+            503: OpenApiResponse(description="`email_unavailable`: the mail provider failed."),
+        },
         summary="Send (or resend) the email-verification link to the current account",
     )
     def post(self, request):
@@ -223,6 +232,8 @@ class EmailVerificationRequestView(APIView):
                 {"non_field_errors": ["This email address is already verified."]},
                 code="already_verified",
             ) from exc
+        except services.EmailDeliveryFailed as exc:
+            raise EmailUnavailable from exc
         return Response({"detail": "Verification email sent."}, status=status.HTTP_202_ACCEPTED)
 
 
