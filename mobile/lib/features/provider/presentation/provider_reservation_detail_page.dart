@@ -1,3 +1,5 @@
+import '../../chat/presentation/open_conversation_button.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -235,6 +237,11 @@ class _DetailState extends ConsumerState<_Detail> {
                 subtitle: Text(formatDateTime(t.createdAt, wallClock, locale)),
               ),
           ],
+          const SizedBox(height: RacheetaSpacing.xl),
+          OpenConversationButton(
+            reservationId: r.id,
+            label: l10n.chatMessagePatient,
+          ),
           if (offered.isNotEmpty) ...[
             const SizedBox(height: RacheetaSpacing.xl),
             for (final target in offered) ...[

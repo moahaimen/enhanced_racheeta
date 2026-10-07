@@ -107,6 +107,15 @@ class SessionController extends Notifier<SessionState> {
   /// Signs out. Local state is cleared FIRST (and in-flight requests aborted); revoking the
   /// refresh token on the server is best effort and can never keep the user signed in.
   Future<void> logout() async {
+    // While the credentials still exist: e.g. unregister this device's push token. Bounded, and a
+    // failure never blocks signing out.
+    try {
+      await ref
+          .read(beforeLogoutProvider)()
+          .timeout(ref.read(logoutHookTimeoutProvider));
+    } on Object {
+      // best effort
+    }
     _ticket++;
     final refresh = await _core.endSession();
     if (ref.mounted) state = const SessionAnonymous();

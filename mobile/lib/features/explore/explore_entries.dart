@@ -17,6 +17,7 @@ class ExploreEntry {
     required this.icon,
     required this.label,
     required this.isAvailableFor,
+    this.unreadKind,
   });
 
   final String id;
@@ -24,9 +25,32 @@ class ExploreEntry {
   final IconData icon;
   final String Function(AppLocalizations l10n) label;
   final bool Function(Account account, Set<String> dashboards) isAvailableFor;
+
+  /// Which backend unread count (if any) this entry shows as a badge.
+  final UnreadKind? unreadKind;
 }
 
+enum UnreadKind { notifications, chat }
+
 final List<ExploreEntry> exploreEntries = <ExploreEntry>[
+  // Communication is role-neutral: every signed-in account has a notification centre and
+  // conversations (the backend scopes both to the account).
+  ExploreEntry(
+    id: 'notifications',
+    path: '/notifications',
+    icon: Icons.notifications_outlined,
+    label: (l10n) => l10n.notificationsTitle,
+    isAvailableFor: (account, dashboards) => true,
+    unreadKind: UnreadKind.notifications,
+  ),
+  ExploreEntry(
+    id: 'messages',
+    path: '/chat',
+    icon: Icons.chat_bubble_outline,
+    label: (l10n) => l10n.chatTitle,
+    isAvailableFor: (account, dashboards) => true,
+    unreadKind: UnreadKind.chat,
+  ),
   ExploreEntry(
     id: 'jobs',
     path: '/jobs',

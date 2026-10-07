@@ -190,6 +190,7 @@ Future<Harness> pumpPatientApp(
   String language = 'en',
   Map<String, Object?>? account,
   Size? size,
+  List<Override> overrides = const <Override>[],
 }) async {
   if (size != null) {
     tester.view.physicalSize = size;
@@ -200,7 +201,7 @@ Future<Harness> pumpPatientApp(
     storedRefresh: 'r1',
     autoRestore: true,
     language: language,
-    extraOverrides: clockOverrides,
+    extraOverrides: [...clockOverrides, ...overrides],
   );
   addTearDown(h.dispose);
   signedInAs(h.backend, account ?? accountJson());

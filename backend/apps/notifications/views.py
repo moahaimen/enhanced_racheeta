@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 
 from django.http import Http404
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import generics, status
-from rest_framework.exceptions import ErrorDetail, ValidationError
+from rest_framework.exceptions import APIException, ErrorDetail, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -126,6 +126,14 @@ class NotificationMarkAllReadView(APIView):
         return Response({"updated": services.mark_all_read(request.user)})
 
 
+class StaleOwnershipError(APIException):
+    """A newer ownership operation already governs this token (typed, not a generic conflict)."""
+
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "This registration was superseded by a newer one."
+    default_code = "stale_ownership"
+
+
 @extend_schema(tags=["notifications"])
 class PushDeviceRegisterView(APIView):
     permission_classes = [IsAuthenticated]
@@ -140,19 +148,32 @@ class PushDeviceRegisterView(APIView):
         description=(
             "Idempotent upsert owned by the authenticated caller. If the token was registered "
             "by another account it is transferred to the caller and the previous owner stops "
-            "receiving pushes through it. The token is never returned."
+            "receiving pushes through it. The token is never returned. Ordering: the request "
+            "carries a client `ownership_seq`; under the token lock it is applied only if it is "
+            "greater than the stored one. An older, equal (by a different owner) or missing "
+            "sequence on a sequenced token changes nothing and is answered 409 "
+            "`stale_ownership`; an exact replay by the owner is returned unchanged (200)."
         ),
         request=PushDeviceRegisterSerializer,
-        responses={200: PushDeviceSerializer},
+        responses={
+            200: PushDeviceSerializer,
+            409: OpenApiResponse(
+                description="`stale_ownership`: a newer operation governs the token."
+            ),
+        },
     )
     def post(self, request):
         serializer = PushDeviceRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        device = push_service.register_device(
-            request.user,
-            token=serializer.validated_data["token"],
-            platform=serializer.validated_data["platform"],
-        )
+        try:
+            device = push_service.register_device(
+                request.user,
+                token=serializer.validated_data["token"],
+                platform=serializer.validated_data["platform"],
+                ownership_seq=serializer.validated_data.get("ownership_seq"),
+            )
+        except push_service.StaleOwnership as exc:
+            raise StaleOwnershipError from exc
         return Response(PushDeviceSerializer(device).data)
 
 
@@ -169,7 +190,11 @@ class PushDeviceUnregisterView(APIView):
         summary="Unregister this device's push token (call before logout)",
         description=(
             "Deactivates the caller's own registration of this token. Tokens that are unknown "
-            "or owned by someone else change nothing and are answered identically (204)."
+            "or owned by someone else change nothing and are answered identically (204), and so do "
+            "stale ones. With an `ownership_seq` greater than the stored one the owner's "
+            "registration is deactivated and the sequence stored, so an older register arriving "
+            "later cannot resurrect it; for a token the server has not seen yet an inactive "
+            "ordering marker is recorded."
         ),
         request=PushDeviceUnregisterSerializer,
         responses={204: None},
@@ -177,5 +202,10 @@ class PushDeviceUnregisterView(APIView):
     def post(self, request):
         serializer = PushDeviceUnregisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        push_service.unregister_device(request.user, token=serializer.validated_data["token"])
+        push_service.unregister_device(
+            request.user,
+            token=serializer.validated_data["token"],
+            ownership_seq=serializer.validated_data.get("ownership_seq"),
+            platform=serializer.validated_data.get("platform", "ANDROID"),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

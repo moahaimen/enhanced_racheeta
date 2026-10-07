@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 13+: runtime permission to show notifications (requested from the notification
+         centre, never at start-up; the app works without it). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="racheeta_mobile"
         android:name="${applicationName}"

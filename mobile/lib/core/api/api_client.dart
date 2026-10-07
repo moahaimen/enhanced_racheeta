@@ -115,6 +115,55 @@ class ApiClient {
     );
   }
 
+  /// A `POST` that is NOT tied to the session scope and carries the given [bearer] token instead
+  /// of the current session's. For operations that change *server-side ownership* (the push
+  /// device token): ending the session must not abort the request client-side while the server may
+  /// still process it, because then the caller could not know when it is safe to start the next
+  /// conflicting operation. It runs to its own completion or timeout, never refreshes tokens and
+  /// is never retried; the caller serialises such operations.
+  Future<T> postDetached<T>(
+    String path, {
+    required String bearer,
+    required T Function(Object? json) parse,
+    Object? body,
+  }) async => _parsed(
+    parse,
+    await _requestDetached('POST', path, bearer: bearer, body: body),
+  );
+
+  /// [postDetached] for endpoints that answer 204 / no body.
+  Future<void> postNoContentDetached(
+    String path, {
+    required String bearer,
+    Object? body,
+  }) async {
+    await _requestDetached('POST', path, bearer: bearer, body: body);
+  }
+
+  Future<Object?> _requestDetached(
+    String method,
+    String path, {
+    required String bearer,
+    Object? body,
+  }) async {
+    final response = await _once(
+      method,
+      path,
+      body: body,
+      query: null,
+      accessToken: bearer,
+      scope: null,
+      cancelToken: null,
+    );
+    final status = response.statusCode ?? 0;
+    final decoded = _decode(
+      response.data,
+      success: status >= 200 && status < 300,
+    );
+    if (status >= 200 && status < 300) return decoded;
+    throw ApiException.fromResponse(status, decoded);
+  }
+
   /// `DELETE` for endpoints that answer 204 / no body (never retried by this method; the single
   /// post-refresh replay only happens after a 401, i.e. before the server processed the call).
   Future<void> deleteNoContent(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/error_messages.dart';
+import '../../chat/presentation/open_conversation_button.dart';
 import '../../../core/time/time_providers.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/format/formatters.dart';
@@ -190,6 +191,13 @@ class _DetailState extends ConsumerState<_Detail> {
               label: l10n.reservationViewProvider,
               onPressed: () async => context.push('/providers/${r.providerId}'),
             ),
+          if (r.providerId != null) ...[
+            const SizedBox(height: RacheetaSpacing.md),
+            OpenConversationButton(
+              reservationId: r.id,
+              label: l10n.chatMessageProvider,
+            ),
+          ],
           if (offerCancel) ...[
             const SizedBox(height: RacheetaSpacing.md),
             PrimaryButton(

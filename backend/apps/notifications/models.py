@@ -81,12 +81,23 @@ class PushDevice(BaseModel):
     # Refreshed on every (idempotent) registration: the only lifecycle signal needed to
     # prefer fresh devices and cap fan-out. No device name/model/fingerprint is collected.
     last_registered_at = models.DateTimeField(default=timezone.now)
+    # Ownership ordering (client-supplied, monotonically increasing per installation). Both
+    # ownership operations (register and unregister) carry one; under the token row lock an
+    # operation changes the owner or the active state only if its value is strictly greater than
+    # this one, so the final state depends on the sequence, never on request arrival or commit
+    # order. NULL = the row has never been governed by sequencing (legacy). It is an opaque
+    # ordering number, not sensitive, and is never returned to clients.
+    ownership_seq = models.BigIntegerField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["-last_registered_at", "-id"]
         constraints = [
             models.UniqueConstraint(fields=["token"], name="push_device_token_unique"),
             models.CheckConstraint(condition=~Q(token=""), name="push_device_token_not_empty"),
+            models.CheckConstraint(
+                condition=Q(ownership_seq__isnull=True) | Q(ownership_seq__gt=0),
+                name="push_device_ownership_seq_positive",
+            ),
         ]
         indexes = [
             models.Index(fields=["account", "is_active"], name="push_device_account_active_idx"),

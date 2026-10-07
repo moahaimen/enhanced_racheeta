@@ -531,5 +531,69 @@
   "confirmKeepJob": "إبقاؤها مفتوحة",
   "jobClosedDone": "تم إغلاق الوظيفة.",
   "errorMembershipInactive": "عضويتك لم تعد تسمح بهذا الإجراء.",
-  "errorJobTransition": "لا يمكن تغيير هذه الوظيفة بهذه الطريقة الآن."
+  "errorJobTransition": "لا يمكن تغيير هذه الوظيفة بهذه الطريقة الآن.",
+  "notificationsTitle": "الإشعارات",
+  "notificationsEmpty": "لا توجد إشعارات بعد",
+  "notificationsEmptyBody": "تظهر هنا التحديثات الخاصة بحجوزاتك.",
+  "notificationsMarkAll": "تحديد الكل كمقروء",
+  "notificationsMarkingAll": "جارٍ التحديد…",
+  "notificationsAllMarked": "{count, plural, =0{لا شيء لتحديده.} =1{تم تحديد إشعار واحد كمقروء.} other{تم تحديد {count} إشعارات كمقروءة.}}",
+  "@notificationsAllMarked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsUnreadCount": "{count} غير مقروء",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationUnread": "غير مقروء",
+  "notificationRead": "مقروء",
+  "notificationFallbackTitle": "إشعار",
+  "errorNotificationMark": "تعذّر تحديث الإشعار. حاول مجدداً.",
+  "pushPromptTitle": "تفعيل الإشعارات الفورية",
+  "pushPromptBody": "اسمح بالإشعارات ليصلك تنبيه عند حدوث جديد. وتبقى كل التفاصيل هنا حتى بدونها.",
+  "pushPromptAction": "السماح بالإشعارات",
+  "pushDeniedHint": "الإشعارات الفورية متوقفة لهذا التطبيق. يمكنك تفعيلها من إعدادات النظام، وتبقى كل التفاصيل ظاهرة هنا.",
+  "chatTitle": "الرسائل",
+  "conversationTitle": "محادثة",
+  "chatEmpty": "لا توجد محادثات بعد",
+  "chatEmptyBody": "تظهر هنا المحادثات الخاصة بحجوزاتك بعد بدء إحداها.",
+  "chatContextReservation": "محادثة حجز",
+  "chatContextOther": "محادثة",
+  "chatNoMessages": "لا توجد رسائل بعد. ابدأ بالتحية.",
+  "chatLoadOlder": "تحميل رسائل أقدم",
+  "chatLoadOlderFailed": "تعذّر تحميل الرسائل الأقدم.",
+  "chatComposerLabel": "الرسالة",
+  "chatSend": "إرسال",
+  "chatSending": "جارٍ الإرسال…",
+  "chatErrorBlank": "اكتب رسالة أولاً.",
+  "chatErrorTooLong": "يمكن أن تصل الرسالة إلى {max} حرفاً كحد أقصى.",
+  "@chatErrorTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "chatErrorSend": "لم تُرسل رسالتك. حاول مجدداً.",
+  "chatYou": "أنت",
+  "chatUnread": "{count} غير مقروءة",
+  "@chatUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMessageProvider": "مراسلة مقدّم الخدمة",
+  "chatMessagePatient": "مراسلة المريض",
+  "chatOpening": "جارٍ الفتح…",
+  "chatOpenFailed": "تعذّر فتح المحادثة."
 }

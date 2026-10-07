@@ -56,8 +56,26 @@ def _push_contract(schema):
     register = schema["paths"]["/api/v1/notifications/push-devices/"]["post"]
     unregister = schema["paths"]["/api/v1/notifications/push-devices/unregister/"]["post"]
     assert register["security"] and unregister["security"]  # authenticated only
-    assert set(schemas["PushDeviceRegisterRequest"]["properties"]) == {"token", "platform"}
-    assert set(schemas["PushDeviceUnregisterRequest"]["properties"]) == {"token"}
+    assert set(schemas["PushDeviceRegisterRequest"]["properties"]) == {
+        "token",
+        "platform",
+        "ownership_seq",
+    }
+    assert set(schemas["PushDeviceUnregisterRequest"]["properties"]) == {
+        "token",
+        "ownership_seq",
+        "platform",
+    }
+    # The ordering protocol: the sequence is a bounded, optional, strictly positive integer on
+    # BOTH ownership endpoints, and register documents the typed stale answer.
+    for name in ("PushDeviceRegisterRequest", "PushDeviceUnregisterRequest"):
+        seq = schemas[name]["properties"]["ownership_seq"]
+        assert seq["type"] == "integer"
+        assert seq["minimum"] == 1
+        assert "ownership_seq" not in schemas[name].get("required", [])
+    assert set(schemas["PushDeviceRegisterRequest"]["required"]) == {"token", "platform"}
+    assert set(schemas["PushDeviceUnregisterRequest"]["required"]) == {"token"}
+    assert set(register["responses"]) == {"200", "409"}
     assert schemas["PushPlatformEnum"]["enum"] == ["ANDROID", "IOS", "WEB"]
     # Responses never carry the token or the owner.
     assert set(schemas["PushDevice"]["properties"]) == {

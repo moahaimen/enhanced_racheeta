@@ -599,5 +599,69 @@
   "confirmKeepJob": "Keep open",
   "jobClosedDone": "The job was closed.",
   "errorMembershipInactive": "Your membership no longer allows this action.",
-  "errorJobTransition": "This job can't be changed that way right now."
+  "errorJobTransition": "This job can't be changed that way right now.",
+  "notificationsTitle": "Notifications",
+  "notificationsEmpty": "No notifications yet",
+  "notificationsEmptyBody": "Updates about your reservations appear here.",
+  "notificationsMarkAll": "Mark all as read",
+  "notificationsMarkingAll": "Marking…",
+  "notificationsAllMarked": "{count, plural, =0{Nothing to mark.} =1{1 notification marked as read.} other{{count} notifications marked as read.}}",
+  "@notificationsAllMarked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsUnreadCount": "{count} unread",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationUnread": "Unread",
+  "notificationRead": "Read",
+  "notificationFallbackTitle": "Notification",
+  "errorNotificationMark": "Couldn't update the notification. Try again.",
+  "pushPromptTitle": "Get push notifications",
+  "pushPromptBody": "Allow notifications to be alerted about new activity. Everything also stays here without them.",
+  "pushPromptAction": "Allow notifications",
+  "pushDeniedHint": "Push notifications are off for this app. You can turn them on in system settings; everything still appears here.",
+  "chatTitle": "Messages",
+  "conversationTitle": "Conversation",
+  "chatEmpty": "No conversations yet",
+  "chatEmptyBody": "Conversations about your reservations appear here once one is opened.",
+  "chatContextReservation": "Reservation conversation",
+  "chatContextOther": "Conversation",
+  "chatNoMessages": "No messages yet. Say hello.",
+  "chatLoadOlder": "Load earlier messages",
+  "chatLoadOlderFailed": "Couldn't load earlier messages.",
+  "chatComposerLabel": "Message",
+  "chatSend": "Send",
+  "chatSending": "Sending…",
+  "chatErrorBlank": "Write a message first.",
+  "chatErrorTooLong": "A message can be at most {max} characters.",
+  "@chatErrorTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "chatErrorSend": "Your message wasn't sent. Try again.",
+  "chatYou": "You",
+  "chatUnread": "{count} unread",
+  "@chatUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMessageProvider": "Message the provider",
+  "chatMessagePatient": "Message the patient",
+  "chatOpening": "Opening…",
+  "chatOpenFailed": "Couldn't open the conversation."
 }

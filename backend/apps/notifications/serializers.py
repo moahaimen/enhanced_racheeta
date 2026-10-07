@@ -66,18 +66,45 @@ class MarkAllReadSerializer(serializers.Serializer):
     updated = serializers.IntegerField()
 
 
+MAX_OWNERSHIP_SEQ = 2**63 - 1
+
+
+def _ownership_seq_field() -> serializers.IntegerField:
+    return serializers.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=MAX_OWNERSHIP_SEQ,
+        help_text=(
+            "Client ownership sequence: strictly increasing per installation (persisted by the "
+            "client, never reset by an account switch, logout or restart). Under the token lock "
+            "an operation is applied only if its value is greater than the one stored for the "
+            "token; an older, equal or missing value on a sequenced token changes nothing."
+        ),
+    )
+
+
 @extend_schema_serializer(component_name="PushDeviceRegister")
 class PushDeviceRegisterSerializer(StrictFieldsSerializer):
-    """The only client input: the opaque FCM token and a bounded platform.
-    Ownership is always the authenticated caller; there is no account field."""
+    """The only client input: the opaque FCM token, a bounded platform and the ownership
+    sequence. Ownership is always the authenticated caller; there is no account field."""
 
     token = serializers.CharField(max_length=1024, min_length=1, trim_whitespace=True)
     platform = serializers.ChoiceField(choices=PushPlatform.choices)
+    ownership_seq = _ownership_seq_field()
 
 
 @extend_schema_serializer(component_name="PushDeviceUnregister")
 class PushDeviceUnregisterSerializer(StrictFieldsSerializer):
     token = serializers.CharField(max_length=1024, min_length=1, trim_whitespace=True)
+    ownership_seq = _ownership_seq_field()
+    platform = serializers.ChoiceField(
+        choices=PushPlatform.choices,
+        required=False,
+        help_text=(
+            "Only used when a sequenced unregister arrives for a token the server has not seen "
+            "yet and must leave an inactive ordering marker (default ANDROID)."
+        ),
+    )
 
 
 @extend_schema_serializer(component_name="PushDevice")

@@ -14,7 +14,12 @@ Set<String> _ids(Map<String, Object?> account, Set<String> dashboards) =>
 void main() {
   group('Explore entries by role', () {
     test('a patient sees only the public areas', () {
-      expect(_ids(accountJson(), {'patient'}), {'jobs', 'real-estate'});
+      expect(_ids(accountJson(), {'patient'}), {
+        'notifications',
+        'messages',
+        'jobs',
+        'real-estate',
+      });
     });
 
     test(
@@ -22,6 +27,8 @@ void main() {
       () {
         final provider = browsingProviderJson();
         expect(_ids(provider, {'doctor'}), {
+          'notifications',
+          'messages',
           'jobs',
           'real-estate',
           'marketplace',

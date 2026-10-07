@@ -2977,6 +2977,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This job can\'t be changed that way right now.'**
   String get errorJobTransition;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates about your reservations appear here.'**
+  String get notificationsEmptyBody;
+
+  /// No description provided for @notificationsMarkAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get notificationsMarkAll;
+
+  /// No description provided for @notificationsMarkingAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Marking…'**
+  String get notificationsMarkingAll;
+
+  /// No description provided for @notificationsAllMarked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing to mark.} =1{1 notification marked as read.} other{{count} notifications marked as read.}}'**
+  String notificationsAllMarked(int count);
+
+  /// No description provided for @notificationsUnreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String notificationsUnreadCount(int count);
+
+  /// No description provided for @notificationUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get notificationUnread;
+
+  /// No description provided for @notificationRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get notificationRead;
+
+  /// No description provided for @notificationFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification'**
+  String get notificationFallbackTitle;
+
+  /// No description provided for @errorNotificationMark.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the notification. Try again.'**
+  String get errorNotificationMark;
+
+  /// No description provided for @pushPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get push notifications'**
+  String get pushPromptTitle;
+
+  /// No description provided for @pushPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications to be alerted about new activity. Everything also stays here without them.'**
+  String get pushPromptBody;
+
+  /// No description provided for @pushPromptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications'**
+  String get pushPromptAction;
+
+  /// No description provided for @pushDeniedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Push notifications are off for this app. You can turn them on in system settings; everything still appears here.'**
+  String get pushDeniedHint;
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get chatTitle;
+
+  /// No description provided for @conversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation'**
+  String get conversationTitle;
+
+  /// No description provided for @chatEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet'**
+  String get chatEmpty;
+
+  /// No description provided for @chatEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations about your reservations appear here once one is opened.'**
+  String get chatEmptyBody;
+
+  /// No description provided for @chatContextReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation conversation'**
+  String get chatContextReservation;
+
+  /// No description provided for @chatContextOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation'**
+  String get chatContextOther;
+
+  /// No description provided for @chatNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet. Say hello.'**
+  String get chatNoMessages;
+
+  /// No description provided for @chatLoadOlder.
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier messages'**
+  String get chatLoadOlder;
+
+  /// No description provided for @chatLoadOlderFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load earlier messages.'**
+  String get chatLoadOlderFailed;
+
+  /// No description provided for @chatComposerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get chatComposerLabel;
+
+  /// No description provided for @chatSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get chatSend;
+
+  /// No description provided for @chatSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get chatSending;
+
+  /// No description provided for @chatErrorBlank.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message first.'**
+  String get chatErrorBlank;
+
+  /// No description provided for @chatErrorTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'A message can be at most {max} characters.'**
+  String chatErrorTooLong(int max);
+
+  /// No description provided for @chatErrorSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message wasn\'t sent. Try again.'**
+  String get chatErrorSend;
+
+  /// No description provided for @chatYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get chatYou;
+
+  /// No description provided for @chatUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String chatUnread(int count);
+
+  /// No description provided for @chatMessageProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Message the provider'**
+  String get chatMessageProvider;
+
+  /// No description provided for @chatMessagePatient.
+  ///
+  /// In en, this message translates to:
+  /// **'Message the patient'**
+  String get chatMessagePatient;
+
+  /// No description provided for @chatOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening…'**
+  String get chatOpening;
+
+  /// No description provided for @chatOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the conversation.'**
+  String get chatOpenFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -100,6 +100,7 @@ No weakening of earlier decisions was needed to make tests pass.
 ## Push notifications (Phase 9C)
 
 - **Token ownership is server-owned and DB-enforced:** `PushDevice.token` is globally unique; the owner is always `request.user` (no account field accepted); registering a token held by another account transfers it, so the previous owner stops receiving pushes (account switch / shared browser).
+- **Ordered ownership:** `ownership_seq` is compared under the row lock; stale/equal/unsequenced requests on a sequenced token change nothing; a stale register answers a typed `409 stale_ownership` that discloses neither the token nor the owner; the sequence is never returned and never recorded on another account's registration; ordering markers are bounded per account.
 - **No IDOR:** unregister only touches the caller's own device and answers `204` for unknown/foreign tokens alike; no list/read/delete-by-id API exists; tokens are never returned.
 - **Credential hygiene:** tokens are never logged in full, never in audit rows or payloads; admin is inspection-only with masked tokens; Firebase credentials stay in `FIREBASE_CREDENTIALS_FILE` (platform-injected, never committed).
 - **Best-effort, after commit, bounded:** pushes are scheduled with `transaction.on_commit`, never raise, and cannot fail or roll back the domain action; rolled-back changes never push. Because `on_commit` runs inside the request, delivery is one SDK multicast under a hard 3 s deadline with a bulkhead and a fail-fast window, so a Firebase outage cannot hold a request or accumulate threads.
@@ -151,6 +152,14 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Error privacy.** Server `detail`/messages are never shown; typed codes map to fixed localized text. Logs carry method/path/status only.
 - **Data minimization.** The seeker's résumé `snapshot` of an application is never modelled or shown; recruiter application figures that the backend withholds stay hidden (never shown as zero); contact values appear only as the API returns them (the listing's own public contact method) and are not turned into links.
 - **No uploads, no external links.** No media is requested and no URL is opened; there is nothing to leak via referrers or intents.
+
+## Mobile notifications, chat and push flows (Phase 11E)
+
+- **Server-scoped, account-keyed.** The backend scopes notifications and conversations to the caller; the app keys every list, thread, count, composer draft and message to the signed-in account, so another account's data, draft or in-flight send never appears after `/me` changes on a mounted route. Sending, marking read and opening a conversation use `runAsAccount` (one request, late success/error dropped, nothing invalidated).
+- **Push never bypasses authorization.** A push is a hint; its data is validated (known `type`, UUID ids) and only selects a normal route whose own gate and the backend still apply. The tap coordinator holds a tap only while the session restores, never across a sign-out, and delivers it once.
+- **Token handling.** The FCM token is held in memory only, never logged or persisted by the app, registered only for the signed-in account (OS permission re-checked on every sync, token refreshes included) and unregistered before logout. Every ownership operation (register AND unregister) carries a persisted, strictly increasing `ownership_seq` and the server applies it only if it is newer than the stored one under the token lock, so the final owner is independent of request arrival or commit order: an older request — including one the client gave up on — can never take the token back from, or resurrect, a newer state (ADR-057). Ownership requests are also serialised on the client and not aborted by the session ending. No Firebase Admin credential, `google-services.json` or key is in the repository; client identifiers come from build defines.
+- **Privacy.** Message bodies are never logged (`ChatMessage.toString` omits them); server messages are never shown (blank/too-long map to fixed text); a conversation of someone else is a plain 404 shown as one generic text; the notification list never carries the raw payload, recipient or dedupe key.
+- **No retry of mutations.** Mark read, mark all, send and open-conversation are single requests; the automatic read cursor is one attempt per newly observed sequence.
 
 ## HTTP hardening (`DEBUG=false`)
 

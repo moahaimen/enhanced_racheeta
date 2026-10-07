@@ -1529,4 +1529,132 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorJobTransition =>
       'This job can\'t be changed that way right now.';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'No notifications yet';
+
+  @override
+  String get notificationsEmptyBody =>
+      'Updates about your reservations appear here.';
+
+  @override
+  String get notificationsMarkAll => 'Mark all as read';
+
+  @override
+  String get notificationsMarkingAll => 'Marking…';
+
+  @override
+  String notificationsAllMarked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications marked as read.',
+      one: '1 notification marked as read.',
+      zero: 'Nothing to mark.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationsUnreadCount(int count) {
+    return '$count unread';
+  }
+
+  @override
+  String get notificationUnread => 'Unread';
+
+  @override
+  String get notificationRead => 'Read';
+
+  @override
+  String get notificationFallbackTitle => 'Notification';
+
+  @override
+  String get errorNotificationMark =>
+      'Couldn\'t update the notification. Try again.';
+
+  @override
+  String get pushPromptTitle => 'Get push notifications';
+
+  @override
+  String get pushPromptBody =>
+      'Allow notifications to be alerted about new activity. Everything also stays here without them.';
+
+  @override
+  String get pushPromptAction => 'Allow notifications';
+
+  @override
+  String get pushDeniedHint =>
+      'Push notifications are off for this app. You can turn them on in system settings; everything still appears here.';
+
+  @override
+  String get chatTitle => 'Messages';
+
+  @override
+  String get conversationTitle => 'Conversation';
+
+  @override
+  String get chatEmpty => 'No conversations yet';
+
+  @override
+  String get chatEmptyBody =>
+      'Conversations about your reservations appear here once one is opened.';
+
+  @override
+  String get chatContextReservation => 'Reservation conversation';
+
+  @override
+  String get chatContextOther => 'Conversation';
+
+  @override
+  String get chatNoMessages => 'No messages yet. Say hello.';
+
+  @override
+  String get chatLoadOlder => 'Load earlier messages';
+
+  @override
+  String get chatLoadOlderFailed => 'Couldn\'t load earlier messages.';
+
+  @override
+  String get chatComposerLabel => 'Message';
+
+  @override
+  String get chatSend => 'Send';
+
+  @override
+  String get chatSending => 'Sending…';
+
+  @override
+  String get chatErrorBlank => 'Write a message first.';
+
+  @override
+  String chatErrorTooLong(int max) {
+    return 'A message can be at most $max characters.';
+  }
+
+  @override
+  String get chatErrorSend => 'Your message wasn\'t sent. Try again.';
+
+  @override
+  String get chatYou => 'You';
+
+  @override
+  String chatUnread(int count) {
+    return '$count unread';
+  }
+
+  @override
+  String get chatMessageProvider => 'Message the provider';
+
+  @override
+  String get chatMessagePatient => 'Message the patient';
+
+  @override
+  String get chatOpening => 'Opening…';
+
+  @override
+  String get chatOpenFailed => 'Couldn\'t open the conversation.';
 }
