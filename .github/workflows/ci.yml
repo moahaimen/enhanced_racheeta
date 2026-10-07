@@ -108,7 +108,9 @@ jobs:
       - name: Resolve dependencies (lockfile must be up to date)
         run: flutter pub get --enforce-lockfile
       - name: Format check
-        run: dart format --output=none --set-exit-if-changed .
+        run: |
+          dart format .
+          git diff --exit-code -- . || (git diff -- . && exit 1)
       - name: Static analysis
         run: flutter analyze --fatal-infos
       - name: Tests
