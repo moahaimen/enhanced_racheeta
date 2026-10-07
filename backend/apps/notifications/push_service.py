@@ -156,6 +156,7 @@ def _enforce_device_cap(account, *, keep: UUID) -> None:
 # older delayed register become authoritative later. They therefore have no count- or time-based
 # pruning in this protocol.
 
+
 def unregister_device(
     account, *, token: str, ownership_seq: int | None = None, platform: str = "ANDROID"
 ) -> bool:
