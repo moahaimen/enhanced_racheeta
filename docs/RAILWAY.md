@@ -28,7 +28,7 @@ Railway's reference syntax (use the reference, do not paste the URL, so a rotati
 
 | Variable | Value | Required |
 | --- | --- | --- |
-| `SECRET_KEY` | 64+ random characters: `python3 -c "import secrets; print(secrets.token_urlsafe(64))"`. Unique per environment. Rotating it logs everyone out. | yes |
+| `SECRET_KEY` | 64+ random characters: `python3 -c "import secrets; print(secrets.token_urlsafe(64))"`. Unique per environment. Rotating it logs everyone out. It is also the JWT signing key: a value under 50 characters or starting `change-me` / `build-time-placeholder` / `django-insecure-` stops the container at start (`racheeta.E009`). | yes |
 | `DEBUG` | `false` | yes |
 | `ALLOWED_HOSTS` | the public domain(s), comma separated, e.g. `app.example.com`. Railway's `RAILWAY_PUBLIC_DOMAIN` is added automatically; `healthcheck.railway.app` is added automatically when `SECURE_PROXY_SSL=true`. `*` is refused (`racheeta.E006`). | yes |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | yes |
@@ -36,7 +36,7 @@ Railway's reference syntax (use the reference, do not paste the URL, so a rotati
 | `TRUSTED_PROXY_COUNT` | `1` (Railway's edge). **Verify in staging** (see §5). With `SECURE_PROXY_SSL=true` and `0` the container refuses to start (`racheeta.E005`). | yes |
 | `CSRF_TRUSTED_ORIGINS` | `https://<domain>` — https only (`racheeta.E007`); needed for the Django admin. | yes |
 | `CORS_ALLOWED_ORIGINS` | empty (the web app is same-origin) | no |
-| `FRONTEND_URL` | `https://<domain>` — used in e-mail links | yes |
+| `FRONTEND_URL` | `https://<domain>` — used in e-mail links, which carry one-time tokens. Must be an https origin only: no path, query, fragment or credentials; a trailing slash is ignored. Anything else stops the container at start (`racheeta.E010`). | yes |
 | `EMAIL_URL` | **OWNER** — provider SMTP, e.g. `smtp://USER:PASSWORD@HOST:587?tls=True` (URL-encode special characters in the password). The container refuses console/locmem mail with `DEBUG=false` (`racheeta.E001`). See `docs/OPERATIONS.md` "E-mail". | yes |
 | `DEFAULT_FROM_EMAIL` | **OWNER** — an address on a domain with SPF/DKIM set up at the provider, e.g. `Racheeta <no-reply@example.com>` | yes |
 | `EMAIL_TIMEOUT` | `10` (default) | no |
@@ -54,7 +54,7 @@ Railway's reference syntax (use the reference, do not paste the URL, so a rotati
 ## 3. Build and start
 
 - **Build:** the multi-stage `Dockerfile` (Node 22 builds `web/`; Python 3.13-slim runs Django;
-  `collectstatic` at build time; unprivileged user `app`; code read-only to it). `.dockerignore`
+  `collectstatic` at build time with a **build-only `SECRET_KEY` generated inside that one `RUN` command** — no key is committed, none is stored in `ENV`/`ARG`, none survives into the runtime; unprivileged user `app`; code read-only to it). `.dockerignore`
   keeps `.env`, keys, tests, docs and other apps out of the image.
 - **Start:** `scripts/start.sh` → `manage.py check` (a configuration error stops the container
   before it touches the database) → `migrate --noinput` → gunicorn (`backend/config/gunicorn.conf.py`)

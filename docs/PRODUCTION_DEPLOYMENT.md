@@ -36,7 +36,7 @@ Pre-flight on your machine, with the production variable values in a scratch she
 cd backend
 SECRET_KEY=… DEBUG=false ALLOWED_HOSTS=… DATABASE_URL=… EMAIL_URL=… FRONTEND_URL=… \
 CSRF_TRUSTED_ORIGINS=… SECURE_PROXY_SSL=true TRUSTED_PROXY_COUNT=1 \
-python manage.py check --deploy          # expect only the push-disabled warning if Firebase is off
+python manage.py check --deploy --fail-level ERROR   # must exit 0; expect only the push-disabled warning if Firebase is off
 ```
 
 ## 3. Cutover sequence

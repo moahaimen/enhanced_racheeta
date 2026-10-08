@@ -364,9 +364,7 @@ def test_missing_email_timeout_is_an_error_and_the_default_is_finite():
     assert "racheeta.E008" in _ids(DEBUG=False, EMAIL_TIMEOUT=None)
 
 
-def test_weak_secret_key_and_public_docs_are_flagged():
-    assert "racheeta.W002" in _ids(DEBUG=False, SECRET_KEY="change-me-" + "x" * 60)
-    assert "racheeta.W002" in _ids(DEBUG=False, SECRET_KEY="short")
+def test_public_docs_are_flagged():
     assert "racheeta.W003" in _ids(DEBUG=False, API_DOCS_ENABLED=True)
     assert "racheeta.W003" not in _ids(DEBUG=False, API_DOCS_ENABLED=False)
 
@@ -455,6 +453,132 @@ def test_manage_check_rejects_obviously_unsafe_production_settings(overrides, ex
     done = _manage(["check"], _production_env(**overrides))
     assert done.returncode != 0
     assert expected in done.stderr
+
+
+STRONG_KEY = "Zq8" + "r3VxT7mKp2LwNc9YbHd4Jf6GsAe1Uo5Xi0" * 2  # 70 varied characters
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "k3y-sm4ll",
+        "x" * 49,  # one character below the minimum
+        "change-me-" + "Ab3" * 20,  # long enough, but the documented placeholder
+        "CHANGE-ME-" + "Ab3" * 20,  # case does not matter
+        "build-time-placeholder",  # the Docker build value (also too short)
+        "build-time-placeholder-" + "Ab3" * 20,  # long form of the same placeholder
+        "django-insecure-" + "Ab3" * 20,  # `django-admin startproject` default
+        "a" * 80,  # long but no entropy
+    ],
+)
+def test_weak_or_placeholder_secret_key_stops_manage_check_in_production(key):
+    done = _manage(["check"], _production_env(SECRET_KEY=key))
+    assert done.returncode != 0, done.stderr[-1500:]
+    assert "racheeta.E009" in done.stderr
+    assert key not in done.stderr  # the value is never echoed
+
+
+def test_strong_secret_key_passes_the_secret_check():
+    assert len(STRONG_KEY) >= 64
+    done = _manage(["check"], _production_env(SECRET_KEY=STRONG_KEY))
+    assert done.returncode == 0, done.stderr[-1500:]
+    assert "racheeta.E009" not in done.stderr
+
+
+def test_the_secret_key_rule_in_process_and_old_warning_id_is_gone():
+    from apps.core.checks import secret_key_problem
+
+    assert secret_key_problem(STRONG_KEY) is None
+    assert secret_key_problem("") and secret_key_problem("change-me")
+    ids = _ids(DEBUG=False, SECRET_KEY="short")
+    assert "racheeta.E009" in ids and "racheeta.W002" not in ids
+    assert "racheeta.E009" not in _ids(DEBUG=False, SECRET_KEY=STRONG_KEY)
+    assert "racheeta.E009" not in _ids(DEBUG=True, SECRET_KEY="short")
+
+
+def test_development_stays_usable_with_a_weak_key_and_http_frontend():
+    done = _manage(
+        ["check"],
+        _production_env(
+            DEBUG="true",
+            SECRET_KEY="dev-only",
+            FRONTEND_URL="http://localhost:5173",
+            SECURE_PROXY_SSL="false",
+            TRUSTED_PROXY_COUNT="0",
+            CSRF_TRUSTED_ORIGINS="http://localhost:5173",
+            EMAIL_URL="consolemail://",
+        ),
+    )
+    assert done.returncode == 0, done.stderr[-1500:]
+    for check_id in ("racheeta.E009", "racheeta.E010"):
+        assert check_id not in done.stderr
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://app.example.test",  # cleartext
+        "app.example.test",  # no scheme
+        "https://",  # no host
+        "https://user:secret-pw@app.example.test",  # credentials
+        "https://user@app.example.test",
+        "https://app.example.test?x=1",  # query
+        "https://app.example.test/#frag",  # fragment
+        "https://app.example.test/app",  # path
+        "https://app.example.test:notaport",
+        "ftp://app.example.test",
+        "https://app.example.test x",  # whitespace
+    ],
+)
+def test_bad_production_frontend_url_stops_manage_check(url):
+    done = _manage(["check"], _production_env(FRONTEND_URL=url))
+    assert done.returncode != 0, done.stderr[-1500:]
+    assert "racheeta.E010" in done.stderr
+    assert "secret-pw" not in done.stderr  # credentials are never echoed
+
+
+def test_empty_production_frontend_url_stops_manage_check():
+    done = _manage(["check"], _production_env(FRONTEND_URL=""))
+    assert done.returncode != 0 and "racheeta.E010" in done.stderr
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://app.example.test",
+        "https://app.example.test/",  # trailing slash is normalised away, like settings does
+        "https://app.example.test:8443",
+        "https://sub.app.example.test",
+    ],
+)
+def test_correct_https_production_frontend_url_passes(url):
+    done = _manage(["check"], _production_env(FRONTEND_URL=url))
+    assert done.returncode == 0, done.stderr[-1500:]
+    assert "racheeta.E010" not in done.stderr
+
+
+def test_frontend_url_rule_in_process_and_http_stays_usable_in_debug():
+    from apps.core.checks import frontend_url_problem
+
+    assert frontend_url_problem("https://app.example.com") is None
+    assert frontend_url_problem("http://app.example.com")
+    assert "racheeta.E010" in _ids(
+        DEBUG=False, RACHEETA={**settings.RACHEETA, "FRONTEND_URL": "http://x.test"}
+    )
+    assert "racheeta.E010" not in _ids(
+        DEBUG=True, RACHEETA={**settings.RACHEETA, "FRONTEND_URL": "http://localhost:5173"}
+    )
+
+
+def test_the_docker_build_uses_an_ephemeral_key_not_a_committed_placeholder():
+    dockerfile = (BACKEND.parent / "Dockerfile").read_text()
+    assert "build-time-placeholder" not in dockerfile
+    run = dockerfile[dockerfile.index("RUN SECRET_KEY=") :].split("\n\n")[0]
+    assert "secrets.token_urlsafe" in run and "collectstatic" in run
+    # a build-only value on the RUN line: never an ENV/ARG, so it cannot persist into the image
+    for line in dockerfile.splitlines():
+        stripped = line.strip()
+        assert not (stripped.startswith(("ENV", "ARG")) and "SECRET_KEY" in stripped), line
 
 
 def test_api_docs_are_off_in_production_and_on_only_when_enabled():

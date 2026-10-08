@@ -33,7 +33,7 @@ jobs:
           --health-retries 10
     env:
       # CI-only values. None of these are production secrets.
-      SECRET_KEY: ci-only-secret-key-not-used-anywhere-else
+      SECRET_KEY: ci-only-throwaway-key-not-used-anywhere-else-0123456789abcdef
       DEBUG: "false"
       ALLOWED_HOSTS: localhost,testserver
       DATABASE_URL: postgres://racheeta:racheeta@localhost:5432/racheeta
