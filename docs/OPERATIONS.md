@@ -74,12 +74,23 @@ Mail is sent synchronously and is bounded (ADR-059): connection and send time ou
 `EMAIL_TIMEOUT` seconds (default 10). Failures are logged (ERROR with the account id) and never
 shown to anonymous callers.
 
-**Choosing a provider (owner).** Any provider offering authenticated SMTP works (the code only uses
-Django's SMTP backend via `EMAIL_URL`). Requirements: a sending domain you control with **SPF,
+**Two transports (ADR-062), selected by `EMAIL_PROVIDER`.**
+
+| `EMAIL_PROVIDER` | Transport | Configure | Use when |
+| --- | --- | --- | --- |
+| `django` (default) | Django SMTP (or console in development) | `EMAIL_URL`, `DEFAULT_FROM_EMAIL` | the host allows outbound SMTP |
+| `resend` | Resend HTTPS API (`https://api.resend.com/emails`, port 443) | `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL` | Railway or any host that blocks SMTP (the intended 12B staging setup) |
+
+Both go through Django's `send_mail`, so the password-reset and verification flows, their
+anti-enumeration behaviour, the timeout (`EMAIL_TIMEOUT`) and the logging rules are identical. With
+`resend`, `EMAIL_URL` is ignored. **Resend setup (owner):** create a Resend account, add and verify
+your sending domain (the DNS records Resend shows: SPF, DKIM; add DMARC), create an API key limited
+to sending, set `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, and `DEFAULT_FROM_EMAIL=Racheeta <no-reply@your-verified-domain>`. Until the domain is verified Resend only delivers from `onboarding@resend.dev` to the account owner's own address. Failures appear in the logs as `Resend rejected the request: HTTP <status> (<error name>)` or `Resend request failed/timed out` — never with the key, the address or the link; check the Resend dashboard (Emails/Logs) for the delivery detail.
+
+**SMTP choice (owner).** Any provider offering authenticated SMTP works (Django's SMTP backend via `EMAIL_URL`). Requirements: a sending domain you control with **SPF,
 DKIM and DMARC** published; STARTTLS on port 587; an API/SMTP credential limited to sending. Set
 `EMAIL_URL=smtp://USER:PASSWORD@HOST:587?tls=True` (percent-encode `@`, `:` and `/` in credentials)
-and `DEFAULT_FROM_EMAIL=Racheeta <no-reply@yourdomain>`. A provider with an HTTP API but no SMTP
-needs a small backend added in a later phase; none is assumed here.
+and `DEFAULT_FROM_EMAIL=Racheeta <no-reply@yourdomain>`. Where SMTP is blocked, use `EMAIL_PROVIDER=resend`.
 
 **Verification in staging (mandatory before 12C):**
 1. Request a password reset for a mailbox you own → the mail arrives (check spam), the link opens
@@ -135,7 +146,8 @@ Record anything new in `docs/SECURITY.md` "Dependency policy and scanning" with 
 | --- | --- | --- |
 | `SECRET_KEY` | Railway variable (per environment) + owner's password manager | Invalidates all JWTs, reset/verification links and admin sessions. Everyone logs in again. Plan a quiet moment. |
 | `DATABASE_URL` | Railway reference to the Postgres service | Rotate the database password in Railway; the reference follows; redeploy. |
-| `EMAIL_URL` credential | Railway variable | Create a new provider key, set it, redeploy, revoke the old key. |
+| `EMAIL_URL` credential (SMTP) | Railway variable | Create a new provider key, set it, redeploy, revoke the old key. |
+| `RESEND_API_KEY` | Railway variable | Create a new key in Resend, set it, redeploy, delete the old key in Resend. The key lives only in the platform variables. |
 | Firebase service account (when activated) | mounted file path in `FIREBASE_CREDENTIALS_FILE` | Create a new key in the Firebase console, replace, redeploy, delete the old key. |
 | Android release keystore | owner's secure storage (never in the repo) | Not rotatable after Play enrolment without Play's key-upgrade process. Back it up in two places. |
 | Off-site backup bucket key | backup scheduler's secret store | Create new key, update scheduler, delete old key. |

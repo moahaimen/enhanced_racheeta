@@ -25,7 +25,7 @@ Follow `docs/RAILWAY.md` §1–§4 with these differences from production:
 
 - Project/environment name `racheeta-staging`; **new** `SECRET_KEY`; new database; no shared secrets.
 - `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL` use the staging host.
-- `EMAIL_URL` points at the real provider but `DEFAULT_FROM_EMAIL` clearly marks staging
+- E-mail: **12B uses Resend over HTTPS** (`EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, no `EMAIL_URL`; see `docs/OPERATIONS.md` §4). `DEFAULT_FROM_EMAIL` clearly marks staging
   (`Racheeta Staging <no-reply@…>`); only send to mailboxes you control.
 - Keep `API_DOCS_ENABLED` unset (staging should behave like production). If you need Swagger for
   a test, enable it temporarily and remove it.
