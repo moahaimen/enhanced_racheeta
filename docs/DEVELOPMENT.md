@@ -106,3 +106,28 @@ flutter test
 ```
 
 CI runs the same three checks in the `mobile` job. See `mobile/README.md`.
+
+## Operations tooling (Phase 12A)
+
+```bash
+# Production-mode HTTP expectations against any running instance (needs only curl)
+scripts/smoke_http.sh http://127.0.0.1:8000
+
+# Backup / restore round trip against a migrated, disposable database
+SOURCE_DATABASE_URL=postgres://localhost/some_db scripts/backup/backup_restore_smoke.sh
+
+# Production image + smoke (needs Docker and an EMPTY database; CI does this)
+DATABASE_URL=postgres://user:pw@localhost:5432/disposable scripts/container_smoke.sh
+
+# Synthetic data, query plans and load (docs/PERFORMANCE.md)
+python manage.py seed_synthetic --confirm-synthetic --providers 5000 --jobs 5000 --listings 3000
+python ../scripts/perf/explain_api_queries.py --analyze
+python ../scripts/loadtest/loadtest.py --base-url http://127.0.0.1:8125 --concurrency 8 --duration 20
+
+# Token retention
+python manage.py prune_expired_tokens --dry-run
+```
+
+Production-mode runs on a developer machine: export `DEBUG=false` explicitly (a local `.env`
+with `DEBUG=true` otherwise wins), and give `SECURE_PROXY_SSL=true` runs `TRUSTED_PROXY_COUNT=1`
+or `manage.py check` refuses to start (`racheeta.E005`).

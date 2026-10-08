@@ -1,0 +1,4 @@
+# Accepted gitleaks findings. Each line is a fingerprint printed by `gitleaks detect -v`.
+# Fake JWT-shaped string used to prove the log redactor removes bearer tokens
+# (backend/tests/test_phase12a_hardening.py); it is not a credential.
+d01831329898a025f128dafcae984f44fbabd76a:backend/tests/test_phase12a_hardening.py:generic-api-key:243

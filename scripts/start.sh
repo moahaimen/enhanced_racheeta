@@ -1,15 +1,18 @@
 #!/bin/sh
-# Production entrypoint (container CMD). Applies migrations, then serves.
-# Migrations run here because Railway has no separate release phase; with one
-# replica this is safe. Move to a dedicated pre-deploy step if replicas > 1.
+# Production entrypoint (container CMD).
+#
+#   1. `check`   — Django system checks; an ERROR (unsafe production settings such as an
+#                  unconfigured proxy count, console e-mail, wildcard hosts) stops the container
+#                  here, before it touches the database or accepts traffic.
+#   2. `migrate` — applies pending migrations. Railway has no separate release phase, so this runs
+#                  at container start. This is safe ONLY with a single replica; with more than one,
+#                  move migrate to a dedicated pre-deploy step (docs/PRODUCTION_DEPLOYMENT.md).
+#                  A failed migration exits non-zero: the new container never becomes ready (the
+#                  platform health check fails), so the previous deployment keeps serving.
+#   3. gunicorn  — config/gunicorn.conf.py (workers, timeouts, privacy-safe access log).
 set -eu
 
+python manage.py check
 python manage.py migrate --noinput
 
-exec gunicorn config.wsgi:application \
-  --bind "0.0.0.0:${PORT:-8000}" \
-  --workers "${WEB_CONCURRENCY:-2}" \
-  --timeout "${GUNICORN_TIMEOUT:-60}" \
-  --access-logfile - \
-  --error-logfile - \
-  --log-level "${GUNICORN_LOG_LEVEL:-info}"
+exec gunicorn config.wsgi:application -c config/gunicorn.conf.py

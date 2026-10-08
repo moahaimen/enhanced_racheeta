@@ -55,14 +55,15 @@ Handler: `backend/apps/core/exceptions.py`.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| GET | `/health/` | none | Liveness. `{"status":"ok"}` |
+| GET | `/health/` | none | Liveness. `{"status":"ok"}` (no database call) |
+| GET | `/ready/` | none | Readiness. `{"status":"ready"}`, or 503 `{"status":"unavailable"}` when PostgreSQL is unreachable. Not part of `/api/v1`; not in the OpenAPI contract. |
 | POST | `/api/v1/auth/register` | none | Create account → `{account, tokens}` (201) |
 | POST | `/api/v1/auth/login` | none | Email + password → `{access, refresh}` |
 | POST | `/api/v1/auth/refresh` | none | `{refresh}` → new `{access, refresh}`; old refresh is blacklisted |
 | POST | `/api/v1/auth/logout` | none | `{refresh}` → 204; refresh token blacklisted |
 | POST | `/api/v1/auth/password-reset/request` | none | `{email}` → 202, enumeration-safe |
 | POST | `/api/v1/auth/password-reset/confirm` | none | `{uid, token, new_password}` → 200; revokes refresh tokens |
-| POST | `/api/v1/auth/email-verification/request` | bearer | Send/resend verification link → 202 |
+| POST | `/api/v1/auth/email-verification/request` | bearer | Send/resend verification link → 202; 503 `email_unavailable` if the mail provider fails |
 | POST | `/api/v1/auth/email-verification/confirm` | none | `{uid, token}` → 200 |
 | POST | `/api/v1/auth/firebase/exchange` | none | `{id_token, role?}` → `{account, tokens, created}` (200/201); 503 while disabled |
 | GET | `/api/v1/me` | bearer | Current account: identity, role, `permissions` |

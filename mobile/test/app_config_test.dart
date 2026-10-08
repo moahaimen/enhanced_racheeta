@@ -209,6 +209,52 @@ void main() {
         },
       );
 
+      test(
+        'the URL must be an origin only: a path would be prepended to /api/v1',
+        () {
+          for (final url in [
+            'https://api.example.com/api',
+            'https://api.example.com/api/v1',
+            'https://api.example.com/v1/',
+            'https://api.example.com/prefix/nested',
+          ]) {
+            for (final env in ['production', 'staging']) {
+              expect(
+                () => AppConfig.fromEnvironment(
+                  appEnv: env,
+                  apiBaseUrl: url,
+                  releaseMode: true,
+                ),
+                throwsA(isA<ConfigurationError>()),
+                reason: '$url in $env',
+              );
+            }
+          }
+          expect(
+            () => AppConfig.fromEnvironment(
+              appEnv: 'development',
+              apiBaseUrl: 'http://10.0.2.2:8000/api',
+              releaseMode: false,
+            ),
+            throwsA(isA<ConfigurationError>()),
+          );
+          // A bare origin, with or without trailing slashes, still works.
+          for (final url in [
+            'https://api.example.com',
+            'https://api.example.com/',
+          ]) {
+            expect(
+              AppConfig.fromEnvironment(
+                appEnv: 'production',
+                apiBaseUrl: url,
+                releaseMode: true,
+              ).apiBaseUrl,
+              'https://api.example.com',
+            );
+          }
+        },
+      );
+
       test('a valid production release URL is accepted and the error is a safe message', () {
         final config = AppConfig.fromEnvironment(
           appEnv: 'production',

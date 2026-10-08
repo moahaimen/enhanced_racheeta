@@ -20,7 +20,7 @@
 | Privilege escalation via API bodies | All privilege/identity fields rejected with 400; DB constraint for ADMIN⇒staff. | covered by tests |
 | Registration role assignment | Only four self-service roles; ADMIN rejected server-side; web never offers it. | covered |
 | Login enumeration | Wrong email and wrong password both return 401 `no_active_account` with the same message. | covered |
-| Password-reset enumeration | Same 202 body for known/unknown/inactive emails. Timing: sending is synchronous through the console/SMTP backend, so a slow provider could leak existence via latency. Mitigation planned: send from a background task when a worker exists. | documented |
+| Password-reset enumeration | Same 202 body for known/unknown/inactive emails. Timing: sending is synchronous, so a slow provider could leak existence via latency. Phase 12A bounds the send (`EMAIL_TIMEOUT`, 10 s) and makes a failing provider indistinguishable from success on the public endpoint (ADR-059); a background worker is deliberately not added. | bounded in 12A |
 | Reset-token expiry / reuse | 60 min (env); single-use by hash design; cross-account misuse impossible (hash includes pk). | covered |
 | Email-verification expiry / reuse | 24 h (env); invalidated by email change and by verification; idempotent after success. | covered |
 | JWT rotation / refresh reuse | Rotation + blacklist; reused refresh → 401. Reset revokes all refresh tokens. | covered |
@@ -170,12 +170,39 @@ No weakening of earlier decisions was needed to make tests pass.
 - **Artifact verification:** `mobile/tool/verify_release_apk.py` and the CI job `mobile-release` check the compiled release APK.
 - **Not covered:** certificate pinning (not implemented), root/jailbreak detection (out of scope), real-device penetration testing.
 
+## Phase 12A security review (2026-10-07)
+
+Scope: the whole HTTP surface, configuration and deployment path, reviewed by this implementation pass (not an independent audit; the independent review of the 12A pull request follows). Method: read every route and permission class; a **reflection test** (`tests/test_security_sweep.py`) walks every `/api/v1/` URL pattern, evaluates the DRF permission classes per HTTP method and pins the exact list of public operations — a new public endpoint fails the test until it is added deliberately — and sends an anonymous request to every other operation, which must answer 401/403; targeted tests for each finding below.
+
+| # | Finding | Severity | Resolution | Regression test |
+| --- | --- | --- | --- | --- |
+| 1 | One-time reset/verification tokens sit in the query string of the page URL; gunicorn's default access log records the request line and `Referer`, so they would reach platform logs (and a page could forward them in `Referer`). | P2 | Custom gunicorn access-log format (path only, no referer); `Referrer-Policy: no-referrer`. | `test_phase12a_hardening.py` (log format, header) |
+| 2 | If the mail provider failed, the public password-reset request raised a 500 only for **existing** accounts — an account-existence oracle during outages. | P2 | Failure is swallowed and logged; identical 202 for known/unknown/failing. Authenticated verification request answers typed `503 email_unavailable`. | `test_email_resilience.py` |
+| 3 | Mail had no timeout (Django default: none): a stalled SMTP server would hold a worker until gunicorn killed it. | P2 | `EMAIL_TIMEOUT` (10 s) + `racheeta.E008`. | `test_phase12a_hardening.py` |
+| 4 | Behind Railway's proxy every client shares one address, so the login throttle would lock out everyone at once (or, if misconfigured the other way, be bypassed with a forged `X-Forwarded-For`). | P2 | `TRUSTED_PROXY_COUNT` → `NUM_PROXIES`; `racheeta.E005` refuses an unconfigured proxy; staging verification procedure. | `test_phase12a_hardening.py`, `test_checks.py` |
+| 5 | No Content-Security-Policy / Permissions-Policy. | P3 (hardening) | Added (see HTTP hardening). | `test_phase12a_hardening.py`, browser check |
+| 6 | `/api/docs/` and `/api/schema/` were public in production. | P3 | Off unless `DEBUG`/`API_DOCS_ENABLED`; W003 warns if exposed. | `test_phase12a_hardening.py` |
+| 7 | No readiness endpoint: a release whose database was unreachable still passed `/health/`. | P3 | `/ready/`; Railway health check switched to it. | `test_phase12a_hardening.py` |
+| 8 | `SECURE_SSL_REDIRECT` would have failed Railway's plain-HTTP deployment probe; `healthcheck.railway.app` was not an allowed host. | P3 (would block first deploy) | Redirect exemption for the two probe paths; host added when behind TLS. | `test_phase12a_hardening.py` |
+| 9 | PyJWT 2.14.0 advisories (not exploitable here). | P3 | Pinned 2.15.1. | `pip-audit` |
+| 10 | Refresh-token revocation rows grow forever (`token_blacklist_*`). | P3 (operational) | `manage.py prune_expired_tokens` (batched, `--dry-run`); cadence in `docs/OPERATIONS.md`. | `test_phase12a_hardening.py` |
+| 11 | A weak or placeholder `SECRET_KEY` produced only a warning, and `start.sh` runs a plain `manage.py check`; SimpleJWT signs tokens with `SECRET_KEY`, so a guessable key lets anyone forge logins. (Found in independent review of PR #20.) | P1 | `racheeta.E009` is an Error for `DEBUG=false`; the Docker build generates an ephemeral build-only key instead of committing a placeholder. | `test_phase12a_hardening.py` (subprocess `manage.py check` per bad value) |
+| 12 | A non-https production `FRONTEND_URL` produced only a warning, so reset/verification links carrying one-time tokens could be generated over cleartext HTTP. (Independent review.) | P2 | `racheeta.E010` is an Error for `DEBUG=false` (https origin only). | `test_phase12a_hardening.py` |
+
+Reviewed and unchanged: object-level isolation (covered since Phases 2–10 by per-app tests); privilege fields rejected on writes; admin reachable only with staff session (path configurable, not a security control); no file uploads exist (no upload attack surface; the media deferral is in `docs/PRODUCTION_DEPLOYMENT.md`); CORS allow-list empty in production (same origin); mass-assignment protected by explicit serializer field lists; logging and error envelopes do not expose internals. **No open P1/P2 findings remain from this pass.** Residual risks: refresh token in `localStorage` (ADR-061), per-process throttle counters, synchronous mail, no WAF/CDN, no 2FA for admin accounts (owner decision; recommended before production).
+
 ## HTTP hardening (`DEBUG=false`)
 
-`SECURE_CONTENT_TYPE_NOSNIFF`, `X_FRAME_OPTIONS=DENY`, secure/HttpOnly session
-and CSRF cookies, `Referrer-Policy: same-origin`. With `SECURE_PROXY_SSL=true`
-(Railway): trust `X-Forwarded-Proto`, redirect to HTTPS, HSTS 30 days
-(raise to a year after verifying HTTPS works everywhere).
+| Control | Where | Notes |
+| --- | --- | --- |
+| `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy` | Django security middleware | |
+| `Referrer-Policy: no-referrer` | `SECURE_REFERRER_POLICY` | E-mail links carry one-time tokens in the query string; no page may forward them. |
+| `Content-Security-Policy` | `apps/core/middleware.py` (`SecurityHeadersMiddleware`) | SPA: `default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` (+ `upgrade-insecure-requests` behind TLS). No `unsafe-eval`, no `unsafe-inline` for scripts or styles (React applies `style` through the CSSOM; checked in a real browser with zero violations). API: `default-src 'none'`. Admin: first-party scripts, inline styles allowed (Django admin needs them). API docs paths carry no CSP (Swagger UI loads from a CDN) and are off in production. Extra API origins: `CSP_CONNECT_SRC`. |
+| `Permissions-Policy` | same | accelerometer, camera, geolocation, gyroscope, magnetometer, microphone, payment, usb, interest-cohort all denied. |
+| HTTPS redirect, HSTS (30 days, include subdomains, no preload), secure cookies | `SECURE_PROXY_SSL=true` | `/health/` and `/ready/` are exempt (the platform probe is plain HTTP). Raise HSTS to a year and consider preload only after a stable HTTPS deployment (preload is a one-way public commitment). |
+| Config guard rails | `apps/core/checks.py`, run by `scripts/start.sh` | E001 console/locmem mail; E005 proxy without `TRUSTED_PROXY_COUNT`; E006 wildcard/empty hosts; E007 non-https CSRF origins; E008 no mail timeout; **E009 weak/placeholder `SECRET_KEY`** (under 50 characters, `change-me…`, `build-time-placeholder…`, `django-insecure-…`, or almost no character variety — it is SimpleJWT's HMAC signing key, so this is an authentication failure, not advice); **E010 `FRONTEND_URL` not a plain https origin** (rejects http, missing scheme/host, credentials, query, fragment, path; reset/verification links carry one-time tokens); W003 API docs exposed. All `E…` ids stop `scripts/start.sh` before migrations. Neither value is ever echoed in the message. Development (`DEBUG=true`) is unaffected. (The earlier warning `W002` no longer exists.) `check --deploy` is exercised with fake values in `tests/test_phase12a_hardening.py`. |
+
+Request ids (`X-Request-ID`, validated) tie a user report to a log line; JSON logs redact bearer tokens, `token=`/`password:` pairs and e-mail addresses and never emit `extra` fields. 5xx responses use a fixed body (no stack trace, no settings).
 
 ## CORS
 
@@ -185,18 +212,25 @@ list can be empty.
 
 ## Rate limiting
 
-Scoped throttles listed above, backed by Django's local-memory cache — per
-process. Adequate for one container; switch to a shared cache if replicas are
-added.
+Audit (12A). The cache is Django's local-memory cache, so counters are **per process**: with `WEB_CONCURRENCY=2` the effective limit is up to twice the rate, and a redeploy resets them. Acceptable for one container; move to a shared cache before adding replicas.
+
+| Scope | Rate | Applies to |
+| --- | --- | --- |
+| `auth` | 10/min | register, login, refresh, logout, Firebase exchange (keyed by client IP) |
+| `password_reset` | 5/min | reset request + confirm |
+| `email_verification` | 3/min | verification request + confirm |
+| `jobs_create` / `jobs_apply` | 30/h / 20/h | job creation, applications |
+| `talent_search` / `talent_invite` | 60/min / 30/h | employer talent search, invitations |
+| `recruitment_messages` | 60/h | recruitment messaging |
+| `chat_messages` | 120/h | sending chat messages (POST only) |
+| `push_devices` | 60/h | push-token register/unregister |
+| `user_writes` (default, 12A) | 600/h | every other authenticated write (POST/PUT/PATCH/DELETE) per account; reads and anonymous requests are untouched |
+
+Behind a proxy, DRF reads the client IP from `X-Forwarded-For` using `TRUSTED_PROXY_COUNT`. Wrong values fail in one of two directions: too low and every user shares the proxy's address (one attacker locks everyone out); too high and a client can forge the header to dodge the limit. `racheeta.E005` stops the container from starting with a proxy and a count of 0; the right value (Railway: 1) is verified in staging (`docs/STAGING.md`). Public anonymous reads (lists, detail) have no throttle; they are paginated (page size 20) and the load harness (`docs/PERFORMANCE.md`) measures them.
 
 ## Token storage trade-off (web)
 
-Access token in memory; refresh token in `localStorage`. This keeps the
-session across reloads with zero infrastructure, at the cost of XSS exposure
-of the refresh token. Mitigations today: no `dangerouslySetInnerHTML`, no
-inline scripts, dependencies pinned. A strict CSP is **not** yet set (Phase
-12). Candidate upgrade: refresh token in an httpOnly, SameSite cookie with
-CSRF protection. Recorded in `DECISIONS.md` (ADR-009).
+Access token in memory; refresh token in `localStorage`. This keeps the session across reloads with zero infrastructure, at the cost of XSS exposure of the refresh token. Mitigations: no `dangerouslySetInnerHTML`, no inline scripts, dependencies pinned, and (12A) a strict Content-Security-Policy that blocks inline script and `eval`. The httpOnly-cookie alternative was **evaluated in 12A and deferred** (ADR-061): the mobile app needs the body-delivered token anyway, so a cookie would be a second auth path with new CSRF surface, and it should be designed against the final domain layout.
 
 ## Passwords
 
@@ -208,12 +242,28 @@ confirmation. Tests use MD5 for speed only (`config/test_settings.py`).
 
 Reset and verification links carry an opaque `uid` (base64 UUID) and an HMAC
 token. They are only ever sent to the address on the account. The SPA posts
-them in a JSON body; they never appear in API access logs.
+them in a JSON body to the API. The *page* URL that the link opens does
+contain them in its query string, so the gunicorn access log records the path
+without the query string and without the `Referer` (`config/gunicorn.conf.py`),
+and `Referrer-Policy: no-referrer` stops browsers forwarding them (a test pins
+both). A reverse proxy or CDN in front of the app may log full URLs; the
+platform's own request logs are the owner's to review (`docs/OPERATIONS.md`).
 
-## Dependency policy
+## Dependency policy and scanning
 
-All Python and npm dependencies are pinned (`requirements/*.txt`,
-`package-lock.json`). Upgrade deliberately; run the full CI.
+Direct Python and npm dependencies are pinned (`requirements/*.txt`, `package-lock.json`, `mobile/pubspec.lock`); PyJWT, a transitive dependency of SimpleJWT, is pinned too (12A). Upgrade deliberately; run the full CI. Not yet done: a fully hash-pinned lock of every transitive Python package (`pip-compile --generate-hashes`) — deferred, tracked in `docs/PRODUCTION_DEPLOYMENT.md` "Known gaps".
+
+Scan results, 2026-10-07 (re-run before each production deploy; commands in `docs/OPERATIONS.md`):
+
+| Scanner | Scope | Result | Disposition |
+| --- | --- | --- | --- |
+| `pip-audit` | installed backend environment | PyJWT 2.14.0: PYSEC-2026-4141 (`PyJWKClient` crash on deeply nested payload) and PYSEC-2026-4183 (OKP private-JWK import) | **Fixed**: pinned `PyJWT==2.15.1`. Neither code path is used (HS256 only, no JWKS client, no JWK import). `pip-audit` now reports none. |
+| `npm audit` | production dependencies | 0 vulnerabilities | none |
+| `npm audit` | full tree | 1 high: `source-map-js` event-loop DoS via crafted source-map section offsets (transitive of `postcss` via Vite, and `css-tree` via jsdom) | **Accepted**: build/test tooling only, never shipped to browsers or the production runtime image; exploitation needs an attacker-controlled source map fed to the build. No fixed release is published on the registry yet (`1.2.2` is latest). Re-check at each dependency update. |
+| `flutter pub outdated` | mobile | `shared_preferences` 2.5.5 → 2.5.6 and four transitive packages behind | **Deferred**: no known advisory; upgrades change the lockfile and need a device pass. |
+| `gitleaks` | whole git history + working tree | One finding on this branch: a fake JWT string in a redaction test (annotated `gitleaks:allow` and fingerprinted in `.gitleaksignore`, so a history scan is clean). Working-tree-only hits are the developer's gitignored `.env` and a third-party sample key inside `mobile/build/` (gitignored build output). Main's 340 earlier commits are clean. | none outstanding |
+
+Dependency scanning is **not** wired into CI as a blocking job: advisories appear without code changes, which would make unrelated pull requests fail. Run the commands above at release time (documented in the production runbook).
 
 ## Reporting
 

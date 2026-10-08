@@ -90,7 +90,7 @@ POST /api/v1/auth/password-reset/confirm  { "uid", "token", "new_password" }
 ### Email verification
 
 ```
-POST /api/v1/auth/email-verification/request   (bearer)  → 202 { "detail" }
+POST /api/v1/auth/email-verification/request   (bearer)  → 202 { "detail" }  |  503 { code: "email_unavailable" } when the mail provider fails (retry later)
                                                → 400 non_field_errors when already verified
 POST /api/v1/auth/email-verification/confirm   { "uid", "token" } → 200 { "detail" }
                                                → 400 details.token

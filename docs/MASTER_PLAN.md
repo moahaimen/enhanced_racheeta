@@ -1128,7 +1128,7 @@ Create dashboards for:
 - No migrations, no new infrastructure.
 - Merged via PR #13 (merge commit `94dc2e39572a984d5e1d68b0602fe74de34096d8`, post-merge CI #298 successful).
 
-## Phase 11 — Mobile Integration (CURRENT — 11F implemented, awaiting review)
+## Phase 11 — Mobile Integration (DONE — 11A–11F merged)
 
 Build a new Flutter architecture with:
 
@@ -1147,7 +1147,7 @@ Delivered as independently reviewed subphases (each its own branch and draft PR;
 | 11C | Provider & facility workspace | merged via PR #16 (accepted head `fa0d74135d527b8e50f2f8ac04fc90fe796e2c20`, merge `2899900b88062f539281b566c28c428baae07c1e`, post-merge CI #313 green) |
 | 11D | Marketplace, jobs and real estate | merged via PR #17 (accepted head `ed99dae41ccc4cb6fe1ce0f7e680b3c61b571f8e`, merge `47bbaeb815357d396b47c91565cfa053e509b7c0`, post-merge CI #318 green) |
 | 11E | Chat, notifications and FCM device registration | merged via PR #18 (accepted head `c2d658a4a25b4fc927258c5ac146967c79f0c5b0`, merge `5805713cbb119579681448dbc16773ed1cc85cb2`, post-merge CI #331 and #332 green: Backend, Web, Mobile) |
-| 11F | Release hardening (signing, store builds, performance, accessibility audit) | implemented on `feat/phase11f-mobile-release-hardening` (draft PR, not merged; awaiting independent review) |
+| 11F | Release hardening (signing, store builds, performance, accessibility audit) | **merged** (PR #19, accepted head `0e751e6`, merge `81f4924`, post-merge CI #341 green) |
 
 **11A implementation (see `mobile/README.md`, ADR-052/053, `AUTHENTICATION.md` "Mobile client", `SECURITY.md` "Mobile client"):** Flutter 3.47.6, Riverpod, go_router, dio, flutter_secure_storage; access token in memory only, rotating refresh token in secure storage; single-flight refresh; stale-response protection across logout and account switching; role-aware navigation derived from `/me`; Arabic (RTL) and English. No feature beyond sign-in, session, home and account is exposed; no FCM registration, no Firebase login.
 
@@ -1159,18 +1159,19 @@ Delivered as independently reviewed subphases (each its own branch and draft PR;
 
 **11E implementation (see `mobile/README.md`, ADR-057, `NOTIFICATIONS.md` / `CHAT.md` / `PUSH.md` "Mobile (Phase 11E)", `SECURITY.md` "Mobile notifications, chat and push flows"):** the persistent notification centre (list, unread count, mark one / all read), generic conversations (list, thread, composer, send, read cursor, "Message" from a reservation) and the FCM client (Firebase Messaging behind a `PushSource` interface, account-safe token registration, foreground refresh, tap and cold-start routing through one coordinator into the existing `GoRouter`). Existing 9A–9C APIs (one narrowly authorized backend protocol correction: ordered push-device ownership via `ownership_seq`, one nullable column + migration `0003`, both device endpoints and OpenAPI). Persistent backend state stays the source of truth; push is a delivery hint (a foreground push only refreshes). Every mutation is account-scoped through `runAsAccount`; the token lifecycle is keyed by `(account, epoch)`; the device is unregistered before logout. Without `FIREBASE_*` build defines push is disabled and everything else works. Not in 11E: attachments, group chat, starting a conversation other than from a reservation, local-notification display, background data handlers, iOS push setup, release signing (11F).
 
-**11F implementation (see `docs/MOBILE_RELEASE.md`, ADR-058, `SECURITY.md` "Mobile release hardening", `mobile/README.md`):** release configuration made safe and verifiable without owner credentials — missing release `INTERNET` permission fixed, fail-closed release signing (`key.properties` / environment, no secret in Git), R8 shrinking, backups and cleartext disabled, `AppConfig` refusing localhost / emulator aliases and credential-bearing URLs, development fallback removed from release binaries, a release-APK verifier and a CI smoke job; accessibility, text-scale and RTL audits with fixes (contrast tokens, read-only text semantics, overflow in Arabic/large text, discovery account scoping); a release smoke suite (account switch in flight, session expiry). No business feature, no backend change. **Not done (external):** production signing key, store listing material, Firebase production configuration, brand icon/splash, iOS signing/APNs, real-device and real-FCM verification — see `docs/MOBILE_RELEASE.md` §13. 11F is awaiting review, not complete; Phase 12 is not started.
+**11F implementation (see `docs/MOBILE_RELEASE.md`, ADR-058, `SECURITY.md` "Mobile release hardening", `mobile/README.md`):** release configuration made safe and verifiable without owner credentials — missing release `INTERNET` permission fixed, fail-closed release signing (`key.properties` / environment, no secret in Git), R8 shrinking, backups and cleartext disabled, `AppConfig` refusing localhost / emulator aliases and credential-bearing URLs, development fallback removed from release binaries, a release-APK verifier and a CI smoke job; accessibility, text-scale and RTL audits with fixes (contrast tokens, read-only text semantics, overflow in Arabic/large text, discovery account scoping); a release smoke suite (account switch in flight, session expiry). No business feature, no backend change. **Not done (external):** production signing key, store listing material, Firebase production configuration, brand icon/splash, iOS signing/APNs, real-device and real-FCM verification — see `docs/MOBILE_RELEASE.md` §13. 11F is merged (PR #19, accepted head `0e751e6858a229eed3c9e81d498d65d8a09e29fb`, merge `81f492464a8f9f6a82ab1d547f06dbc3520aee48`, post-merge CI #341 green); Phase 11 is closed.
 
-## Phase 12 — Production Hardening
+## Phase 12 — Production Hardening (CURRENT — 12A implemented, awaiting independent review)
 
-- Security review.
-- Performance tests.
-- Database indexes.
-- Backups.
-- Monitoring.
-- Staging.
-- Railway production deployment.
-- Data migration if required.
+Delivered in three separately authorized steps:
+
+| Step | Scope | Status |
+| --- | --- | --- |
+| **12A** | Code, security, performance, database, backup, monitoring and deployment **hardening** and the operator documentation. No deployment, no Railway resources. | implemented on `feat/phase12a-production-hardening` (draft PR, not merged; awaiting independent review) |
+| 12B | Create the staging environment and run `docs/STAGING.md` | **not started** (needs owner inputs and spend approval) |
+| 12C | Production cutover per `docs/PRODUCTION_DEPLOYMENT.md` | **not started** (needs staging green and the owner inputs listed there) |
+
+**12A implementation (see ADR-059/060/061, `SECURITY.md` "Phase 12A security review", `OPERATIONS.md`, `PERFORMANCE.md`, `BACKUP_RESTORE.md`, `RAILWAY.md`, `STAGING.md`, `PRODUCTION_DEPLOYMENT.md`, `DATA_MIGRATION.md`):** `/ready/` readiness next to `/health/`; request ids and JSON stdout logging with redaction; Content-Security-Policy, Permissions-Policy and `Referrer-Policy: no-referrer`; production configuration checks (proxy count, hosts, https CSRF origins, mail timeout, weak key, exposed docs) enforced at container start; bounded synchronous e-mail that cannot reveal account existence when the provider fails; per-account write throttle and proxy-aware throttling; API docs off in production; a privacy-safe gunicorn config; refresh-token pruning command; a reflection-based security sweep of the public API surface; query-count (N+1) tests, EXPLAIN evidence and a synthetic seed + load harness; backup/restore/off-site scripts with a CI round-trip test; a production-image smoke test in CI; PyJWT pin; mobile `API_BASE_URL` must be an origin without a path. Decisions: no worker/Redis (ADR-059), httpOnly refresh cookie deferred (ADR-061), no speculative indexes, no legacy data migration. **Not done (external or later):** the staging and production environments themselves, e-mail provider, domain, off-site backup store, monitoring recipients, admin 2FA, privacy policy, mobile signing/Firebase production values, measurements on target hardware.
 
 ---
 

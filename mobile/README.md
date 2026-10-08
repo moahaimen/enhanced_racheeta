@@ -54,7 +54,7 @@ flutter run --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://api
 | Define | Values | Notes |
 |---|---|---|
 | `APP_ENV` | `development` (default), `staging`, `production` | `development` is rejected in release builds |
-| `API_BASE_URL` | absolute URL | required for `staging`/`production`; `http://` only for debug + `development` |
+| `API_BASE_URL` | absolute origin (no path) | required for `staging`/`production`; `http://` only for debug + `development` |
 
 A misconfigured build shows an explicit configuration error screen instead of falling back to an
 insecure default. No secret belongs in a `--dart-define` (they are readable in the app binary).
