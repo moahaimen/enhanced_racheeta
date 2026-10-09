@@ -37,8 +37,10 @@ Railway's reference syntax (use the reference, do not paste the URL, so a rotati
 | `CSRF_TRUSTED_ORIGINS` | `https://<domain>` — https only (`racheeta.E007`); needed for the Django admin. | yes |
 | `CORS_ALLOWED_ORIGINS` | empty (the web app is same-origin) | no |
 | `FRONTEND_URL` | `https://<domain>` — used in e-mail links, which carry one-time tokens. Must be an https origin only: no path, query, fragment or credentials; a trailing slash is ignored. Anything else stops the container at start (`racheeta.E010`). | yes |
-| `EMAIL_URL` | **OWNER** — provider SMTP, e.g. `smtp://USER:PASSWORD@HOST:587?tls=True` (URL-encode special characters in the password). The container refuses console/locmem mail with `DEBUG=false` (`racheeta.E001`). See `docs/OPERATIONS.md` "E-mail". | yes |
-| `DEFAULT_FROM_EMAIL` | **OWNER** — an address on a domain with SPF/DKIM set up at the provider, e.g. `Racheeta <no-reply@example.com>` | yes |
+| `EMAIL_PROVIDER` | `resend` for the 12B staging configuration (HTTPS API, no outbound SMTP needed); `django` (default) keeps the SMTP transport. Anything else stops the container (`racheeta.E011`). | yes (staging: `resend`) |
+| `RESEND_API_KEY` | **OWNER** — with `EMAIL_PROVIDER=resend` only. Create a sending-only key in the Resend dashboard; set it as a Railway variable (never in git/docs/chat). Empty or malformed stops the container (`racheeta.E012`). | with `resend` |
+| `EMAIL_URL` | **OWNER** — with `EMAIL_PROVIDER=django` only (ignored by `resend`): provider SMTP, e.g. `smtp://USER:PASSWORD@HOST:587?tls=True` (URL-encode special characters in the password). The container refuses console/locmem mail with `DEBUG=false` (`racheeta.E001`). See `docs/OPERATIONS.md` "E-mail". | yes |
+| `DEFAULT_FROM_EMAIL` | **OWNER** — an address on a domain with SPF/DKIM set up at the provider (with Resend: a domain verified in the Resend account; a `.local`/`.test`/`.invalid` placeholder stops the container, `racheeta.E013`), e.g. `Racheeta <no-reply@example.com>` | yes |
 | `EMAIL_TIMEOUT` | `10` (default) | no |
 | `DB_CONNECT_TIMEOUT` | `5` (default) | no |
 | `WEB_CONCURRENCY` | gunicorn workers; `2` (default) suits the smallest plan. Raise only after measuring (`docs/PERFORMANCE.md`). | no |

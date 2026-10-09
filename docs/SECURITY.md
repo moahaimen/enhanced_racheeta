@@ -200,7 +200,7 @@ Reviewed and unchanged: object-level isolation (covered since Phases 2–10 by p
 | `Content-Security-Policy` | `apps/core/middleware.py` (`SecurityHeadersMiddleware`) | SPA: `default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` (+ `upgrade-insecure-requests` behind TLS). No `unsafe-eval`, no `unsafe-inline` for scripts or styles (React applies `style` through the CSSOM; checked in a real browser with zero violations). API: `default-src 'none'`. Admin: first-party scripts, inline styles allowed (Django admin needs them). API docs paths carry no CSP (Swagger UI loads from a CDN) and are off in production. Extra API origins: `CSP_CONNECT_SRC`. |
 | `Permissions-Policy` | same | accelerometer, camera, geolocation, gyroscope, magnetometer, microphone, payment, usb, interest-cohort all denied. |
 | HTTPS redirect, HSTS (30 days, include subdomains, no preload), secure cookies | `SECURE_PROXY_SSL=true` | `/health/` and `/ready/` are exempt (the platform probe is plain HTTP). Raise HSTS to a year and consider preload only after a stable HTTPS deployment (preload is a one-way public commitment). |
-| Config guard rails | `apps/core/checks.py`, run by `scripts/start.sh` | E001 console/locmem mail; E005 proxy without `TRUSTED_PROXY_COUNT`; E006 wildcard/empty hosts; E007 non-https CSRF origins; E008 no mail timeout; **E009 weak/placeholder `SECRET_KEY`** (under 50 characters, `change-me…`, `build-time-placeholder…`, `django-insecure-…`, or almost no character variety — it is SimpleJWT's HMAC signing key, so this is an authentication failure, not advice); **E010 `FRONTEND_URL` not a plain https origin** (rejects http, missing scheme/host, credentials, query, fragment, path; reset/verification links carry one-time tokens); W003 API docs exposed. All `E…` ids stop `scripts/start.sh` before migrations. Neither value is ever echoed in the message. Development (`DEBUG=true`) is unaffected. (The earlier warning `W002` no longer exists.) `check --deploy` is exercised with fake values in `tests/test_phase12a_hardening.py`. |
+| Config guard rails | `apps/core/checks.py`, run by `scripts/start.sh` | E001 console/locmem mail; E005 proxy without `TRUSTED_PROXY_COUNT`; E006 wildcard/empty hosts; E007 non-https CSRF origins; E008 no mail timeout; **E009 weak/placeholder `SECRET_KEY`** (under 50 characters, `change-me…`, `build-time-placeholder…`, `django-insecure-…`, or almost no character variety — it is SimpleJWT's HMAC signing key, so this is an authentication failure, not advice); **E010 `FRONTEND_URL` not a plain https origin** (rejects http, missing scheme/host, credentials, query, fragment, path; reset/verification links carry one-time tokens); **E011 unknown `EMAIL_PROVIDER`** (any mode); **E012 `EMAIL_PROVIDER=resend` without a usable `RESEND_API_KEY`** and **E013 invalid/placeholder `DEFAULT_FROM_EMAIL`** (production); W003 API docs exposed. All `E…` ids stop `scripts/start.sh` before migrations. Neither value is ever echoed in the message. Development (`DEBUG=true`) is unaffected. (The earlier warning `W002` no longer exists.) `check --deploy` is exercised with fake values in `tests/test_phase12a_hardening.py`. |
 
 Request ids (`X-Request-ID`, validated) tie a user report to a log line; JSON logs redact bearer tokens, `token=`/`password:` pairs and e-mail addresses and never emit `extra` fields. 5xx responses use a fixed body (no stack trace, no settings).
 
@@ -237,6 +237,22 @@ Access token in memory; refresh token in `localStorage`. This keeps the session 
 Django's default PBKDF2-SHA256 hasher. Validators: min length 8, similarity,
 common-password list, numeric-only. Enforced on registration and on reset
 confirmation. Tests use MD5 for speed only (`config/test_settings.py`).
+
+## E-mail transports (Phase 12B, ADR-062)
+
+`EMAIL_PROVIDER` selects Django SMTP (default, unchanged) or the Resend HTTPS API (`apps/core/email_backends.py`, a Django email backend, so no account code changed). Security properties of the Resend path, each pinned by `tests/test_resend_email.py`:
+
+| Property | How |
+| --- | --- |
+| API key is server-side only | Read from `RESEND_API_KEY` (a platform variable); never in source, tests (fake `re_test_…` values), docs, Docker or clients. Empty/whitespace/control-character keys stop `manage.py check` (E012) and fail before any request. |
+| HTTPS only, bounded | Fixed `https://api.resend.com/emails`; every request uses `EMAIL_TIMEOUT` (default 10 s, E008 refuses none). |
+| Credential cannot be redirected | Redirects are not followed (a 3xx would resend `Authorization` elsewhere); tested against a loopback server. |
+| No secret in errors or logs | Failures carry only `HTTP <status> (<Resend error name>)` or a timeout/connection class; the key, recipient address, message body/links/tokens and Resend's free-text message are never included; exception chains are suppressed. Success logs only Resend's message id. |
+| Anti-enumeration unchanged | The public reset request still answers an identical 202 for known, unknown and provider-failing addresses; the authenticated verification request answers the typed 503. Verified through the Resend path. |
+| No silent loss | Attachments (unsupported) and header-injection characters raise instead of being dropped; `fail_silently` is honoured only when the caller asks. |
+| Fails closed | Unknown `EMAIL_PROVIDER` (E011), missing key (E012), placeholder/invalid sender (E013), console/locmem under SMTP (E001, unchanged). |
+
+Residual: the timeout is per socket operation (connect/read), not a total deadline; worst case stays far below gunicorn's 60 s. Resend sees the recipient address, subject and body (including the one-time link) as the processor of the mail, as any SMTP relay would; review its DPA before production. Delivery is not guaranteed by the API response (acceptance only): bounces appear in the Resend dashboard.
 
 ## Email links
 

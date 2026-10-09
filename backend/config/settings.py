@@ -32,6 +32,8 @@ env = environ.Env(
     LOG_LEVEL=(str, "INFO"),
     SECURE_PROXY_SSL=(bool, False),
     EMAIL_URL=(str, "consolemail://"),
+    EMAIL_PROVIDER=(str, "django"),
+    RESEND_API_KEY=(str, ""),
     DEFAULT_FROM_EMAIL=(str, "Racheeta <no-reply@racheeta.local>"),
     FRONTEND_URL=(str, "http://localhost:5173"),
     PASSWORD_RESET_TIMEOUT_MINUTES=(int, 60),
@@ -298,7 +300,16 @@ PASSWORD_RESET_TIMEOUT = env("PASSWORD_RESET_TIMEOUT_MINUTES") * 60
 # Email — EMAIL_URL, e.g. consolemail:// (dev), smtp://user:pass@host:587?tls=True
 # A production deployment must not use the console backend (see apps.core.checks).
 # ---------------------------------------------------------------------------
-vars().update(env.email_url("EMAIL_URL"))
+# EMAIL_PROVIDER selects the transport (docs/DECISIONS.md ADR-062):
+#   django (default) - Django's SMTP/console backend configured by EMAIL_URL, as before;
+#   resend           - Resend's HTTPS API (no SMTP port needed), configured by RESEND_API_KEY.
+# Any other value is rejected by `manage.py check` (racheeta.E011), in every mode.
+EMAIL_PROVIDER = env("EMAIL_PROVIDER").strip().lower()
+RESEND_API_KEY = env("RESEND_API_KEY")
+if EMAIL_PROVIDER == "resend":
+    EMAIL_BACKEND = "apps.core.email_backends.ResendEmailBackend"
+else:
+    vars().update(env.email_url("EMAIL_URL"))
 # Django's default is NO timeout: a stalled SMTP server would hold a request (and a gunicorn worker)
 # until gunicorn kills it. Transactional e-mail is sent synchronously (docs/DECISIONS.md ADR-059).
 EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")

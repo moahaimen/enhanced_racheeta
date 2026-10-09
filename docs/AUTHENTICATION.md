@@ -147,7 +147,7 @@ Nothing in the repository contains Firebase credentials, and CI never needs them
 
 ## Email provider
 
-Emails go through Django's email backend configured by `EMAIL_URL`
+Emails go through Django's email backend. `EMAIL_PROVIDER=django` (default) uses the SMTP/console backend configured by `EMAIL_URL`; `EMAIL_PROVIDER=resend` uses the Resend HTTPS API (`apps/core/email_backends.py`, ADR-062) configured by `RESEND_API_KEY`. The SMTP description follows
 (django-environ syntax). Development uses `consolemail://`, which prints the
 message, including the reset link, to stdout. A system check
 (`racheeta.E001`) makes `manage.py check` fail when the console or locmem

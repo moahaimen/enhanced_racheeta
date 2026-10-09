@@ -16,11 +16,71 @@ def check_email_backend_in_production(app_configs, **kwargs):
         return [
             Error(
                 f"EMAIL_BACKEND is {backend!r} while DEBUG is False. Password-reset and "
-                "verification tokens would be written to logs. Set EMAIL_URL to a real provider.",
+                "verification tokens would be written to logs. Set EMAIL_URL to a real SMTP "
+                "provider or use EMAIL_PROVIDER=resend.",
                 id="racheeta.E001",
             )
         ]
     return []
+
+
+EMAIL_PROVIDERS = ("django", "resend")
+_PLACEHOLDER_SENDER_TLDS = (".local", ".localhost", ".invalid", ".test", ".example", ".internal")
+
+
+def sender_address_problem(sender: str) -> str | None:
+    """Why `sender` ("Name <user@domain>" or "user@domain") is unusable as a From, or None."""
+    from email.utils import parseaddr
+
+    if not sender or any(ord(ch) < 32 or ord(ch) == 127 for ch in sender):
+        return "is empty or contains control characters"
+    address = parseaddr(sender)[1]
+    local, _, domain = address.partition("@")
+    if not local or not domain or "@" in domain or " " in address or "." not in domain:
+        return "is not a valid sender address (expected 'Name <user@your-domain.com>')"
+    if domain.lower().endswith(_PLACEHOLDER_SENDER_TLDS):
+        return "uses a placeholder domain that no mail provider can send from"
+    return None
+
+
+@register(Tags.security)
+def check_email_provider(app_configs, **kwargs):
+    """EMAIL_PROVIDER must be a known transport; Resend needs a key and a real sender.
+
+    SMTP keeps its own rules (racheeta.E001 refuses console/locmem backends in production);
+    these checks never relax them. The Resend key is never echoed.
+    """
+    provider = getattr(settings, "EMAIL_PROVIDER", "django")
+    if provider not in EMAIL_PROVIDERS:
+        return [
+            Error(
+                f"EMAIL_PROVIDER must be one of {', '.join(EMAIL_PROVIDERS)} "
+                f"(got {provider[:30]!r}).",
+                id="racheeta.E011",
+            )
+        ]
+    if provider != "resend" or settings.DEBUG:
+        return []
+    errors = []
+    key = getattr(settings, "RESEND_API_KEY", "")
+    if not key or key != key.strip() or any(ord(ch) < 33 or ord(ch) == 127 for ch in key):
+        errors.append(
+            Error(
+                "EMAIL_PROVIDER is resend but RESEND_API_KEY is empty or malformed. Create an API "
+                "key in the Resend dashboard and set it as a server-side variable.",
+                id="racheeta.E012",
+            )
+        )
+    problem = sender_address_problem(settings.DEFAULT_FROM_EMAIL)
+    if problem:
+        errors.append(
+            Error(
+                f"DEFAULT_FROM_EMAIL {problem}. With Resend it must be on a domain verified in "
+                "your Resend account.",
+                id="racheeta.E013",
+            )
+        )
+    return errors
 
 
 @register(Tags.security)

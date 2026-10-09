@@ -68,7 +68,7 @@ racheeta-platform/
 | Settings | One module, `backend/config/settings.py`, driven by environment variables (django-environ). Repo-root `.env` is read on developer machines only. |
 | Database | PostgreSQL via `DATABASE_URL`. Persistent connections, health checks. No other database is supported. |
 | Auth | JWT (SimpleJWT): short-lived access token, rotating refresh token with blacklist. Password reset, email verification and a Firebase adapter. See `AUTHENTICATION.md`. |
-| Email | Django email backend from `EMAIL_URL` (console in dev; production provider is an owner decision). `apps/accounts/emails.py`. |
+| Email | Django email backend: `EMAIL_PROVIDER=django` → `EMAIL_URL`; `EMAIL_PROVIDER=resend` → Resend HTTPS API (`apps/core/email_backends.py`) (console in dev; production provider is an owner decision). `apps/accounts/emails.py`. |
 | i18n | `LocaleMiddleware`; messages follow `Accept-Language` (`ar` default, `en`). |
 | API | Everything public is under `/api/v1/` (`config/api_v1.py`). Unknown `/api/v1/*` paths return a JSON 404. |
 | Errors | One envelope for every error, produced by `apps.core.exceptions.api_exception_handler`. See `API.md`. |
