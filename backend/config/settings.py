@@ -109,6 +109,7 @@ INSTALLED_APPS = [
     "apps.chat.apps.ChatConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.dashboards",
+    "apps.demo",
 ]
 
 MIDDLEWARE = [
