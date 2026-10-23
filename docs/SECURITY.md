@@ -191,6 +191,10 @@ Scope: the whole HTTP surface, configuration and deployment path, reviewed by th
 
 Reviewed and unchanged: object-level isolation (covered since Phases 2–10 by per-app tests); privilege fields rejected on writes; admin reachable only with staff session (path configurable, not a security control); no file uploads exist (no upload attack surface; the media deferral is in `docs/PRODUCTION_DEPLOYMENT.md`); CORS allow-list empty in production (same origin); mass-assignment protected by explicit serializer field lists; logging and error envelopes do not expose internals. **No open P1/P2 findings remain from this pass.** Residual risks: refresh token in `localStorage` (ADR-061), per-process throttle counters, synchronous mail, no WAF/CDN, no 2FA for admin accounts (owner decision; recommended before production).
 
+## Demo data (Phase 12B, ADR-063)
+
+`seed_demo_data` refuses unless `DEMO_DATA_ENABLED=true` (staging only), takes the shared demo password from `DEMO_PASSWORD` (a platform variable; or prints a generated one once), creates no administrator, uses the undeliverable domain `@demo.racheeta.invalid`, and records everything it inserts so `clear_demo_data` can remove exactly that and refuse otherwise. The shared password is a staging-only convenience: keep it out of git and do not reuse a real one; remove `DEMO_DATA_ENABLED` afterwards if the commands should not be usable. Production must never set it.
+
 ## HTTP hardening (`DEBUG=false`)
 
 | Control | Where | Notes |

@@ -10,6 +10,10 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 
 - Web-only redesign: self-hosted Cairo (`@fontsource-variable/cairo`), tokens/primitives in `web/src/design-system`, page in `web/src/pages/HomePage.tsx` + `pages/home/*`; evidence in `docs/design/home-redesign/`. Review round 2: talent calls to action are entitlement-aware (`pages/home/talentTarget.ts`), the header groups account destinations in a Workspace menu, and the hero/service cards use derived photographs (`web/src/assets/home`). No backend, deployment or Railway change. Backend CSP still lists Google Fonts (can be tightened later).
+## Phase 12B demo dataset (ADR-063) — branch `feat/phase12b-demo-data`
+
+- `python manage.py seed_demo_data` / `clear_demo_data [--dry-run] [--yes]` (`backend/apps/demo/`, docs in `docs/DEMO_DATA.md`): fictional, presentation-ready staging data (70 accounts, 36 providers, 13 companies, 49 products, 24 jobs, 19 listings, 85 reservations, 67 reviews, chat, notifications), recorded in the new `demo.DemoRecord` registry so cleanup removes exactly it and refuses (changing nothing) if a real row is involved. Needs `DEMO_DATA_ENABLED=true` (staging only) and `DEMO_PASSWORD`; creates no admin; **never run on production**.
+- Not run on Railway: seeding staging happens only after review → merge → deploy of the accepted SHA. One migration (`demo/0001`); no business model or service changed.
 
 ## Phase 12B e-mail transport (ADR-062)
 
