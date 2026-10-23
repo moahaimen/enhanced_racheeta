@@ -1,7 +1,7 @@
 .footer {
   margin-block-start: auto;
-  border-block-start: var(--border-width) solid var(--border-subtle);
-  background: var(--surface-primary);
+  border-block-start: var(--border-width) solid rgba(171, 223, 217, 0.6);
+  background: linear-gradient(180deg, var(--surface-tint) 0%, var(--surface-primary) 100%);
   color: var(--text-secondary);
   font-size: var(--text-body-sm);
 }

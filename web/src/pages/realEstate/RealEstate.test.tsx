@@ -10,6 +10,7 @@ import * as providersApi from '../../api/endpoints/providers'
 import { tokenStore } from '../../api/tokens'
 import type { City, OwnerDashboard, OwnerListing, PropertyListing, RealEstateSeller } from '../../api'
 import { baghdad, basra } from '../../test/providerFixtures'
+import { mockHomeData } from '../../test/homeMocks'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 // These pages chain several backend loads; be generous so a slow or busy machine does not flake (per test file).
@@ -259,17 +260,17 @@ describe('Home page real-estate card', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     tokenStore.clear()
+    mockHomeData()
     vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
     vi.mocked(providersApi.listProviders).mockResolvedValue(page([]))
   })
 
   it('is live for visitors: it links to the catalogue and is not marked "soon"', async () => {
     renderApp('/')
-    const card = (await screen.findByText(/عيادات وعقارات مخصّصة|clinics and properties suited/i)).closest('article, div, li') as HTMLElement
-    const link = within(card.parentElement ?? card).getAllByRole('link', { name: /تصفّح|browse/i }).find((a) => a.getAttribute('href') === '/real-estate')
-    expect(link).toBeDefined()
-    const modules = screen.getAllByText(/العقارات الطبية|medical real estate/i)
-    for (const node of modules) expect(node.closest('[data-testid="feature-upcoming"], li')?.textContent ?? '').not.toMatch(/قريبًا|قريباً|soon/i)
+    // the redesigned home exposes real estate as a category tile AND an illustrated service card
+    const links = (await screen.findAllByRole('link', { name: /العقارات الطبية|medical real estate/i })).filter((a) => a.getAttribute('href') === '/real-estate')
+    expect(links.length).toBeGreaterThanOrEqual(2)
+    for (const link of links) expect(link.textContent ?? '').not.toMatch(/قريبًا|قريباً|soon/i)
   })
 
   it('sends a real-estate seller to their workspace', async () => {

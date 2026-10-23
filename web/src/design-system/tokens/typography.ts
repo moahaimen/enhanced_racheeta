@@ -1,9 +1,9 @@
 export const fontFamily = {
-  sans: "'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif",
+  sans: "'Cairo Variable', 'Cairo', 'Noto Sans Arabic', 'Segoe UI', system-ui, -apple-system, sans-serif",
   mono: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
 } as const
 
-export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700 } as const
+export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800 } as const
 
 /** Type scale (rem / unitless line-height). Display and H1 shrink on mobile in CSS. */
 export const typeScale = {

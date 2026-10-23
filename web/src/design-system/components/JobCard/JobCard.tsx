@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { JobCard as JobCardData } from '../../../api'
-import { useLocalizedName } from '../../../i18n/localized'
+import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon } from '../../icons'
 import { Badge } from '../Badge/Badge'
 import { Card } from '../Card/Card'
@@ -15,19 +15,20 @@ import styles from './JobCard.module.css'
 export function JobCard({ job }: { job: JobCardData }) {
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
+  const text = useScriptText()
   const salary = job.salary_visible ? formatSalary(job, i18n.language) : null
   const hiringName = job.hiring_employer?.name || job.hiring_organization_name
   return (
     <Card as="article" interactive className={`${styles.card} ${job.is_featured ? styles.featured : ''}`.trim()}>
       <div className={styles.head}>
         <h3 className={styles.title}>
-          <Link to={`/jobs/${job.id}`}>{job.title}</Link>
+          <Link to={`/jobs/${job.id}`}>{text(job.title)}</Link>
         </h3>
         {job.is_featured ? <Badge tone="brand" leading={<Icon name="sparkle" size={12} />}>{t('jobs.featured')}</Badge> : null}
       </div>
       <div className={styles.employer}>
         <Icon name="building" size={16} />
-        <span>{job.employer.name}</span>
+        <span>{text(job.employer.name)}</span>
         {job.employer.is_verified ? (
           <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
             {t('jobs.verifiedEmployer')}

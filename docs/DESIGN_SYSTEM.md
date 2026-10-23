@@ -60,8 +60,12 @@ not scale steps, so a future theme changes roles only.
 
 ## 3. Typography
 
-Font: **IBM Plex Sans Arabic** (Arabic and Latin in one family), fallbacks
-Noto Sans Arabic → system UI. Loaded with `display=swap` (`web/index.html`).
+Font: **Cairo** (variable weight axis 200–1000; Arabic and Latin in one family), fallbacks
+Noto Sans Arabic → system UI. **Self-hosted**: `@fontsource-variable/cairo` (SIL OFL, pinned exactly)
+is imported in `web/src/main.tsx` (`wght.css`), Vite bundles the woff2 files into `dist/assets`, and
+the browser downloads only the subsets a page needs (Arabic ≈ 31 kB, Latin ≈ 34 kB). No request
+leaves our origin for fonts. Weights in use: 400, 500, 600, 700 and 800 (hero heading only).
+Cairo has tall ascenders and descenders, so leading is `--leading-body: 1.7`, `--leading-tight: 1.3`.
 
 | Role | Size (mobile → desktop) | Weight | Line-height |
 | --- | --- | --- | --- |
@@ -195,3 +199,29 @@ typography, focus, reduced motion), `styles/utilities.css` (a dozen
 utilities). Everything else is a **CSS Module** next to its component or
 page (`*.module.css`). The former single global stylesheet was removed. No UI
 framework is used; the system is owned by the repository.
+
+## Public homepage language (Phase 12B redesign, ADR-064)
+
+Goal: a mature, content-rich healthcare ecosystem — not a doctor-booking page. Everything below is
+presentation only; the page consumes the existing public APIs.
+
+- **Tokens added** (`styles/tokens.css`, mirrored and tested in `tokens/colors.ts`): aqua / blue /
+  indigo / coral / mint accent scales (one family per product area: doctors teal, facilities blue,
+  jobs indigo, real estate coral, suppliers mint, products aqua), `--surface-page` / `--surface-tint`
+  (no large flat-white areas), `--gradient-hero|brand|band`, layered card shadows, 18px card radius,
+  `--duration-reveal`. `--surface-brand-strong` is now teal-700 (deeper buttons, better contrast).
+- **Primitives** (`design-system/components`): `CategoryTile`, `ServiceTile` (illustrated card),
+  `StatChip`, `FeaturedProviderCard`, `PropertyCard`, `ProductTile`, `PersonPlaceholder`,
+  `Reveal`, `NearViewport`, `CountUp`; existing `ProviderCard` and `JobCard` gained the
+  placeholder avatar and "Arabic | English" name picking (`pickScript`).
+- **Header** (`design-system/layouts/SiteHeader.tsx`): public navigation (five links) is always visible from 1100 px; signed-in accounts get icon-only Messages and Notifications (unread badge, 99+ cap, text kept for assistive technology) and a **Workspace** disclosure (button with `aria-expanded`, Escape closes and returns focus, outside click / navigation closes) holding dashboard, role destinations, employer workspace, admin console, account and logout. Under 1100 px a single menu panel lists every link. Regression tests: `SiteHeader.test.tsx`.
+- **Page** (`pages/HomePage.tsx`, `pages/home/*`): hero (project-owned SVG backdrop + derived practitioner cut-out, `HeroVisual`) → one
+  search surface (tabs route to the existing backend-filtered searches) with category tiles →
+  real counts → illustrated service cards → featured doctors → facilities → specialty chips →
+  latest jobs (+ hiring band) → latest properties → ecosystem + products/categories → "why" band →
+  provider call to action. Sections whose role cannot use them are omitted, never dead-linked.
+- **Data**: see the table in the PR / `docs/design/home-redesign/README.md`. No data is hard-coded.
+- **Motion** (CSS only): hero orb drift (14–18 s), floating chip, entrance rise/fade, card lift 3 px,
+  image/icon scale ≤ 1.12, arrow nudge, search glow, counters on entering the viewport. All of it is
+  disabled by `prefers-reduced-motion`; content never waits for motion or for IntersectionObserver
+  (fail-open + scroll fail-safe).

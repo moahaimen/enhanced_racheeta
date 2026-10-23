@@ -14,7 +14,9 @@ permissions:
 jobs:
   backend:
     name: Backend (Django)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to Ubuntu 26.04 (Oct 2026), whose archive has no postgresql-client-16;
+    # the backup/restore round trip needs client 16 to match the postgres:16 service.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
