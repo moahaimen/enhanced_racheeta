@@ -189,7 +189,7 @@ or advertising can reuse it unchanged. Typed exceptions become
 - Vite + React 19 + TypeScript (strict). Lint: oxlint. Tests: Vitest + Testing Library.
 - **Design system** (`src/design-system`, `docs/DESIGN_SYSTEM.md`): tokens as
   TypeScript + CSS custom properties, CSS Modules per component, an owned
-  line-icon set, IBM Plex Sans Arabic. Pages compose `Container`, `SectionCard`,
+  line-icon set, self-hosted Cairo. Pages compose `Container`, `SectionCard`,
   `PageHeader`, form fields and states from the design system; no page-local
   styling of primitives.
 - `src/api/client.ts` is the only place `fetch` is called. It attaches the

@@ -35,8 +35,12 @@ or token file is copied into this repository.
   `web/package-lock.json` under their own licences.
 - Icons in `web/src/design-system/icons/` are drawn for Racheeta on a 24px
   grid; they are not an imported icon library.
-- The interface font (IBM Plex Sans Arabic) is loaded from Google Fonts under
-  the SIL Open Font License; self-hosting is a later hardening step.
+- The interface font is **Cairo** (SIL Open Font License), self-hosted through the
+  `@fontsource-variable/cairo` npm package; no third-party font request is made.
+- The homepage illustrations (`web/src/pages/home/art.tsx`) and the practitioner placeholder avatar
+  (`PersonPlaceholder`) are original inline SVG drawn for Racheeta. The reference images used during
+  design (`docs/design/home-redesign` shows only screenshots of the built UI) were AI-generated
+  concept art and are **not** shipped as assets.
 
 ## Enforcement
 
