@@ -30,6 +30,7 @@ ignore = [
 "apps/**/tests/**" = ["S105", "S106"]
 "config/settings.py" = ["S105"]
 "conftest.py" = ["S105", "S106"]
+"apps/demo/content/**" = ["E501"]  # data tables: one fictional record per line
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]
