@@ -131,17 +131,25 @@
 .heroVisual {
   position: relative;
   justify-self: center;
-  inline-size: min(100%, 26rem);
+  inline-size: min(100%, 27rem);
+  aspect-ratio: 520 / 470;
   /* mobile: the illustration tucks behind the search card instead of stacking as a second hero */
   margin-block-end: -3rem;
 }
-.heroArt {
-  display: block;
+.heroBackdrop {
+  position: absolute;
+  inset: 0;
   inline-size: 100%;
+  block-size: 100%;
+  filter: drop-shadow(0 18px 30px rgba(16, 60, 57, 0.1));
+}
+.heroDoctor {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 4%;
+  inline-size: 80%;
   block-size: auto;
-  max-block-size: 13rem;
-  margin-inline: auto;
-  filter: drop-shadow(0 20px 32px rgba(16, 60, 57, 0.14));
+  filter: drop-shadow(0 14px 22px rgba(16, 60, 57, 0.18));
   animation: heroEnter 900ms var(--ease-standard) both;
 }
 
@@ -181,6 +189,7 @@
 @media (min-width: 768px) {
   .heroVisual {
     margin-block-end: 0;
+    inline-size: min(100%, 32rem);
   }
   .hero {
     padding-block: var(--space-12) 7rem;
@@ -188,9 +197,6 @@
   .heroInner {
     grid-template-columns: 1.1fr 0.9fr;
     gap: var(--space-8);
-  }
-  .heroArt {
-    max-block-size: 28rem;
   }
 }
 
@@ -706,7 +712,7 @@ a.chip:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .heroChip,
-  .heroArt {
+  .heroDoctor {
     animation: none;
   }
   .searchButton,

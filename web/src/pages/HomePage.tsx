@@ -12,7 +12,9 @@ import {
   type Accent,
   type IconName,
 } from '../design-system'
-import { HeroArt, SceneCompanies, SceneDoctors, SceneEstate, SceneHospitals, SceneJobs, SceneProducts } from './home/art'
+import { HeroVisual } from './home/HeroVisual'
+import { useTalentTarget } from './home/talentTarget'
+import { ServiceImage } from './home/ServiceImage'
 import { HeroSearch } from './home/HeroSearch'
 import {
   Facilities,
@@ -42,7 +44,7 @@ export function HomePage() {
   // are sent through login by the route guard; patients and sellers are not offered a dead end.
   const supplierTarget: Target | null = isCompany ? { to: '/company' } : isProvider || isAnonymous ? { to: '/marketplace' } : null
   const estateTarget: Target = status === 'authenticated' && account?.role === 'REAL_ESTATE_SELLER' ? { to: '/real-estate/owner' } : { to: '/real-estate' }
-  const talentTarget: Target = status === 'authenticated' ? { to: '/employer/talent' } : { to: '/login', state: { from: '/employer' } }
+  const talentTarget = useTalentTarget()
 
   const tiles: { to: string; icon: IconName; label: string; accent: Accent }[] = [
     { to: '/providers?kind=PRACTITIONER', icon: 'stethoscope', label: t('home.catDoctors'), accent: 'teal' },
@@ -97,13 +99,7 @@ export function HomePage() {
                 </li>
               </ul>
             </div>
-            <div className={styles.heroVisual} aria-hidden="true">
-              <HeroArt className={styles.heroArt} />
-              <span className={styles.heroChip}>
-                <Icon name="heartPulse" size={22} />
-                {t('home.heroChip')}
-              </span>
-            </div>
+            <HeroVisual chip={t('home.heroChip')} />
           </div>
         </Container>
       </section>
@@ -133,38 +129,38 @@ export function HomePage() {
         </Reveal>
         <div className={styles.services}>
           <Reveal index={0}>
-            <ServiceTile to="/providers?kind=PRACTITIONER" art={<SceneDoctors />} title={t('home.svc.doctorsTitle')} description={t('home.svc.doctorsBody')} accent="teal" />
+            <ServiceTile to="/providers?kind=PRACTITIONER" art={<ServiceImage name="doctors" />} title={t('home.svc.doctorsTitle')} description={t('home.svc.doctorsBody')} accent="teal" />
           </Reveal>
           <Reveal index={1}>
-            <ServiceTile to="/providers?kind=FACILITY" art={<SceneHospitals />} title={t('home.svc.facilitiesTitle')} description={t('home.svc.facilitiesBody')} accent="blue" />
+            <ServiceTile to="/providers?kind=FACILITY" art={<ServiceImage name="facilities" />} title={t('home.svc.facilitiesTitle')} description={t('home.svc.facilitiesBody')} accent="blue" />
           </Reveal>
           <Reveal index={2}>
             {supplierTarget ? (
               <ServiceTile
                 to={supplierTarget.to}
-                art={<SceneProducts />}
+                art={<ServiceImage name="products" />}
                 title={isCompany ? t('home.svc.companyTitle') : t('home.svc.productsTitle')}
                 description={isCompany ? t('home.svc.companyBody') : t('home.svc.productsBody')}
                 accent="aqua"
               />
             ) : (
-              <ServiceTile to="/dashboard" art={<SceneProducts />} title={t('home.svc.dashboardTitle')} description={t('home.svc.dashboardBody')} accent="aqua" />
+              <ServiceTile to="/dashboard" art={<ServiceImage name="products" />} title={t('home.svc.dashboardTitle')} description={t('home.svc.dashboardBody')} accent="aqua" />
             )}
           </Reveal>
           <Reveal index={3}>
-            <ServiceTile to="/jobs" art={<SceneJobs />} title={t('home.svc.jobsTitle')} description={t('home.svc.jobsBody')} accent="indigo" />
+            <ServiceTile to="/jobs" art={<ServiceImage name="jobs" />} title={t('home.svc.jobsTitle')} description={t('home.svc.jobsBody')} accent="indigo" />
           </Reveal>
           <Reveal index={4}>
             <ServiceTile
               to={estateTarget.to}
-              art={<SceneEstate />}
+              art={<ServiceImage name="estate" />}
               title={estateTarget.to === '/real-estate' ? t('home.svc.estateTitle') : t('nav.realEstateWorkspace')}
               description={t('home.svc.estateBody')}
               accent="coral"
             />
           </Reveal>
           <Reveal index={5}>
-            <ServiceTile to={talentTarget.to} art={<SceneCompanies />} title={t('home.svc.hireTitle')} description={t('home.svc.hireBody')} accent="mint" />
+            <ServiceTile to={talentTarget.to} state={talentTarget.state} art={<ServiceImage name="hire" />} title={t('home.svc.hireTitle')} description={t('home.svc.hireBody')} accent="mint" />
           </Reveal>
         </div>
       </Container>

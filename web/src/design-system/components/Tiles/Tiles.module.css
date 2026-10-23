@@ -105,19 +105,22 @@
 
 .serviceArt {
   display: block;
-  aspect-ratio: 16 / 8.5;
+  aspect-ratio: 16 / 7;
   overflow: hidden;
   background: var(--accent-bg);
 }
 
-.serviceArt > svg {
+.serviceArt > svg,
+.serviceArt > img {
   display: block;
   inline-size: 100%;
   block-size: 100%;
+  object-fit: cover;
   transition: transform 600ms var(--ease-standard);
 }
 
-.service:hover .serviceArt > svg {
+.service:hover .serviceArt > svg,
+.service:hover .serviceArt > img {
   transform: scale(1.04);
 }
 
@@ -210,7 +213,7 @@
 /* phones: two cards per row, so everything is denser and shorter */
 @media (max-width: 719px) {
   .serviceArt {
-    aspect-ratio: 16 / 11;
+    aspect-ratio: 16 / 10;
   }
   .serviceBody {
     align-items: flex-start;
@@ -237,7 +240,8 @@
   .service,
   .arrow,
   .tileIcon,
-  .serviceArt > svg {
+  .serviceArt > svg,
+  .serviceArt > img {
     transition: none;
   }
   .tile:hover,

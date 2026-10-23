@@ -5,6 +5,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ApiError } from '../api/client'
 import * as authApi from '../api/endpoints/auth'
 import * as jobsApi from '../api/endpoints/jobs'
 import * as marketplaceApi from '../api/endpoints/marketplace'
@@ -15,7 +16,7 @@ import { tokenStore } from '../api/tokens'
 import type { PropertyListing } from '../api'
 import { CountUp, NearViewport, Reveal } from '../design-system'
 import { changeLanguage } from '../i18n'
-import { makeJobCard, paginated } from '../test/jobFixtures'
+import { makeBilling, makeEmployerOwner, makeJobCard, paginated } from '../test/jobFixtures'
 import { baghdad, cardiology, makeCard } from '../test/providerFixtures'
 import { emptyPage, mockHomeData } from '../test/homeMocks'
 import { makeAccount, renderApp } from '../test/renderApp'
@@ -329,5 +330,78 @@ describe('motion primitives degrade safely', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} }))
     render(<CountUp value={1234} locale="en" />)
     expect(screen.getByLabelText('1,234')).toHaveTextContent('1,234')
+  })
+})
+
+describe('premium homepage — hiring calls to action never dead-end', () => {
+  const hireLinks = () =>
+    screen.getAllByRole('link').filter((a) => /ابحث عن كوادر|وظّف كوادر طبية/.test(a.textContent ?? ''))
+
+  const settle = async () => {
+    await screen.findByTestId('home-jobs')
+    // let the eligibility lookup (employer + billing) finish
+    await new Promise((r) => setTimeout(r, 30))
+  }
+
+  it('routes an anonymous visitor through login (both calls to action)', async () => {
+    renderApp('/')
+    await settle()
+    expect(hireLinks().length).toBeGreaterThanOrEqual(2)
+    for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/login')
+  })
+
+  it.each(['PATIENT', 'PROVIDER', 'MEDICAL_COMPANY', 'REAL_ESTATE_SELLER'] as const)(
+    'sends a %s without an organisation to the employer workspace (onboarding), never to talent search',
+    async (role) => {
+      tokenStore.set({ access: 'a', refresh: 'r' })
+      vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role }))
+      vi.mocked(jobsApi.getMyEmployer).mockRejectedValue(new ApiError(404, 'not_found', 'No organisation'))
+      renderApp('/')
+      await settle()
+      await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(2))
+      for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
+      expect(jobsApi.getEmployerBilling).not.toHaveBeenCalled()
+    },
+  )
+
+  it('sends an eligible recruiter (verified, active, talent.search enabled) straight to talent search', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner({ my_role: 'RECRUITER' }))
+    const billing = makeBilling()
+    billing.entitlements = billing.entitlements.map((e) => (e.key === 'talent.search' ? { ...e, enabled: true } : e))
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing)
+    renderApp('/')
+    await settle()
+    await waitFor(() => {
+      expect(hireLinks().length).toBeGreaterThanOrEqual(2)
+      for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer/talent')
+    })
+  })
+
+  it.each([
+    ['plan without talent.search', makeEmployerOwner(), makeBilling()],
+    ['read-only member', makeEmployerOwner({ my_role: 'VIEWER' }), undefined],
+    ['unverified organisation', makeEmployerOwner({ verification_status: 'PENDING' }), undefined],
+    ['suspended recruitment', makeEmployerOwner({ recruitment_status: 'SUSPENDED' }), undefined],
+  ] as const)('keeps an employer with %s on the workspace', async (_label, employer, billing) => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(employer)
+    vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing ?? makeBilling())
+    renderApp('/')
+    await settle()
+    await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(2))
+    for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
+  })
+
+  it('falls back to the workspace when the billing lookup fails', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(jobsApi.getMyEmployer).mockResolvedValue(makeEmployerOwner())
+    vi.mocked(jobsApi.getEmployerBilling).mockRejectedValue(new ApiError(500, 'server_error', 'boom'))
+    renderApp('/')
+    await settle()
+    for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
   })
 })

@@ -31,12 +31,12 @@ describe('HomePage jobs section', () => {
     expect(screen.queryByText(/الوظائف الطبية.*قريباً/)).toBeNull()
   })
 
-  it('sends a signed-in user straight to talent search', async () => {
+  it('sends a signed-in account without an eligible employer organisation to the employer workspace, not to talent search', async () => {
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'MEDICAL_COMPANY' }))
     renderApp('/')
     const section = await screen.findByTestId('home-jobs')
-    await waitFor(() => expect(within(section).getByRole('link', { name: /ابحث عن كوادر|Find talent/i })).toHaveAttribute('href', '/employer/talent'))
+    await waitFor(() => expect(within(section).getByRole('link', { name: /ابحث عن كوادر|Find talent/i })).toHaveAttribute('href', '/employer'))
   })
 })
 

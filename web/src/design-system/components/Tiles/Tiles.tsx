@@ -19,9 +19,9 @@ export function CategoryTile({ to, icon, label, accent = 'teal' }: { to: To; ico
 }
 
 /** Illustrated service card: art on top, title + description, arrow call-to-action. */
-export function ServiceTile({ to, art, title, description, accent = 'teal' }: { to: To; art: ReactNode; title: string; description: string; accent?: Accent }) {
+export function ServiceTile({ to, state, art, title, description, accent = 'teal' }: { to: To; state?: unknown; art: ReactNode; title: string; description: string; accent?: Accent }) {
   return (
-    <Link to={to} className={styles.service} data-accent={accent}>
+    <Link to={to} state={state} className={styles.service} data-accent={accent}>
       <span className={styles.serviceArt} aria-hidden="true">
         {art}
       </span>
