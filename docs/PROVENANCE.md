@@ -37,10 +37,16 @@ or token file is copied into this repository.
   grid; they are not an imported icon library.
 - The interface font is **Cairo** (SIL Open Font License), self-hosted through the
   `@fontsource-variable/cairo` npm package; no third-party font request is made.
-- The homepage illustrations (`web/src/pages/home/art.tsx`) and the practitioner placeholder avatar
-  (`PersonPlaceholder`) are original inline SVG drawn for Racheeta. The reference images used during
-  design (`docs/design/home-redesign` shows only screenshots of the built UI) were AI-generated
-  concept art and are **not** shipped as assets.
+- The homepage backdrop (`web/src/pages/home/art.tsx`: orb, towers, palms) and the practitioner
+  placeholder avatar (`PersonPlaceholder`) are original inline SVG drawn for Racheeta.
+- The **homepage photographs** in `web/src/assets/home/` (hero practitioner cut-out and the six
+  service-card pictures) are **derived from the owner-supplied, AI-generated reference pack**
+  (`racheeta_ui_reference_pack`, approved direction `04_final_merged_direction.png`). They are
+  cropped / cut out / upscaled and exported as WebP; no text, logo or UI is baked in, and the full
+  concept screenshots are **not** shipped. See `web/src/assets/home/README.md` for the exact
+  derivation. The pack carries no licence metadata: the owner approved using these as project
+  imagery; **the owner should confirm the rights position before the production launch**, or swap
+  in commissioned photography (the files are referenced from two small components only).
 
 ## Enforcement
 

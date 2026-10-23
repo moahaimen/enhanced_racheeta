@@ -9,7 +9,7 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 
-- Web-only redesign: self-hosted Cairo (`@fontsource-variable/cairo`), tokens/primitives in `web/src/design-system`, page in `web/src/pages/HomePage.tsx` + `pages/home/*`; evidence in `docs/design/home-redesign/`. No backend, deployment or Railway change. Backend CSP still lists Google Fonts (can be tightened later).
+- Web-only redesign: self-hosted Cairo (`@fontsource-variable/cairo`), tokens/primitives in `web/src/design-system`, page in `web/src/pages/HomePage.tsx` + `pages/home/*`; evidence in `docs/design/home-redesign/`. Review round 2: talent calls to action are entitlement-aware (`pages/home/talentTarget.ts`), the header groups account destinations in a Workspace menu, and the hero/service cards use derived photographs (`web/src/assets/home`). No backend, deployment or Railway change. Backend CSP still lists Google Fonts (can be tightened later).
 
 ## Phase 12B e-mail transport (ADR-062)
 

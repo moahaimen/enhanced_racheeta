@@ -214,7 +214,8 @@ presentation only; the page consumes the existing public APIs.
   `StatChip`, `FeaturedProviderCard`, `PropertyCard`, `ProductTile`, `PersonPlaceholder`,
   `Reveal`, `NearViewport`, `CountUp`; existing `ProviderCard` and `JobCard` gained the
   placeholder avatar and "Arabic | English" name picking (`pickScript`).
-- **Page** (`pages/HomePage.tsx`, `pages/home/*`): hero with project-owned SVG illustration → one
+- **Header** (`design-system/layouts/SiteHeader.tsx`): public navigation (five links) is always visible from 1100 px; signed-in accounts get icon-only Messages and Notifications (unread badge, 99+ cap, text kept for assistive technology) and a **Workspace** disclosure (button with `aria-expanded`, Escape closes and returns focus, outside click / navigation closes) holding dashboard, role destinations, employer workspace, admin console, account and logout. Under 1100 px a single menu panel lists every link. Regression tests: `SiteHeader.test.tsx`.
+- **Page** (`pages/HomePage.tsx`, `pages/home/*`): hero (project-owned SVG backdrop + derived practitioner cut-out, `HeroVisual`) → one
   search surface (tabs route to the existing backend-filtered searches) with category tiles →
   real counts → illustrated service cards → featured doctors → facilities → specialty chips →
   latest jobs (+ hiring band) → latest properties → ecosystem + products/categories → "why" band →
