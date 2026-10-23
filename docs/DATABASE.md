@@ -3,6 +3,10 @@
 PostgreSQL 16. Configured only through `DATABASE_URL`. No other engine is
 supported or tested.
 
+## Demo registry (Phase 12B)
+
+`demo_record` (model `demo.DemoRecord`) lists the rows inserted by `seed_demo_data` (model label, primary key, optional idempotency key); `clear_demo_data` deletes exactly those. It references no business table and no business table references it. See `docs/DEMO_DATA.md`, ADR-063.
+
 ## Rules
 
 - Every schema change ships as a migration in the same commit.

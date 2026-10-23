@@ -7,6 +7,11 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 - **Phases 9A–9C, Phase 10 and Phase 11 (11A–11F) are DONE and merged.** 11F: PR #19, accepted head `0e751e6858a229eed3c9e81d498d65d8a09e29fb`, merge `81f492464a8f9f6a82ab1d547f06dbc3520aee48`, post-merge CI #341 green (Backend, Web, Mobile, Mobile release smoke). Phase 11 is officially closed.
 - **Phase 12A is DONE and merged** (PR #20, merge `f19cf4d3a6ae5fb417d6e0cffce8413617cb9853`). **Phase 12B (isolated Railway staging) is CURRENT:** the owner created the Railway project `racheeta-staging` (environment `staging`, services `racheeta-app` + `Postgres`) externally; this repository's side so far is the **Resend HTTPS e-mail transport** (`EMAIL_PROVIDER=resend`, ADR-062) because Railway may block SMTP. That change is a draft PR awaiting independent review; do not merge until exact-head CI and review are green and the owner says **`merge it`**. **12C (production) is NOT STARTED.** No production exists; the legacy database and data were never touched.
 
+## Phase 12B demo dataset (ADR-063) — branch `feat/phase12b-demo-data`
+
+- `python manage.py seed_demo_data` / `clear_demo_data [--dry-run] [--yes]` (`backend/apps/demo/`, docs in `docs/DEMO_DATA.md`): fictional, presentation-ready staging data (70 accounts, 36 providers, 13 companies, 49 products, 24 jobs, 19 listings, 85 reservations, 67 reviews, chat, notifications), recorded in the new `demo.DemoRecord` registry so cleanup removes exactly it and refuses (changing nothing) if a real row is involved. Needs `DEMO_DATA_ENABLED=true` (staging only) and `DEMO_PASSWORD`; creates no admin; **never run on production**.
+- Not run on Railway: seeding staging happens only after review → merge → deploy of the accepted SHA. One migration (`demo/0001`); no business model or service changed.
+
 ## Phase 12B e-mail transport (ADR-062)
 
 - `backend/apps/core/email_backends.py` (`ResendEmailBackend`, stdlib `urllib`, no dependency), `EMAIL_PROVIDER` / `RESEND_API_KEY` in `config/settings.py`, checks E011–E013 in `apps/core/checks.py`, tests in `backend/tests/test_resend_email.py`. SMTP (`EMAIL_PROVIDER=django`, `EMAIL_URL`, E001) is untouched; the account code is untouched.
