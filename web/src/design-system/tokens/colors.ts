@@ -57,3 +57,12 @@ export const roles = {
   borderBrand: teal[300],
   focusRing: teal[400],
 } as const
+
+/** Public-site accents: one family per product area, all derived from the Racheeta teal. */
+export const accent = {
+  aqua: { 50: '#effafb', 100: '#d9f3f6', 200: '#b3e6ec', 300: '#7fd3de', 500: '#1fa3b8', 700: '#0f6f80' },
+  blue: { 50: '#eef4fd', 100: '#dbe8fb', 500: '#3b82d6', 700: '#2a5fae' },
+  indigo: { 50: '#f1f0fd', 100: '#e1defa', 500: '#6a5ae0', 700: '#4b3fb0' },
+  coral: { 50: '#fff1ee', 100: '#ffddd6', 500: '#e5624b', 700: '#b83f2a' },
+  mint: { 50: '#edf9f2', 100: '#d3f1e1', 500: '#2fa86a', 700: '#1b7a4b' },
+} as const

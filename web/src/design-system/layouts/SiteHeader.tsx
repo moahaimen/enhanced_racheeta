@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, useLocation, useNavigate } from 'react-router'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
 import { useChat } from '../../chat/useChat'
@@ -103,6 +103,10 @@ export function SiteHeader() {
   // The panel is "open for this path"; navigating closes it without an effect.
   const [openAt, setOpenAt] = useState<string | null>(null)
   const open = openAt === location.pathname
+  // The facilities shortcut is the same page with ?kind=FACILITY: NavLink ignores the query, so the
+  // two entries decide their own active state.
+  const onProviders = location.pathname === '/providers'
+  const onFacilities = new URLSearchParams(location.search).get('kind') === 'FACILITY'
   const setOpen = (next: boolean) => setOpenAt(next ? location.pathname : null)
 
   const links: ReactNode = (
@@ -111,10 +115,14 @@ export function SiteHeader() {
         <Icon name="home" size={18} />
         {t('nav.home')}
       </NavLink>
-      <NavLink to="/providers" className={styles.link}>
+      <Link to="/providers" className={styles.link} aria-current={onProviders && !onFacilities ? 'page' : undefined}>
         <Icon name="search" size={18} />
         {t('nav.providers')}
-      </NavLink>
+      </Link>
+      <Link to="/providers?kind=FACILITY" className={styles.link} aria-current={onProviders && onFacilities ? 'page' : undefined}>
+        <Icon name="hospital" size={18} />
+        {t('nav.facilities')}
+      </Link>
       <NavLink to="/jobs" className={styles.link}>
         <Icon name="briefcase" size={18} />
         {t('nav.jobs')}

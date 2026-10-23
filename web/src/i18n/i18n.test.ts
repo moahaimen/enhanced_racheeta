@@ -22,3 +22,20 @@ describe('i18n direction', () => {
     await changeLanguage('ar')
   })
 })
+
+describe('pickScript', () => {
+  it('shows the half of "Arabic | English" that matches the UI language', async () => {
+    const { pickScript } = await import('./localized')
+    expect(pickScript('د. كريم الساعدي | Dr. Karim Al-Saadi', 'ar')).toBe('د. كريم الساعدي')
+    expect(pickScript('د. كريم الساعدي | Dr. Karim Al-Saadi', 'en')).toBe('Dr. Karim Al-Saadi')
+    expect(pickScript('Dr. Karim Al-Saadi | د. كريم', 'ar')).toBe('د. كريم')
+  })
+
+  it('leaves everything else untouched', async () => {
+    const { pickScript } = await import('./localized')
+    for (const text of ['مستشفى دجلة', 'Dijla Hospital', 'A | B', 'عيادة | مركز', 'a | b | c', '']) {
+      expect(pickScript(text, 'ar')).toBe(text)
+      expect(pickScript(text, 'en')).toBe(text)
+    }
+  })
+})

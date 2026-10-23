@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { ProviderCard as ProviderCardData } from '../../../api'
-import { useLocalizedName } from '../../../i18n/localized'
+import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon } from '../../icons'
 import { Avatar } from '../Avatar/Avatar'
+import { PersonPlaceholder } from '../Avatar/PersonPlaceholder'
 import { Badge } from '../Badge/Badge'
 import { Card } from '../Card/Card'
 import { Skeleton } from '../States/States'
@@ -21,6 +22,7 @@ const MAX_SPECIALTIES = 3
 export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   const { t } = useTranslation()
   const name = useLocalizedName()
+  const text = useScriptText()
   const extra = provider.specialties.length - MAX_SPECIALTIES
   return (
     <Card as="article" interactive className={styles.card} style={{ position: 'relative' }}>
@@ -29,11 +31,11 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           src={provider.image_url || null}
           name={provider.display_name}
           size="lg"
-          fallback={<Icon name={PROVIDER_TYPE_ICON[provider.provider_type]} size={28} />}
+          fallback={provider.kind === 'PRACTITIONER' ? <PersonPlaceholder seed={provider.id} size={72} /> : <Icon name={PROVIDER_TYPE_ICON[provider.provider_type]} size={28} />}
         />
         <div className={styles.identity}>
           <h3 className={styles.name}>
-            <Link to={`/providers/${provider.id}`}>{provider.display_name}</Link>
+            <Link to={`/providers/${provider.id}`}>{text(provider.display_name)}</Link>
           </h3>
           <div className={styles.meta}>
             <Badge tone="brand">{t(`providerTypes.${provider.provider_type}`)}</Badge>

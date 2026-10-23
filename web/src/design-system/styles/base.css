@@ -17,7 +17,7 @@ body {
   font-size: var(--text-body);
   line-height: var(--leading-body);
   color: var(--text-primary);
-  background: var(--surface-secondary);
+  background: var(--surface-page);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

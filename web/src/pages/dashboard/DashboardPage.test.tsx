@@ -17,6 +17,7 @@ import type {
   RecruiterDashboard,
 } from '../../api'
 import { changeLanguage } from '../../i18n'
+import { mockHomeData } from '../../test/homeMocks'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
 
 configure({ asyncUtilTimeout: 5000 })
@@ -133,7 +134,9 @@ describe('Dashboard hub', () => {
     vi.mocked(dashboardsApi.getPatient).mockReturnValue(pending.promise)
     renderApp('/dashboard')
 
-    expect(await screen.findByTestId('async-loading')).toBeInTheDocument()
+    // The loading wrapper is replaced between the index load and the dashboard load: assert it in a
+    // retry loop rather than holding on to an element that may already have been swapped out.
+    await waitFor(() => expect(screen.getByTestId('async-loading')).toBeInTheDocument())
     await act(async () => pending.resolve(patientData()))
 
     const dashboard = await screen.findByTestId('dashboard-patient')
@@ -415,6 +418,7 @@ describe('Dashboard hub', () => {
 describe('Dashboard navigation and language', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
+    mockHomeData()
     await changeLanguage('en')
     tokenStore.set({ access: 'a', refresh: 'r' })
   })

@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { duration, neutral, radius, semantic, shadow, teal } from './index'
+import { accent, duration, fontFamily, neutral, radius, semantic, shadow, teal } from './index'
 
 /** tokens.css must mirror the TypeScript token values (single source of truth). */
 const css = readFileSync(resolve(process.cwd(), 'src/design-system/styles/tokens.css'), 'utf8')
@@ -35,6 +35,17 @@ describe('design tokens', () => {
     expect(cssVar('shadow-md')).toBe(shadow.md)
     expect(cssVar('radius-lg')).toBe(`${radius.lg / 16}rem`)
     expect(cssVar('duration-base')).toBe(`${duration.base}ms`)
+  })
+
+  it('accent families match CSS', () => {
+    for (const [family, scale] of Object.entries(accent)) {
+      for (const [step, value] of Object.entries(scale)) expect(cssVar(`color-${family}-${step}`), `${family}-${step}`).toBe(value)
+    }
+  })
+
+  it('uses Cairo as the sans font in both token sources', () => {
+    expect(cssVar('font-sans')).toBe(fontFamily.sans.replaceAll('"', ''))
+    expect(fontFamily.sans.startsWith("'Cairo Variable'")).toBe(true)
   })
 
   it('exposes role tokens for theming', () => {
