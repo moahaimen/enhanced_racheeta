@@ -14,7 +14,9 @@ permissions:
 jobs:
   backend:
     name: Backend (Django)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to Ubuntu 26.04 (Oct 2026), whose archive has no postgresql-client-16;
+    # the backup/restore round trip needs client 16 to match the postgres:16 service.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -67,12 +69,6 @@ jobs:
           python manage.py migrate --check
       - name: Backup / restore round trip (scripts/backup)
         run: |
-          # ubuntu-latest no longer ships postgresql-client-16 in its own archive; take it from the
-          # official PostgreSQL (PGDG) repository so dumps stay compatible with the postgres:16 service.
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          . /etc/os-release
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
           python manage.py shell -c "
           from django.contrib.auth import get_user_model
