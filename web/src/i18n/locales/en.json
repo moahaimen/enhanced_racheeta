@@ -88,7 +88,8 @@
     "notifications": "Notifications",
     "messages": "Messages",
     "dashboard": "Dashboard",
-    "facilities": "Hospitals & centers"
+    "facilities": "Hospitals & centers",
+    "account": "Workspace"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
