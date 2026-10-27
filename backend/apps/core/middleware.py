@@ -54,7 +54,8 @@ def build_app_policy(*, connect_extra: tuple[str, ...] = (), upgrade: bool = Fal
     * styles: same-origin plus the Google Fonts stylesheet the app links; React's `style={}`
       props are applied through the CSSOM, which CSP does not restrict, so `'unsafe-inline'` is
       NOT needed;
-    * fonts: gstatic (the IBM Plex Sans Arabic files); images: self + data: URIs;
+    * fonts: self only (Cairo is self-hosted by the web bundle since ADR-064; the Google Fonts
+      origins were removed from the policy once nothing referenced them); images: self + data: URIs;
     * connections: same-origin API (extend with CSP_CONNECT_SRC if the API lives elsewhere);
     * no plugins, no framing, restricted base/form targets.
     """
@@ -62,8 +63,8 @@ def build_app_policy(*, connect_extra: tuple[str, ...] = (), upgrade: bool = Fal
     directives = [
         "default-src 'self'",
         "script-src 'self'",
-        "style-src 'self' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
+        "style-src 'self'",
+        "font-src 'self'",
         "img-src 'self' data:",
         f"connect-src {connect}",
         "manifest-src 'self'",

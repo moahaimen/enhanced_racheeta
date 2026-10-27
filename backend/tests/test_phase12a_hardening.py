@@ -147,8 +147,8 @@ def test_app_documents_get_a_strict_csp_and_permissions_policy(client):
     assert "connect-src 'self'" == directives["connect-src"]
     assert "unsafe-eval" not in csp
     assert "unsafe-inline" not in csp
-    assert "https://fonts.googleapis.com" in directives["style-src"]
-    assert "https://fonts.gstatic.com" in directives["font-src"]
+    assert directives["style-src"] == "style-src 'self'"
+    assert directives["font-src"] == "font-src 'self'"  # Cairo is self-hosted (ADR-064)
     assert "upgrade-insecure-requests" not in csp  # only behind TLS (SECURE_PROXY_SSL)
     assert "camera=()" in response["Permissions-Policy"]
     assert "microphone=()" in response["Permissions-Policy"]
@@ -215,9 +215,9 @@ def test_the_web_entry_has_no_inline_script_or_style_blocks():
 
     assert re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", index) == []
     assert "<style" not in index
-    # the only third-party origins are the two Google Fonts hosts the policy allows
+    # no third-party origin at all: the font is bundled (ADR-064), so the policy is pure 'self'
     origins = set(re.findall(r"https://([a-z.]+)/", index))
-    assert origins <= {"fonts.googleapis.com", "fonts.gstatic.com"}
+    assert origins == set()
 
 
 # --- logging --------------------------------------------------------------------------------
