@@ -5,8 +5,11 @@ healthcare ecosystem for presentations; `clear_demo_data` removes it again, and 
 record: ADR-063. **Never run this against production** (it refuses unless `DEMO_DATA_ENABLED=true`,
 a variable you set on the staging service only).
 
-> Status: the tooling is implemented and tested (Phase 12B). It has **not** been run on Railway
-> staging: that happens only after review and merge (see §7).
+> Status (2026-10-27): implemented and tested (36 tests in `backend/apps/demo/tests`), ported onto
+> the current `main` (`feat/phase12b-demo-data-final`), and exercised locally end to end
+> (`seed --dry-run` → `seed` → `seed` again (idempotent, no new rows) → `clear --dry-run --yes` →
+> `clear --yes` → `seed` again). It has **not** been run on Railway staging: that happens only after
+> review and merge (`docs/STAGING.md` §6).
 
 ## 1. Commands
 
@@ -33,12 +36,14 @@ Accounts use the reserved, undeliverable domain `@demo.racheeta.invalid`; none i
 | Role | Email | What you see |
 | --- | --- | --- |
 | Patient | `patient-sara@demo.racheeta.invalid` | upcoming/completed appointments, notifications, a conversation, reviews to write |
-| Doctor | `dr-karim-saadi@demo.racheeta.invalid` | provider dashboard, ratings, received bookings, availability, marketplace products |
-| Hospital | `dijla-hospital@demo.racheeta.invalid` | facility dashboard, practitioners, recruiter workspace with jobs and applicants |
-| Pharma company | `company-dijla-pharma@demo.racheeta.invalid` | company dashboard, products, recruiter workspace |
-| Equipment company | `company-sharq-devices@demo.racheeta.invalid` | company dashboard with six products, job postings |
+| Doctor (provider) | `dr-karim-saadi@demo.racheeta.invalid` | provider dashboard, ratings, received bookings, availability, offers, the targeted marketplace |
+| Hospital (provider + employer owner) | `dijla-hospital@demo.racheeta.invalid` | facility dashboard, practitioners, employer workspace (owner) with published jobs, applicants and talent search |
+| Pharmaceutical company (+ employer owner) | `company-dijla-pharma@demo.racheeta.invalid` | company dashboard, products, advertising workspace, employer workspace |
+| Equipment company (+ employer owner) | `company-sharq-devices@demo.racheeta.invalid` | company dashboard with six products, job postings |
 | Real-estate agent | `seller-mansour-properties@demo.racheeta.invalid` | seller dashboard with six listings |
-| Job seekers | `seeker-ahmad@…`, `seeker-sara@…`, … (10) | résumé profile, applications in different states |
+| Job seekers | `seeker-ahmad@…`, `seeker-sara@…`, … (10) | résumé profile, applications in different states, recruitment messages |
+| Recruiter (non-owner member) | **not seeded** | every employer organisation has exactly one member, its OWNER; add a recruiter through the employer workspace if a demo needs one |
+| Administrator | **never seeded** | use your own staff account (created by you, outside the registry) |
 
 Your own administrator account (not touched by either command) shows the admin dashboard
 aggregates over this data. Treat the shared password as staging-only; do not reuse a real password.

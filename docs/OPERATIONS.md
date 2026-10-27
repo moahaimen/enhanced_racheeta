@@ -5,9 +5,9 @@ platform dashboards, nothing else. Deployment itself is in `docs/RAILWAY.md`,
 `docs/STAGING.md` and `docs/PRODUCTION_DEPLOYMENT.md`; backups in `docs/BACKUP_RESTORE.md`;
 performance numbers in `docs/PERFORMANCE.md`.
 
-> Phase 12A status: the code, logs and scripts described here exist and are tested locally and in
-> CI. **Nothing is deployed, so no alert, dashboard or uptime check has been created** — §2 lists
-> exactly what the owner must create in 12B/12C.
+> Status (2026-10-27): the code, logs and scripts described here exist and are tested locally and in
+> CI; **staging is deployed** (`docs/STAGING.md`). **No alert, dashboard or uptime check has been
+> created for staging or production** — §2 lists exactly what the owner must create (OWNER inputs).
 
 ## 1. What the system emits
 

@@ -3,9 +3,12 @@
 Target shape: **one service + one PostgreSQL**. Nothing else until a feature demonstrably needs it
 (ADR-059: no Redis, no worker, no cron service).
 
-> Status (Phase 12A): **nothing is deployed and no Railway resource exists.** This document is the
-> operator's manual for creating them in Phase 12B (staging, `docs/STAGING.md`) and Phase 12C
-> (production, `docs/PRODUCTION_DEPLOYMENT.md`). Every value below that depends on the owner
+> Status (2026-10-27): **staging exists and is healthy** — Railway project `racheeta-staging`
+> (environment `staging`, services `racheeta-app` + `Postgres`), public origin
+> `https://racheeta-app-staging.up.railway.app`, created by the owner and serving `main`
+> (`/health/`, `/ready/`, headers and the web bundle verified from outside; see `docs/STAGING.md` §5).
+> **No production resource exists** (Phase 12C, `docs/PRODUCTION_DEPLOYMENT.md`). This document
+> remains the operator's manual for both. Every value below that depends on the owner
 > (domain, e-mail provider, secrets) is marked **OWNER**. Railway's dashboard changes over time;
 > where a menu name matters it is given as a hint, the variables and commands are authoritative.
 

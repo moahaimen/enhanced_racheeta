@@ -4,9 +4,21 @@ The only stateful component is **PostgreSQL**. There is no object storage yet (n
 when they do, their bucket joins this document). Everything below is provider-neutral: it needs
 `pg_dump`/`pg_restore`/`psql` **version 16** and network access to the database.
 
-> Phase 12A status: the scripts are written and tested (`backup_restore_smoke.sh` runs in CI against a
-> throw-away PostgreSQL), but **no production or staging backup exists, and no off-site bucket has
-> been chosen**. The owner must complete §5 before 12C.
+> Status (2026-10-27): the scripts are written and tested (`backup_restore_smoke.sh` runs in CI against
+> a throw-away PostgreSQL, and was run locally against the seeded demo database — §1a). **No staging
+> or production backup has been taken by the operator yet, and no off-site bucket has been chosen**
+> (OWNER, §5). Running the round trip against staging needs the staging `DATABASE_URL`, which only
+> the Railway dashboard exposes (`docs/STAGING.md` §3.4).
+
+## 1a. Local round-trip evidence (2026-10-27)
+
+`scripts/backup/backup_restore_smoke.sh` was run on the development machine against the local
+PostgreSQL 16 database holding the full demo dataset (`seed_demo_data`, 1 469 registered rows,
+3 710 rows in 72 tables): dump 487 kB with checksum, restore into a fresh scratch database,
+`migrate`/`check` clean, identical row counts, refusal of a non-empty target and of a corrupted
+dump — **7 seconds end to end**. This proves the scripts and gives an order of magnitude only; the
+staging/production RTO must be measured on Railway with the real database size (§3.4 of
+`docs/STAGING.md`).
 
 ## 1. Targets (propose, owner decides)
 

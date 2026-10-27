@@ -1,16 +1,34 @@
 # Current State
 
-Date: 2026-10-08
-Branch: `fix/phase12b-resend-email` (from `main` `f19cf4d3a6ae5fb417d6e0cffce8413617cb9853`, the Phase 12A merge, PR #20)
+Date: 2026-10-27
+Branch: `feat/phase12b-demo-data-final` (from `main` `83ac6dd2363c6ce256402885d3fea10c0249248b`, the PR #23 merge)
 Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 
-- **Phases 9A–9C, Phase 10 and Phase 11 (11A–11F) are DONE and merged.** 11F: PR #19, accepted head `0e751e6858a229eed3c9e81d498d65d8a09e29fb`, merge `81f492464a8f9f6a82ab1d547f06dbc3520aee48`, post-merge CI #341 green (Backend, Web, Mobile, Mobile release smoke). Phase 11 is officially closed.
-- **Phase 12A is DONE and merged** (PR #20, merge `f19cf4d3a6ae5fb417d6e0cffce8413617cb9853`). **Phase 12B (isolated Railway staging) is CURRENT:** the owner created the Railway project `racheeta-staging` (environment `staging`, services `racheeta-app` + `Postgres`) externally; this repository's side so far is the **Resend HTTPS e-mail transport** (`EMAIL_PROVIDER=resend`, ADR-062) because Railway may block SMTP. That change is a draft PR awaiting independent review; do not merge until exact-head CI and review are green and the owner says **`merge it`**. **12C (production) is NOT STARTED.** No production exists; the legacy database and data were never touched.
+- **Phases 0–11 are DONE and merged.** **Phase 12A (production hardening) is merged** (PR #20).
+  **PR #21 (Resend e-mail transport) and PR #23 (premium public homepage) are merged**; `main` is
+  `83ac6dd`.
+- **Staging EXISTS and serves `main`**: `https://racheeta-app-staging.up.railway.app` (Railway project
+  `racheeta-staging`). Verified from outside on 2026-10-27: health/ready, TLS redirect, security
+  headers, docs gating, Arabic/English web at desktop and phone widths. Unseeded. Full classification
+  in `docs/STAGING.md`. **Production does not exist.**
+- **Scope of the current phase: WEB + BACKEND + STAGING only.** The Flutter app is out of scope
+  (no mobile change on this branch).
+- **This branch (final-readiness PR):** (1) PR #22's demo dataset ported onto current `main` as two
+  cherry-picked commits (`backend/apps/demo`, migration `demo/0001`, `docs/DEMO_DATA.md`, ADR-063;
+  only doc conflicts, both sides kept); (2) CSP tightened to `style-src 'self'; font-src 'self'`
+  (Cairo is bundled since ADR-064; tests updated); (3) status documentation brought to reality
+  (`STAGING`, `RAILWAY`, `OPERATIONS`, `BACKUP_RESTORE`, `PERFORMANCE`, `PRODUCTION_DEPLOYMENT`,
+  `DEMO_DATA`), plus `docs/FINAL_WEB_READINESS.md` (the verdict) and
+  `docs/ACCOUNT_DELETION_REVIEW.md` (owner decision, nothing implemented).
+- **Demo data on staging:** not seeded yet — procedure in `docs/STAGING.md` §6, only after this PR is
+  reviewed, merged and deployed.
+- Design exploration branch `wip/warm-cream-redesign` (local only, two checkpoints) is **not** part
+  of any PR; the owner has not chosen a direction.
 
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 
 - Web-only redesign: self-hosted Cairo (`@fontsource-variable/cairo`), tokens/primitives in `web/src/design-system`, page in `web/src/pages/HomePage.tsx` + `pages/home/*`; evidence in `docs/design/home-redesign/`. Review round 2: talent calls to action are entitlement-aware (`pages/home/talentTarget.ts`), the header groups account destinations in a Workspace menu, and the hero/service cards use derived photographs (`web/src/assets/home`). No backend, deployment or Railway change. Backend CSP still lists Google Fonts (can be tightened later).
-## Phase 12B demo dataset (ADR-063) — branch `feat/phase12b-demo-data`
+## Phase 12B demo dataset (ADR-063) — branch `feat/phase12b-demo-data-final` (supersedes `feat/phase12b-demo-data`, PR #22)
 
 - `python manage.py seed_demo_data` / `clear_demo_data [--dry-run] [--yes]` (`backend/apps/demo/`, docs in `docs/DEMO_DATA.md`): fictional, presentation-ready staging data (70 accounts, 36 providers, 13 companies, 49 products, 24 jobs, 19 listings, 85 reservations, 67 reviews, chat, notifications), recorded in the new `demo.DemoRecord` registry so cleanup removes exactly it and refuses (changing nothing) if a real row is involved. Needs `DEMO_DATA_ENABLED=true` (staging only) and `DEMO_PASSWORD`; creates no admin; **never run on production**.
 - Not run on Railway: seeding staging happens only after review → merge → deploy of the accepted SHA. One migration (`demo/0001`); no business model or service changed.

@@ -5,9 +5,11 @@ What was measured in Phase 12A, how to repeat it, and what it does and does not 
 **Read this first.** Every number below comes from one developer laptop (Apple M3, 8 cores, 8 GB,
 PostgreSQL 16 on the same machine, other applications running) against **synthetic** data. They
 are evidence that nothing is pathological at the tested size, not a capacity claim and not a
-promise for Railway hardware. No production or staging system has been measured, because none
-exists. Re-run the harness against staging (12B) and record the results here before relying on any
-of it.
+promise for Railway hardware. **Staging exists (2026-10-27) but has not been load-measured**: the
+harness needs synthetic data on staging (`seed_synthetic --allow-nonlocal-host`) and an owner-approved
+window (it is an indicative load test on a shared plan). Re-run it against staging and record the
+results in §5 before relying on any of it; the external latencies observed for single requests are
+in `docs/STAGING.md` §5.
 
 ## 1. Tools (all in the repository, all safe by construction)
 
