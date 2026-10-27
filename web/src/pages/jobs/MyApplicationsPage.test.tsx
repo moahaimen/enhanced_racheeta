@@ -22,6 +22,15 @@ describe('MyApplicationsPage', () => {
     vi.mocked(jobsApi.listMessages).mockResolvedValue([])
   })
 
+  it('explains that a résumé is needed instead of showing an error when the profile does not exist yet', async () => {
+    vi.mocked(jobsApi.listMyApplications).mockRejectedValue(new ApiError(403, 'permission_denied', 'Create your professional profile first.'))
+    vi.mocked(jobsApi.listMyInvitations).mockRejectedValue(new ApiError(403, 'permission_denied', 'Create your professional profile first.'))
+    renderApp('/jobs/my-applications')
+    const state = await screen.findByTestId('applications-profile-required')
+    expect(within(state).getByRole('link', { name: /سيرتي المهنية|My résumé/i })).toHaveAttribute('href', '/jobs/profile')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('shows an empty state with a link to the jobs search', async () => {
     vi.mocked(jobsApi.listMyApplications).mockResolvedValue(paginated([]))
     renderApp('/jobs/my-applications')

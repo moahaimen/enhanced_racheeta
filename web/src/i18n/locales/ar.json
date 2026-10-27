@@ -855,7 +855,8 @@
     "count_few": "{{count}} طلبات",
     "count_many": "{{count}} طلباً",
     "count_other": "{{count}} طلب",
-    "invitesEmptyPage": "لا توجد دعوات في هذه الصفحة."
+    "invitesEmptyPage": "لا توجد دعوات في هذه الصفحة.",
+    "profileRequired": "أنشئ سيرتك المهنية أولاً لترى طلباتك ودعوات التوظيف."
   },
   "seekerProfile": {
     "title": "سيرتي المهنية",
