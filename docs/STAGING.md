@@ -134,7 +134,8 @@ deployed commit in the dashboard; the migration `demo/0001` is applied by the re
 Then, in the Railway dashboard for the **staging** service only:
 
 1. Variables: add `DEMO_DATA_ENABLED=true` and `DEMO_PASSWORD=<a staging-only password ≥ 12 chars>`
-   (or omit `DEMO_PASSWORD` and use `--generate-password`, which prints it once).
+   (or, for the **first** seed only, omit `DEMO_PASSWORD` and use `--generate-password`, which prints
+   it once; a re-run must use the same password — a different one or `--generate-password` is refused).
 2. Shell (`railway ssh` or the dashboard shell): `python manage.py seed_demo_data --dry-run`, read
    the plan, then `python manage.py seed_demo_data`. Expected end: `seed_demo_data: done.` with the
    counts in `docs/DEMO_DATA.md` §3.

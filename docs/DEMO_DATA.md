@@ -5,7 +5,8 @@ healthcare ecosystem for presentations; `clear_demo_data` removes it again, and 
 record: ADR-063. **Never run this against production** (it refuses unless `DEMO_DATA_ENABLED=true`,
 a variable you set on the staging service only).
 
-> Status (2026-10-27): implemented and tested (36 tests in `backend/apps/demo/tests`), ported onto
+> Status (2026-10-28): implemented and tested (49 tests in `backend/apps/demo/tests`, including
+> interruption, side-effect and credential tests added after review), ported onto
 > the current `main` (`feat/phase12b-demo-data-final`), and exercised locally end to end
 > (`seed --dry-run` → `seed` → `seed` again (idempotent, no new rows) → `clear --dry-run --yes` →
 > `clear --yes` → `seed` again). It has **not** been run on Railway staging: that happens only after
@@ -21,15 +22,30 @@ python manage.py clear_demo_data --dry-run         # exactly what would be delet
 python manage.py clear_demo_data --yes             # delete the demo data (one transaction)
 ```
 
-Both commands print counts and never print a credential. `seed_demo_data` is idempotent (a second
-run adds nothing; day-relative appointment slots top up for new days). The lifecycle is
-`empty → seed → rich demo → clear → clean → seed again`, covered by tests.
+Both commands print counts and never print a credential (except the one `--generate-password` case
+below). `seed_demo_data` is idempotent (a second run adds nothing; day-relative appointment slots
+top up for new days). The lifecycle `seed → seed → clear → seed → clear` is covered by a test that
+checks identical counts after each seed and the exact original database after each clear.
+
+**If a seed is interrupted** (exception, lost connection, killed process), the phase in progress is
+rolled back entirely by the database and every earlier phase is already committed **together with
+its ownership records** (§4). You can then either run `seed_demo_data` again (it reuses the
+committed phases and completes the rest; use the same password, see §2) or `clear_demo_data --yes`
+to remove the committed part.
 
 ## 2. Logging in as the demo roles
 
 All demo accounts share **one password that you choose at seed time** via the `DEMO_PASSWORD`
 variable (at least 12 characters; set it as a Railway variable or inline for the one command; it is
-never in git). Alternatively `--generate-password` prints a random one **once** to your terminal.
+never in git, and only its hash is stored — never in `demo_record`).
+
+* **Initial seed only:** `--generate-password` generates a random password, uses it and prints it
+  **once**. If that first seed fails after the accounts phase was committed, the command still prints
+  the password (with a note) so the retry can use it as `DEMO_PASSWORD`.
+* **Re-runs never change credentials.** When registered demo accounts exist, `--generate-password`
+  is **refused** ("only valid for the initial seed") and nothing is printed or written, and a
+  `DEMO_PASSWORD` that does not match the existing demo accounts is **refused** too. To change the
+  password, `clear_demo_data --yes` and seed again.
 Accounts use the reserved, undeliverable domain `@demo.racheeta.invalid`; none is an administrator
 (the seeder never creates staff). Suggested demonstration logins:
 
@@ -89,12 +105,22 @@ primary key, optional idempotency key):
 
 * while `seed_demo_data` runs, a `post_save` receiver in **that process** records every row it
   INSERTS — the objects it creates **and** their side effects (notifications, audit events,
-  transitions, memberships, tokens). The seeder is a separate process, so a web request can never be
-  recorded by mistake; a row is registered only if it was inserted by the seeder;
+  transitions, memberships, tokens) — and `QuerySet.bulk_create` is wrapped so rows that product
+  services insert in bulk (no `post_save`), such as chat participants, are recorded as well. The
+  seeder is a separate process, so a web request can never be recorded by mistake; a row is
+  registered only if it was inserted by the seeder;
 * named objects also carry a stable key (`provider:dr-karim-saadi`, `product:12`, …) so a second run
   finds them instead of creating them again;
-* each phase commits separately and registers its rows immediately after, so even a seed that fails
-  half way leaves a clearable, consistent state.
+* **ownership is atomic with the rows it owns.** Each of the five phases is one database transaction
+  containing: the phase's rows, the rows created by the product's deferred `transaction.on_commit`
+  hooks (reservation and chat events → notifications → push hints, run by the seeder at the end of
+  the phase's transaction instead of after its commit — the same callbacks, the same rows), and the
+  `demo_record` rows for all of them. A phase therefore commits completely registered or not at all.
+  Tests inject a failure while the registry is written, a failure inside a deferred hook and a
+  failure in the middle of a phase, and check after each that every row added since the start is
+  owned by a `DemoRecord`, that a retry completes the seed and that cleanup restores the original
+  database. (With `PUSH_SENDER` configured a push hint would be attempted before the commit; demo
+  accounts register no push devices, so nothing is sent.)
 
 ## 5. Why cleanup cannot delete real data
 

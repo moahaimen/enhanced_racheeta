@@ -54,7 +54,7 @@ other than the ported `demo/0001`, or dependency changed. No mobile file changed
 `ruff check` clean · `ruff format --check` 361 files · `manage.py check` 0 issues ·
 `makemigrations --check` no changes · OpenAPI regenerated = committed file ·
 **full suite 1 981 passed, 1 skipped** (the skip: `firebase_admin` is a production-only dependency
-not installed in the dev venv) · demo suite 36 tests (part of the total) including idempotency,
+not installed in the dev venv) · demo suite 49 tests (part of the total) including idempotency, atomic phase ownership under injected failures (registry write, deferred hook, mid-phase), credential non-rotation,
 seed→clear→seed and real-data preservation (real booking on a demo provider, real application to a
 demo job, real review of a demo provider, reference geography/specialties) · `git diff --check`
 clean · gitleaks: no leaks.
