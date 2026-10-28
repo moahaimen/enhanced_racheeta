@@ -827,7 +827,8 @@
     "emptyPage": "No applications on this page.",
     "count_one": "{{count}} application",
     "count_other": "{{count}} applications",
-    "invitesEmptyPage": "No invitations on this page."
+    "invitesEmptyPage": "No invitations on this page.",
+    "profileRequired": "Create your résumé first to see your applications and invitations."
   },
   "seekerProfile": {
     "title": "My résumé",

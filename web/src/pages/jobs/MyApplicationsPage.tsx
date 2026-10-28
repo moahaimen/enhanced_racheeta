@@ -4,9 +4,13 @@ import { Link, useSearchParams } from 'react-router'
 
 import { jobs as jobsApi } from '../../api'
 import type { ApplicationSeeker, Invitation } from '../../api'
-import { Alert, ApiActionButton, ApplicationStatusBadge, AsyncPage, Badge, Container, EmptyState, ErrorState, Icon, InvitationStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, Pagination, SectionCard, Textarea } from '../../design-system'
+import { ApiError } from '../../api/client'
+import { Alert, ApiActionButton, ApplicationStatusBadge, Badge, Container, EmptyState, ErrorState, Icon, InvitationStatusBadge, LinkButton, LoadingState, PageHeader, PageStack, Pagination, SectionCard, Textarea } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import styles from './MyApplicationsPage.module.css'
+
+/** `HasJobSeekerProfile` answers 403 until the person creates a résumé: an expected state, not a failure. */
+const profileMissing = (error: unknown) => error instanceof ApiError && error.status === 403
 
 const PAGE_SIZE = 20
 
@@ -21,29 +25,7 @@ export function MyApplicationsPage() {
       <PageHeader eyebrow={<><Icon name="briefcase" size={16} />{t('nav.jobs')}</>} title={t('applications.title')} description={t('applications.intro')} />
       <PageStack>
         <InvitationsBlock />
-        <AsyncPage load={(signal) => jobsApi.listMyApplications(page, signal)} deps={[page]}>
-          {(result, reload) =>
-            result.results.length === 0 ? (
-              <div className="card-block">
-                {page > 1 ? (
-                  <EmptyState icon="briefcase" title={t('applications.emptyPage')} testId="applications-empty-page" action={<LinkButton to="/jobs/my-applications">{t('common.previous')}</LinkButton>} />
-                ) : (
-                  <EmptyState icon="briefcase" title={t('applications.empty')} testId="applications-empty" action={<LinkButton to="/jobs">{t('applications.browse')}</LinkButton>} />
-                )}
-              </div>
-            ) : (
-              <>
-                <p className="text-caption" data-testid="applications-count">
-                  {t('applications.count', { count: result.count })}
-                </p>
-                {result.results.map((application) => (
-                  <ApplicationCard key={application.id} application={application} reload={reload} />
-                ))}
-                <Pagination page={page} total={Math.max(1, Math.ceil(result.count / PAGE_SIZE))} hasNext={result.next !== null} hasPrevious={result.previous !== null} onChange={goTo} />
-              </>
-            )
-          }
-        </AsyncPage>
+        <ApplicationsBlock page={page} goTo={goTo} />
       </PageStack>
     </Container>
   )
@@ -180,6 +162,43 @@ export function MessagesThread({ applicationId, mySide, closed, canSend = true }
 }
 
 /** Invitations the seeker received, paginated from the URL (`?invites_page=`, independent of `?page=`). */
+function ApplicationsBlock({ page, goTo }: { page: number; goTo: (next: number) => void }) {
+  const { t } = useTranslation()
+  const applications = useAsyncData((signal) => jobsApi.listMyApplications(page, signal), [page])
+  if (applications.loading) return <LoadingState testId="async-loading" />
+  if (profileMissing(applications.error)) {
+    return (
+      <div className="card-block">
+        <EmptyState icon="user" title={t('applications.profileRequired')} testId="applications-profile-required" action={<LinkButton to="/jobs/profile">{t('nav.seekerProfile')}</LinkButton>} />
+      </div>
+    )
+  }
+  if (applications.error !== null || applications.data === undefined) return <ErrorState error={applications.error} onRetry={applications.reload} testId="async-error" />
+  const result = applications.data
+  const reload = applications.reload
+  return (
+            result.results.length === 0 ? (
+              <div className="card-block">
+                {page > 1 ? (
+                  <EmptyState icon="briefcase" title={t('applications.emptyPage')} testId="applications-empty-page" action={<LinkButton to="/jobs/my-applications">{t('common.previous')}</LinkButton>} />
+                ) : (
+                  <EmptyState icon="briefcase" title={t('applications.empty')} testId="applications-empty" action={<LinkButton to="/jobs">{t('applications.browse')}</LinkButton>} />
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="text-caption" data-testid="applications-count">
+                  {t('applications.count', { count: result.count })}
+                </p>
+                {result.results.map((application) => (
+                  <ApplicationCard key={application.id} application={application} reload={reload} />
+                ))}
+                <Pagination page={page} total={Math.max(1, Math.ceil(result.count / PAGE_SIZE))} hasNext={result.next !== null} hasPrevious={result.previous !== null} onChange={goTo} />
+              </>
+            )
+  )
+}
+
 function InvitationsBlock() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
@@ -194,6 +213,7 @@ function InvitationsBlock() {
   const invitations = useAsyncData((signal) => jobsApi.listMyInvitations(invitesPage, signal), [invitesPage])
   const [error, setError] = useState<string | null>(null)
   if (invitations.loading) return <LoadingState testId="invitations-loading" />
+  if (profileMissing(invitations.error)) return null
   if (invitations.error) return <ErrorState error={invitations.error} onRetry={invitations.reload} />
   if (!invitations.data || (invitations.data.count === 0 && invitesPage === 1)) return null
   return (

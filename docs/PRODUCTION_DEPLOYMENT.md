@@ -1,7 +1,9 @@
 # Production deployment runbook (Phase 12C)
 
-> **Status (Phase 12A): this is a plan, not a record.** Nothing has been deployed. Phase 12C is
-> a separate, owner-authorized step and must not start until `docs/STAGING.md` is fully green.
+> **Status (2026-10-27): this is a plan, not a record.** Staging exists and serves `main`
+> (`docs/STAGING.md`); **production has not been created or deployed.** Phase 12C is a separate,
+> owner-authorized step and must not start until `docs/STAGING.md` is green and the OWNER items in
+> §1 are provided. The web-only readiness verdict is in `docs/FINAL_WEB_READINESS.md`.
 > Where this runbook depends on something the owner has not provided, it says **OWNER** and the
 > step cannot be completed by an engineer alone.
 
@@ -11,8 +13,8 @@ All must be true. Any **OWNER** item that is missing is a *no-go*, not something
 
 | # | Condition | Status at end of 12A |
 | --- | --- | --- |
-| 1 | 12A PR merged to `main`; CI green on the merge commit | pending review |
-| 2 | Staging exists and `docs/STAGING.md` checklist is complete with results recorded | not started (12B) |
+| 1 | 12A PR merged to `main`; CI green on the merge commit | done (PR #20, `f19cf4d`) |
+| 2 | Staging exists and `docs/STAGING.md` checklist is complete with results recorded | staging exists; checklist partly verified — see `docs/STAGING.md` §5 for the VERIFIED / NOT VERIFIED / OWNER classification |
 | 3 | **OWNER:** production domain and DNS control | not provided |
 | 4 | **OWNER:** e-mail provider, verified sending domain (SPF/DKIM/DMARC), production credential | not chosen |
 | 5 | **OWNER:** off-site backup destination and credentials; one successful restore rehearsal; measured RTO written in `docs/BACKUP_RESTORE.md` | not chosen |
@@ -130,9 +132,10 @@ issued with the old key work again). A DNS/certificate problem is fixed at the d
 
 These are *not* blockers the engineer can fix; they are the boundary of what 12A delivers.
 
-- **No production or staging environment exists; none of the platform-dependent claims has been
-  verified on Railway** (proxy count, edge logs, health-check behaviour, certificate, e-mail
-  delivery, backup timing).
+- **No production environment exists.** Staging exists; of the platform-dependent claims, health,
+  readiness, TLS/redirect, headers, docs gating and the web bundle are verified from outside; proxy
+  count, edge logs, failed-deploy behaviour, e-mail delivery and backup timing on Railway are **not**
+  (they need dashboard/variable access — `docs/STAGING.md` §5).
 - **E-mail provider, sending domain, off-site backup store, domain name, monitoring recipients, admin
   2FA policy, privacy policy** — owner-provided inputs, not yet provided.
 - Python transitive dependencies are not hash-locked (only direct pins plus PyJWT); a full lock file

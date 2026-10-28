@@ -44,6 +44,7 @@ Full instructions: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Query plans, load harness, measured results |
 | [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) | Database backup, restore and off-site copies |
 | [docs/DATA_MIGRATION.md](docs/DATA_MIGRATION.md) | Legacy data migration (not authorized) |
+| [docs/DEMO_DATA.md](docs/DEMO_DATA.md) | Reversible fictional demo dataset for staging presentations |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local setup and commands |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision log |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Milestone progress |
