@@ -1,10 +1,12 @@
 """Records what `seed_demo_data` creates, and keeps the seeder idempotent.
 
 `Registry` is a context manager: while it is active a `post_save` receiver notes every row that is
-INSERTED (side effects included: notifications, audit events, transitions, billing accounts...). The
-seeder runs as a separate management-command process, so no web request can be captured by
-mistake. `ensure(key, factory)` makes a row addressable by a stable key so a second run finds and
-reuses it instead of creating it again.
+INSERTED (side effects included: notifications, audit events, transitions, billing accounts...), and
+`QuerySet.bulk_create` — which sends no `post_save` — is wrapped so the rows product services insert
+in bulk (chat participants, listing suitable uses, ...) are recorded too. The seeder runs as a
+separate management-command process, so no web request can be captured by mistake.
+`ensure(key, factory)` makes a row addressable by a stable key so a second run finds and reuses it
+instead of creating it again.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from collections.abc import Callable
 from typing import Any
 
 from django.apps import apps
+from django.db.models.query import QuerySet
 from django.db.models.signals import post_save
 
 from .models import DemoRecord
@@ -29,23 +32,43 @@ class Registry:
         self._dispatch_uid = f"demo-registry-{id(self)}"
 
     # -- recording ----------------------------------------------------------------------------
-    def _on_save(self, sender, instance, created=False, raw=False, **kwargs) -> None:
-        if not created or raw:
-            return
-        meta = sender._meta
+    def _note(self, model, pk) -> None:
+        meta = model._meta
         if meta.app_label in EXCLUDED_APP_LABELS or meta.auto_created:
             return
-        ident = (meta.label, str(instance.pk))
+        ident = (meta.label, str(pk))
         if ident not in self._seen:
             self._seen.add(ident)
             self._pending.append(ident)
 
+    def _on_save(self, sender, instance, created=False, raw=False, **kwargs) -> None:
+        if created and not raw:
+            self._note(sender, instance.pk)
+
+    def _record_bulk(self, model, objs) -> None:
+        # Only rows that really exist (bulk_create(ignore_conflicts=True) may skip some).
+        pks = [obj.pk for obj in objs if obj.pk is not None]
+        if not pks:
+            return
+        for pk in model._base_manager.filter(pk__in=pks).values_list("pk", flat=True):
+            self._note(model, pk)
+
     def __enter__(self) -> Registry:
         post_save.connect(self._on_save, dispatch_uid=self._dispatch_uid, weak=False)
+        original = self._original_bulk_create = QuerySet.bulk_create
+        registry = self
+
+        def recording_bulk_create(queryset, objs, *args, **kwargs):
+            created = original(queryset, objs, *args, **kwargs)
+            registry._record_bulk(queryset.model, created)
+            return created
+
+        QuerySet.bulk_create = recording_bulk_create
         return self
 
     def __exit__(self, *exc_info) -> None:
         post_save.disconnect(dispatch_uid=self._dispatch_uid)
+        QuerySet.bulk_create = self._original_bulk_create
 
     # -- idempotency --------------------------------------------------------------------------
     @staticmethod
@@ -70,7 +93,11 @@ class Registry:
 
     # -- persistence --------------------------------------------------------------------------
     def flush(self) -> int:
-        """Write the registry rows for everything recorded so far (call inside the transaction)."""
+        """Write the registry rows for everything recorded so far.
+
+        Called INSIDE the phase transaction (seeder.DemoSeeder.run), so the ownership records commit
+        atomically with the rows they own; if this write fails, the phase rolls back with it.
+        """
         rows = [
             DemoRecord(model_label=label, object_pk=pk, key=self._keys.get((label, pk)))
             for label, pk in self._pending

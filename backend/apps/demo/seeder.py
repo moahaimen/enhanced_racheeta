@@ -7,9 +7,13 @@ Rules this module follows:
   and the reason is stated at that call;
 * every inserted row is recorded by `Registry` (including side effects) so `clear_demo_data` can
   remove exactly it; every named object has a stable key so a second run is a no-op;
-* each phase commits on its own (so `transaction.on_commit` side effects such as notifications fire
-  inside the recording window) and its registry rows are written right after it; a failing phase
-  rolls back alone and leaves everything before it registered and clearable.
+* each phase is ONE transaction that contains the phase's rows, the rows its deferred
+  `transaction.on_commit` hooks create (notifications, push hints, ...) and the registry rows that
+  own all of them. The hooks are the product's own callbacks, run by the seeder at the end of the
+  phase's transaction instead of after its commit, so they see the same data and create the same
+  rows. Consequently a phase is either committed together with its ownership records or not at
+  all: an interrupted seed (exception, lost connection, killed process) never leaves an
+  unregistered demo row behind, and every phase before it stays registered and clearable.
 """
 
 # ruff: noqa: B023 - the factories given to Registry.ensure run immediately, in the same loop turn
@@ -108,25 +112,40 @@ class DemoSeeder:
             for title, phase in phases:
                 self.log(f"  {title} ...")
                 try:
+                    # One transaction per phase: its rows, the rows its deferred hooks create and
+                    # the registry rows that own them commit together or not at all (ADR-063).
                     with transaction.atomic():
+                        start = len(connection.run_on_commit)
                         phase()
+                        self._run_deferred_hooks(start)
+                        self.registry.flush()
                 except Exception:
                     self.registry.discard_pending()
                     raise
-                # on_commit side effects (notifications) fired when the block above committed
-                self._drain_on_commit()
-                self.registry.flush()
-            self._polish_notifications()
+            with transaction.atomic():
+                self._polish_notifications()  # updates registered rows only; inserts nothing
         return self.summary()
 
-    @staticmethod
-    def _drain_on_commit() -> None:
-        """Only if an outer transaction wraps the seeder (tests): run deferred side effects."""
-        if not connection.in_atomic_block:
-            return
-        callbacks, connection.run_on_commit = list(connection.run_on_commit), []
-        for _sids, func, *_rest in callbacks:
-            func()
+    def _run_deferred_hooks(self, start: int) -> None:
+        """Run the `on_commit` callbacks registered since `start`, inside the phase transaction.
+
+        These are the product's own deferred side effects (reservation/chat events -> notification
+        rows -> push hints). Running them before the phase commits lets the registry record the rows
+        they insert and commit those records with them. Callbacks that register further callbacks
+        are drained too. A `robust` callback failure is logged and skipped, as Django does after a
+        real commit; any other failure aborts (and rolls back) the whole phase.
+        """
+        while len(connection.run_on_commit) > start:
+            pending = connection.run_on_commit[start:]
+            del connection.run_on_commit[start:]
+            for _sids, func, robust in pending:
+                if not robust:
+                    func()
+                    continue
+                try:
+                    func()
+                except Exception as exc:  # noqa: BLE001 - mirrors Django's robust on_commit
+                    self.warnings.append(f"a deferred side effect failed and was skipped: {exc!r}")
 
     def summary(self) -> Counter:
         counts = Counter()
