@@ -71,3 +71,6 @@ logs/
 *.log
 tmp/
 .tmp/
+
+# Local-only demo workspace (disposable DB settings, demo credentials, screenshots). Never committed.
+local-demo/
