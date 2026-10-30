@@ -9,6 +9,8 @@ import { AsyncPage, Button, Checkbox, Container, EmptyState, Icon, JobCard, JobC
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { JOB_FILTER_KEYS, readJobFilters, writeJobFilters } from './filters'
+import { FilterDisclosure } from '../FilterDisclosure'
+import dir from '../directory.module.css'
 import styles from './JobsPage.module.css'
 
 const PAGE_SIZE = 12
@@ -31,10 +33,12 @@ export function JobsPage() {
   return (
     <Container width="xl">
       <PageStack>
-        <section className={styles.hero} aria-labelledby="jobs-title">
-          <h1 id="jobs-title">{t('jobsPage.title')}</h1>
-          <p>{t('jobsPage.intro')}</p>
-          <div className={styles.heroActions}>
+        <header className={dir.header}>
+          <div>
+            <h1 id="jobs-title">{t('jobsPage.title')}</h1>
+            <p>{t('jobsPage.intro')}</p>
+          </div>
+          <div className={dir.actions}>
             {status === 'authenticated' ? (
               <>
                 <LinkButton to="/jobs/profile" variant="secondary" size="sm" leading={<Icon name="user" size={16} />}>
@@ -55,9 +59,10 @@ export function JobsPage() {
               </LinkButton>
             ) : null}
           </div>
-        </section>
+        </header>
 
-        <section className="card-block" aria-labelledby="jobs-filters">
+        <div className={dir.layout}>
+        <section className={dir.filterPanel} aria-labelledby="jobs-filters">
           <h2 id="jobs-filters" className="visually-hidden">
             {t('providers.filters')}
           </h2>
@@ -73,7 +78,7 @@ export function JobsPage() {
           </AsyncPage>
         </section>
 
-        <section aria-labelledby="jobs-results">
+        <section className={dir.main} aria-labelledby="jobs-results">
           <h2 id="jobs-results" className="visually-hidden">
             {t('jobsPage.results_other', { count: 0 })}
           </h2>
@@ -121,6 +126,7 @@ export function JobsPage() {
             )}
           </AsyncPage>
         </section>
+        </div>
       </PageStack>
     </Container>
   )
@@ -162,7 +168,7 @@ function FilterBar({
           {t('common.search')}
         </Button>
       </div>
-      <div className={styles.filters}>
+      <FilterDisclosure label={t('providers.filters')} className={styles.filters}>
         <Select label={t('jobsPage.filters.profession')} value={filters.profession ?? ''} onChange={(e) => onChange({ profession: e.target.value })}>
           <option value="">{t('common.all')}</option>
           {PROFESSIONS.map((p) => (
@@ -203,6 +209,8 @@ function FilterBar({
             </option>
           ))}
         </Select>
+        <details className={styles.more}>
+          <summary>{t('jobsPage.moreFilters')}</summary>
         <Select label={t('jobsPage.filters.work_mode')} value={filters.work_mode ?? ''} onChange={(e) => onChange({ work_mode: e.target.value })}>
           <option value="">{t('common.all')}</option>
           {WORK_MODES.map((v) => (
@@ -236,10 +244,11 @@ function FilterBar({
           ))}
         </Select>
         <Checkbox label={t('jobsPage.filters.salary_available')} checked={filters.salary_available === 'true'} onChange={(e) => onChange({ salary_available: e.target.checked ? 'true' : '' })} />
+        </details>
         <Button type="button" variant="ghost" onClick={onClear}>
           {t('common.clear')}
         </Button>
-      </div>
+      </FilterDisclosure>
     </form>
   )
 }

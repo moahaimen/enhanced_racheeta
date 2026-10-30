@@ -37,6 +37,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           <h3 className={styles.name}>
             <Link to={`/providers/${provider.id}`}>{text(provider.display_name)}</Link>
           </h3>
+          {provider.specialties[0] ? <p className={styles.role}>{name(provider.specialties[0])}</p> : null}
           <div className={styles.meta}>
             <Badge tone="brand">{t(`providerTypes.${provider.provider_type}`)}</Badge>
             <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
@@ -70,9 +71,14 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
             ★ {provider.average_rating.toFixed(1)} · {t('reviews.count', { count: provider.review_count })}
           </span>
         ) : null}
-        <span className={styles.cta} aria-hidden="true">
-          {t('providers.viewProfile')}
-          <Icon name="arrowForward" size={16} flipInRtl />
+        <span className={styles.actions} aria-hidden="true">
+          {provider.kind === 'PRACTITIONER' ? (
+            <span className={styles.ghost}>
+              <Icon name="calendar" size={14} />
+              {t('home.bookNow')}
+            </span>
+          ) : null}
+          <span className={styles.primary}>{t('providers.viewProfile')}</span>
         </span>
       </div>
     </Card>

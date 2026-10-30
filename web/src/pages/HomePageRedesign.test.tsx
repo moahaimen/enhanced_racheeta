@@ -17,7 +17,7 @@ import type { PropertyListing } from '../api'
 import { CountUp, NearViewport, Reveal } from '../design-system'
 import { changeLanguage } from '../i18n'
 import { makeBilling, makeEmployerOwner, makeJobCard, paginated } from '../test/jobFixtures'
-import { baghdad, cardiology, makeCard } from '../test/providerFixtures'
+import { baghdad, cardiology, dentistry, makeCard } from '../test/providerFixtures'
 import { emptyPage, mockHomeData } from '../test/homeMocks'
 import { makeAccount, renderApp } from '../test/renderApp'
 
@@ -111,7 +111,7 @@ describe('premium homepage — search', () => {
 })
 
 describe('premium homepage — sections come from the API (nothing hard-coded)', () => {
-  it('shows verified doctors from the providers API, best rated first, with a booking call to action', async () => {
+  it('shows verified doctors from the providers API, best rated first, with a profile call to action', async () => {
     vi.mocked(providersApi.listProviders).mockImplementation(async (params) =>
       params?.kind === 'PRACTITIONER'
         ? paginated([
@@ -126,7 +126,7 @@ describe('premium homepage — sections come from the API (nothing hard-coded)',
     const links = within(grid).getAllByRole('link')
     expect(links.map((a) => a.textContent)).toEqual(['د. أعلى', 'د. منخفض', 'د. جديد']) // Arabic half only; sorted by rating
     expect(links[0]).toHaveAttribute('href', '/providers/p-top')
-    expect(within(grid).getAllByText(/احجز الآن/)).toHaveLength(3)
+    expect(within(grid).getAllByText(/عرض الملف/)).toHaveLength(3) // approved card: 'view profile' pill
     expect(within(grid).getByText('4.9')).toBeInTheDocument()
     expect(within(grid).getAllByText('أمراض القلب').length).toBeGreaterThanOrEqual(1)
     expect(vi.mocked(providersApi.listProviders)).toHaveBeenCalledWith(expect.objectContaining({ kind: 'PRACTITIONER' }), expect.anything())
@@ -343,10 +343,10 @@ describe('premium homepage — hiring calls to action never dead-end', () => {
     await new Promise((r) => setTimeout(r, 30))
   }
 
-  it('routes an anonymous visitor through login (both calls to action)', async () => {
+  it('routes an anonymous visitor through login', async () => {
     renderApp('/')
     await settle()
-    expect(hireLinks().length).toBeGreaterThanOrEqual(2)
+    expect(hireLinks().length).toBeGreaterThanOrEqual(1)
     for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/login')
   })
 
@@ -358,7 +358,7 @@ describe('premium homepage — hiring calls to action never dead-end', () => {
       vi.mocked(jobsApi.getMyEmployer).mockRejectedValue(new ApiError(404, 'not_found', 'No organisation'))
       renderApp('/')
       await settle()
-      await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(2))
+      await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(1))
       for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
       expect(jobsApi.getEmployerBilling).not.toHaveBeenCalled()
     },
@@ -374,7 +374,7 @@ describe('premium homepage — hiring calls to action never dead-end', () => {
     renderApp('/')
     await settle()
     await waitFor(() => {
-      expect(hireLinks().length).toBeGreaterThanOrEqual(2)
+      expect(hireLinks().length).toBeGreaterThanOrEqual(1)
       for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer/talent')
     })
   })
@@ -391,7 +391,7 @@ describe('premium homepage — hiring calls to action never dead-end', () => {
     vi.mocked(jobsApi.getEmployerBilling).mockResolvedValue(billing ?? makeBilling())
     renderApp('/')
     await settle()
-    await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(hireLinks().length).toBeGreaterThanOrEqual(1))
     for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
   })
 
@@ -403,5 +403,81 @@ describe('premium homepage — hiring calls to action never dead-end', () => {
     renderApp('/')
     await settle()
     for (const link of hireLinks()) expect(link).toHaveAttribute('href', '/employer')
+  })
+})
+
+describe('approved homepage — six principal cards, doctor rail, popular services', () => {
+  const featureNav = () => screen.findByRole('navigation', { name: /تصفّح حسب الفئة|browse by category/i })
+  const cardLinks = (nav: HTMLElement) => within(nav).getAllByRole('link').map((a) => [a.getAttribute('aria-label') ?? '', a.getAttribute('href')])
+
+  it('shows six cards alternating teal and white with their real destinations (anonymous)', async () => {
+    renderApp('/')
+    const nav = await featureNav()
+    const cards = nav.querySelectorAll('article')
+    expect(cards).toHaveLength(6)
+    expect([...cards].map((c) => c.getAttribute('data-tone'))).toEqual(['teal', 'white', 'teal', 'white', 'teal', 'white'])
+    const links = cardLinks(nav)
+    expect(links.map(([, href]) => href)).toEqual(['/providers?kind=PRACTITIONER', '/providers?kind=FACILITY', '/jobs', '/real-estate', '/marketplace', '/marketplace'])
+    // every pill names its card (visible text first: label-in-name)
+    expect(links[0]![0]).toMatch(/^ابحث الآن — الأطباء$/)
+    expect(within(nav).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'الأطباء',
+      'المستشفيات والمراكز',
+      'الوظائف',
+      'العقارات الطبية',
+      'المنتجات الطبية',
+      'الشركات',
+    ])
+  })
+
+  it('never sends a patient into the B2B marketplace: products and companies open the public categories', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
+    renderApp('/')
+    await screen.findAllByRole('link', { name: /لوحة المعلومات|dashboard/i })
+    const nav = await featureNav()
+    const hrefs = cardLinks(nav).map(([, href]) => href)
+    expect(hrefs.slice(4)).toEqual(['#product-categories', '#product-categories'])
+    expect(hrefs).not.toContain('/marketplace')
+  })
+
+  it('sends a medical company to its workspace from the products and companies cards', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'MEDICAL_COMPANY' }))
+    renderApp('/')
+    await screen.findAllByRole('link', { name: /لوحة المعلومات|dashboard/i })
+    const nav = await featureNav()
+    expect(cardLinks(nav).map(([, href]) => href).slice(4)).toEqual(['/company', '/company'])
+  })
+
+  it('builds popular services from the specialties API only (plus "more")', async () => {
+    vi.mocked(referenceApi.listSpecialties).mockResolvedValue([dentistry, cardiology])
+    renderApp('/')
+    const list = await screen.findByTestId('popular-services')
+    const links = within(list).getAllByRole('link')
+    // approved order (dentistry before cardiology), only specialties the API returned, then "more"
+    expect(links.map((a) => a.textContent)).toEqual([dentistry.name_ar, cardiology.name_ar, 'المزيد'])
+    expect(links[0]).toHaveAttribute('href', `/providers?specialty=${dentistry.slug}`)
+    expect(links[2]).toHaveAttribute('href', '/providers')
+  })
+
+  it('hides popular services when no known specialty is returned', async () => {
+    vi.mocked(referenceApi.listSpecialties).mockResolvedValue([])
+    renderApp('/')
+    await screen.findByRole('navigation', { name: /تصفّح حسب الفئة/ })
+    await new Promise((r) => setTimeout(r, 30))
+    expect(screen.queryByTestId('popular-services')).toBeNull()
+  })
+
+  it('gives the doctor rail named previous/next buttons', async () => {
+    vi.mocked(providersApi.listProviders).mockImplementation(async (params) =>
+      params?.kind === 'PRACTITIONER' ? paginated([makeCard({ id: 'p-1', display_name: 'د. واحد | Dr One', average_rating: 4.8, review_count: 12 })]) : emptyPage,
+    )
+    renderApp('/')
+    const rail = await screen.findByTestId('featured-doctors')
+    expect(screen.getByRole('button', { name: 'السابق' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'التالي' })).toBeInTheDocument()
+    expect(within(rail).getByText('4.8')).toBeInTheDocument()
+    expect(within(rail).getByText(/12 تقييماً/)).toBeInTheDocument() // Arabic plural form, not the English fallback
   })
 })

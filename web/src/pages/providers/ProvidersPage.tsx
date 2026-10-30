@@ -20,6 +20,8 @@ import {
 } from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
+import { FilterDisclosure } from '../FilterDisclosure'
+import dir from '../directory.module.css'
 import styles from './ProvidersPage.module.css'
 
 const PAGE_SIZE = 12
@@ -67,12 +69,15 @@ export function ProvidersPage() {
   return (
     <Container width="xl">
       <PageStack>
-        <section className={styles.hero} aria-labelledby="providers-title">
-          <h1 id="providers-title">{t('providers.title')}</h1>
-          <p>{t('providers.intro')}</p>
-        </section>
+        <header className={dir.header}>
+          <div>
+            <h1 id="providers-title">{t('providers.title')}</h1>
+            <p>{t('providers.intro')}</p>
+          </div>
+        </header>
 
-        <section className="card-block" aria-labelledby="filters-title">
+        <div className={dir.layout}>
+        <section className={dir.filterPanel} aria-labelledby="filters-title">
           <h2 id="filters-title" className="visually-hidden">
             {t('providers.filters')}
           </h2>
@@ -90,7 +95,7 @@ export function ProvidersPage() {
           </AsyncPage>
         </section>
 
-        <section aria-labelledby="results-title">
+        <section className={dir.main} aria-labelledby="results-title">
           <h2 id="results-title" className="visually-hidden">
             {t('providers.results_other', { count: 0 })}
           </h2>
@@ -156,6 +161,7 @@ export function ProvidersPage() {
             )}
           </AsyncPage>
         </section>
+        </div>
       </PageStack>
     </Container>
   )
@@ -201,7 +207,7 @@ function FilterBar({
           {t('common.search')}
         </Button>
       </div>
-      <div className={styles.filters}>
+      <FilterDisclosure label={t('providers.filters')} className={styles.filters}>
         <Select label={t('providers.type')} value={filters.type} onChange={(e) => onChange({ type: e.target.value as ProviderType | '' })}>
           <option value="">{t('common.all')}</option>
           {PROVIDER_TYPES.map((code) => (
@@ -247,7 +253,7 @@ function FilterBar({
         >
           {t('common.clear')}
         </Button>
-      </div>
+      </FilterDisclosure>
     </form>
   )
 }

@@ -94,7 +94,7 @@
   "home": {
     "heroEyebrow": "Iraq's medical platform",
     "heroTitle": "Your healthcare in one place",
-    "heroBody": "All your health services here: doctors, hospitals, medical jobs, properties and products from verified companies.",
+    "heroBody": "Doctors, hospitals, medical jobs, companies, products and medical real estate — all on one platform.",
     "heroPrimary": "Browse providers",
     "heroSecondary": "Create your account",
     "heroProvider": "My provider profile",
@@ -216,7 +216,33 @@
     "categoriesChipsTitle": "Medical product categories",
     "categoriesChipsBody": "Verified companies list their products in these categories for providers.",
     "joinCompany": "Join as a company",
-    "priceOnRequest": "Price on request"
+    "priceOnRequest": "Price on request",
+    "heroStart": "Get started",
+    "feat": {
+      "doctorsTitle": "Doctors",
+      "doctorsBody": "Find the right doctor by specialty and location",
+      "doctorsCta": "Search now",
+      "facilitiesTitle": "Hospitals & centers",
+      "facilitiesBody": "Services and details of verified hospitals and health centers",
+      "facilitiesCta": "Explore",
+      "jobsTitle": "Jobs",
+      "jobsBody": "Healthcare jobs from verified organisations",
+      "jobsCta": "Browse jobs",
+      "estateTitle": "Medical real estate",
+      "estateBody": "Clinics and centers ready to rent or buy",
+      "estateCta": "View properties",
+      "productsTitle": "Medical products",
+      "productsBody": "Medical supplies and equipment from approved suppliers",
+      "productsCta": "Browse products",
+      "companiesTitle": "Companies",
+      "companiesBody": "Pharmaceutical, device and medical-supply companies",
+      "companiesCta": "View companies",
+      "companiesWorkspaceCta": "My company workspace"
+    },
+    "popularTitle": "Popular services",
+    "popularMore": "More",
+    "carouselPrev": "Previous",
+    "carouselNext": "Next"
   },
   "fields": {
     "email": "Email address",
@@ -758,7 +784,8 @@
       "shift_type": "Shift",
       "salary_available": "Salary shown"
     },
-    "emptyPage": "No jobs on this page."
+    "emptyPage": "No jobs on this page.",
+    "moreFilters": "More filters"
   },
   "jobDetail": {
     "employer": "Employer",

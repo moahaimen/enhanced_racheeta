@@ -200,7 +200,48 @@ utilities). Everything else is a **CSS Module** next to its component or
 page (`*.module.css`). The former single global stylesheet was removed. No UI
 framework is used; the system is owned by the repository.
 
-## Public homepage language (Phase 12B redesign, ADR-064)
+## Approved web UI (owner-approved direction, October 2026, ADR-065)
+
+The owner approved one visual direction for the whole web app. It is implemented through the tokens
+(`design-system/styles/tokens.css`, mirrored and tested in `tokens/colors.ts`), not page-level colours.
+
+| Role | Colour | Token |
+| --- | --- | --- |
+| Global page background (every page) | `#E9EEF2` | `--surface-page` (`neutral-100`) |
+| Primary teal: featured cards, buttons, active pills, links, icons | `#148283` | `--color-primary-700` (`600` too) |
+| Content surfaces: cards, header, footer, forms | `#FFFFFF` | `--surface-primary` |
+| Soft teal icon backgrounds, selected rows | `#E0F1F0` | `--color-primary-50` |
+| Text on white / on teal | `#363433` / `#FFFFFF` | `--text-primary` / `--text-on-brand` |
+| Functional colours (unchanged meaning) | error red, warning amber, alert coral (unread badges) | `--color-error`, `--color-warning`, `--color-coral-500` |
+
+The other accent families are folded into the palette: `aqua`, `mint`, `blue` are teal tints,
+`indigo` is the white/grey family. Font: Cairo (self-hosted), Arabic-first RTL, English LTR.
+
+**Homepage** (`pages/HomePage.tsx`, `pages/home/*`): white hero band — headline «رعايتك الصحية في
+مكان واحد», tagline «ابحث · احجز · تواصل», text, the working search (area tabs, text, governorate,
+teal search button) and a framed photograph; then **six principal cards in a 3 × 2 grid alternating
+teal and white** (doctors, hospitals & centers, jobs / medical real estate, medical products,
+companies). Teal cards: white text, translucent icon chip, white pill button. White cards: teal
+heading, soft-teal icon chip, teal outline pill. Then the featured-doctors rail (best-rated verified
+practitioners from the API, previous/next buttons, "view profile" pill), popular services (real
+specialties from `GET /specialties`, project-drawn icons, "more"), and the existing API sections
+(numbers, facilities, latest jobs + hiring band, properties, product categories, provider call to
+action). Products/companies cards follow the B2B rule: providers → `/marketplace`, companies →
+`/company`, anonymous → `/marketplace` through login, patients/sellers → the public product
+categories on the same page (never a dead end).
+
+**Header**: white, compact, heart-pulse mark in teal with the bilingual wordmark (Racheeta /
+رشيتة), five public links (teal active pill), language switch, login + teal "create account";
+signed-in accounts keep the Workspace menu and inbox icons.
+
+**Inner pages** keep their structure: white cards over `#E9EEF2`, teal headings/buttons/active tabs.
+Directories (providers, jobs) use a compact title bar, a white filter sidebar and a results grid;
+provider cards end with a filled teal "view profile" pill (+ an outline "book" pill for
+practitioners). Signed-in workspace pages (dashboard, profile, provider, company, employer, messages,
+notifications, reservations, seller, résumé) show a persistent white sidebar whose active entry uses
+the soft-teal background.
+
+## Public homepage language (Phase 12B redesign, ADR-064) — superseded visually by the section above
 
 Goal: a mature, content-rich healthcare ecosystem — not a doctor-booking page. Everything below is
 presentation only; the page consumes the existing public APIs.

@@ -1,34 +1,50 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 
 import { useAuth } from '../auth/useAuth'
-import {
-  Badge,
-  CategoryTile,
-  Container,
-  Icon,
-  LinkButton,
-  Reveal,
-  ServiceTile,
-  type Accent,
-  type IconName,
-} from '../design-system'
+import { Badge, Container, Icon, LinkButton, Reveal, type IconName } from '../design-system'
 import { HeroVisual } from './home/HeroVisual'
 import { useTalentTarget } from './home/talentTarget'
-import { ServiceImage } from './home/ServiceImage'
 import { HeroSearch } from './home/HeroSearch'
 import {
   Facilities,
-  FeaturedDoctors,
+  FeaturedDoctorsRow,
   LatestJobs,
   LatestProperties,
   PlatformStats,
+  PopularServices,
   ProductCategoriesBand,
   ProductsForProviders,
-  SpecialtyChips,
 } from './home/HomeSections'
 import styles from './home/Home.module.css'
 
 type Target = { to: string; state?: { from: string } }
+
+type Feature = { key: string; icon: IconName; to: string; tone: 'teal' | 'white'; title: string; body: string; cta: string }
+
+/** One of the six principal destinations: a teal or a white card, icon chip, title, text, pill. */
+function FeatureCard({ feature }: { feature: Feature }) {
+  return (
+    <article className={styles.feature} data-tone={feature.tone}>
+      <span className={styles.featureIcon} aria-hidden="true">
+        <Icon name={feature.icon} size={28} />
+      </span>
+      <h3 className={styles.featureTitle}>{feature.title}</h3>
+      <p className={styles.featureBody}>{feature.body}</p>
+      {feature.to.startsWith('#') ? (
+        <a href={feature.to} className={styles.featurePill} aria-label={`${feature.cta} — ${feature.title}`}>
+          {feature.cta}
+          <Icon name="arrowForward" size={16} flipInRtl />
+        </a>
+      ) : (
+        <Link to={feature.to} className={styles.featurePill} aria-label={`${feature.cta} — ${feature.title}`}>
+          {feature.cta}
+          <Icon name="arrowForward" size={16} flipInRtl />
+        </Link>
+      )}
+    </article>
+  )
+}
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -41,138 +57,82 @@ export function HomePage() {
   const isOtherRole = status === 'authenticated' && !isProvider
 
   // The medical marketplace is B2B: providers browse it, companies manage it. Anonymous visitors
-  // are sent through login by the route guard; patients and sellers are not offered a dead end.
+  // are sent through login by the route guard. Patients and sellers are not offered a dead end:
+  // their products/companies cards open the public product categories further down this page.
   const supplierTarget: Target | null = isCompany ? { to: '/company' } : isProvider || isAnonymous ? { to: '/marketplace' } : null
+  const catalogueTo = supplierTarget?.to ?? '#product-categories'
   const estateTarget: Target = status === 'authenticated' && account?.role === 'REAL_ESTATE_SELLER' ? { to: '/real-estate/owner' } : { to: '/real-estate' }
   const talentTarget = useTalentTarget()
 
-  const tiles: { to: string; icon: IconName; label: string; accent: Accent }[] = [
-    { to: '/providers?kind=PRACTITIONER', icon: 'stethoscope', label: t('home.catDoctors'), accent: 'teal' },
-    { to: '/providers?kind=FACILITY', icon: 'hospital', label: t('home.catFacilities'), accent: 'blue' },
-    { to: '/jobs', icon: 'briefcase', label: t('home.catJobs'), accent: 'indigo' },
-    { to: estateTarget.to, icon: 'building', label: t('home.catEstate'), accent: 'coral' },
+  // Approved layout: 3 × 2, alternating teal and white (reading order follows the page direction).
+  const features: Feature[] = [
+    { key: 'doctors', icon: 'doctor', to: '/providers?kind=PRACTITIONER', tone: 'teal', title: t('home.feat.doctorsTitle'), body: t('home.feat.doctorsBody'), cta: t('home.feat.doctorsCta') },
+    { key: 'facilities', icon: 'hospital', to: '/providers?kind=FACILITY', tone: 'white', title: t('home.feat.facilitiesTitle'), body: t('home.feat.facilitiesBody'), cta: t('home.feat.facilitiesCta') },
+    { key: 'jobs', icon: 'briefcase', to: '/jobs', tone: 'teal', title: t('home.feat.jobsTitle'), body: t('home.feat.jobsBody'), cta: t('home.feat.jobsCta') },
+    { key: 'estate', icon: 'building', to: estateTarget.to, tone: 'white', title: t('home.feat.estateTitle'), body: t('home.feat.estateBody'), cta: t('home.feat.estateCta') },
+    { key: 'products', icon: 'box', to: catalogueTo, tone: 'teal', title: t('home.feat.productsTitle'), body: t('home.feat.productsBody'), cta: t('home.feat.productsCta') },
+    { key: 'companies', icon: 'pill', to: catalogueTo, tone: 'white', title: t('home.feat.companiesTitle'), body: t('home.feat.companiesBody'), cta: isCompany ? t('home.feat.companiesWorkspaceCta') : t('home.feat.companiesCta') },
   ]
-  if (supplierTarget) tiles.push({ to: supplierTarget.to, icon: 'cart', label: t('home.catSuppliers'), accent: 'mint' })
 
   return (
     <>
       <section className={styles.hero} aria-labelledby="hero-title">
-        <span className={`${styles.orb} ${styles.orbA}`} aria-hidden="true" />
-        <span className={`${styles.orb} ${styles.orbB}`} aria-hidden="true" />
         <Container width="xl">
           <div className={styles.heroInner}>
             <div className={styles.heroText}>
-              <span className={styles.eyebrow}>
-                <Icon name="sparkle" size={16} />
-                {t('home.heroEyebrow')}
-              </span>
               <h1 id="hero-title" className={styles.title}>
                 <span>{t('home.heroTitleLead')}</span> <span className={styles.titleAccent}>{t('home.heroTitleAccent')}</span>
               </h1>
               <p className={styles.tagline}>{t('home.heroTagline')}</p>
               <p className={styles.body}>{t('home.heroBody')}</p>
+              <section className={styles.searchCard} aria-labelledby="search-title">
+                <h2 id="search-title" className="visually-hidden">
+                  {t('home.searchTitle')}
+                </h2>
+                <HeroSearch />
+              </section>
               {isAnonymous || isProvider ? (
                 <div className={styles.ctas}>
                   {isAnonymous ? (
-                    <LinkButton to="/register" size="lg" trailing={<Icon name="arrowForward" size={18} flipInRtl />}>
-                      {t('home.heroSecondary')}
+                    <LinkButton to="/register" trailing={<Icon name="arrowForward" size={16} flipInRtl />}>
+                      {t('home.heroStart')}
                     </LinkButton>
                   ) : (
-                    <LinkButton to="/provider/profile" size="lg" trailing={<Icon name="arrowForward" size={18} flipInRtl />}>
+                    <LinkButton to="/provider/profile" trailing={<Icon name="arrowForward" size={16} flipInRtl />}>
                       {t('home.heroProvider')}
                     </LinkButton>
                   )}
                 </div>
               ) : null}
-              <ul className={styles.trust}>
-                <li>
-                  <Icon name="checkCircle" size={18} />
-                  {t('home.heroTrust1')}
-                </li>
-                <li>
-                  <Icon name="checkCircle" size={18} />
-                  {t('home.heroTrust2')}
-                </li>
-                <li>
-                  <Icon name="checkCircle" size={18} />
-                  {t('home.heroTrust3')}
-                </li>
-              </ul>
             </div>
             <HeroVisual chip={t('home.heroChip')} />
           </div>
         </Container>
       </section>
 
-      <Container width="xl" className={styles.searchWrap}>
-        <section className={styles.searchCard} aria-labelledby="search-title">
-          <h2 id="search-title" className="visually-hidden">
-            {t('home.searchTitle')}
-          </h2>
-          <HeroSearch />
-          <nav className={styles.tiles} aria-label={t('home.categoriesTitle')}>
-            {tiles.map((tile) => (
-              <CategoryTile key={tile.label} {...tile} />
-            ))}
-          </nav>
-        </section>
+      <Container width="xl" className={styles.featuresWrap}>
+        <nav className={styles.features} aria-label={t('home.categoriesTitle')}>
+          {features.map((feature, index) => (
+            <Reveal key={feature.key} index={index}>
+              <FeatureCard feature={feature} />
+            </Reveal>
+          ))}
+        </nav>
+      </Container>
+
+      <Container width="xl" className={styles.blockWrap}>
+        <FeaturedDoctorsRow />
+        <PopularServices />
       </Container>
 
       <Container width="xl" className={styles.statsWrap}>
         <PlatformStats />
       </Container>
 
-      <Container width="xl" as="section" className={styles.blockWrap} aria-labelledby="services-title">
-        <Reveal className={styles.sectionHead}>
-          <h2 id="services-title">{t('home.servicesTitle')}</h2>
-          <p>{t('home.servicesBody')}</p>
-        </Reveal>
-        <div className={styles.services}>
-          <Reveal index={0}>
-            <ServiceTile to="/providers?kind=PRACTITIONER" art={<ServiceImage name="doctors" />} title={t('home.svc.doctorsTitle')} description={t('home.svc.doctorsBody')} accent="teal" />
-          </Reveal>
-          <Reveal index={1}>
-            <ServiceTile to="/providers?kind=FACILITY" art={<ServiceImage name="facilities" />} title={t('home.svc.facilitiesTitle')} description={t('home.svc.facilitiesBody')} accent="blue" />
-          </Reveal>
-          <Reveal index={2}>
-            {supplierTarget ? (
-              <ServiceTile
-                to={supplierTarget.to}
-                art={<ServiceImage name="products" />}
-                title={isCompany ? t('home.svc.companyTitle') : t('home.svc.productsTitle')}
-                description={isCompany ? t('home.svc.companyBody') : t('home.svc.productsBody')}
-                accent="aqua"
-              />
-            ) : (
-              <ServiceTile to="/dashboard" art={<ServiceImage name="products" />} title={t('home.svc.dashboardTitle')} description={t('home.svc.dashboardBody')} accent="aqua" />
-            )}
-          </Reveal>
-          <Reveal index={3}>
-            <ServiceTile to="/jobs" art={<ServiceImage name="jobs" />} title={t('home.svc.jobsTitle')} description={t('home.svc.jobsBody')} accent="indigo" />
-          </Reveal>
-          <Reveal index={4}>
-            <ServiceTile
-              to={estateTarget.to}
-              art={<ServiceImage name="estate" />}
-              title={estateTarget.to === '/real-estate' ? t('home.svc.estateTitle') : t('nav.realEstateWorkspace')}
-              description={t('home.svc.estateBody')}
-              accent="coral"
-            />
-          </Reveal>
-          <Reveal index={5}>
-            <ServiceTile to={talentTarget.to} state={talentTarget.state} art={<ServiceImage name="hire" />} title={t('home.svc.hireTitle')} description={t('home.svc.hireBody')} accent="mint" />
-          </Reveal>
-        </div>
-      </Container>
-
-      <Container width="xl" className={styles.blockWrap}>
-        <FeaturedDoctors />
-      </Container>
 
       <div className={styles.tinted}>
         <Container width="xl" className={styles.blockWrap}>
           <Facilities />
-          <SpecialtyChips />
         </Container>
       </div>
 
@@ -210,53 +170,9 @@ export function HomePage() {
         </Container>
       </div>
 
-      <Container width="xl" className={styles.blockWrap} as="section" aria-labelledby="eco-title">
-        <Reveal className={styles.sectionHead}>
-          <h2 id="eco-title">{t('home.ecoTitle')}</h2>
-          <p>{t('home.ecoBody')}</p>
-        </Reveal>
-        <div className={styles.eco}>
-          {(
-            [
-              { icon: 'pill', accent: 'teal', title: t('home.eco.pharmaTitle'), body: t('home.eco.pharmaBody'), to: supplierTarget?.to ?? '/register' },
-              { icon: 'flask', accent: 'mint', title: t('home.eco.equipTitle'), body: t('home.eco.equipBody'), to: supplierTarget?.to ?? '/register' },
-              { icon: 'users', accent: 'indigo', title: t('home.eco.employersTitle'), body: t('home.eco.employersBody'), to: '/jobs' },
-              { icon: 'hospital', accent: 'blue', title: t('home.eco.facilitiesTitle'), body: t('home.eco.facilitiesBody'), to: '/providers?kind=FACILITY' },
-            ] as { icon: IconName; accent: Accent; title: string; body: string; to: string }[]
-          ).map((item, index) => (
-            <Reveal key={item.title} index={index}>
-              <CategoryTile to={item.to} icon={item.icon} label={item.title} accent={item.accent} />
-              <p className={styles.ecoBody}>{item.body}</p>
-            </Reveal>
-          ))}
-        </div>
+      <Container width="xl" className={styles.blockWrap}>
         {isProvider ? <ProductsForProviders /> : <ProductCategoriesBand />}
       </Container>
-
-      <section className={styles.why} aria-labelledby="why-title">
-        <Container width="xl">
-          <Reveal className={`${styles.sectionHead} ${styles.onDark}`}>
-            <h2 id="why-title">{t('home.whyTitle')}</h2>
-          </Reveal>
-          <div className={styles.whyGrid}>
-            {(
-              [
-                { icon: 'shieldCheck', title: t('home.why.verifiedTitle'), body: t('home.why.verifiedBody') },
-                { icon: 'user', title: t('home.why.accountTitle'), body: t('home.why.accountBody') },
-                { icon: 'globe', title: t('home.why.arabicTitle'), body: t('home.why.arabicBody') },
-              ] as { icon: IconName; title: string; body: string }[]
-            ).map((item, index) => (
-              <Reveal key={item.title} index={index} className={styles.whyCard}>
-                <span className={styles.whyIcon} aria-hidden="true">
-                  <Icon name={item.icon} size={22} />
-                </span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
 
       <Container width="xl" className={styles.blockWrap}>
         <div className={styles.cta} data-testid="provider-cta">

@@ -94,7 +94,7 @@
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
     "heroTitle": "رعايتك الصحية في مكان واحد",
-    "heroBody": "كل خدماتك الصحية هنا: أطباء ومستشفيات ووظائف طبية وعقارات ومنتجات من الشركات الموثّقة.",
+    "heroBody": "الأطباء، المستشفيات، الوظائف الطبية، الشركات، المنتجات والعقارات الطبية... كلها في منصة واحدة.",
     "heroPrimary": "تصفّح مقدّمي الخدمات",
     "heroSecondary": "أنشئ حسابك",
     "heroProvider": "ملفي المهني",
@@ -216,7 +216,33 @@
     "categoriesChipsTitle": "فئات المنتجات الطبية",
     "categoriesChipsBody": "تعرض الشركات الموثّقة منتجاتها ضمن هذه الفئات لمقدّمي الخدمات.",
     "joinCompany": "انضم كشركة",
-    "priceOnRequest": "السعر عند الطلب"
+    "priceOnRequest": "السعر عند الطلب",
+    "heroStart": "ابدأ الآن",
+    "feat": {
+      "doctorsTitle": "الأطباء",
+      "doctorsBody": "ابحث عن أفضل الأطباء حسب التخصص والموقع",
+      "doctorsCta": "ابحث الآن",
+      "facilitiesTitle": "المستشفيات والمراكز",
+      "facilitiesBody": "معلومات وخدمات المستشفيات والمراكز الصحية الموثّقة",
+      "facilitiesCta": "استكشف",
+      "jobsTitle": "الوظائف",
+      "jobsBody": "فرص عمل في القطاع الصحي من مؤسسات موثّقة",
+      "jobsCta": "تصفّح الوظائف",
+      "estateTitle": "العقارات الطبية",
+      "estateBody": "عيادات ومراكز جاهزة للإيجار أو للبيع",
+      "estateCta": "عرض العقارات",
+      "productsTitle": "المنتجات الطبية",
+      "productsBody": "مستلزمات ومعدات طبية من موردين معتمدين",
+      "productsCta": "تصفّح المنتجات",
+      "companiesTitle": "الشركات",
+      "companiesBody": "شركات الأدوية والأجهزة والمستلزمات الطبية",
+      "companiesCta": "عرض الشركات",
+      "companiesWorkspaceCta": "مساحة شركتي"
+    },
+    "popularTitle": "خدمات شائعة",
+    "popularMore": "المزيد",
+    "carouselPrev": "السابق",
+    "carouselNext": "التالي"
   },
   "fields": {
     "email": "البريد الإلكتروني",
@@ -782,7 +808,8 @@
       "shift_type": "الوردية",
       "salary_available": "الراتب معلن"
     },
-    "emptyPage": "لا توجد وظائف في هذه الصفحة."
+    "emptyPage": "لا توجد وظائف في هذه الصفحة.",
+    "moreFilters": "مزيد من عوامل التصفية"
   },
   "jobDetail": {
     "employer": "جهة التوظيف",
@@ -1164,7 +1191,7 @@
     "empty": "لا توجد لديك حجوزات بعد.",
     "emptyPage": "لا توجد حجوزات في هذه الصفحة.",
     "count_one": "حجز واحد",
-    "count_other": "{{count}} حجوزات",
+    "count_other": "{{count}} حجز",
     "bookTitle": "احجز موعداً",
     "bookIntro": "اختر موعداً متاحاً. لا توجد رسوم اشتراك على الحجز.",
     "noAvailability": "لا توجد مواعيد متاحة حالياً.",
@@ -1174,7 +1201,11 @@
     "booking": "جارٍ الحجز…",
     "booked": "تم إنشاء الحجز بنجاح. يمكنك متابعته من صفحة حجوزاتي.",
     "cancel": "إلغاء الحجز",
-    "cancelling": "جارٍ الإلغاء…"
+    "cancelling": "جارٍ الإلغاء…",
+    "count_zero": "لا توجد حجوزات",
+    "count_two": "حجزان",
+    "count_few": "{{count}} حجوزات",
+    "count_many": "{{count}} حجزاً"
   },
   "providerReservations": {
     "title": "المواعيد والحجوزات",
@@ -1206,7 +1237,11 @@
     "submitted": "تم إرسال تقييمك.",
     "alreadyReviewed": "تم تقييم هذا الموعد.",
     "count_one": "تقييم واحد",
-    "count_other": "{{count}} تقييمات"
+    "count_other": "{{count}} تقييم",
+    "count_zero": "لا توجد تقييمات",
+    "count_two": "تقييمان",
+    "count_few": "{{count}} تقييمات",
+    "count_many": "{{count}} تقييماً"
   },
   "offers": {
     "manageTitle": "إدارة العروض",

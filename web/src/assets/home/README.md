@@ -7,7 +7,6 @@ art; approved direction `04_final_merged_direction.png`). See `docs/PROVENANCE.m
 | --- | --- | --- |
 | `hero-doctor.webp` | Practitioner cut-out for the hero (560 px wide, transparent background) | ≈ 24 kB |
 | `hero-doctor-sm.webp` | Same, 360 px wide, served under 768 px | ≈ 14 kB |
-| `svc-doctors|facilities|products|jobs|estate|hire.webp` | Service-card pictures, 520 × 156 px | 5–13 kB each |
 
 Derivation: crop of the approved reference at its native resolution → for the hero, OpenCV GrabCut
 foreground extraction with a hand-tuned rectangle/mask → Lanczos upscale (Pillow) → WebP export

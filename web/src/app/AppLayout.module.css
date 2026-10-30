@@ -12,3 +12,25 @@
 .mainFlush {
   padding-block: 0 var(--space-12);
 }
+
+/* Signed-in workspace: persistent light sidebar + content. */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  max-inline-size: calc(80rem + 2 * var(--space-gutter));
+  margin-inline: auto;
+  padding-inline: var(--space-gutter);
+}
+@media (min-width: 1000px) {
+  .workspace {
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.workspaceMain {
+  min-inline-size: 0;
+}
+.workspaceMain > * {
+  padding-inline: 0 !important;
+}

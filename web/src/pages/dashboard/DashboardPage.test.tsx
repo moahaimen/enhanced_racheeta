@@ -427,10 +427,14 @@ describe('Dashboard navigation and language', () => {
     signIn('PATIENT', ['patient'])
     vi.mocked(dashboardsApi.getPatient).mockResolvedValue(patientData())
     const signedIn = renderApp('/profile')
-    const link = await screen.findByRole('link', { name: 'Dashboard' })
+    // header (workspace menu) once; the mobile panel adds a second one when opened. Signed-in
+    // workspace pages also show the persistent sidebar entry, outside the header.
+    const header = await screen.findByRole('banner')
+    const link = await within(header).findByRole('link', { name: 'Dashboard' })
     expect(link).toHaveAttribute('href', '/dashboard')
     await userEvent.click(screen.getByRole('button', { name: /open menu/i }))
-    expect(screen.getAllByRole('link', { name: 'Dashboard' })).toHaveLength(2)
+    expect(within(header).getAllByRole('link', { name: 'Dashboard' })).toHaveLength(2)
+    expect(within(screen.getByRole('complementary', { name: /workspace/i })).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard')
     signedIn.unmount()
 
     tokenStore.clear()

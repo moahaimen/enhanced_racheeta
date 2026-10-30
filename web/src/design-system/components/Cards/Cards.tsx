@@ -38,29 +38,33 @@ export function FeaturedProviderCard({ provider }: { provider: ProviderCardData 
         </Link>
       </h3>
       <p className={styles.providerRole}>{specialty ? name(specialty) : t(`providerTypes.${provider.provider_type}`)}</p>
+      <p className={styles.ratingEmpty}>
+        <Icon name="shieldCheck" size={14} /> {t('verification.VERIFIED')}
+      </p>
       {rated ? (
         <p className={styles.rating} aria-label={t('reviews.count', { count: provider.review_count })}>
           <span aria-hidden="true">★</span> {provider.average_rating!.toFixed(1)}
           <span className={styles.ratingCount}>({provider.review_count})</span>
         </p>
-      ) : (
-        <p className={styles.ratingEmpty}>
-          <Icon name="shieldCheck" size={14} /> {t('verification.VERIFIED')}
-        </p>
-      )}
+      ) : null}
       <p className={styles.place}>
         <Icon name="mapPin" size={14} />
         {name(provider.governorate)}
       </p>
-      <span className={styles.bookCta} aria-hidden="true">
-        <Icon name="calendar" size={16} />
-        {t('home.bookNow')}
+      <span className={styles.ctaRow} aria-hidden="true">
+        <span className={styles.profileCta}>{t('providers.viewProfile')}</span>
+        {practitioner ? (
+          <span className={styles.bookCta}>
+            <Icon name="calendar" size={14} />
+            {t('home.bookNow')}
+          </span>
+        ) : null}
       </span>
     </article>
   )
 }
 
-/** Property card: coral art header (type icon), badges, location, area and price (pre-formatted by the caller). */
+/** Property card: soft-teal art header (type icon), badges, location, area and price (pre-formatted by the caller). */
 export function PropertyCard({
   to,
   title,
@@ -68,7 +72,7 @@ export function PropertyCard({
   location,
   area,
   price,
-  accent = 'coral',
+  accent = 'teal',
 }: {
   to: string
   title: string

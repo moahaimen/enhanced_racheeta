@@ -11,6 +11,7 @@ export { Button, IconButton, LinkButton, type ButtonProps } from './components/B
 export { buttonClassName, type ButtonVariant } from './components/Button/buttonClassName'
 export { ProviderCard, ProviderCardSkeleton } from './components/ProviderCard/ProviderCard'
 export { PROVIDER_TYPE_ICON } from './components/ProviderCard/providerTypeIcon'
+export { WorkspaceSidebar, isWorkspacePath } from './layouts/WorkspaceSidebar'
 export { SiteHeader } from './layouts/SiteHeader'
 export { SiteFooter } from './layouts/SiteFooter'
 export { Badge, type BadgeTone } from './components/Badge/Badge'

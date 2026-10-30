@@ -1,4 +1,4 @@
-/* Accent families: one coherent palette, five tints (teal, blue, indigo, coral, mint) + aqua. */
+/* Accent families mapped onto the approved palette (teal tints, white/grey, functional coral). */
 [data-accent='teal'] {
   --accent-bg: var(--color-primary-50);
   --accent-fg: var(--color-primary-700);
@@ -24,6 +24,16 @@
   --accent-fg: var(--color-coral-700);
   --accent-soft: var(--color-coral-100);
 }
+[data-accent='beige'] {
+  --accent-bg: var(--color-neutral-50);
+  --accent-fg: var(--color-primary-800);
+  --accent-soft: var(--color-neutral-100);
+}
+[data-accent='sage'] {
+  --accent-bg: var(--color-primary-100);
+  --accent-fg: var(--color-primary-800);
+  --accent-soft: var(--color-primary-200);
+}
 [data-accent='mint'] {
   --accent-bg: var(--color-mint-50);
   --accent-fg: var(--color-mint-700);
@@ -35,13 +45,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  min-block-size: 6.5rem;
-  padding: var(--space-4) var(--space-3);
+  gap: var(--space-2);
+  min-block-size: 5.25rem;
+  padding: var(--space-3) var(--space-2);
   border: var(--border-width) solid transparent;
   border-radius: var(--radius-card);
   background: var(--accent-bg);
-  color: var(--text-primary);
+  color: var(--accent-text, var(--text-primary));
   text-decoration: none;
   transition:
     transform var(--duration-base) var(--ease-standard),
@@ -105,7 +115,7 @@
 
 .serviceArt {
   display: block;
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 16 / 6;
   overflow: hidden;
   background: var(--accent-bg);
 }
