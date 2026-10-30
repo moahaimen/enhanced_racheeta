@@ -1,0 +1,89 @@
+/* Shared "directory" layout (providers, jobs): compact title bar + filter sidebar + results. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-neutral-200);
+}
+.header h1 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-extrabold);
+}
+.header p {
+  margin-block-start: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  max-inline-size: 44rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+}
+
+.filterPanel {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-neutral-200);
+  border-radius: var(--radius-card);
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+@media (min-width: 960px) {
+  .filterPanel {
+    position: sticky;
+    inset-block-start: 4.5rem;
+  }
+}
+
+.main {
+  min-inline-size: 0;
+}
+
+/* Narrow screens: filter fields behind a disclosure (FilterDisclosure.tsx) */
+.disclosure {
+  border-block-start: var(--border-width) solid var(--border-subtle);
+  padding-block-start: var(--space-2);
+}
+.disclosure summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  color: var(--color-primary-700);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  list-style: none;
+}
+.disclosure summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure summary:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.disclosureChevron {
+  margin-inline-start: auto;
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+.disclosure[open] .disclosureChevron {
+  transform: rotate(180deg);
+}
+.disclosure[open] summary {
+  margin-block-end: var(--space-3);
+}
