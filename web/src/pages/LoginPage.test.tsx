@@ -54,7 +54,7 @@ describe('LoginPage', () => {
     })
 
     pending.resolve({ access: 'a', refresh: 'r' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
   })
 
   it('submits with the Enter key', async () => {
@@ -64,7 +64,7 @@ describe('LoginPage', () => {
     const { email, password } = fields()
     await userEvent.type(email, 'person@example.com')
     await userEvent.type(password, 'Str0ng-Passw0rd!{Enter}')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
     expect(authApi.login).toHaveBeenCalledTimes(1)
   })
 

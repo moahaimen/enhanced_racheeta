@@ -22,6 +22,12 @@ const WORKSPACE_PREFIXES = [
   '/real-estate/owner',
   '/jobs/profile',
   '/jobs/my-applications',
+  '/workspaces',
+  '/workspace/',
+  '/orders',
+  '/quotes',
+  '/merchant',
+  '/settings',
 ]
 
 export function isWorkspacePath(pathname: string): boolean {
@@ -34,24 +40,35 @@ export function WorkspaceSidebar() {
   const { account } = useAuth()
   if (!account) return null
   const role = account.role
-  const items: Item[] = [{ to: '/dashboard', icon: 'chart', label: t('nav.dashboard') }]
+  const items: Item[] = [
+    { to: '/dashboard', icon: 'chart', label: t('nav.dashboard') },
+    { to: '/workspaces', icon: 'building', label: t('nav.workspaces') },
+  ]
   if (role === 'PATIENT') items.push({ to: '/reservations', icon: 'calendar', label: t('nav.myReservations') })
+  if (role === 'PATIENT' || role === 'PROVIDER') items.push({ to: '/orders', icon: 'box', label: t('nav.myOrders') })
   if (role === 'PROVIDER') {
     items.push(
       { to: '/provider/profile', icon: 'briefcase', label: t('nav.providerProfile') },
       { to: '/provider/reservations', icon: 'calendar', label: t('nav.providerReservations') },
       { to: '/provider/offers', icon: 'tag', label: t('nav.providerOffers') },
       { to: '/marketplace', icon: 'cart', label: t('nav.marketplace') },
+      { to: '/quotes', icon: 'tag', label: t('nav.quotes') },
     )
   }
   if (role === 'REAL_ESTATE_SELLER') items.push({ to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace') })
   if (role === 'MEDICAL_COMPANY') {
-    items.push({ to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true }, { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') })
+    items.push(
+      { to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true },
+      { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') },
+      { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
+      { to: '/merchant/quotes', icon: 'mail', label: t('nav.merchantQuotes') },
+    )
   }
   items.push({ to: '/employer', icon: 'hospital', label: t('nav.employer') })
   items.push({ to: '/jobs/profile', icon: 'user', label: t('nav.seekerProfile') }, { to: '/jobs/my-applications', icon: 'briefcase', label: t('nav.myApplications') })
   items.push({ to: '/messages', icon: 'mail', label: t('nav.messages') }, { to: '/notifications', icon: 'bell', label: t('nav.notifications') })
   if (account.is_staff) items.push({ to: '/admin-console', icon: 'shieldCheck', label: t('nav.adminConsole') })
+  items.push({ to: '/settings/preferences', icon: 'bell', label: t('nav.preferences') })
   items.push({ to: '/profile', icon: 'user', label: t('nav.profile') })
 
   return (

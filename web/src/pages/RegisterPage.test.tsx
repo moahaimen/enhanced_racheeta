@@ -28,7 +28,26 @@ describe('RegisterPage', () => {
     renderApp('/register')
     const select = screen.getByLabelText(/نوع الحساب|account type/i)
     const options = within(select).getAllByRole('option').map((o) => (o as HTMLOptionElement).value)
-    expect(options).toEqual(['PATIENT', 'PROVIDER', 'MEDICAL_COMPANY', 'REAL_ESTATE_SELLER'])
+    expect(options).not.toContain('ADMIN')
+    expect(options).toEqual([
+      'PATIENT',
+      'DOCTOR',
+      'NURSE',
+      'THERAPIST',
+      'HOSPITAL',
+      'MEDICAL_CENTER',
+      'PHARMACY',
+      'LABORATORY',
+      'BEAUTY_CENTER',
+      'PHARMACEUTICAL_COMPANY',
+      'SCIENTIFIC_OFFICE',
+      'MEDICAL_SUPPLIES_OFFICE',
+      'EQUIPMENT_SUPPLIER',
+      'ASSISTIVE_DEVICE_STORE',
+      'PHARMA_DISTRIBUTOR',
+      'PROPERTY_OWNER',
+      'PROPERTY_AGENT',
+    ])
   })
 
   it('shows the password rules', () => {
@@ -51,7 +70,7 @@ describe('RegisterPage', () => {
     vi.mocked(authApi.register).mockReturnValue(pending.promise)
     const { router } = renderApp('/register')
     await fillValid()
-    await userEvent.selectOptions(screen.getByLabelText(/نوع الحساب|account type/i), 'PROVIDER')
+    await userEvent.selectOptions(screen.getByLabelText(/نوع الحساب|account type/i), 'DOCTOR')
     const submit = submitButton()
     await userEvent.click(submit)
 
@@ -65,12 +84,13 @@ describe('RegisterPage', () => {
       email: 'new@example.com',
       password: 'Str0ng-Passw0rd!',
       role: 'PROVIDER',
+      account_type: 'DOCTOR',
       preferred_language: 'ar',
     })
     expect(Object.keys(payload)).not.toContain('is_staff')
 
     pending.resolve({ account: makeAccount({ role: 'PROVIDER' }), tokens: { access: 'a', refresh: 'r' } })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
   })
 
   it('shows the duplicate-email error from the backend on the email field', async () => {

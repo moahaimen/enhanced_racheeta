@@ -18,6 +18,7 @@ from apps.marketplace.permissions import (
     HasMedicalCompany,
     current_verified_provider,
 )
+from apps.preferences import services as preferences
 
 from . import services
 from .filters import AdminCampaignFilter, OwnerCampaignFilter
@@ -304,6 +305,9 @@ class SponsoredCampaignListView(generics.ListAPIView):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied(BROWSE_DENIED)
+        if not preferences.get(self.request.user)["show_sponsored_products"]:
+            # Display preference: the provider chose not to see sponsored content.
+            return AdvertisingCampaign.objects.none()
         return (
             AdvertisingCampaign.objects.visible_to(provider)
             .select_related(

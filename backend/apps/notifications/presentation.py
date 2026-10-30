@@ -111,6 +111,94 @@ def _status_changed(lang: str, payload: dict[str, Any]) -> tuple[str, str] | Non
     return title, f"{body} is now {label}."
 
 
+ORDER_STATUS = {
+    "ar": {
+        "PLACED": "تم استلام الطلب",
+        "CONFIRMED": "تم تأكيد الطلب",
+        "SHIPPED": "تم شحن الطلب",
+        "DELIVERED": "تم تسليم الطلب",
+        "CANCELLED": "تم إلغاء الطلب",
+    },
+    "en": {
+        "PLACED": "Order received",
+        "CONFIRMED": "Order confirmed",
+        "SHIPPED": "Order shipped",
+        "DELIVERED": "Order delivered",
+        "CANCELLED": "Order cancelled",
+    },
+}
+QUOTE_STATUS = {
+    "ar": {
+        "QUOTED": "وصل عرض سعر",
+        "ACCEPTED": "تم قبول عرض السعر",
+        "DECLINED": "تم رفض طلب التسعير",
+        "WITHDRAWN": "تم سحب طلب التسعير",
+    },
+    "en": {
+        "QUOTED": "Price quote received",
+        "ACCEPTED": "Quote accepted",
+        "DECLINED": "Quote request declined",
+        "WITHDRAWN": "Quote request withdrawn",
+    },
+}
+SPONSORED = {"ar": "إعلان ممول", "en": "Sponsored"}
+
+
+def _pick(text: str, lang: str) -> str:
+    """Demo/business names may be stored as "Arabic | English": show the reader's half."""
+    parts = text.split(" | ")
+    if len(parts) != 2:
+        return text
+    arabic = any("\u0600" <= ch <= "\u06ff" for ch in parts[0])
+    return (parts[0] if arabic == (lang == "ar") else parts[1]).strip()
+
+
+def _order(lang: str, payload: dict[str, Any]) -> tuple[str, str] | None:
+    status = _text(payload, "status")
+    number = _text(payload, "order_number")
+    if status not in ORDER_STATUS[lang]:
+        return None
+    if lang == "ar":
+        return ORDER_STATUS[lang][status], f"الطلب {number}".strip() + "."
+    return ORDER_STATUS[lang][status], f"Order {number}".strip() + "."
+
+
+def _quote_requested(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
+    product = _pick(_text(payload, "product_title"), lang)
+    quantity = _text(payload, "quantity")
+    if lang == "ar":
+        return "طلب تسعير جديد", f"طلب سعر لـ «{product}» — الكمية {quantity}."
+    return "New quote request", f'A price was requested for "{product}" (quantity {quantity}).'
+
+
+def _quote_updated(lang: str, payload: dict[str, Any]) -> tuple[str, str] | None:
+    status = _text(payload, "status")
+    if status not in QUOTE_STATUS[lang]:
+        return None
+    product = _pick(_text(payload, "product_title"), lang)
+    if lang == "ar":
+        return QUOTE_STATUS[lang][status], f"طلب التسعير لـ «{product}»."
+    return QUOTE_STATUS[lang][status], f'Quote request for "{product}".'
+
+
+def _sponsored(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
+    product = _pick(_text(payload, "product_title"), lang)
+    company = _pick(_text(payload, "company_name"), lang)
+    if lang == "ar":
+        return f"{SPONSORED[lang]} · منتج في مجالك", f"«{product}» من {company}."
+    return f"{SPONSORED[lang]} · A product for your field", f'"{product}" by {company}.'
+
+
+def _promotion(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
+    listing = _pick(_text(payload, "listing_title"), lang)
+    if lang == "ar":
+        return f"{SPONSORED[lang]} · عقار طبي", f"«{listing}» — لأنك فعّلت عروض العقارات."
+    return (
+        f"{SPONSORED[lang]} · Medical property",
+        f'"{listing}" — you opted in to property offers.',
+    )
+
+
 def render(event_type: str, payload: Any, language: str | None) -> tuple[str, str]:
     """Return (title, body) for the event in `language`. Never raises."""
     lang = normalize_language(language)
@@ -122,6 +210,23 @@ def render(event_type: str, payload: Any, language: str | None) -> tuple[str, st
             rendered = _status_changed(lang, data)
             if rendered is not None:
                 return rendered
+        if event_type in (
+            NotificationEventType.ORDER_PLACED,
+            NotificationEventType.ORDER_STATUS_CHANGED,
+        ):
+            rendered = _order(lang, data)
+            if rendered is not None:
+                return rendered
+        if event_type == NotificationEventType.QUOTE_REQUESTED:
+            return _quote_requested(lang, data)
+        if event_type == NotificationEventType.QUOTE_UPDATED:
+            rendered = _quote_updated(lang, data)
+            if rendered is not None:
+                return rendered
+        if event_type == NotificationEventType.SPONSORED_PRODUCT:
+            return _sponsored(lang, data)
+        if event_type == NotificationEventType.PROPERTY_PROMOTION:
+            return _promotion(lang, data)
     except Exception:  # noqa: BLE001 — presentation must never break a read
         logger.exception("notification presentation failed for %s", event_type)
     return FALLBACK[lang]

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 
 import { ApiError, marketplace as marketplaceApi } from '../../api'
 import { AsyncPage, Badge, Container, Icon, PageHeader, PageStack, SectionCard } from '../../design-system'
+import { RequestQuoteForm } from '../quotes/QuotesPages'
 import { useLocalizedName } from '../../i18n/localized'
 import { formatProductPrice } from './MarketplacePage'
 
@@ -56,6 +57,9 @@ export function ProductDetailPage() {
                     {product.company.website}
                   </a>
                 ) : null}
+              </SectionCard>
+              <SectionCard title={t('quotes.request')} description={t('quotes.intro')} headingLevel={2}>
+                <RequestQuoteForm productId={product.id} />
               </SectionCard>
             </PageStack>
           </>

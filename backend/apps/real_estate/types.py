@@ -56,3 +56,14 @@ EMAIL_METHODS = frozenset({ContactMethod.EMAIL, ContactMethod.BOTH})
 
 # Fixed display order of suitable uses (stable API output).
 SUITABLE_USE_ORDER = {use.value: index for index, use in enumerate(SuitableUse)}
+
+
+class PromotionStatus(models.TextChoices):
+    REQUESTED = "REQUESTED", "Awaiting review"
+    ACTIVE = "ACTIVE", "Active"
+    REJECTED = "REJECTED", "Rejected"
+    ENDED = "ENDED", "Ended"
+
+
+OPEN_PROMOTION_STATUSES = (PromotionStatus.REQUESTED, PromotionStatus.ACTIVE)
+MAX_PROMOTION_DAYS = 60

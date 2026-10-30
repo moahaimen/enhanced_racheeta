@@ -34,6 +34,67 @@ SELF_REGISTRATION_ROLE_CHOICES = [
     )
 ]
 
+
+class AccountType(models.TextChoices):
+    """The understandable "who are you" choice of the onboarding screen (finer than `role`).
+
+    It maps to exactly one primary role (ACCOUNT_TYPE_ROLE) and preselects the profile the
+    person completes next (provider type, company business type, seller kind). Job seeker is not
+    a type: any account may add a job-seeker profile. ADMIN is never a type.
+    """
+
+    PATIENT = "PATIENT", "Patient"
+    DOCTOR = "DOCTOR", "Doctor"
+    NURSE = "NURSE", "Nurse"
+    THERAPIST = "THERAPIST", "Therapist"
+    HOSPITAL = "HOSPITAL", "Hospital"
+    MEDICAL_CENTER = "MEDICAL_CENTER", "Medical center / clinic"
+    PHARMACY = "PHARMACY", "Pharmacy"
+    LABORATORY = "LABORATORY", "Laboratory"
+    BEAUTY_CENTER = "BEAUTY_CENTER", "Beauty center"
+    PHARMACEUTICAL_COMPANY = "PHARMACEUTICAL_COMPANY", "Pharmaceutical company"
+    SCIENTIFIC_OFFICE = "SCIENTIFIC_OFFICE", "Scientific office"
+    MEDICAL_SUPPLIES_OFFICE = "MEDICAL_SUPPLIES_OFFICE", "Medical supplies office"
+    EQUIPMENT_SUPPLIER = "EQUIPMENT_SUPPLIER", "Medical equipment supplier"
+    ASSISTIVE_DEVICE_STORE = "ASSISTIVE_DEVICE_STORE", "Assistive devices store"
+    PHARMA_DISTRIBUTOR = "PHARMA_DISTRIBUTOR", "Pharmaceutical distributor"
+    PROPERTY_OWNER = "PROPERTY_OWNER", "Medical property owner"
+    PROPERTY_AGENT = "PROPERTY_AGENT", "Medical property agent / manager"
+
+
+PROVIDER_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.DOCTOR,
+        AccountType.NURSE,
+        AccountType.THERAPIST,
+        AccountType.HOSPITAL,
+        AccountType.MEDICAL_CENTER,
+        AccountType.PHARMACY,
+        AccountType.LABORATORY,
+        AccountType.BEAUTY_CENTER,
+    }
+)
+BUSINESS_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.PHARMACEUTICAL_COMPANY,
+        AccountType.SCIENTIFIC_OFFICE,
+        AccountType.MEDICAL_SUPPLIES_OFFICE,
+        AccountType.EQUIPMENT_SUPPLIER,
+        AccountType.ASSISTIVE_DEVICE_STORE,
+        AccountType.PHARMA_DISTRIBUTOR,
+    }
+)
+PROPERTY_ACCOUNT_TYPES = frozenset({AccountType.PROPERTY_OWNER, AccountType.PROPERTY_AGENT})
+
+ACCOUNT_TYPE_ROLE: dict[str, str] = {
+    AccountType.PATIENT: AccountRole.PATIENT,
+    **{t: AccountRole.PROVIDER for t in PROVIDER_ACCOUNT_TYPES},
+    **{t: AccountRole.MEDICAL_COMPANY for t in BUSINESS_ACCOUNT_TYPES},
+    **{t: AccountRole.REAL_ESTATE_SELLER for t in PROPERTY_ACCOUNT_TYPES},
+}
+assert set(ACCOUNT_TYPE_ROLE) == set(AccountType.values)  # noqa: S101 - every type has a role
+
+
 # Capability codes per role. Format: "<module>.<action>".
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     AccountRole.PATIENT: frozenset(

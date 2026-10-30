@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import promotion_views, views
 
 urlpatterns = [
     # public catalogue
@@ -40,5 +40,36 @@ urlpatterns = [
         "real-estate/owner/listings/<uuid:pk>/unpublish",
         views.MyListingUnpublishView.as_view(),
         name="real-estate-owner-listing-unpublish",
+    ),
+    # promotions
+    path(
+        "real-estate/owner/promotions",
+        promotion_views.MyPromotionListView.as_view(),
+        name="real-estate-owner-promotions",
+    ),
+    path(
+        "real-estate/owner/promotions/<uuid:pk>/end",
+        promotion_views.MyPromotionEndView.as_view(),
+        name="real-estate-owner-promotion-end",
+    ),
+    path(
+        "real-estate/promoted",
+        promotion_views.PromotedListingFeedView.as_view(),
+        name="real-estate-promoted",
+    ),
+    path(
+        "admin/real-estate/promotions",
+        promotion_views.AdminPromotionListView.as_view(),
+        name="admin-real-estate-promotions",
+    ),
+    path(
+        "admin/real-estate/promotions/<uuid:pk>/approve",
+        promotion_views.AdminPromotionApproveView.as_view(),
+        name="admin-real-estate-promotion-approve",
+    ),
+    path(
+        "admin/real-estate/promotions/<uuid:pk>/reject",
+        promotion_views.AdminPromotionRejectView.as_view(),
+        name="admin-real-estate-promotion-reject",
     ),
 ]

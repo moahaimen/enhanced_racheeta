@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import os
 
-from django.conf import settings
 from django.db import connection
 
 MARKER = "racheeta-disposable-local-demo"
@@ -32,10 +31,11 @@ class LocalDemoRefused(Exception):
     """The current database is not a disposable local demo database."""
 
 
-def check(environ=None) -> list[str]:
-    """Reasons to refuse (empty list = safe). Pure checks first; the database is asked last."""
+def check(environ=None, db=None) -> list[str]:
+    """Reasons to refuse (empty list = safe). Pure checks first; the database is asked last.
+    `db` defaults to the settings of the connection that would actually be used."""
     environ = os.environ if environ is None else environ
-    db = settings.DATABASES["default"]
+    db = connection.settings_dict if db is None else db
     host = str(db.get("HOST") or "")
     name = str(db.get("NAME") or "")
     url = str(environ.get("DATABASE_URL", "")).lower()
@@ -68,4 +68,4 @@ def assert_local_disposable_database(environ=None) -> str:
     reasons = check(environ)
     if reasons:
         raise LocalDemoRefused("Refusing (local demo guard): " + "; ".join(reasons) + ".")
-    return str(settings.DATABASES["default"]["NAME"])
+    return str(connection.settings_dict["NAME"])

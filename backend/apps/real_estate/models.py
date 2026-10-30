@@ -21,10 +21,12 @@ from django.utils import timezone
 from apps.accounts.roles import AccountRole
 from apps.core.models import BaseModel
 from apps.geography.models import City, Governorate
+from apps.providers.types import ProviderType
 
 from .types import (
     SUITABLE_USE_ORDER,
     ContactMethod,
+    PromotionStatus,
     PropertyType,
     PublicationStatus,
     SellerType,
@@ -242,3 +244,90 @@ class ListingSuitableUse(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.listing_id}:{self.use}"
+
+
+class ListingPromotionQuerySet(models.QuerySet):
+    def visible_to(self, provider, now=None):
+        """THE promotion visibility rule, from current state: an ACTIVE promotion
+        inside its window, on a listing that passes `publicly_visible`, shown only
+        to a verified, active provider whose type it targets (empty = every type)
+        AND who opted in to real-estate promotions (off by default)."""
+        from apps.preferences.models import MarketingPreference
+        from apps.providers.models import ProviderProfile
+        from apps.providers.types import VerificationStatus
+
+        now = now or timezone.now()
+        eligible = ProviderProfile.objects.filter(
+            pk=provider.pk,
+            verification_status=VerificationStatus.VERIFIED,
+            account__is_active=True,
+            account__role=AccountRole.PROVIDER,
+        ).exists()
+        opted_in = MarketingPreference.objects.filter(
+            account_id=provider.account_id, real_estate_promotions=True, channel_in_app=True
+        ).exists()
+        if not (eligible and opted_in):
+            return self.none()
+        return self.filter(
+            status=PromotionStatus.ACTIVE,
+            starts_at__lte=now,
+            ends_at__gt=now,
+            listing__in=PropertyListing.objects.publicly_visible(now),
+        ).filter(
+            Q(target_provider_types=[])
+            | Q(target_provider_types__contains=[provider.provider_type])
+        )
+
+
+class ListingPromotion(BaseModel):
+    """A seller's request to promote one listing to relevant providers. An
+    administrator approves it (ACTIVE for `days`) or rejects it. No payment is
+    taken here; the promotion only widens who is SHOWN a public listing."""
+
+    listing = models.ForeignKey(
+        PropertyListing, on_delete=models.CASCADE, related_name="promotions"
+    )
+    target_provider_types = models.JSONField(default=list, blank=True)
+    days = models.PositiveSmallIntegerField(default=14)
+    status = models.CharField(
+        max_length=10, choices=PromotionStatus.choices, default=PromotionStatus.REQUESTED
+    )
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    reject_reason = models.CharField(max_length=300, blank=True, default="")
+
+    objects = ListingPromotionQuerySet.as_manager()
+
+    class Meta:
+        db_table = "real_estate_listing_promotion"
+        ordering = ["-created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["listing"],
+                condition=Q(status__in=["REQUESTED", "ACTIVE"]),
+                name="real_estate_one_open_promotion_per_listing",
+            ),
+            models.CheckConstraint(
+                condition=Q(days__gte=1) & Q(days__lte=60),
+                name="real_estate_promotion_days_range",
+            ),
+            models.CheckConstraint(
+                condition=~Q(status="ACTIVE")
+                | (Q(starts_at__isnull=False) & Q(ends_at__isnull=False)),
+                name="real_estate_promotion_active_has_window",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"promotion:{self.listing_id}:{self.status}"
+
+
+PROVIDER_TYPE_VALUES = frozenset(ProviderType.values)

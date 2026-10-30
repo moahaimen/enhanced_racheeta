@@ -2,8 +2,9 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, UniqueConstraint
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import filters, generics, status
+from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import (
     APIException,
     ErrorDetail,
@@ -87,7 +88,7 @@ from .serializers import (
     TalentDetailSerializer,
     WorkExperienceSerializer,
 )
-from .types import ApplicationStatus, MemberStatus, MessageSide
+from .types import PROFESSION_GROUPS, ApplicationStatus, MemberStatus, MessageSide
 
 # ---- error mapping ---------------------------------------------------------
 
@@ -204,6 +205,33 @@ class EmployerPublicView(generics.RetrieveAPIView):
     authentication_classes = []
     serializer_class = EmployerPublicSerializer
     queryset = Employer.objects.public().select_related("governorate", "city", "provider_profile")
+
+
+ProfessionGroupSerializer = inline_serializer(
+    name="ProfessionGroup",
+    many=True,
+    fields={
+        "group": drf_serializers.CharField(),
+        "professions": drf_serializers.ListField(child=drf_serializers.CharField()),
+    },
+)
+
+
+@extend_schema(
+    tags=["jobs"],
+    summary="Profession vocabulary grouped for display (healthcare first)",
+    responses=ProfessionGroupSerializer,
+)
+class ProfessionGroupsView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        data = [
+            {"group": group, "professions": [str(p) for p in members]}
+            for group, members in PROFESSION_GROUPS.items()
+        ]
+        return Response(data)
 
 
 # ---- job seeker: profile -------------------------------------------------

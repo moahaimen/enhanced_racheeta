@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 
-import type { AccountRole, PreferredLanguage } from '../api'
+import type { AccountType, PreferredLanguage } from '../api'
 import { DEFAULT_AUTHENTICATED_PATH } from '../app/guards'
-import { SELF_REGISTRATION_ROLES } from '../auth/roles'
+import { ACCOUNT_TYPE_GROUPS, roleForAccountType } from '../auth/roles'
 import { useAuth } from '../auth/useAuth'
 import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, Select, TextField, useFormErrors } from '../design-system'
 import { AuthShell } from './auth/AuthShell'
@@ -21,7 +21,7 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [role, setRole] = useState<Exclude<AccountRole, 'ADMIN'>>('PATIENT')
+  const [accountType, setAccountType] = useState<AccountType>('PATIENT')
   const errors = useFormErrors(FIELDS)
 
   const validate = (): boolean => {
@@ -44,7 +44,8 @@ export function RegisterPage() {
       full_name: fullName.trim(),
       email: email.trim(),
       password,
-      role,
+      role: roleForAccountType(accountType),
+      account_type: accountType,
       preferred_language: i18n.language as PreferredLanguage,
       ...(phone.trim() ? { phone_number: phone.replace(/[\s-]/g, '') } : {}),
     })
@@ -106,16 +107,20 @@ export function RegisterPage() {
           />
           <Select
             label={t('fields.role')}
-            name="role"
-            hint={t('register.roleHint')}
-            value={role}
-            onChange={(e) => setRole(e.target.value as Exclude<AccountRole, 'ADMIN'>)}
+            name="account_type"
+            hint={t('onboarding.typeHint')}
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value as AccountType)}
             error={errors.fieldErrors.role}
           >
-            {SELF_REGISTRATION_ROLES.map((code) => (
-              <option key={code} value={code}>
-                {t(`roles.${code}`)}
-              </option>
+            {ACCOUNT_TYPE_GROUPS.map(({ group, types }) => (
+              <optgroup key={group} label={t(`accountTypeGroups.${group}`)}>
+                {types.map((code) => (
+                  <option key={code} value={code}>
+                    {t(`accountTypes.${code}`)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </FormSection>

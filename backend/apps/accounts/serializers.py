@@ -8,7 +8,13 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Account
-from .roles import CLIENT_FORBIDDEN_FIELDS, SELF_REGISTRATION_ROLE_CHOICES, AccountRole
+from .roles import (
+    ACCOUNT_TYPE_ROLE,
+    CLIENT_FORBIDDEN_FIELDS,
+    SELF_REGISTRATION_ROLE_CHOICES,
+    AccountRole,
+    AccountType,
+)
 
 
 class ForbidPrivilegeFieldsMixin:
@@ -45,6 +51,7 @@ class AccountSerializer(serializers.ModelSerializer):
             "full_name",
             "phone_number",
             "role",
+            "account_type",
             "preferred_language",
             "email_verified",
             "email_verified_at",
@@ -60,7 +67,7 @@ class AccountSerializer(serializers.ModelSerializer):
 class AccountUpdateSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer):
     """Fields the account owner may change on PATCH /me."""
 
-    extra_forbidden = frozenset({"role", "email", "password", "id"})
+    extra_forbidden = frozenset({"role", "account_type", "email", "password", "id"})
 
     class Meta:
         model = Account
@@ -84,10 +91,21 @@ class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer
     role = serializers.ChoiceField(
         choices=SELF_REGISTRATION_ROLE_CHOICES, default=AccountRole.PATIENT
     )
+    # The onboarding choice. When given, the server derives `role` from it (ACCOUNT_TYPE_ROLE); a
+    # contradicting `role` is rejected rather than silently overridden. ADMIN is never reachable.
+    account_type = serializers.ChoiceField(choices=AccountType.choices, required=False)
 
     class Meta:
         model = Account
-        fields = ("email", "password", "full_name", "phone_number", "role", "preferred_language")
+        fields = (
+            "email",
+            "password",
+            "full_name",
+            "phone_number",
+            "role",
+            "account_type",
+            "preferred_language",
+        )
         extra_kwargs = {
             "phone_number": {"required": False},
             "preferred_language": {"required": False},
@@ -103,6 +121,14 @@ class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        account_type = attrs.get("account_type")
+        if account_type:
+            derived = ACCOUNT_TYPE_ROLE[account_type]
+            if "role" in self.initial_data and attrs.get("role") != derived:
+                raise serializers.ValidationError(
+                    {"role": "Does not match the chosen account type."}, code="role_mismatch"
+                )
+            attrs["role"] = derived
         candidate = Account(**{k: v for k, v in attrs.items() if k != "password"})
         try:
             validate_password(attrs["password"], user=candidate)

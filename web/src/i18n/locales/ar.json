@@ -89,7 +89,15 @@
     "messages": "الرسائل",
     "dashboard": "لوحة المعلومات",
     "facilities": "المستشفيات والمراكز",
-    "account": "مساحتي"
+    "account": "مساحتي",
+    "workspaces": "مساحات العمل",
+    "store": "متجر الأجهزة المساعدة",
+    "myOrders": "طلباتي من المتجر",
+    "quotes": "طلبات التسعير",
+    "merchantOrders": "طلبات المتجر",
+    "merchantQuotes": "طلبات التسعير الواردة",
+    "preferences": "تفضيلات الإعلانات",
+    "cart": "السلة"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -534,7 +542,24 @@
     "PSYCHOLOGIST": "أخصائي نفسي",
     "MEDICAL_ASSISTANT": "مساعد طبي",
     "ADMINISTRATIVE": "إداري / استقبال",
-    "OTHER": "مهنة صحية أخرى"
+    "OTHER": "مهنة صحية أخرى",
+    "PHARMACY_TECHNICIAN": "فني صيدلة",
+    "OPTOMETRIST": "أخصائي بصريات",
+    "SPEECH_THERAPIST": "أخصائي نطق",
+    "BIOMEDICAL_ENGINEER": "مهندس طبي حيوي",
+    "MEDICAL_REPRESENTATIVE": "مندوب علمي",
+    "HEALTH_ADMINISTRATOR": "إداري صحي",
+    "SOFTWARE_DEVELOPER": "مطوّر برمجيات",
+    "IT_SUPPORT": "دعم تقني",
+    "NETWORK_ENGINEER": "مهندس شبكات",
+    "CYBERSECURITY": "أمن معلومات",
+    "DATA_ANALYST": "محلل بيانات",
+    "ACCOUNTANT": "محاسب / مالية",
+    "MARKETING": "تسويق",
+    "SALES": "مبيعات",
+    "HUMAN_RESOURCES": "موارد بشرية",
+    "ENGINEER": "مهندس (صيانة ومرافق)",
+    "CUSTOMER_SERVICE": "خدمة العملاء"
   },
   "degrees": {
     "DIPLOMA": "دبلوم",
@@ -1105,7 +1130,8 @@
       "jobs": "مراجعة الوظائف",
       "subscriptions": "الاشتراكات",
       "credits": "الأرصدة",
-      "advertising": "الإعلانات"
+      "advertising": "الإعلانات",
+      "promotions": "ترويج العقارات"
     },
     "verificationFilter": "حالة التوثيق",
     "emptyEmployers": "لا توجد مؤسسات مطابقة.",
@@ -1740,5 +1766,206 @@
       "last24h": "آخر 24 ساعة",
       "last7d": "آخر 7 أيام"
     }
+  },
+  "professionGroups": {
+    "HEALTHCARE": "المهن الصحية",
+    "HEALTH_BUSINESS": "أعمال صحية مساندة",
+    "TECHNOLOGY": "التقنية",
+    "BUSINESS": "الأعمال والإدارة"
+  },
+  "accountTypes": {
+    "PATIENT": "مريض / مستخدم",
+    "DOCTOR": "طبيب",
+    "NURSE": "ممرض/ة",
+    "THERAPIST": "معالج",
+    "HOSPITAL": "مستشفى",
+    "MEDICAL_CENTER": "مركز طبي",
+    "PHARMACY": "صيدلية",
+    "LABORATORY": "مختبر",
+    "BEAUTY_CENTER": "مركز تجميل",
+    "PHARMACEUTICAL_COMPANY": "شركة أدوية",
+    "SCIENTIFIC_OFFICE": "مكتب علمي",
+    "MEDICAL_SUPPLIES_OFFICE": "مكتب مستلزمات طبية",
+    "EQUIPMENT_SUPPLIER": "مورّد أجهزة",
+    "ASSISTIVE_DEVICE_STORE": "متجر أجهزة مساعدة",
+    "PHARMA_DISTRIBUTOR": "موزّع أدوية",
+    "PROPERTY_OWNER": "مالك عقار طبي",
+    "PROPERTY_AGENT": "وكيل عقارات طبية"
+  },
+  "accountTypeGroups": {
+    "people": "أفراد",
+    "practitioners": "ممارسون صحيون",
+    "facilities": "منشآت صحية",
+    "business": "شركات وأعمال",
+    "property": "عقارات طبية"
+  },
+  "ws": {
+    "switcherTitle": "مساحات العمل",
+    "switcherIntro": "كل مساحة تفتح ما يسمح به دورك فيها؛ الخادم يتحقق من الصلاحية في كل طلب.",
+    "open": "فتح",
+    "role": "دورك",
+    "kinds": {
+      "patient": "مستخدم",
+      "practitioner": "ممارس",
+      "facility": "منشأة",
+      "company": "شركة",
+      "property": "عقارات",
+      "employer": "توظيف",
+      "job_seeker": "باحث عن عمل",
+      "admin": "إدارة"
+    },
+    "roles": {
+      "OWNER": "مالك",
+      "MANAGER": "مدير",
+      "STAFF": "موظف",
+      "VIEWER": "اطلاع فقط"
+    },
+    "none": "لا توجد مساحات عمل بعد",
+    "orgTitle": "مساحة المنشأة",
+    "companyTitle": "مساحة الشركة",
+    "counts": {
+      "pending": "بانتظار التأكيد",
+      "upcoming": "القادمة",
+      "today": "اليوم",
+      "practitioners": "الممارسون",
+      "staff": "فريق العمل",
+      "products_active": "منتجات نشطة",
+      "orders_open": "طلبات مفتوحة",
+      "quotes_open": "طلبات تسعير مفتوحة"
+    },
+    "reservations": "حجوزات المنشأة",
+    "noReservations": "لا توجد حجوزات",
+    "members": "فريق العمل",
+    "addMember": "إضافة عضو",
+    "memberEmail": "البريد الإلكتروني للعضو",
+    "memberRole": "الدور",
+    "endMember": "إنهاء العضوية",
+    "noMembers": "لا يوجد أعضاء بعد.",
+    "readOnly": "صلاحيتك اطلاع فقط في هذه المساحة.",
+    "orders": "طلبات المتجر",
+    "quotes": "طلبات التسعير",
+    "confirm": "تأكيد",
+    "reject": "رفض",
+    "complete": "إتمام",
+    "cancel": "إلغاء"
+  },
+  "store": {
+    "title": "متجر الأجهزة المساعدة",
+    "intro": "أجهزة مساعدة ومنزلية مسموح بيعها للعموم من متاجر موثّقة. الأدوية والمواد المقيّدة غير متاحة هنا.",
+    "demoPayment": "بيئة تجريبية: الدفع عند الاستلام أو تحويل يدوي فقط — لا تُجمع بيانات بطاقات ولا يُخصم أي مبلغ.",
+    "inStock": "متوفر",
+    "outOfStock": "غير متوفر",
+    "addToCart": "أضف إلى السلة",
+    "added": "أضيف إلى السلة",
+    "allCategories": "كل الفئات",
+    "empty": "لا توجد منتجات متاحة.",
+    "by": "من {{name}}",
+    "cartTitle": "السلة",
+    "cartEmpty": "سلتك فارغة.",
+    "quantity": "الكمية",
+    "remove": "إزالة",
+    "total": "الإجمالي التقديري",
+    "serverTotal": "يحسب الخادم السعر النهائي عند تأكيد الطلب.",
+    "oneStore": "يحتوي الطلب الواحد على منتجات متجر واحد.",
+    "checkout": "تأكيد الطلب",
+    "placing": "جارٍ الإرسال…",
+    "address": "عنوان التوصيل",
+    "phone": "رقم التواصل",
+    "governorate": "المحافظة",
+    "note": "ملاحظة",
+    "payment": "طريقة الدفع",
+    "paymentMethods": {
+      "CASH_ON_DELIVERY": "الدفع عند الاستلام",
+      "MANUAL_TRANSFER": "تحويل يدوي يؤكده المتجر"
+    },
+    "paymentStatus": {
+      "UNPAID": "غير مدفوع",
+      "PAID": "مدفوع (مسجل)",
+      "REFUND_DUE": "مستحق للاسترداد"
+    },
+    "orderStatus": {
+      "PLACED": "مستلم",
+      "CONFIRMED": "مؤكد",
+      "SHIPPED": "تم الشحن",
+      "DELIVERED": "تم التسليم",
+      "CANCELLED": "ملغى"
+    },
+    "placed": "تم إرسال طلبك {{number}}.",
+    "loginToOrder": "سجّل الدخول لإتمام الطلب.",
+    "myOrders": "طلباتي من المتجر",
+    "noOrders": "لا توجد طلبات بعد.",
+    "cancelOrder": "إلغاء الطلب",
+    "merchantOrders": "طلبات المتجر",
+    "markPaid": "تسجيل استلام التحويل",
+    "advance": {
+      "CONFIRMED": "تأكيد",
+      "SHIPPED": "شحن",
+      "DELIVERED": "تسليم",
+      "CANCELLED": "إلغاء"
+    },
+    "buyer": "المشتري",
+    "items": "المنتجات"
+  },
+  "quotes": {
+    "title": "طلبات التسعير",
+    "intro": "اطلب سعراً من الشركة لمنتج موجّه لتخصصك. لا تُشارك بيانات تواصلك الشخصية.",
+    "request": "طلب تسعير",
+    "requested": "تم إرسال طلب التسعير.",
+    "message": "رسالة (اختياري)",
+    "none": "لا توجد طلبات تسعير.",
+    "status": {
+      "REQUESTED": "مُرسل",
+      "QUOTED": "وصل عرض",
+      "ACCEPTED": "مقبول",
+      "DECLINED": "مرفوض",
+      "WITHDRAWN": "مسحوب"
+    },
+    "accept": "قبول العرض",
+    "decline": "رفض",
+    "withdraw": "سحب الطلب",
+    "unitPrice": "سعر الوحدة",
+    "respond": "إرسال السعر",
+    "incoming": "طلبات التسعير الواردة",
+    "from": "من {{name}}"
+  },
+  "prefs": {
+    "title": "تفضيلات الإعلانات والتسويق",
+    "intro": "العرض داخل رشيتة منفصل عن موافقتك على تلقي رسائل تسويقية. الإشعارات الأساسية (الحجوزات، الطلبات) تصلك دائماً.",
+    "display": "ما يُعرض لي",
+    "outreach": "الرسائل التسويقية (اختيارية)",
+    "channels": "قنوات الاستلام",
+    "show_sponsored_products": "عرض المنتجات الممولة ذات الصلة بمجالي",
+    "real_estate_promotions": "عروض العقارات الطبية",
+    "job_alerts": "تنبيهات الوظائف",
+    "offers_and_news": "عروض المنتجات والأخبار",
+    "channel_in_app": "داخل التطبيق",
+    "channel_email": "البريد الإلكتروني (معطل في البيئة التجريبية)",
+    "channel_push": "الإشعارات الفورية (معطلة في البيئة التجريبية)",
+    "saved": "تم حفظ التفضيلات."
+  },
+  "promo": {
+    "sponsored": "إعلان ممول",
+    "promotedProperties": "عقارات طبية مروّجة",
+    "promotedHint": "تظهر لأنك فعّلت عروض العقارات الطبية.",
+    "promotions": "الترويج",
+    "request": "طلب ترويج",
+    "days": "المدة (أيام)",
+    "targets": "الفئات المستهدفة (اتركها فارغة للجميع)",
+    "status": {
+      "REQUESTED": "بانتظار المراجعة",
+      "ACTIVE": "نشط",
+      "REJECTED": "مرفوض",
+      "ENDED": "منتهٍ"
+    },
+    "end": "إيقاف",
+    "none": "لا توجد طلبات ترويج.",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "rejectReason": "سبب الرفض",
+    "adminTitle": "ترويج العقارات"
+  },
+  "onboarding": {
+    "chooseType": "ما نوع حسابك؟",
+    "typeHint": "اختر ما يصفك؛ يُحدّد الخادم الصلاحيات من هذا الاختيار."
   }
 }

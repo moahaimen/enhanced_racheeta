@@ -5,8 +5,8 @@
 
 Refuses unless `local_guard` accepts the database. The shared demo password comes from
 LOCAL_DEMO_PASSWORD (local-demo/.env.demo) and is never printed. `--with-admin` additionally
-creates one local-only administrator (registered, so `clear_local_demo` removes it); the staging
-command `seed_demo_data` never creates an administrator.
+creates one local-only administrator with its OWN password (LOCAL_DEMO_ADMIN_PASSWORD), registered
+so `clear_local_demo` removes it; the staging command `seed_demo_data` never creates one.
 """
 
 import os
@@ -38,5 +38,12 @@ class Command(BaseCommand):
         os.environ["DEMO_PASSWORD"] = password
         os.environ["DEMO_LOCAL_EXTRAS"] = "1"
         if options["with_admin"]:
+            admin_password = os.environ.get("LOCAL_DEMO_ADMIN_PASSWORD", "")
+            if len(admin_password) < 16 or admin_password == password:
+                raise CommandError(
+                    "Set a separate LOCAL_DEMO_ADMIN_PASSWORD (16+ characters, different from the "
+                    "demo password) in local-demo/.env.demo."
+                )
             os.environ["DEMO_LOCAL_ADMIN"] = "1"
+            os.environ["DEMO_LOCAL_ADMIN_PASSWORD"] = admin_password
         call_command("seed_demo_data", dry_run=options["dry_run"], stdout=self.stdout)

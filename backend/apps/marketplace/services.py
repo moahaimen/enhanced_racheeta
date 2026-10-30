@@ -11,9 +11,13 @@ from .models import MedicalCompany, Product, ProductCategory
 from .types import (
     ADMIN_VERIFICATION_TARGETS,
     COMPANY_IDENTITY_FIELDS,
+    CONSUMER_CHANNELS,
     IDENTITY_LOCKED_STATUSES,
+    PROFESSIONAL_CHANNELS,
+    RETAIL_BUSINESS_TYPES,
     VERIFICATION_REQUESTABLE_FROM,
     CompanyVerificationStatus,
+    SaleChannel,
 )
 
 
@@ -55,6 +59,7 @@ class ProductNotFound(MarketplaceError):
 
 COMPANY_FIELDS = (
     "name",
+    "business_type",
     "description",
     "phone",
     "public_email",
@@ -63,7 +68,18 @@ COMPANY_FIELDS = (
     "city",
     "address",
 )
-PRODUCT_FIELDS = ("category", "title", "description", "brand", "model_name", "price", "currency")
+PRODUCT_FIELDS = (
+    "category",
+    "title",
+    "description",
+    "brand",
+    "model_name",
+    "price",
+    "currency",
+    "sale_channel",
+    "is_restricted",
+    "stock_quantity",
+)
 
 
 def _require_city_in_governorate(row) -> None:
@@ -210,13 +226,27 @@ def _locked_publishable_category(category_id) -> ProductCategory:
 def _require_publishable(company: MedicalCompany, product: Product) -> None:
     """The activation gate, on locked state: verified company on an active
     MEDICAL_COMPANY account (read with the locked company, never from the
-    request's snapshot), publishable category."""
+    request's snapshot); a professional offer needs a category with an active audience, a store
+    offer needs a consumer-allowed category, a retail business and a stock figure."""
     if not company.can_publish:
         raise CompanyNotVerified(
             "The company must be verified, on an active medical company account, "
             "before publishing products."
         )
-    _locked_publishable_category(product.category_id)
+    if product.sale_channel in PROFESSIONAL_CHANNELS:
+        _locked_publishable_category(product.category_id)
+    if product.sale_channel in CONSUMER_CHANNELS:
+        category = (
+            ProductCategory.objects.select_for_update(of=("self",))
+            .filter(pk=product.category_id, is_active=True, consumer_allowed=True)
+            .first()
+        )
+        if category is None:
+            raise CategoryUnavailable("This category cannot be offered in the public store.")
+        if company.business_type not in RETAIL_BUSINESS_TYPES:
+            raise InvalidProduct("Only retail businesses can offer products in the public store.")
+        if product.stock_quantity is None:
+            raise InvalidProduct("Set the stock quantity for a store product.")
 
 
 def _validate_product(product: Product) -> None:
@@ -224,6 +254,12 @@ def _validate_product(product: Product) -> None:
         raise InvalidProduct("Price must be zero or more.")
     if not product.title.strip():
         raise InvalidProduct("Title is required.")
+    if product.is_restricted and product.sale_channel != SaleChannel.B2B:
+        raise InvalidProduct(
+            "Restricted products (prescription, regulated equipment) are B2B only."
+        )
+    if product.sale_channel in CONSUMER_CHANNELS and product.price is None:
+        raise InvalidProduct("A store product needs a price.")
 
 
 @transaction.atomic

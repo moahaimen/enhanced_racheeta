@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { dashboards as dashboardsApi } from '../../api'
 import type { DoctorDashboard, FacilityDashboard } from '../../api'
 import { AsyncPage, Badge, SectionCard } from '../../design-system'
+import { SponsoredSection } from '../advertising/SponsoredSection'
+import { PromotedPropertiesSection } from '../realEstate/PromotionsPanels'
 import styles from './Dashboard.module.css'
 import { CountGrid, Metric, ReservationRows, UnreadBlock, WorkspaceLinks } from './widgets'
 
@@ -99,6 +101,14 @@ function ProviderView({ data, facility }: { data: DoctorDashboard | FacilityDash
       <SectionCard title={t('dashboard.unread')} headingLevel={2}>
         <UnreadBlock {...data.unread} />
       </SectionCard>
+
+      {/* Targeted sponsored content (server-decided, labelled «إعلان ممول»); verified providers only. */}
+      {profile.verification_status === 'VERIFIED' ? (
+        <>
+          <SponsoredSection />
+          <PromotedPropertiesSection />
+        </>
+      ) : null}
     </div>
   )
 }

@@ -66,10 +66,13 @@ def planned_counts() -> list[tuple[str, int]]:
 
 
 def registered_account_hashes() -> set[str]:
-    """Distinct password hashes of the demo accounts that are registered AND still exist."""
+    """Distinct password hashes of the demo accounts that are registered AND still exist.
+    The local-only administrator (staff, its own password) is not a shared-password account."""
     records = DemoRecord.objects.filter(model_label="accounts.Account")
     pks = list(records.values_list("object_pk", flat=True))
-    return set(Account.objects.filter(pk__in=pks).values_list("password", flat=True))
+    return set(
+        Account.objects.filter(pk__in=pks, is_staff=False).values_list("password", flat=True)
+    )
 
 
 class Command(BaseCommand):

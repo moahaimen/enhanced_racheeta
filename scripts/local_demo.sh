@@ -24,6 +24,12 @@ if [ ! -f "$envfile" ]; then
   printf 'DATABASE_URL=postgres://%s@localhost:5432/%s\nRACHEETA_LOCAL_DEMO=1\nLOCAL_DEMO_PASSWORD=%s\n' "$USER" "$dbname" "$pw" > "$envfile"
   echo "created $envfile (local only, git-ignored)"
 fi
+if ! grep -q '^LOCAL_DEMO_ADMIN_PASSWORD=' "$envfile"; then
+  apw="$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')"
+  umask 077
+  printf 'LOCAL_DEMO_ADMIN_PASSWORD=%s\n' "$apw" >> "$envfile"
+  echo "added a separate local admin password to $envfile"
+fi
 set -a; . "$envfile"; set +a
 for v in $(env | grep -o '^RAILWAY_[A-Z_]*' || true); do unset "$v"; done
 

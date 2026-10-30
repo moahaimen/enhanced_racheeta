@@ -366,3 +366,46 @@ class PaginatedPropertyListingOwnerSerializer(serializers.Serializer):
     next = serializers.URLField(allow_null=True)
     previous = serializers.URLField(allow_null=True)
     results = PropertyListingOwnerSerializer(many=True)
+
+
+class PromotionListingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+
+
+class ListingPromotionSerializer(serializers.Serializer):
+    """Seller/admin view of a promotion. Never lists who saw or was notified."""
+
+    id = serializers.UUIDField(read_only=True)
+    listing = PromotionListingSerializer(read_only=True)
+    target_provider_types = serializers.ListField(child=serializers.CharField(), read_only=True)
+    days = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    starts_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    ends_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    reject_reason = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+
+class PromotionRequestSerializer(serializers.Serializer):
+    listing = serializers.UUIDField()
+    target_provider_types = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, default=list, max_length=9
+    )
+    days = serializers.IntegerField(min_value=1, max_value=60, default=14)
+
+
+class PromotionRejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=300)
+
+
+class PromotedListingSerializer(serializers.Serializer):
+    """A promoted listing in a provider's feed. Always labelled sponsored by the client."""
+
+    promotion_id = serializers.UUIDField(source="pk")
+    sponsored = serializers.SerializerMethodField()
+    listing = PropertyListingPublicSerializer()
+    ends_at = serializers.DateTimeField()
+
+    def get_sponsored(self, obj) -> bool:
+        return True

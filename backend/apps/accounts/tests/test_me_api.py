@@ -23,6 +23,7 @@ def test_me_returns_identity_role_and_permissions(auth_client, account):
         "full_name",
         "phone_number",
         "role",
+        "account_type",
         "preferred_language",
         "email_verified",
         "email_verified_at",

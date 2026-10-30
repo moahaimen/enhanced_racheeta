@@ -12,7 +12,7 @@ from django.db.models.functions import Lower
 from apps.core.models import TimeStampedModel, UUIDModel
 
 from .managers import AccountManager
-from .roles import AccountRole
+from .roles import AccountRole, AccountType
 
 
 class Account(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
@@ -26,6 +26,11 @@ class Account(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=150)
     phone_number = models.CharField(max_length=32, blank=True, default="")
     role = models.CharField(max_length=32, choices=AccountRole.choices, default=AccountRole.PATIENT)
+    # Onboarding choice (finer than `role`; see roles.AccountType). Empty for accounts created
+    # before it existed — they keep working exactly as before.
+    account_type = models.CharField(
+        max_length=40, choices=AccountType.choices, blank=True, default=""
+    )
     preferred_language = models.CharField(
         max_length=2, choices=Language.choices, default=Language.ARABIC
     )

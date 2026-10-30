@@ -14,23 +14,21 @@ SAFE = {
 }
 
 
-def _with_db(settings, host="localhost", name="racheeta_workspace_demo"):
-    settings.DATABASES["default"]["HOST"] = host
-    settings.DATABASES["default"]["NAME"] = name
+def _db(host="localhost", name="racheeta_workspace_demo"):
+    """A database description for the guard (the live connection settings are never mutated)."""
+    return {"HOST": host, "NAME": name}
 
 
-def test_requires_the_explicit_local_opt_in(settings):
-    _with_db(settings)
-    reasons = local_guard.check({**SAFE, "RACHEETA_LOCAL_DEMO": ""})
+def test_requires_the_explicit_local_opt_in():
+    reasons = local_guard.check({**SAFE, "RACHEETA_LOCAL_DEMO": ""}, _db())
     assert any("RACHEETA_LOCAL_DEMO" in r for r in reasons)
 
 
 @pytest.mark.parametrize(
     "var", ["RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_NAME"]
 )
-def test_refuses_whenever_a_railway_variable_is_present(settings, var):
-    _with_db(settings)
-    assert any("Railway" in r for r in local_guard.check({**SAFE, var: "x"}))
+def test_refuses_whenever_a_railway_variable_is_present(var):
+    assert any("Railway" in r for r in local_guard.check({**SAFE, var: "x"}, _db()))
 
 
 @pytest.mark.parametrize(
@@ -42,21 +40,20 @@ def test_refuses_whenever_a_railway_variable_is_present(settings, var):
         ("db.example.com", "postgres://u:p@db.example.com:5432/racheeta_demo"),
     ],
 )
-def test_refuses_remote_hosts(settings, host, url):
-    _with_db(settings, host=host, name="racheeta_demo")
-    reasons = local_guard.check({**SAFE, "DATABASE_URL": url})
+def test_refuses_remote_hosts(host, url):
+    reasons = local_guard.check({**SAFE, "DATABASE_URL": url}, _db(host, "racheeta_demo"))
     assert any("not this machine" in r for r in reasons)
 
 
-def test_refuses_a_database_whose_name_is_not_a_demo(settings):
-    _with_db(settings, name="racheeta_dev")
-    assert any("does not contain 'demo'" in r for r in local_guard.check(SAFE))
+def test_refuses_a_database_whose_name_is_not_a_demo():
+    assert any(
+        "does not contain 'demo'" in r for r in local_guard.check(SAFE, _db(name="racheeta_dev"))
+    )
 
 
-def test_refuses_a_local_demo_named_database_without_the_marker(settings):
+def test_refuses_a_local_demo_named_database_without_the_marker():
     # local host, demo-looking name, opt-in set: still refused, because pg_database has no marker
-    _with_db(settings, name="racheeta_unmarked_demo")
-    reasons = local_guard.check(SAFE)
+    reasons = local_guard.check(SAFE, _db(name="racheeta_unmarked_demo"))
     assert reasons == [
         "database 'racheeta_unmarked_demo' does not carry the disposable-demo marker"
     ]
@@ -76,9 +73,18 @@ def test_local_commands_refuse_and_change_nothing_outside_the_disposable_databas
     assert not Account.objects.exists()
 
 
-def test_the_guard_never_reveals_credentials(settings):
-    _with_db(settings, host="db.example.com", name="racheeta_demo")
+def test_the_guard_never_reveals_credentials():
     reasons = local_guard.check(
-        {**SAFE, "DATABASE_URL": "postgres://user:SuperSecret@db.example.com/racheeta_demo"}
+        {**SAFE, "DATABASE_URL": "postgres://user:SuperSecret@db.example.com/racheeta_demo"},
+        _db("db.example.com", "racheeta_demo"),
     )
     assert "SuperSecret" not in " ".join(reasons)
+
+
+def test_the_guard_never_mutates_the_live_connection_settings():
+    from django.db import connection
+
+    before = dict(connection.settings_dict)
+    local_guard.check(SAFE, _db("db.example.com", "racheeta_demo"))
+    local_guard.check(SAFE)
+    assert connection.settings_dict == before

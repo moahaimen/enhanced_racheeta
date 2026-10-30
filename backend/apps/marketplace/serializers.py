@@ -63,7 +63,16 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCategory
-        fields = ("id", "slug", "name_ar", "name_en", "parent_id", "sort_order", "can_publish")
+        fields = (
+            "id",
+            "slug",
+            "name_ar",
+            "name_en",
+            "parent_id",
+            "sort_order",
+            "can_publish",
+            "consumer_allowed",
+        )
         read_only_fields = fields
 
     def get_can_publish(self, obj) -> bool:
@@ -87,7 +96,16 @@ class CompanySummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MedicalCompany
-        fields = ("id", "name", "governorate", "city", "website", "public_email", "phone")
+        fields = (
+            "id",
+            "name",
+            "business_type",
+            "governorate",
+            "city",
+            "website",
+            "public_email",
+            "phone",
+        )
         read_only_fields = fields
 
 
@@ -106,6 +124,7 @@ class CompanyOwnerSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "business_type",
             "description",
             "phone",
             "public_email",
@@ -139,6 +158,7 @@ class CompanyWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
         model = MedicalCompany
         fields = (
             "name",
+            "business_type",
             "description",
             "phone",
             "public_email",
@@ -205,6 +225,7 @@ class ProductPublicSerializer(serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "sale_channel",
             "category",
             "company",
             "created_at",
@@ -226,6 +247,9 @@ class ProductOwnerSerializer(serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "sale_channel",
+            "is_restricted",
+            "stock_quantity",
             "category",
             "is_active",
             "created_at",
@@ -248,13 +272,67 @@ class ProductWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("category", "title", "description", "brand", "model_name", "price", "currency")
-        extra_kwargs = {"title": {"required": True}, "currency": {"required": False}}
+        fields = (
+            "category",
+            "title",
+            "description",
+            "brand",
+            "model_name",
+            "price",
+            "currency",
+            "sale_channel",
+            "is_restricted",
+            "stock_quantity",
+        )
+        extra_kwargs = {
+            "title": {"required": True},
+            "currency": {"required": False},
+            "sale_channel": {"required": False},
+            "is_restricted": {"required": False},
+            "stock_quantity": {"required": False},
+        }
 
     def validate_currency(self, value: str) -> str:
         if value not in settings.RACHEETA["CURRENCIES"]:
             raise serializers.ValidationError("Unsupported currency.")
         return value
+
+
+class StoreCategorySerializer(serializers.ModelSerializer):
+    """Public store category: names only (no catalogue-governance flags)."""
+
+    class Meta:
+        model = ProductCategory
+        fields = ("id", "slug", "name_ar", "name_en")
+        read_only_fields = fields
+
+
+class StoreProductSerializer(serializers.ModelSerializer):
+    """The public store's view of a consumer product (no professional catalogue data,
+    no exact stock figure: only whether it can be ordered)."""
+
+    category = StoreCategorySerializer(read_only=True)
+    company = CompanySummarySerializer(read_only=True)
+    in_stock = serializers.SerializerMethodField()
+
+    def get_in_stock(self, obj) -> bool:
+        return bool(obj.stock_quantity)
+
+    class Meta:
+        model = Product
+        fields = (
+            "id",
+            "title",
+            "description",
+            "brand",
+            "model_name",
+            "price",
+            "currency",
+            "in_stock",
+            "category",
+            "company",
+        )
+        read_only_fields = fields
 
 
 class PaginatedProductOwnerSerializer(serializers.Serializer):

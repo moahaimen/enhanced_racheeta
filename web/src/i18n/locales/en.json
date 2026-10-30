@@ -89,7 +89,15 @@
     "messages": "Messages",
     "dashboard": "Dashboard",
     "facilities": "Hospitals & centers",
-    "account": "Workspace"
+    "account": "Workspace",
+    "workspaces": "Workspaces",
+    "store": "Assistive device store",
+    "myOrders": "My store orders",
+    "quotes": "Quote requests",
+    "merchantOrders": "Store orders",
+    "merchantQuotes": "Incoming quote requests",
+    "preferences": "Ad preferences",
+    "cart": "Cart"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -525,7 +533,24 @@
     "PSYCHOLOGIST": "Psychologist",
     "MEDICAL_ASSISTANT": "Medical assistant",
     "ADMINISTRATIVE": "Administrative / reception",
-    "OTHER": "Other healthcare profession"
+    "OTHER": "Other healthcare profession",
+    "PHARMACY_TECHNICIAN": "Pharmacy technician",
+    "OPTOMETRIST": "Optometrist",
+    "SPEECH_THERAPIST": "Speech therapist",
+    "BIOMEDICAL_ENGINEER": "Biomedical engineer",
+    "MEDICAL_REPRESENTATIVE": "Medical representative",
+    "HEALTH_ADMINISTRATOR": "Healthcare administrator",
+    "SOFTWARE_DEVELOPER": "Software developer",
+    "IT_SUPPORT": "IT support",
+    "NETWORK_ENGINEER": "Network engineer",
+    "CYBERSECURITY": "Cybersecurity specialist",
+    "DATA_ANALYST": "Data analyst",
+    "ACCOUNTANT": "Accountant / finance",
+    "MARKETING": "Marketing",
+    "SALES": "Sales",
+    "HUMAN_RESOURCES": "Human resources",
+    "ENGINEER": "Engineer (facilities / maintenance)",
+    "CUSTOMER_SERVICE": "Customer service"
   },
   "degrees": {
     "DIPLOMA": "Diploma",
@@ -1073,7 +1098,8 @@
       "jobs": "Job review",
       "subscriptions": "Subscriptions",
       "credits": "Credits",
-      "advertising": "Advertising"
+      "advertising": "Advertising",
+      "promotions": "Property promotions"
     },
     "verificationFilter": "Verification status",
     "emptyEmployers": "No matching organisations.",
@@ -1692,5 +1718,206 @@
       "last24h": "Last 24 hours",
       "last7d": "Last 7 days"
     }
+  },
+  "professionGroups": {
+    "HEALTHCARE": "Healthcare professions",
+    "HEALTH_BUSINESS": "Health business",
+    "TECHNOLOGY": "Technology",
+    "BUSINESS": "Business & operations"
+  },
+  "accountTypes": {
+    "PATIENT": "Patient / user",
+    "DOCTOR": "Doctor",
+    "NURSE": "Nurse",
+    "THERAPIST": "Therapist",
+    "HOSPITAL": "Hospital",
+    "MEDICAL_CENTER": "Medical center",
+    "PHARMACY": "Pharmacy",
+    "LABORATORY": "Laboratory",
+    "BEAUTY_CENTER": "Beauty center",
+    "PHARMACEUTICAL_COMPANY": "Pharmaceutical company",
+    "SCIENTIFIC_OFFICE": "Scientific office",
+    "MEDICAL_SUPPLIES_OFFICE": "Medical supplies office",
+    "EQUIPMENT_SUPPLIER": "Equipment supplier",
+    "ASSISTIVE_DEVICE_STORE": "Assistive device store",
+    "PHARMA_DISTRIBUTOR": "Pharma distributor",
+    "PROPERTY_OWNER": "Medical property owner",
+    "PROPERTY_AGENT": "Medical property agent"
+  },
+  "accountTypeGroups": {
+    "people": "Individuals",
+    "practitioners": "Practitioners",
+    "facilities": "Healthcare facilities",
+    "business": "Companies & businesses",
+    "property": "Medical real estate"
+  },
+  "ws": {
+    "switcherTitle": "Workspaces",
+    "switcherIntro": "Each workspace opens what your role there allows; the server checks access on every request.",
+    "open": "Open",
+    "role": "Your role",
+    "kinds": {
+      "patient": "Personal",
+      "practitioner": "Practitioner",
+      "facility": "Facility",
+      "company": "Business",
+      "property": "Real estate",
+      "employer": "Recruitment",
+      "job_seeker": "Job seeker",
+      "admin": "Administration"
+    },
+    "roles": {
+      "OWNER": "Owner",
+      "MANAGER": "Manager",
+      "STAFF": "Staff",
+      "VIEWER": "View only"
+    },
+    "none": "No workspaces yet",
+    "orgTitle": "Facility workspace",
+    "companyTitle": "Business workspace",
+    "counts": {
+      "pending": "Awaiting confirmation",
+      "upcoming": "Upcoming",
+      "today": "Today",
+      "practitioners": "Practitioners",
+      "staff": "Staff",
+      "products_active": "Active products",
+      "orders_open": "Open orders",
+      "quotes_open": "Open quote requests"
+    },
+    "reservations": "Facility reservations",
+    "noReservations": "No reservations",
+    "members": "Team",
+    "addMember": "Add member",
+    "memberEmail": "Member e-mail",
+    "memberRole": "Role",
+    "endMember": "End membership",
+    "noMembers": "No members yet.",
+    "readOnly": "You have view-only access in this workspace.",
+    "orders": "Store orders",
+    "quotes": "Quote requests",
+    "confirm": "Confirm",
+    "reject": "Reject",
+    "complete": "Complete",
+    "cancel": "Cancel"
+  },
+  "store": {
+    "title": "Assistive device store",
+    "intro": "Assistive and home devices that may be sold to the public, from verified stores. Medicines and restricted items are not available here.",
+    "demoPayment": "Demo environment: cash on delivery or manual transfer only — no card data is collected and nothing is charged.",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "addToCart": "Add to cart",
+    "added": "Added to cart",
+    "allCategories": "All categories",
+    "empty": "No products available.",
+    "by": "by {{name}}",
+    "cartTitle": "Cart",
+    "cartEmpty": "Your cart is empty.",
+    "quantity": "Quantity",
+    "remove": "Remove",
+    "total": "Estimated total",
+    "serverTotal": "The server computes the final price when the order is placed.",
+    "oneStore": "One order contains products from one store.",
+    "checkout": "Place order",
+    "placing": "Sending…",
+    "address": "Delivery address",
+    "phone": "Contact phone",
+    "governorate": "Governorate",
+    "note": "Note",
+    "payment": "Payment method",
+    "paymentMethods": {
+      "CASH_ON_DELIVERY": "Cash on delivery",
+      "MANUAL_TRANSFER": "Manual transfer (confirmed by the store)"
+    },
+    "paymentStatus": {
+      "UNPAID": "Unpaid",
+      "PAID": "Paid (recorded)",
+      "REFUND_DUE": "Refund due"
+    },
+    "orderStatus": {
+      "PLACED": "Placed",
+      "CONFIRMED": "Confirmed",
+      "SHIPPED": "Shipped",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    },
+    "placed": "Your order {{number}} was sent.",
+    "loginToOrder": "Log in to place the order.",
+    "myOrders": "My store orders",
+    "noOrders": "No orders yet.",
+    "cancelOrder": "Cancel order",
+    "merchantOrders": "Store orders",
+    "markPaid": "Record transfer received",
+    "advance": {
+      "CONFIRMED": "Confirm",
+      "SHIPPED": "Ship",
+      "DELIVERED": "Deliver",
+      "CANCELLED": "Cancel"
+    },
+    "buyer": "Buyer",
+    "items": "Items"
+  },
+  "quotes": {
+    "title": "Quote requests",
+    "intro": "Ask a business for a price on a product targeted at your field. Your personal contact details are not shared.",
+    "request": "Request a quote",
+    "requested": "Quote request sent.",
+    "message": "Message (optional)",
+    "none": "No quote requests.",
+    "status": {
+      "REQUESTED": "Sent",
+      "QUOTED": "Quoted",
+      "ACCEPTED": "Accepted",
+      "DECLINED": "Declined",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "accept": "Accept quote",
+    "decline": "Decline",
+    "withdraw": "Withdraw",
+    "unitPrice": "Unit price",
+    "respond": "Send price",
+    "incoming": "Incoming quote requests",
+    "from": "from {{name}}"
+  },
+  "prefs": {
+    "title": "Ad & marketing preferences",
+    "intro": "What is shown inside Racheeta is separate from your consent to marketing messages. Essential notifications (reservations, orders) always reach you.",
+    "display": "What I see",
+    "outreach": "Marketing messages (opt-in)",
+    "channels": "Channels",
+    "show_sponsored_products": "Show relevant sponsored products in my field",
+    "real_estate_promotions": "Medical property offers",
+    "job_alerts": "Job alerts",
+    "offers_and_news": "Product offers and news",
+    "channel_in_app": "In the app",
+    "channel_email": "E-mail (disabled in the demo)",
+    "channel_push": "Push (disabled in the demo)",
+    "saved": "Preferences saved."
+  },
+  "promo": {
+    "sponsored": "Sponsored",
+    "promotedProperties": "Promoted medical properties",
+    "promotedHint": "Shown because you opted in to medical property offers.",
+    "promotions": "Promotion",
+    "request": "Request promotion",
+    "days": "Duration (days)",
+    "targets": "Target groups (leave empty for all)",
+    "status": {
+      "REQUESTED": "Awaiting review",
+      "ACTIVE": "Active",
+      "REJECTED": "Rejected",
+      "ENDED": "Ended"
+    },
+    "end": "Stop",
+    "none": "No promotion requests.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectReason": "Rejection reason",
+    "adminTitle": "Property promotions"
+  },
+  "onboarding": {
+    "chooseType": "What kind of account is this?",
+    "typeHint": "Pick what describes you; the server derives permissions from it."
   }
 }

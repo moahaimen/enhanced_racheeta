@@ -50,6 +50,13 @@ PUBLIC_OPERATIONS = {
     ("GET", "api/v1/jobs"),
     ("GET", "api/v1/jobs/<uuid:pk>"),
     ("GET", "api/v1/employers/<uuid:pk>"),
+    # reviewed: the profession vocabulary (no data) and the consumer store, which exposes only
+    # allowed, non-restricted products of verified retail businesses (no stock figures, no
+    # professional catalogue)
+    ("GET", "api/v1/jobs/professions"),
+    ("GET", "api/v1/store/products"),
+    ("GET", "api/v1/store/products/<uuid:pk>"),
+    ("GET", "api/v1/store/categories"),
 }
 
 

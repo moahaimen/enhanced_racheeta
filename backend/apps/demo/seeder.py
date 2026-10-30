@@ -66,6 +66,7 @@ from apps.reservations.types import ReservationStatus
 from apps.reviews import services as review_services
 from apps.specialties.models import Specialty
 
+from . import local_seed
 from .content import common, estate, jobs, market, people, providers
 from .models import DemoRecord
 from .registry import Registry
@@ -109,6 +110,13 @@ class DemoSeeder:
             ("jobs and recruitment", self.phase_jobs),
             ("real estate", self.phase_real_estate),
         ]
+        if local_seed.enabled():  # only `seed_local_demo` sets this, after its local guard
+            extras = local_seed.LocalExtras(self)
+            phases += [
+                ("local: people, staff, preferences", extras.phase_people),
+                ("local: business types, store, campaigns", extras.phase_commerce),
+                ("local: orders, quotes, promotions", extras.phase_activity),
+            ]
         with self.registry:
             for title, phase in phases:
                 self.log(f"  {title} ...")

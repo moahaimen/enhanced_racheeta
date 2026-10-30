@@ -643,7 +643,17 @@ def verify_campaign_payment(
         target=campaign,
         summary=campaign.name,
     )
+    campaign_pk = campaign.pk
+    # Outreach is best-effort and runs only after the activation is durable; a failure
+    # there must never undo or fail the payment decision.
+    transaction.on_commit(lambda: _notify_audience(campaign_pk), robust=True)
     return campaign
+
+
+def _notify_audience(campaign_id) -> None:
+    from .outreach import notify_campaign_audience
+
+    notify_campaign_audience(campaign_id)
 
 
 @transaction.atomic

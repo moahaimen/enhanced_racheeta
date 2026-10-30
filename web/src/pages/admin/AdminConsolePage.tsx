@@ -10,9 +10,10 @@ import { toErrorMessage } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError } from '../validation'
 import { AdminAdvertisingTab } from './AdminAdvertisingTab'
+import { AdminPromotionsPanel } from '../realEstate/PromotionsPanels'
 import styles from './AdminConsolePage.module.css'
 
-const TABS = ['employers', 'jobs', 'subscriptions', 'credits', 'advertising'] as const
+const TABS = ['employers', 'jobs', 'subscriptions', 'credits', 'advertising', 'promotions'] as const
 type Tab = (typeof TABS)[number]
 
 /** /admin-console — Super Admin control plane for recruitment and billing. Staff accounts only. */
@@ -27,7 +28,7 @@ export function AdminConsolePage() {
       <Tabs id="admin" aria-label={t('admin.title')} value={tab} onChange={(next) => setParams({ tab: next })} tabs={TABS.map((id) => ({ id, label: t(`admin.tabs.${id}`) }))} />
       <div {...tabPanelProps('admin', tab)}>
         <PageStack>
-          {tab === 'employers' ? <EmployersTab /> : tab === 'jobs' ? <JobsTab /> : tab === 'subscriptions' ? <SubscriptionsTab /> : tab === 'advertising' ? <AdminAdvertisingTab /> : <CreditsTab />}
+          {tab === 'employers' ? <EmployersTab /> : tab === 'jobs' ? <JobsTab /> : tab === 'subscriptions' ? <SubscriptionsTab /> : tab === 'advertising' ? <AdminAdvertisingTab /> : tab === 'promotions' ? <AdminPromotionsPanel /> : <CreditsTab />}
         </PageStack>
       </div>
     </Container>

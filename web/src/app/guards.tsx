@@ -8,7 +8,8 @@ import type { AccountRole } from '../api'
 import { useAuth } from '../auth/useAuth'
 import { ErrorState, LoadingState } from '../design-system'
 
-export const DEFAULT_AUTHENTICATED_PATH = '/profile'
+/** Where a signed-in account lands: its role-aware dashboard (never a bare profile form). */
+export const DEFAULT_AUTHENTICATED_PATH = '/dashboard'
 
 export function SessionRestoring() {
   const { t } = useTranslation()

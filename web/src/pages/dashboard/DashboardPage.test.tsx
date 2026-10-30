@@ -389,7 +389,7 @@ describe('Dashboard hub', () => {
     vi.mocked(dashboardsApi.getPatient).mockResolvedValue(patientData('ACCOUNT B VISIT'))
     await userEvent.type(screen.getByLabelText(/email/i), 'b@example.com')
     await userEvent.type(screen.getByLabelText(/^password$/i), 'Str0ng-Passw0rd!{Enter}')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
     await act(async () => {
       await router.navigate('/dashboard')
     })

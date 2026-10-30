@@ -109,6 +109,9 @@ INSTALLED_APPS = [
     "apps.chat.apps.ChatConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.dashboards",
+    "apps.workspaces",
+    "apps.preferences",
+    "apps.commerce",
     "apps.demo",
 ]
 
@@ -262,6 +265,15 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
+        "AccountTypeEnum": "apps.accounts.roles.AccountType.choices",
+        "BusinessTypeEnum": "apps.marketplace.types.BusinessType.choices",
+        "SaleChannelEnum": "apps.marketplace.types.SaleChannel.choices",
+        "OrderStatusEnum": "apps.commerce.types.OrderStatus.choices",
+        "StorePaymentMethodEnum": "apps.commerce.types.PaymentMethod.choices",
+        "StorePaymentStatusEnum": "apps.commerce.types.PaymentStatus.choices",
+        "QuoteStatusEnum": "apps.commerce.types.QuoteStatus.choices",
+        "OrgRoleEnum": "apps.workspaces.types.OrgRole.choices",
+        "PromotionStatusEnum": "apps.real_estate.types.PromotionStatus.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
         "PushPlatformEnum": "apps.notifications.types.PushPlatform.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",

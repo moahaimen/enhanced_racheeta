@@ -525,6 +525,108 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderOwner'
           description: ''
+  /api/v1/admin/real-estate/promotions:
+    get:
+      operationId: admin_real_estate_promotions_list
+      summary: 'Administrator: listing promotions (paginated)'
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ACTIVE
+          - ENDED
+          - REJECTED
+          - REQUESTED
+      tags:
+      - real-estate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedListingPromotionList'
+          description: ''
+  /api/v1/admin/real-estate/promotions/{id}/approve:
+    post:
+      operationId: admin_real_estate_promotions_approve_create
+      summary: 'Administrator: approve a promotion'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPromotion'
+          description: ''
+  /api/v1/admin/real-estate/promotions/{id}/reject:
+    post:
+      operationId: admin_real_estate_promotions_reject_create
+      summary: 'Administrator: reject a promotion'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromotionRejectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PromotionRejectRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPromotion'
+          description: ''
   /api/v1/admin/recruitment/employers:
     get:
       operationId: admin_recruitment_employers_list
@@ -2194,20 +2296,37 @@ paths:
         schema:
           type: string
           enum:
+          - ACCOUNTANT
           - ADMINISTRATIVE
           - ANESTHESIA_TECHNICIAN
+          - BIOMEDICAL_ENGINEER
+          - CUSTOMER_SERVICE
+          - CYBERSECURITY
+          - DATA_ANALYST
           - DENTIST
           - DOCTOR
+          - ENGINEER
+          - HEALTH_ADMINISTRATOR
+          - HUMAN_RESOURCES
+          - IT_SUPPORT
           - LAB_TECHNICIAN
+          - MARKETING
           - MEDICAL_ASSISTANT
+          - MEDICAL_REPRESENTATIVE
           - MIDWIFE
+          - NETWORK_ENGINEER
           - NURSE
           - NUTRITIONIST
+          - OPTOMETRIST
           - OTHER
           - PHARMACIST
+          - PHARMACY_TECHNICIAN
           - PHYSIOTHERAPIST
           - PSYCHOLOGIST
           - RADIOLOGY_TECHNICIAN
+          - SALES
+          - SOFTWARE_DEVELOPER
+          - SPEECH_THERAPIST
         description: |-
           * `DOCTOR` - Physician
           * `DENTIST` - Dentist
@@ -2223,6 +2342,23 @@ paths:
           * `MEDICAL_ASSISTANT` - Medical assistant
           * `ADMINISTRATIVE` - Administrative / reception
           * `OTHER` - Other healthcare profession
+          * `PHARMACY_TECHNICIAN` - Pharmacy technician
+          * `OPTOMETRIST` - Optometrist
+          * `SPEECH_THERAPIST` - Speech therapist
+          * `BIOMEDICAL_ENGINEER` - Biomedical engineer
+          * `MEDICAL_REPRESENTATIVE` - Medical representative
+          * `HEALTH_ADMINISTRATOR` - Healthcare administrator
+          * `SOFTWARE_DEVELOPER` - Software developer
+          * `IT_SUPPORT` - IT support
+          * `NETWORK_ENGINEER` - Network engineer
+          * `CYBERSECURITY` - Cybersecurity specialist
+          * `DATA_ANALYST` - Data analyst
+          * `ACCOUNTANT` - Accountant / finance
+          * `MARKETING` - Marketing
+          * `SALES` - Sales
+          * `HUMAN_RESOURCES` - Human resources
+          * `ENGINEER` - Engineer (facilities / maintenance)
+          * `CUSTOMER_SERVICE` - Customer service
       - name: page
         required: false
         in: query
@@ -3308,6 +3444,23 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/jobs/professions:
+    get:
+      operationId: jobs_professions_list
+      summary: Profession vocabulary grouped for display (healthcare first)
+      tags:
+      - jobs
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfessionGroup'
+          description: ''
   /api/v1/marketplace/categories:
     get:
       operationId: marketplace_categories_list
@@ -3655,6 +3808,286 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
+  /api/v1/me/preferences:
+    get:
+      operationId: me_preferences_retrieve
+      summary: My marketing preferences (display + outreach consent)
+      tags:
+      - preferences
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preference'
+          description: ''
+    patch:
+      operationId: me_preferences_partial_update
+      summary: Change my marketing preferences
+      tags:
+      - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preference'
+          description: ''
+  /api/v1/merchant/orders:
+    get:
+      operationId: merchant_orders_list
+      summary: Store orders of my business
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderList'
+          description: ''
+  /api/v1/merchant/orders/{id}:
+    get:
+      operationId: merchant_orders_retrieve
+      summary: One order of my business
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/merchant/orders/{id}/payment-received:
+    post:
+      operationId: merchant_orders_payment_received_create
+      summary: Record that a manual transfer was received (nothing is charged)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/merchant/orders/{id}/transition:
+    post:
+      operationId: merchant_orders_transition_create
+      summary: Move an order (confirm, ship, deliver, cancel)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderTransitionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderTransitionRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/merchant/quotes:
+    get:
+      operationId: merchant_quotes_list
+      summary: Quote requests received by my business
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - quotes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQuoteList'
+          description: ''
+  /api/v1/merchant/quotes/{id}/decline:
+    post:
+      operationId: merchant_quotes_decline_create
+      summary: Decline a request
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quotes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
+  /api/v1/merchant/quotes/{id}/respond:
+    post:
+      operationId: merchant_quotes_respond_create
+      summary: Send a price for a request
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRespondRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteRespondRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
   /api/v1/notifications/:
     get:
       operationId: notifications_retrieve
@@ -3860,6 +4293,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferOwner'
+          description: ''
+  /api/v1/orders:
+    get:
+      operationId: orders_list
+      summary: My store orders
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderList'
+          description: ''
+    post:
+      operationId: orders_create
+      summary: Place a store order (prices and totals are computed by the server)
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}:
+    get:
+      operationId: orders_retrieve
+      summary: One of my store orders
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}/cancel:
+    post:
+      operationId: orders_cancel_create
+      summary: Cancel my order (before it ships)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CancelRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
           description: ''
   /api/v1/providers:
     get:
@@ -4392,6 +4940,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProviderOwner'
           description: ''
+  /api/v1/quotes:
+    get:
+      operationId: quotes_list
+      summary: My quote requests (verified providers)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - quotes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQuoteList'
+          description: ''
+    post:
+      operationId: quotes_create
+      summary: Ask a business for a price on a product targeted at me
+      tags:
+      - quotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
+  /api/v1/quotes/{id}/close:
+    post:
+      operationId: quotes_close_create
+      summary: Accept, decline or withdraw my quote request
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteCloseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteCloseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
   /api/v1/real-estate/listings:
     get:
       operationId: real_estate_listings_list
@@ -4767,6 +5409,119 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PropertyListingOwner'
+          description: ''
+  /api/v1/real-estate/owner/promotions:
+    get:
+      operationId: real_estate_owner_promotions_list
+      summary: My listing promotions (paginated)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - real-estate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedListingPromotionList'
+          description: ''
+    post:
+      operationId: real_estate_owner_promotions_create
+      summary: My listing promotions (paginated)
+      tags:
+      - real-estate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromotionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PromotionRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPromotion'
+          description: ''
+  /api/v1/real-estate/owner/promotions/{id}/end:
+    post:
+      operationId: real_estate_owner_promotions_end_create
+      summary: Withdraw or stop one of my promotions
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPromotion'
+          description: ''
+  /api/v1/real-estate/promoted:
+    get:
+      operationId: real_estate_promoted_list
+      summary: Promoted medical properties for me (opt-in, verified providers; paginated)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      tags:
+      - real-estate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPromotedListingList'
           description: ''
   /api/v1/recruitment/applications/{id}/messages:
     get:
@@ -5181,6 +5936,101 @@ paths:
                 items:
                   $ref: '#/components/schemas/Specialty'
           description: ''
+  /api/v1/store/categories:
+    get:
+      operationId: store_categories_list
+      summary: Public store categories that currently have products
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StoreCategory'
+          description: ''
+  /api/v1/store/products:
+    get:
+      operationId: store_products_list
+      summary: 'Public store: allowed consumer products (no restricted items)'
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStoreProductList'
+          description: ''
+  /api/v1/store/products/{id}:
+    get:
+      operationId: store_products_retrieve
+      summary: 'Public store: one product'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreProduct'
+          description: ''
   /api/v1/talent:
     get:
       operationId: talent_list
@@ -5452,6 +6302,338 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/workspaces:
+    get:
+      operationId: workspaces_list
+      summary: Workspaces I may open now (server-computed)
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
+          description: ''
+  /api/v1/workspaces/company/{id}:
+    get:
+      operationId: workspaces_company_retrieve
+      summary: Business workspace summary
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyWorkspaceSummary'
+          description: ''
+  /api/v1/workspaces/company/{id}/members:
+    get:
+      operationId: workspaces_company_members_list
+      summary: Staff of an organization (owner, manager)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+          description: ''
+    post:
+      operationId: workspaces_company_members_create
+      summary: Add an existing account as manager, staff or viewer (owner only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+  /api/v1/workspaces/company/{id}/members/{member_id}/end:
+    post:
+      operationId: workspaces_company_members_end_create
+      summary: End a staff membership (owner only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: member_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+  /api/v1/workspaces/facility/{id}:
+    get:
+      operationId: workspaces_facility_retrieve
+      summary: Facility workspace summary
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilityWorkspaceSummary'
+          description: ''
+  /api/v1/workspaces/facility/{id}/members:
+    get:
+      operationId: workspaces_facility_members_list
+      summary: Staff of an organization (owner, manager)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+          description: ''
+    post:
+      operationId: workspaces_facility_members_create
+      summary: Add an existing account as manager, staff or viewer (owner only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+  /api/v1/workspaces/facility/{id}/members/{member_id}/end:
+    post:
+      operationId: workspaces_facility_members_end_create
+      summary: End a staff membership (owner only)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: member_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+  /api/v1/workspaces/facility/{id}/reservations:
+    get:
+      operationId: workspaces_facility_reservations_list
+      summary: Reservations of a facility I work for
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReservationProviderList'
+          description: ''
+  /api/v1/workspaces/facility/{id}/reservations/{reservation_id}/transition:
+    post:
+      operationId: workspaces_facility_reservations_transition_create
+      summary: Confirm, reject, complete or mark no-show (facility staff)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: reservation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderTransitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProviderTransitionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationProvider'
+          description: ''
 components:
   schemas:
     Account:
@@ -5477,6 +6659,10 @@ components:
         role:
           allOf:
           - $ref: '#/components/schemas/AccountRoleEnum'
+          readOnly: true
+        account_type:
+          allOf:
+          - $ref: '#/components/schemas/AccountTypeEnum'
           readOnly: true
         preferred_language:
           allOf:
@@ -5513,6 +6699,7 @@ components:
           nullable: true
           title: آخر دخول
       required:
+      - account_type
       - created_at
       - email
       - email_verified
@@ -5540,6 +6727,44 @@ components:
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
         * `ADMIN` - Racheeta administrator
+    AccountTypeEnum:
+      enum:
+      - PATIENT
+      - DOCTOR
+      - NURSE
+      - THERAPIST
+      - HOSPITAL
+      - MEDICAL_CENTER
+      - PHARMACY
+      - LABORATORY
+      - BEAUTY_CENTER
+      - PHARMACEUTICAL_COMPANY
+      - SCIENTIFIC_OFFICE
+      - MEDICAL_SUPPLIES_OFFICE
+      - EQUIPMENT_SUPPLIER
+      - ASSISTIVE_DEVICE_STORE
+      - PHARMA_DISTRIBUTOR
+      - PROPERTY_OWNER
+      - PROPERTY_AGENT
+      type: string
+      description: |-
+        * `PATIENT` - Patient
+        * `DOCTOR` - Doctor
+        * `NURSE` - Nurse
+        * `THERAPIST` - Therapist
+        * `HOSPITAL` - Hospital
+        * `MEDICAL_CENTER` - Medical center / clinic
+        * `PHARMACY` - Pharmacy
+        * `LABORATORY` - Laboratory
+        * `BEAUTY_CENTER` - Beauty center
+        * `PHARMACEUTICAL_COMPANY` - Pharmaceutical company
+        * `SCIENTIFIC_OFFICE` - Scientific office
+        * `MEDICAL_SUPPLIES_OFFICE` - Medical supplies office
+        * `EQUIPMENT_SUPPLIER` - Medical equipment supplier
+        * `ASSISTIVE_DEVICE_STORE` - Assistive devices store
+        * `PHARMA_DISTRIBUTOR` - Pharmaceutical distributor
+        * `PROPERTY_OWNER` - Medical property owner
+        * `PROPERTY_AGENT` - Medical property agent / manager
     ActivateRequest:
       type: object
       properties:
@@ -6094,6 +7319,24 @@ components:
     BlankEnum:
       enum:
       - ''
+    BusinessTypeEnum:
+      enum:
+      - MEDICAL_COMPANY
+      - PHARMACEUTICAL_COMPANY
+      - SCIENTIFIC_OFFICE
+      - MEDICAL_SUPPLIES_OFFICE
+      - EQUIPMENT_SUPPLIER
+      - ASSISTIVE_DEVICE_STORE
+      - PHARMA_DISTRIBUTOR
+      type: string
+      description: |-
+        * `MEDICAL_COMPANY` - Medical company
+        * `PHARMACEUTICAL_COMPANY` - Pharmaceutical company
+        * `SCIENTIFIC_OFFICE` - Scientific office
+        * `MEDICAL_SUPPLIES_OFFICE` - Medical supplies office
+        * `EQUIPMENT_SUPPLIER` - Medical equipment supplier
+        * `ASSISTIVE_DEVICE_STORE` - Assistive devices store
+        * `PHARMA_DISTRIBUTOR` - Pharmaceutical distributor
     CampaignAdmin:
       type: object
       properties:
@@ -6426,6 +7669,26 @@ components:
       required:
       - name
       - product
+    CancelRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    CartLineRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          maximum: 20
+          minimum: 1
+      required:
+      - product
+      - quantity
     ChatAccount:
       type: object
       properties:
@@ -6553,6 +7816,43 @@ components:
           type: integer
       required:
       - count
+    CheckoutRequest:
+      type: object
+      description: Only product ids and quantities come from the client; prices and
+        totals never do.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+        payment_method:
+          $ref: '#/components/schemas/StorePaymentMethodEnum'
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: ^\+?[0-9 ]{7,20}$
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - address
+      - governorate
+      - items
+      - payment_method
+      - phone
     City:
       type: object
       properties:
@@ -6589,6 +7889,10 @@ components:
           readOnly: true
         name:
           type: string
+          readOnly: true
+        business_type:
+          allOf:
+          - $ref: '#/components/schemas/BusinessTypeEnum'
           readOnly: true
         description:
           type: string
@@ -6661,6 +7965,7 @@ components:
       required:
       - account_email
       - address
+      - business_type
       - can_publish
       - city
       - created_at
@@ -6709,6 +8014,10 @@ components:
           readOnly: true
         name:
           type: string
+          readOnly: true
+        business_type:
+          allOf:
+          - $ref: '#/components/schemas/BusinessTypeEnum'
           readOnly: true
         description:
           type: string
@@ -6776,6 +8085,7 @@ components:
           readOnly: true
       required:
       - address
+      - business_type
       - can_publish
       - city
       - created_at
@@ -6804,6 +8114,10 @@ components:
         name:
           type: string
           readOnly: true
+        business_type:
+          allOf:
+          - $ref: '#/components/schemas/BusinessTypeEnum'
+          readOnly: true
         governorate:
           allOf:
           - $ref: '#/components/schemas/Governorate'
@@ -6825,6 +8139,7 @@ components:
           type: string
           readOnly: true
       required:
+      - business_type
       - city
       - governorate
       - id
@@ -6869,6 +8184,33 @@ components:
         * `VERIFIED` - Verified
         * `REJECTED` - Rejected
         * `SUSPENDED` - Suspended
+    CompanyWorkspaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        business_type:
+          type: string
+        role:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - business_type
+      - capabilities
+      - counts
+      - id
+      - name
+      - role
     CompanyWriteRequest:
       type: object
       properties:
@@ -6876,6 +8218,8 @@ components:
           type: string
           minLength: 1
           maxLength: 150
+        business_type:
+          $ref: '#/components/schemas/BusinessTypeEnum'
         description:
           type: string
         phone:
@@ -8233,6 +9577,33 @@ components:
       - reviews
       - unread
       - upcoming
+    FacilityWorkspaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        provider_type:
+          type: string
+        role:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - capabilities
+      - counts
+      - id
+      - name
+      - provider_type
+      - role
     FeaturedRequest:
       type: object
       properties:
@@ -9518,6 +10889,56 @@ components:
         * `INTERMEDIATE` - Intermediate
         * `ADVANCED` - Advanced
         * `NATIVE` - Native
+    ListingPromotion:
+      type: object
+      description: Seller/admin view of a promotion. Never lists who saw or was notified.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/PromotionListing'
+          readOnly: true
+        target_provider_types:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        days:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reject_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - days
+      - ends_at
+      - id
+      - listing
+      - reject_reason
+      - starts_at
+      - status
+      - target_provider_types
     LoginRequest:
       type: object
       description: Email + password -> access/refresh pair. Registered via SIMPLE_JWT.
@@ -9568,6 +10989,45 @@ components:
       - payments
       - products
       - verification_status
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/OrgRoleEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MemberStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - email
+      - ended_at
+      - full_name
+      - id
+      - role
+      - status
     MemberAddRequest:
       type: object
       properties:
@@ -9587,6 +11047,28 @@ components:
       type: string
       description: |-
         * `RECRUITER` - Recruiter
+        * `VIEWER` - Viewer
+    MemberCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        role:
+          $ref: '#/components/schemas/MemberCreateRoleEnum'
+      required:
+      - email
+      - role
+    MemberCreateRoleEnum:
+      enum:
+      - MANAGER
+      - STAFF
+      - VIEWER
+      type: string
+      description: |-
+        * `MANAGER` - Manager
+        * `STAFF` - Staff
         * `VIEWER` - Viewer
     MemberStatusEnum:
       enum:
@@ -9828,16 +11310,35 @@ components:
     NotificationCategoryEnum:
       enum:
       - RESERVATION
+      - ORDER
+      - QUOTE
+      - MARKETING
       type: string
-      description: '* `RESERVATION` - Reservation'
+      description: |-
+        * `RESERVATION` - Reservation
+        * `ORDER` - Store order
+        * `QUOTE` - Quote request
+        * `MARKETING` - Sponsored / promotion
     NotificationEventTypeEnum:
       enum:
       - RESERVATION_CREATED
       - RESERVATION_STATUS_CHANGED
+      - ORDER_PLACED
+      - ORDER_STATUS_CHANGED
+      - QUOTE_REQUESTED
+      - QUOTE_UPDATED
+      - SPONSORED_PRODUCT
+      - PROPERTY_PROMOTION
       type: string
       description: |-
         * `RESERVATION_CREATED` - Reservation created
         * `RESERVATION_STATUS_CHANGED` - Reservation status changed
+        * `ORDER_PLACED` - New store order
+        * `ORDER_STATUS_CHANGED` - Order status changed
+        * `QUOTE_REQUESTED` - New quote request
+        * `QUOTE_UPDATED` - Quote request updated
+        * `SPONSORED_PRODUCT` - Sponsored product in your field
+        * `PROPERTY_PROMOTION` - Promoted medical property
     OfferCreateRequest:
       type: object
       properties:
@@ -9935,6 +11436,203 @@ components:
       - starts_at
       - title
       - updated_at
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatusEnum'
+          readOnly: true
+        payment_method:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentMethodEnum'
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentStatusEnum'
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        merchant:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        buyer_name:
+          type: string
+          readOnly: true
+        delivery_governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        delivery_city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+          nullable: true
+        delivery_address:
+          type: string
+          readOnly: true
+        contact_phone:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderTransition'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - buyer_name
+      - contact_phone
+      - created_at
+      - currency
+      - delivery_address
+      - delivery_city
+      - delivery_governorate
+      - id
+      - items
+      - merchant
+      - note
+      - number
+      - payment_method
+      - payment_status
+      - status
+      - status_changed_at
+      - total
+      - transitions
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product_id:
+          type: string
+          format: uuid
+          readOnly: true
+        title_snapshot:
+          type: string
+          readOnly: true
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - id
+      - line_total
+      - product_id
+      - quantity
+      - title_snapshot
+      - unit_price
+    OrderStatusEnum:
+      enum:
+      - PLACED
+      - CONFIRMED
+      - SHIPPED
+      - DELIVERED
+      - CANCELLED
+      type: string
+      description: |-
+        * `PLACED` - Placed
+        * `CONFIRMED` - Confirmed by the store
+        * `SHIPPED` - Shipped
+        * `DELIVERED` - Delivered
+        * `CANCELLED` - Cancelled
+    OrderTransition:
+      type: object
+      properties:
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - from_status
+      - reason
+      - to_status
+    OrderTransitionRequestRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderTransitionRequestStatusEnum'
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - status
+    OrderTransitionRequestStatusEnum:
+      enum:
+      - CONFIRMED
+      - SHIPPED
+      - DELIVERED
+      - CANCELLED
+      type: string
+      description: |-
+        * `CONFIRMED` - CONFIRMED
+        * `SHIPPED` - SHIPPED
+        * `DELIVERED` - DELIVERED
+        * `CANCELLED` - CANCELLED
+    OrgRoleEnum:
+      enum:
+      - OWNER
+      - MANAGER
+      - STAFF
+      - VIEWER
+      type: string
+      description: |-
+        * `OWNER` - Owner
+        * `MANAGER` - Manager
+        * `STAFF` - Staff
+        * `VIEWER` - Viewer
     OrganizationTypeEnum:
       enum:
       - HOSPITAL
@@ -9961,6 +11659,16 @@ components:
         * `UNIVERSITY` - University / college
         * `RECRUITMENT_AGENCY` - Recruitment agency
         * `OTHER` - Other approved healthcare organisation
+    OutcomeEnum:
+      enum:
+      - ACCEPTED
+      - DECLINED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `ACCEPTED` - ACCEPTED
+        * `DECLINED` - DECLINED
+        * `WITHDRAWN` - WITHDRAWN
     OwnerCity:
       type: object
       description: |-
@@ -10459,6 +12167,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JobEmployer'
+    PaginatedListingPromotionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingPromotion'
     PaginatedMyReviewList:
       type: object
       required:
@@ -10526,6 +12257,29 @@ components:
       - next
       - previous
       - results
+    PaginatedOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
     PaginatedProductOwner:
       type: object
       properties:
@@ -10571,6 +12325,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductPublic'
+    PaginatedPromotedListingList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromotedListing'
     PaginatedPropertyListingOwner:
       type: object
       properties:
@@ -10685,6 +12462,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicReview'
+    PaginatedQuoteList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quote'
     PaginatedReservationPatientList:
       type: object
       required:
@@ -10777,6 +12577,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SponsoredCampaign'
+    PaginatedStoreProductList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoreProduct'
     PaginatedTalentCardList:
       type: object
       required:
@@ -10884,6 +12707,8 @@ components:
           type: string
           minLength: 1
           maxLength: 150
+        business_type:
+          $ref: '#/components/schemas/BusinessTypeEnum'
         description:
           type: string
         phone:
@@ -11152,6 +12977,23 @@ components:
           format: date-time
         is_active:
           type: boolean
+    PatchedPreferenceRequest:
+      type: object
+      properties:
+        show_sponsored_products:
+          type: boolean
+        real_estate_promotions:
+          type: boolean
+        job_alerts:
+          type: boolean
+        offers_and_news:
+          type: boolean
+        channel_in_app:
+          type: boolean
+        channel_email:
+          type: boolean
+        channel_push:
+          type: boolean
     PatchedProductWriteRequest:
       type: object
       description: |-
@@ -11182,6 +13024,15 @@ components:
           type: string
           minLength: 1
           maxLength: 3
+        sale_channel:
+          $ref: '#/components/schemas/SaleChannelEnum'
+        is_restricted:
+          type: boolean
+        stock_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
     PatchedPropertyListingWriteRequest:
       type: object
       description: |-
@@ -11618,6 +13469,23 @@ components:
       description: |-
         * `BOOLEAN` - Capability on/off
         * `LIMIT` - Numeric limit
+    Preference:
+      type: object
+      properties:
+        show_sponsored_products:
+          type: boolean
+        real_estate_promotions:
+          type: boolean
+        job_alerts:
+          type: boolean
+        offers_and_news:
+          type: boolean
+        channel_in_app:
+          type: boolean
+        channel_email:
+          type: boolean
+        channel_push:
+          type: boolean
     PreferredLanguageEnum:
       enum:
       - ar
@@ -11658,8 +13526,12 @@ components:
             category is active and has at least one active audience rule. Derived
             by the backend at read time; publication is still decided server-side.
           readOnly: true
+        consumer_allowed:
+          type: boolean
+          readOnly: true
       required:
       - can_publish
+      - consumer_allowed
       - id
       - name_ar
       - name_en
@@ -11694,6 +13566,17 @@ components:
         currency:
           type: string
           readOnly: true
+        sale_channel:
+          allOf:
+          - $ref: '#/components/schemas/SaleChannelEnum'
+          readOnly: true
+        is_restricted:
+          type: boolean
+          readOnly: true
+        stock_quantity:
+          type: integer
+          readOnly: true
+          nullable: true
         category:
           allOf:
           - $ref: '#/components/schemas/ProductCategory'
@@ -11717,8 +13600,11 @@ components:
       - description
       - id
       - is_active
+      - is_restricted
       - model_name
       - price
+      - sale_channel
+      - stock_quantity
       - title
       - updated_at
     ProductPublic:
@@ -11750,6 +13636,10 @@ components:
         currency:
           type: string
           readOnly: true
+        sale_channel:
+          allOf:
+          - $ref: '#/components/schemas/SaleChannelEnum'
+          readOnly: true
         category:
           allOf:
           - $ref: '#/components/schemas/ProductCategory'
@@ -11776,6 +13666,7 @@ components:
       - id
       - model_name
       - price
+      - sale_channel
       - title
       - updated_at
     ProductWriteRequest:
@@ -11808,6 +13699,15 @@ components:
           type: string
           minLength: 1
           maxLength: 3
+        sale_channel:
+          $ref: '#/components/schemas/SaleChannelEnum'
+        is_restricted:
+          type: boolean
+        stock_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
       required:
       - category
       - title
@@ -11827,6 +13727,23 @@ components:
       - MEDICAL_ASSISTANT
       - ADMINISTRATIVE
       - OTHER
+      - PHARMACY_TECHNICIAN
+      - OPTOMETRIST
+      - SPEECH_THERAPIST
+      - BIOMEDICAL_ENGINEER
+      - MEDICAL_REPRESENTATIVE
+      - HEALTH_ADMINISTRATOR
+      - SOFTWARE_DEVELOPER
+      - IT_SUPPORT
+      - NETWORK_ENGINEER
+      - CYBERSECURITY
+      - DATA_ANALYST
+      - ACCOUNTANT
+      - MARKETING
+      - SALES
+      - HUMAN_RESOURCES
+      - ENGINEER
+      - CUSTOMER_SERVICE
       type: string
       description: |-
         * `DOCTOR` - Physician
@@ -11843,6 +13760,96 @@ components:
         * `MEDICAL_ASSISTANT` - Medical assistant
         * `ADMINISTRATIVE` - Administrative / reception
         * `OTHER` - Other healthcare profession
+        * `PHARMACY_TECHNICIAN` - Pharmacy technician
+        * `OPTOMETRIST` - Optometrist
+        * `SPEECH_THERAPIST` - Speech therapist
+        * `BIOMEDICAL_ENGINEER` - Biomedical engineer
+        * `MEDICAL_REPRESENTATIVE` - Medical representative
+        * `HEALTH_ADMINISTRATOR` - Healthcare administrator
+        * `SOFTWARE_DEVELOPER` - Software developer
+        * `IT_SUPPORT` - IT support
+        * `NETWORK_ENGINEER` - Network engineer
+        * `CYBERSECURITY` - Cybersecurity specialist
+        * `DATA_ANALYST` - Data analyst
+        * `ACCOUNTANT` - Accountant / finance
+        * `MARKETING` - Marketing
+        * `SALES` - Sales
+        * `HUMAN_RESOURCES` - Human resources
+        * `ENGINEER` - Engineer (facilities / maintenance)
+        * `CUSTOMER_SERVICE` - Customer service
+    ProfessionGroup:
+      type: object
+      properties:
+        group:
+          type: string
+        professions:
+          type: array
+          items:
+            type: string
+      required:
+      - group
+      - professions
+    PromotedListing:
+      type: object
+      description: A promoted listing in a provider's feed. Always labelled sponsored
+        by the client.
+      properties:
+        promotion_id:
+          type: string
+          format: uuid
+        sponsored:
+          type: boolean
+          readOnly: true
+        listing:
+          $ref: '#/components/schemas/PropertyListingPublic'
+        ends_at:
+          type: string
+          format: date-time
+      required:
+      - ends_at
+      - listing
+      - promotion_id
+      - sponsored
+    PromotionListing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+      required:
+      - id
+      - title
+    PromotionRejectRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+      - reason
+    PromotionRequestRequest:
+      type: object
+      properties:
+        listing:
+          type: string
+          format: uuid
+        target_provider_types:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 32
+          maxItems: 9
+        days:
+          type: integer
+          maximum: 60
+          minimum: 1
+          default: 14
+      required:
+      - listing
     PropertyListingOwner:
       type: object
       description: 'The owner''s view: stored contact values, lifecycle and derived
@@ -12865,6 +14872,99 @@ components:
         * `ANDROID` - Android
         * `IOS` - iOS
         * `WEB` - Web
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/QuoteStatusEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        product:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        company:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        requester:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        quoted_unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        quoted_currency:
+          type: string
+          readOnly: true
+        quoted_note:
+          type: string
+          readOnly: true
+        quoted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - closed_at
+      - company
+      - created_at
+      - id
+      - message
+      - product
+      - quantity
+      - quoted_at
+      - quoted_currency
+      - quoted_note
+      - quoted_unit_price
+      - requester
+      - status
+    QuoteCloseRequest:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/OutcomeEnum'
+      required:
+      - outcome
+    QuoteCreateRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          maximum: 10000
+          minimum: 1
+        message:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - product
+      - quantity
     QuoteDatesRequest:
       type: object
       properties:
@@ -12877,6 +14977,19 @@ components:
       required:
       - ends_on
       - starts_on
+    QuoteRespondRequest:
+      type: object
+      properties:
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        note:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - unit_price
     QuoteResponse:
       type: object
       properties:
@@ -12921,6 +15034,20 @@ components:
       - daily_rate
       - days
       - quoted_at
+    QuoteStatusEnum:
+      enum:
+      - REQUESTED
+      - QUOTED
+      - ACCEPTED
+      - DECLINED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `REQUESTED` - Requested
+        * `QUOTED` - Quoted
+        * `ACCEPTED` - Accepted
+        * `DECLINED` - Declined
+        * `WITHDRAWN` - Withdrawn
     ReasonRequest:
       type: object
       properties:
@@ -13022,6 +15149,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/SelfRegistrationRoleEnum'
           default: PATIENT
+        account_type:
+          $ref: '#/components/schemas/AccountTypeEnum'
         preferred_language:
           $ref: '#/components/schemas/PreferredLanguageEnum'
       required:
@@ -13323,6 +15452,16 @@ components:
       required:
       - rating
       - reservation
+    SaleChannelEnum:
+      enum:
+      - B2B
+      - B2C
+      - BOTH
+      type: string
+      description: |-
+        * `B2B` - Professionals only (targeted)
+        * `B2C` - Public store only
+        * `BOTH` - Professionals and public store
     SaveCandidateRequest:
       type: object
       properties:
@@ -13644,6 +15783,100 @@ components:
       - product
       - sponsored
       - starts_on
+    StoreCategory:
+      type: object
+      description: 'Public store category: names only (no catalogue-governance flags).'
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name_ar:
+          type: string
+          readOnly: true
+        name_en:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name_ar
+      - name_en
+      - slug
+    StorePaymentMethodEnum:
+      enum:
+      - CASH_ON_DELIVERY
+      - MANUAL_TRANSFER
+      type: string
+      description: |-
+        * `CASH_ON_DELIVERY` - Cash on delivery
+        * `MANUAL_TRANSFER` - Manual transfer (confirmed by the store)
+    StorePaymentStatusEnum:
+      enum:
+      - UNPAID
+      - PAID
+      - REFUND_DUE
+      type: string
+      description: |-
+        * `UNPAID` - Not paid yet
+        * `PAID` - Payment received (recorded by the store)
+        * `REFUND_DUE` - Refund due
+    StoreProduct:
+      type: object
+      description: |-
+        The public store's view of a consumer product (no professional catalogue data,
+        no exact stock figure: only whether it can be ordered).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        brand:
+          type: string
+          readOnly: true
+        model_name:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        in_stock:
+          type: boolean
+          readOnly: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/StoreCategory'
+          readOnly: true
+        company:
+          allOf:
+          - $ref: '#/components/schemas/CompanySummary'
+          readOnly: true
+      required:
+      - brand
+      - category
+      - company
+      - currency
+      - description
+      - id
+      - in_stock
+      - model_name
+      - price
+      - title
     Subscription:
       type: object
       properties:
@@ -14074,6 +16307,41 @@ components:
         * `ON_SITE` - On site
         * `REMOTE` - Remote
         * `HYBRID` - Hybrid
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        subtype:
+          type: string
+        title:
+          type: string
+        role:
+          type: string
+        path:
+          type: string
+        verification_status:
+          type: string
+        modules:
+          type: array
+          items:
+            type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+      required:
+      - capabilities
+      - id
+      - kind
+      - modules
+      - path
+      - role
+      - subtype
+      - title
+      - verification_status
     _NoBodyRequest:
       type: object
       properties:

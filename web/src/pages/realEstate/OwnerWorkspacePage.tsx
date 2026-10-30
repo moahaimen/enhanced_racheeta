@@ -13,6 +13,7 @@ import {
   realEstate as realEstateApi,
   reference,
 } from '../../api'
+import { SellerPromotionsPanel } from './PromotionsPanels'
 import type { City, ContactMethod, Governorate, ListingWrite, OwnerListing, PropertyType, RealEstateSeller, SellerType, SuitableUse, TransactionType } from '../../api'
 import {
   Alert,
@@ -228,6 +229,8 @@ function Workspace({ seller, governorates, reload }: { seller: RealEstateSeller;
             />
           ) : null}
         </SectionCard>
+
+        {listings.data ? <SellerPromotionsPanel listings={listings.data.results} /> : null}
 
         <SectionCard title={t('realEstateOwner.profile')} headingLevel={2}>
           <SellerForm seller={seller} onSaved={reload} />

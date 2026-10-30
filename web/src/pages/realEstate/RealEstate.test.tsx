@@ -7,6 +7,7 @@ import * as authApi from '../../api/endpoints/auth'
 import * as realEstateApi from '../../api/endpoints/realEstate'
 import * as referenceApi from '../../api/endpoints/reference'
 import * as providersApi from '../../api/endpoints/providers'
+import * as workspacesApi from '../../api/endpoints/workspaces'
 import { tokenStore } from '../../api/tokens'
 import type { City, OwnerDashboard, OwnerListing, PropertyListing, RealEstateSeller } from '../../api'
 import { baghdad, basra } from '../../test/providerFixtures'
@@ -20,6 +21,7 @@ vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/realEstate')
 vi.mock('../../api/endpoints/reference')
 vi.mock('../../api/endpoints/providers')
+vi.mock('../../api/endpoints/workspaces')
 
 const karrada: City = { id: 'c-karrada', governorate: 'g-baghdad', slug: 'karrada', name_ar: 'الكرادة', name_en: 'Karrada' }
 const mansour: City = { id: 'c-mansour', governorate: 'g-baghdad', slug: 'mansour', name_ar: 'المنصور', name_en: 'Mansour' }
@@ -353,6 +355,7 @@ describe('Seller workspace', () => {
     vi.mocked(realEstateApi.getMySeller).mockResolvedValue(seller)
     vi.mocked(realEstateApi.getOwnerDashboard).mockResolvedValue(dashboard)
     vi.mocked(realEstateApi.listMyListings).mockResolvedValue(page([]))
+    vi.mocked(workspacesApi.listMyPromotions).mockResolvedValue(page([]))
   })
 
   it('onboards a seller who has no profile yet', async () => {

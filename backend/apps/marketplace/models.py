@@ -22,7 +22,14 @@ from apps.geography.models import City, Governorate
 from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
 
-from .types import CompanyVerificationStatus
+from .types import (
+    CONSUMER_CHANNELS,
+    PROFESSIONAL_CHANNELS,
+    RETAIL_BUSINESS_TYPES,
+    BusinessType,
+    CompanyVerificationStatus,
+    SaleChannel,
+)
 
 
 class MedicalCompanyQuerySet(models.QuerySet):
@@ -42,6 +49,10 @@ class MedicalCompany(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="medical_company"
     )
     name = models.CharField(max_length=150)
+    # Normalized classification (verified identity: locked while PENDING/VERIFIED).
+    business_type = models.CharField(
+        max_length=32, choices=BusinessType.choices, default=BusinessType.MEDICAL_COMPANY
+    )
     description = models.TextField(blank=True, default="")
     phone = models.CharField(max_length=32, blank=True, default="")
     public_email = models.EmailField(blank=True, default="")
@@ -112,6 +123,9 @@ class ProductCategory(BaseModel):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Administrator governance: products in this category MAY be offered in the public store
+    # (assistive devices, general supplies). Medicines and restricted equipment never are.
+    consumer_allowed = models.BooleanField(default=False)
 
     class Meta:
         db_table = "marketplace_category"
@@ -180,12 +194,17 @@ class ProductAudience(BaseModel):
 
 
 class ProductQuerySet(models.QuerySet):
+    def consumer_store(self):
+        """Products offered in the public store (see consumer_store_filter)."""
+        return self.filter(consumer_store_filter())
+
     def exposable(self):
         """Products that may be shown to SOME provider: published by a verified
         company on an active MEDICAL_COMPANY account, in an active category
         that has at least one active audience rule."""
         return self.filter(
             is_active=True,
+            sale_channel__in=PROFESSIONAL_CHANNELS,
             company__verification_status=CompanyVerificationStatus.VERIFIED,
             company__account__is_active=True,
             company__account__role=AccountRole.MEDICAL_COMPANY,
@@ -218,6 +237,7 @@ class ProductQuerySet(models.QuerySet):
         return (
             self.filter(
                 is_active=True,
+                sale_channel__in=PROFESSIONAL_CHANNELS,
                 company__verification_status=CompanyVerificationStatus.VERIFIED,
                 company__account__is_active=True,
                 company__account__role=AccountRole.MEDICAL_COMPANY,
@@ -239,6 +259,23 @@ class ProductQuerySet(models.QuerySet):
         )
 
 
+def consumer_store_filter() -> Q:
+    """THE public-store rule (one place; list, detail and checkout share it): a published,
+    non-restricted product offered to consumers, in an active consumer-allowed category, by a
+    verified retail business on an active MEDICAL_COMPANY account."""
+    return Q(
+        is_active=True,
+        sale_channel__in=CONSUMER_CHANNELS,
+        is_restricted=False,
+        category__is_active=True,
+        category__consumer_allowed=True,
+        company__verification_status=CompanyVerificationStatus.VERIFIED,
+        company__business_type__in=RETAIL_BUSINESS_TYPES,
+        company__account__is_active=True,
+        company__account__role=AccountRole.MEDICAL_COMPANY,
+    )
+
+
 class Product(BaseModel):
     company = models.ForeignKey(MedicalCompany, on_delete=models.CASCADE, related_name="products")
     category = models.ForeignKey(ProductCategory, on_delete=models.PROTECT, related_name="products")
@@ -252,6 +289,14 @@ class Product(BaseModel):
     currency = models.CharField(max_length=3, default="IQD")
     # The company's publication switch; exposure needs more (see targeted_for).
     is_active = models.BooleanField(default=False)
+    # Where the product may be offered. Existing products are B2B (targeted professional catalogue).
+    sale_channel = models.CharField(
+        max_length=4, choices=SaleChannel.choices, default=SaleChannel.B2B
+    )
+    # Prescription medicines / restricted equipment: professional (B2B) only, never in the store.
+    is_restricted = models.BooleanField(default=False)
+    # Merchant-owned inventory for store orders; null = not stocked (quote/price on request only).
+    stock_quantity = models.PositiveIntegerField(null=True, blank=True)
 
     objects = ProductQuerySet.as_manager()
 
@@ -262,6 +307,11 @@ class Product(BaseModel):
             models.CheckConstraint(
                 condition=Q(price__isnull=True) | Q(price__gte=0),
                 name="marketplace_product_price_non_negative",
+            ),
+            # Defence in depth for the service rule: restricted items are professional-only.
+            models.CheckConstraint(
+                condition=Q(is_restricted=False) | Q(sale_channel="B2B"),
+                name="marketplace_product_restricted_is_b2b",
             ),
         ]
         indexes = [

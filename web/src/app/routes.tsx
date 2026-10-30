@@ -38,6 +38,13 @@ import { ProvidersPage } from '../pages/providers/ProvidersPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { VerifyEmailPage } from '../pages/VerifyEmailPage'
+import { MerchantQuotesPage, MyQuotesPage } from '../pages/quotes/QuotesPages'
+import { PreferencesPage } from '../pages/settings/PreferencesPage'
+import { CartPage } from '../pages/store/CartPage'
+import { MerchantOrdersPage, MyOrdersPage } from '../pages/store/OrdersPages'
+import { StorePage } from '../pages/store/StorePage'
+import { OrgWorkspacePage } from '../pages/workspace/OrgWorkspacePage'
+import { WorkspacesPage } from '../pages/workspace/WorkspacesPage'
 
 /**
  * Route table. Three groups:
@@ -59,6 +66,9 @@ export const routes: RouteObject[] = [
       // Medical real estate is publicly browsable; the backend decides what is visible.
       { path: 'real-estate', element: <RealEstatePage /> },
       { path: 'real-estate/:id', element: <RealEstateDetailPage /> },
+      // Public consumer store: the backend exposes only allowed, non-restricted products.
+      { path: 'store', element: <StorePage /> },
+      { path: 'cart', element: <CartPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
@@ -77,6 +87,14 @@ export const routes: RouteObject[] = [
           { path: 'notifications', element: <NotificationsPage /> },
           { path: 'messages', element: <MessagesPage /> },
           { path: 'messages/:id', element: <ConversationPage /> },
+          { path: 'workspaces', element: <WorkspacesPage /> },
+          // Organization workspaces: the server answers 404 unless the caller has a role there.
+          { path: 'workspace/:kind/:id', element: <OrgWorkspacePage /> },
+          { path: 'settings/preferences', element: <PreferencesPage /> },
+          { path: 'orders', element: <MyOrdersPage /> },
+          // Merchant pages serve owners AND staff (?company=); the server checks the capability.
+          { path: 'merchant/orders', element: <MerchantOrdersPage /> },
+          { path: 'merchant/quotes', element: <MerchantQuotesPage /> },
           {
             element: <RequireRole roles={['PATIENT']} />,
             children: [{ path: 'reservations', element: <MyReservationsPage /> }],
@@ -102,6 +120,7 @@ export const routes: RouteObject[] = [
               // B2B catalogue: the backend decides which products this provider may see.
               { path: 'marketplace', element: <MarketplacePage /> },
               { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
+              { path: 'quotes', element: <MyQuotesPage /> },
             ],
           },
           {
