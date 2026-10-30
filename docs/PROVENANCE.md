@@ -39,8 +39,8 @@ or token file is copied into this repository.
   `@fontsource-variable/cairo` npm package; no third-party font request is made.
 - The homepage backdrop (`web/src/pages/home/art.tsx`: orb, towers, palms) and the practitioner
   placeholder avatar (`PersonPlaceholder`) are original inline SVG drawn for Racheeta.
-- The **homepage photographs** in `web/src/assets/home/` (hero practitioner cut-out and the six
-  service-card pictures) are **derived from the owner-supplied, AI-generated reference pack**
+- The **homepage photographs** in `web/src/assets/home/` (the hero practitioner cut-out;
+  the six service-card pictures were removed with the approved homepage, ADR-065) are **derived from the owner-supplied, AI-generated reference pack**
   (`racheeta_ui_reference_pack`, approved direction `04_final_merged_direction.png`). They are
   cropped / cut out / upscaled and exported as WebP; no text, logo or UI is baked in, and the full
   concept screenshots are **not** shipped. See `web/src/assets/home/README.md` for the exact
