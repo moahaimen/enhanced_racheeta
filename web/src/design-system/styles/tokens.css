@@ -1,42 +1,46 @@
 /*
  * Racheeta design tokens as CSS custom properties.
+ *
+ * Owner-approved palette (docs/DESIGN_SYSTEM.md): page #E9EEF2 (--surface-page, neutral-100),
+ * primary teal #148283 (primary-600/700), white surfaces #FFFFFF, soft teal icon backgrounds
+ * #E0F1F0 (primary-50). Error/warning/alert colours stay functional.
  * Values mirror src/design-system/tokens/*.ts (enforced by tokens.test.ts).
  */
 :root {
   /* ---- colour: brand teal scale ---- */
-  --color-primary-50: #eef8f7;
-  --color-primary-100: #d5efec;
-  --color-primary-200: #abdfd9;
-  --color-primary-300: #7ccac2;
-  --color-primary-400: #4db1a8;
-  --color-primary-500: #2a9a90;
-  --color-primary-600: #1f7f77;
-  --color-primary-700: #196660;
-  --color-primary-800: #154f4b;
-  --color-primary-900: #103c39;
+  --color-primary-50: #e0f1f0;
+  --color-primary-100: #d1e2e5;
+  --color-primary-200: #b1d3d7;
+  --color-primary-300: #85c3c3;
+  --color-primary-400: #56aaac;
+  --color-primary-500: #3e9c9e;
+  --color-primary-600: #148283;
+  --color-primary-700: #148283;
+  --color-primary-800: #0f6872;
+  --color-primary-900: #0b4f56;
 
   /* ---- colour: neutrals ---- */
   --color-neutral-0: #ffffff;
-  --color-neutral-50: #f7f9f9;
-  --color-neutral-100: #eef1f2;
-  --color-neutral-200: #e2e7e9;
-  --color-neutral-300: #cbd3d6;
-  --color-neutral-400: #9aa6ab;
-  --color-neutral-500: #6b7a80;
-  --color-neutral-600: #4a575c;
-  --color-neutral-700: #34403f;
-  --color-neutral-800: #22302f;
-  --color-neutral-900: #15201f;
+  --color-neutral-50: #f3f5f7;
+  --color-neutral-100: #e9eef2;
+  --color-neutral-200: #dddfe4;
+  --color-neutral-300: #c9cdd3;
+  --color-neutral-400: #9a9ea3;
+  --color-neutral-500: #78797a;
+  --color-neutral-600: #575859;
+  --color-neutral-700: #403e3f;
+  --color-neutral-800: #363433;
+  --color-neutral-900: #161616;
 
   /* ---- colour: semantic ---- */
-  --color-success: #1e8e5a;
-  --color-success-soft: #e8f6ef;
+  --color-success: #148283;
+  --color-success-soft: #e0f1f0;
   --color-warning: #b7791f;
-  --color-warning-soft: #fbf3e4;
+  --color-warning-soft: #fbf1e0;
   --color-error: #c4383b;
   --color-error-soft: #fbeaea;
-  --color-info: #2f6fb7;
-  --color-info-soft: #e9f1fb;
+  --color-info: #148283;
+  --color-info-soft: #e0f1f0;
 
   /* ---- colour roles ---- */
   --surface-primary: var(--color-neutral-0);
@@ -51,40 +55,40 @@
   --text-brand: var(--color-primary-700);
   --border-subtle: var(--color-neutral-200);
   --border-strong: var(--color-neutral-300);
-  --border-brand: var(--color-primary-300);
+  --border-brand: var(--color-primary-200);
   --focus-ring: var(--color-primary-400);
 
   /* ---- colour: aqua / blue / category accents (public site, docs/DESIGN_SYSTEM.md) ---- */
-  --color-aqua-50: #effafb;
-  --color-aqua-100: #d9f3f6;
-  --color-aqua-200: #b3e6ec;
-  --color-aqua-300: #7fd3de;
-  --color-aqua-500: #1fa3b8;
-  --color-aqua-700: #0f6f80;
-  --color-blue-50: #eef4fd;
-  --color-blue-100: #dbe8fb;
-  --color-blue-500: #3b82d6;
-  --color-blue-700: #2a5fae;
-  --color-indigo-50: #f1f0fd;
-  --color-indigo-100: #e1defa;
-  --color-indigo-500: #6a5ae0;
-  --color-indigo-700: #4b3fb0;
-  --color-coral-50: #fff1ee;
-  --color-coral-100: #ffddd6;
-  --color-coral-500: #e5624b;
-  --color-coral-700: #b83f2a;
-  --color-mint-50: #edf9f2;
-  --color-mint-100: #d3f1e1;
-  --color-mint-500: #2fa86a;
-  --color-mint-700: #1b7a4b;
+  --color-aqua-50: #e0f1f0;
+  --color-aqua-100: #d1e2e5;
+  --color-aqua-200: #b1d3d7;
+  --color-aqua-300: #85c3c3;
+  --color-aqua-500: #3e9c9e;
+  --color-aqua-700: #148283;
+  --color-blue-50: #d1e2e5;
+  --color-blue-100: #b1d3d7;
+  --color-blue-500: #3e9c9e;
+  --color-blue-700: #0f6872;
+  --color-indigo-50: #ffffff;
+  --color-indigo-100: #e9eef2;
+  --color-indigo-500: #575859;
+  --color-indigo-700: #363433;
+  --color-coral-50: #fbeaea;
+  --color-coral-100: #f6d4d4;
+  --color-coral-500: #d64541;
+  --color-coral-700: #a8322f;
+  --color-mint-50: #e0f1f0;
+  --color-mint-100: #d1e2e5;
+  --color-mint-500: #3e9c9e;
+  --color-mint-700: #148283;
 
   /* ---- page surfaces & gradients: no large flat-white areas ---- */
-  --surface-page: #f3f9fa;
-  --surface-tint: #eaf6f7;
-  --surface-tint-strong: #dff1f2;
-  --gradient-hero: linear-gradient(160deg, #e3f6f4 0%, #d3eef0 38%, #e9f4fb 100%);
-  --gradient-brand: linear-gradient(135deg, #0f6f66 0%, #1a8a86 55%, #1fa3b8 100%);
-  --gradient-band: linear-gradient(135deg, #0d4f4a 0%, #135f5b 50%, #1a7480 100%);
+  --surface-page: #e9eef2;
+  --surface-tint: #e0f1f0;
+  --surface-tint-strong: #d1e2e5;
+  --gradient-hero: linear-gradient(180deg, #e9eef2 0%, #e9eef2 100%);
+  --gradient-brand: linear-gradient(135deg, #0f6872 0%, #148283 100%);
+  --gradient-band: linear-gradient(135deg, #0f6872 0%, #148283 100%);
 
   /* ---- spacing (4px base) ---- */
   --space-1: 0.25rem;
@@ -115,9 +119,9 @@
   --weight-semibold: 600;
   --weight-bold: 700;
   --weight-extrabold: 800;
-  --text-display: 2rem;
-  --text-h1: 1.75rem;
-  --text-h2: 1.5rem;
+  --text-display: 1.875rem;
+  --text-h1: 1.5rem;
+  --text-h2: 1.3125rem;
   --text-h3: 1.25rem;
   --text-section: 1.125rem;
   --text-body: 1rem;
@@ -137,17 +141,17 @@
   --radius-xl: 1.5rem;
   --radius-full: 999px;
   --radius-control: var(--radius-md);
-  --radius-card: 1.125rem;
-  --radius-hero: var(--radius-xl);
+  --radius-card: 1rem;
+  --radius-hero: 1.25rem;
 
   /* ---- shadows & borders ---- */
-  --shadow-xs: 0 1px 2px rgba(21, 32, 31, 0.05);
-  --shadow-sm: 0 2px 8px rgba(21, 32, 31, 0.06);
-  --shadow-md: 0 8px 24px rgba(21, 32, 31, 0.08);
-  --shadow-lg: 0 16px 48px rgba(21, 32, 31, 0.12);
-  --shadow-card: 0 1px 2px rgba(16, 60, 57, 0.04), 0 4px 14px rgba(16, 60, 57, 0.06);
-  --shadow-card-hover: 0 2px 4px rgba(16, 60, 57, 0.05), 0 14px 32px rgba(16, 60, 57, 0.12);
-  --shadow-float: 0 18px 44px rgba(16, 60, 57, 0.16);
+  --shadow-xs: 0 1px 2px rgba(22, 22, 22, 0.05);
+  --shadow-sm: 0 2px 8px rgba(22, 22, 22, 0.06);
+  --shadow-md: 0 8px 24px rgba(22, 22, 22, 0.08);
+  --shadow-lg: 0 16px 48px rgba(22, 22, 22, 0.12);
+  --shadow-card: 0 1px 2px rgba(22, 22, 22, 0.04), 0 3px 10px rgba(22, 22, 22, 0.05);
+  --shadow-card-hover: 0 2px 4px rgba(22, 22, 22, 0.05), 0 10px 24px rgba(22, 22, 22, 0.1);
+  --shadow-float: 0 14px 36px rgba(22, 22, 22, 0.14);
   --border-width: 1px;
 
   /* ---- motion ---- */
@@ -166,8 +170,8 @@
   :root {
     --space-section: 4rem;
     --space-gutter: 2rem;
-    --text-display: 2.5rem;
-    --text-h1: 2rem;
+    --text-display: 2.25rem;
+    --text-h1: 1.75rem;
   }
 }
 

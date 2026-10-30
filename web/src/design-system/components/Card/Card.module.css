@@ -1,14 +1,14 @@
 .card {
-  background: var(--surface-primary);
+  background: #ffffff;
   border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 @media (min-width: 768px) {
   .card {
-    padding: var(--space-6);
+    padding: var(--space-5);
   }
 }
 

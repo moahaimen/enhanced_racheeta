@@ -2,17 +2,17 @@
   position: sticky;
   inset-block-start: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--surface-primary) 88%, var(--color-aqua-50));
-  backdrop-filter: saturate(1.5) blur(14px);
-  border-block-end: var(--border-width) solid rgba(171, 223, 217, 0.55);
-  box-shadow: 0 6px 20px rgba(16, 60, 57, 0.04);
+  background: #ffffff;
+  backdrop-filter: saturate(1.2) blur(10px);
+  border-block-end: var(--border-width) solid var(--color-neutral-200);
+  box-shadow: 0 2px 10px rgba(22, 22, 22, 0.05);
 }
 
 .bar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-block-size: 4.25rem;
+  min-block-size: 3.5rem;
 }
 
 .brand {
@@ -22,8 +22,8 @@
   color: var(--color-primary-900);
   text-decoration: none;
   font-weight: var(--weight-extrabold);
-  font-size: 1.4rem;
-  margin-inline-end: var(--space-2);
+  font-size: 1.3rem;
+  margin-inline-end: var(--space-3);
   letter-spacing: 0.01em;
 }
 .brand:focus-visible {
@@ -35,12 +35,27 @@
 .mark {
   display: inline-grid;
   place-items: center;
-  inline-size: 2.5rem;
-  block-size: 2.5rem;
-  border-radius: 0.8rem;
-  background: var(--gradient-brand);
-  color: var(--text-on-brand);
-  box-shadow: 0 6px 14px rgba(15, 111, 102, 0.28);
+  color: var(--color-primary-700);
+}
+.mark svg {
+  stroke-width: 2.1;
+}
+
+.wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.wordLatin {
+  font-size: 1rem;
+  font-weight: var(--weight-extrabold);
+  color: var(--color-primary-800);
+  letter-spacing: 0.02em;
+}
+.wordArabic {
+  font-size: 1.15rem;
+  font-weight: var(--weight-extrabold);
+  color: var(--text-primary);
 }
 
 .nav {
@@ -54,8 +69,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding-inline: var(--space-3);
-  padding-block: 0.5rem;
+  padding-inline: 0.8rem;
+  padding-block: 0.4rem;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: var(--text-body-sm);
@@ -80,7 +95,7 @@
 .link[aria-current='page'] {
   color: var(--text-on-brand);
   background: var(--color-primary-700);
-  box-shadow: 0 6px 14px rgba(15, 111, 102, 0.26);
+  box-shadow: 0 3px 8px rgba(20, 130, 131, 0.22);
 }
 
 .badge {
@@ -180,7 +195,7 @@
   border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background: var(--surface-primary);
-  box-shadow: 0 18px 40px rgba(16, 60, 57, 0.16);
+  box-shadow: 0 18px 40px rgba(22, 22, 22, 0.14);
 }
 .accountPanel[data-open='true'] {
   display: flex;

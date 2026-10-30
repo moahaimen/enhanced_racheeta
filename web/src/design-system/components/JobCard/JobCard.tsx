@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import type { JobCard as JobCardData } from '../../../api'
 import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon } from '../../icons'
+import { Avatar } from '../Avatar/Avatar'
 import { Badge } from '../Badge/Badge'
 import { Card } from '../Card/Card'
 import { Skeleton } from '../States/States'
@@ -21,19 +22,21 @@ export function JobCard({ job }: { job: JobCardData }) {
   return (
     <Card as="article" interactive className={`${styles.card} ${job.is_featured ? styles.featured : ''}`.trim()}>
       <div className={styles.head}>
-        <h3 className={styles.title}>
-          <Link to={`/jobs/${job.id}`}>{text(job.title)}</Link>
-        </h3>
+        <Avatar src={null} name={text(job.employer.name)} size="md" fallback={<Icon name="building" size={22} />} />
+        <div className={styles.identity}>
+          <h3 className={styles.title}>
+            <Link to={`/jobs/${job.id}`}>{text(job.title)}</Link>
+          </h3>
+          <div className={styles.employer}>
+            <span>{text(job.employer.name)}</span>
+            {job.employer.is_verified ? (
+              <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
+                {t('jobs.verifiedEmployer')}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
         {job.is_featured ? <Badge tone="brand" leading={<Icon name="sparkle" size={12} />}>{t('jobs.featured')}</Badge> : null}
-      </div>
-      <div className={styles.employer}>
-        <Icon name="building" size={16} />
-        <span>{text(job.employer.name)}</span>
-        {job.employer.is_verified ? (
-          <Badge tone="success" leading={<Icon name="shieldCheck" size={12} />}>
-            {t('jobs.verifiedEmployer')}
-          </Badge>
-        ) : null}
       </div>
       {job.employer.is_recruitment_agency ? (
         <div className={styles.agency}>
@@ -66,8 +69,8 @@ export function JobCard({ job }: { job: JobCardData }) {
       </div>
       <div className={styles.footer}>
         <span className={styles.salary}>{salary ?? ''}</span>
-        <span aria-hidden="true">
-          {t('jobs.viewJob')} <Icon name="arrowForward" size={16} flipInRtl />
+        <span className={styles.cta} aria-hidden="true">
+          {t('jobs.viewJob')} <Icon name="arrowForward" size={14} flipInRtl />
         </span>
       </div>
     </Card>

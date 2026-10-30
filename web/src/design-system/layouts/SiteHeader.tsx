@@ -19,9 +19,13 @@ export function BrandMark({ className = '' }: { className?: string }) {
   return (
     <NavLink to="/" className={`${styles.brand} ${className}`.trim()} aria-label={t('app.name')}>
       <span className={styles.mark} aria-hidden="true">
-        <Icon name="heartPulse" size={20} />
+        <Icon name="heartPulse" size={34} />
       </span>
-      <span>{t('app.name')}</span>
+      {/* Bilingual wordmark: the brand is written in both scripts whatever the UI language. */}
+      <span className={styles.wordmark} aria-hidden="true">
+        <span className={styles.wordLatin}>Racheeta</span>
+        <span className={styles.wordArabic}>رشيتة</span>
+      </span>
     </NavLink>
   )
 }

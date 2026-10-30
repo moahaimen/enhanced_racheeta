@@ -1,7 +1,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   block-size: 100%;
   position: relative;
 }
@@ -14,8 +14,11 @@
 .head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: var(--space-3);
+}
+.identity {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 .title {
@@ -37,8 +40,10 @@
 
 .employer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  margin-block-start: 0.1rem;
   color: var(--text-secondary);
   font-size: var(--text-body-sm);
 }
@@ -84,4 +89,16 @@
 .agency {
   color: var(--text-muted);
   font-size: var(--text-caption);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-700);
+  color: var(--text-on-brand);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
 }

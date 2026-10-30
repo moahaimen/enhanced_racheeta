@@ -1,0 +1,89 @@
+.sidebar {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    position: sticky;
+    inset-block-start: 4.5rem;
+    align-self: start;
+    padding: var(--space-3);
+    border: var(--border-width) solid var(--color-neutral-200);
+    border-radius: var(--radius-card);
+    background: #ffffff;
+    box-shadow: var(--shadow-card);
+  }
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-neutral-200);
+  min-inline-size: 0;
+}
+.who > div {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.who strong {
+  color: var(--text-primary);
+  font-size: var(--text-body-sm);
+  overflow-wrap: anywhere;
+}
+.who span:not(.avatar) {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 0.8rem;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.55rem var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard);
+}
+.link:hover {
+  background: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+.link:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.link[aria-current='page'] {
+  background: var(--color-primary-100);
+  color: var(--color-primary-800);
+}
+.link[aria-current='page'] svg {
+  color: var(--color-primary-700);
+}

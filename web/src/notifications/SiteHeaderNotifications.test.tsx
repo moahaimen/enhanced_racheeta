@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -192,14 +192,16 @@ describe('Unread count refresh policy', () => {
     vi.mocked(authApi.login).mockResolvedValue({ access: 'a2', refresh: 'r2' })
 
     const { router } = renderApp('/')
-    await screen.findByRole('link', { name: /notifications/i })
+    // the header's bell (signed-in pages also show the workspace sidebar entry)
+    await within(screen.getAllByRole('banner')[0]!).findByRole('link', { name: /notifications/i })
     await userEvent.click(screen.getByRole('button', { name: /log out/i }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
 
     await userEvent.type(await screen.findByLabelText(/email|البريد الإلكتروني/i), 'b@example.com')
     await userEvent.type(await screen.findByLabelText(/^password$|^كلمة المرور$/i), 'Str0ng-Passw0rd!')
     await userEvent.click(await screen.findByRole('button', { name: /^log in$|^دخول$/i }))
-    await screen.findByRole('link', { name: /notifications/i })
+    // the header's bell (signed-in pages also show the workspace sidebar entry)
+    await within(screen.getAllByRole('banner')[0]!).findByRole('link', { name: /notifications/i })
     // Account B's own loads (sign-in lands on /login, then redirects to /profile).
     await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
     await waitFor(() =>

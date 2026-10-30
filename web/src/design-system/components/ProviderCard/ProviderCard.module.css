@@ -1,7 +1,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   block-size: 100%;
 }
 
@@ -82,4 +82,36 @@
   display: flex;
   gap: var(--space-3);
   align-items: center;
+}
+
+.role {
+  margin-block-start: 0.1rem;
+  color: var(--color-primary-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ghost,
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+}
+.ghost {
+  border: 1.5px solid var(--color-primary-700);
+  color: var(--color-primary-700);
+  background: var(--surface-primary);
+}
+.primary {
+  background: var(--color-primary-700);
+  color: var(--text-on-brand);
 }

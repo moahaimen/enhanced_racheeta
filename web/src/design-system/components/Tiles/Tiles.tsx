@@ -4,7 +4,7 @@ import { Link, type To } from 'react-router'
 import { Icon, type IconName } from '../../icons'
 import styles from './Tiles.module.css'
 
-export type Accent = 'teal' | 'blue' | 'indigo' | 'coral' | 'mint' | 'aqua'
+export type Accent = 'teal' | 'blue' | 'indigo' | 'coral' | 'mint' | 'aqua' | 'beige' | 'sage'
 
 /** Large icon shortcut used for the category row. One accent family per product area. */
 export function CategoryTile({ to, icon, label, accent = 'teal' }: { to: To; icon: IconName; label: string; accent?: Accent }) {
