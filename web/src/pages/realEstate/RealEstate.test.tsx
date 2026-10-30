@@ -267,7 +267,7 @@ describe('Home page real-estate card', () => {
 
   it('is live for visitors: it links to the catalogue and is not marked "soon"', async () => {
     renderApp('/')
-    // the redesigned home exposes real estate as a category tile AND an illustrated service card
+    // the approved home exposes real estate as a feature card (its pill names the card) AND a footer link
     const links = (await screen.findAllByRole('link', { name: /العقارات الطبية|medical real estate/i })).filter((a) => a.getAttribute('href') === '/real-estate')
     expect(links.length).toBeGreaterThanOrEqual(2)
     for (const link of links) expect(link.textContent ?? '').not.toMatch(/قريبًا|قريباً|soon/i)

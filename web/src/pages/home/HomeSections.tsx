@@ -1,19 +1,21 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { jobs as jobsApi, marketplace, providers as providersApi, realEstate, reference } from '../../api'
-import type { ProviderCard as ProviderCardData } from '../../api'
+import type { ProviderCard as ProviderCardData, Specialty } from '../../api'
 import {
   AsyncPage,
+  Avatar,
   Badge,
   CountUp,
   EmptyState,
-  FeaturedProviderCard,
   Icon,
   JobCard,
   JobCardSkeleton,
   LinkButton,
   NearViewport,
+  PersonPlaceholder,
   ProductTile,
   PropertyCard,
   Reveal,
@@ -50,14 +52,77 @@ function byRating(a: ProviderCardData, b: ProviderCardData): number {
   return (b.average_rating ?? 0) - (a.average_rating ?? 0) || b.review_count - a.review_count
 }
 
-export function FeaturedDoctors() {
+/** Compact doctor card of the approved homepage: portrait, name, specialty, rating, city, profile pill. */
+function DoctorCard({ provider }: { provider: ProviderCardData }) {
   const { t } = useTranslation()
+  const name = useLocalizedName()
+  const text = useScriptText()
+  const specialty = provider.specialties[0]
+  const rated = provider.review_count > 0 && provider.average_rating !== null
+  return (
+    <article className={styles.doctor}>
+      <div className={styles.doctorTop}>
+        <div className={styles.doctorText}>
+          <h3 className={styles.doctorName}>
+            <Link to={`/providers/${provider.id}`} className={styles.stretch}>
+              {text(provider.display_name)}
+            </Link>
+          </h3>
+          <p className={styles.doctorRole}>{specialty ? name(specialty) : t(`providerTypes.${provider.provider_type}`)}</p>
+          {rated ? (
+            <p className={styles.doctorRating}>
+              <span className={styles.star} aria-hidden="true">★</span>
+              <span>{provider.average_rating!.toFixed(1)}</span>
+              <span className={styles.reviewCount}>({t('reviews.count', { count: provider.review_count })})</span>
+            </p>
+          ) : (
+            <p className={styles.doctorVerified}>
+              <Icon name="shieldCheck" size={14} /> {t('verification.VERIFIED')}
+            </p>
+          )}
+          <p className={styles.doctorPlace}>
+            <Icon name="mapPin" size={14} />
+            {name(provider.governorate)}
+          </p>
+        </div>
+        <Avatar
+          src={provider.image_url || null}
+          name={provider.display_name}
+          size="lg"
+          className={styles.doctorAvatar}
+          fallback={<PersonPlaceholder seed={provider.id} size={72} />}
+        />
+      </div>
+      <span className={styles.doctorCta} aria-hidden="true">
+        {t('providers.viewProfile')}
+      </span>
+    </article>
+  )
+}
+
+/** Featured doctors as a horizontal row with previous/next controls (scroll-snap, keyboard reachable). */
+export function FeaturedDoctorsRow() {
+  const { t } = useTranslation()
+  const rail = useRef<HTMLDivElement>(null)
+  const scroll = (direction: 1 | -1) => {
+    const el = rail.current
+    if (!el) return
+    const rtl = getComputedStyle(el).direction === 'rtl'
+    const step = el.clientWidth * 0.8 * direction * (rtl ? -1 : 1)
+    el.scrollBy({ left: step, behavior: 'smooth' })
+  }
   return (
     <section className={styles.block} aria-labelledby="doctors-title">
-      <Reveal>
-        <SectionHeader title={<span id="doctors-title">{t('home.doctorsTitle')}</span>} description={t('home.doctorsBody')} actions={<ViewAll to="/providers?kind=PRACTITIONER" label={t('home.viewAll')} />} />
-      </Reveal>
-      <NearViewport minHeight="18rem">
+      <div className={styles.rowHead}>
+        <h2 id="doctors-title" className={styles.rowTitle}>
+          {t('home.doctorsTitle')}
+        </h2>
+        <Link to="/providers?kind=PRACTITIONER" className={styles.rowLink}>
+          {t('home.viewAll')}
+          <Icon name="arrowForward" size={16} flipInRtl />
+        </Link>
+      </div>
+      <NearViewport minHeight="12rem">
         <AsyncPage
           load={(signal) => providersApi.listProviders({ kind: 'PRACTITIONER', page_size: 12 }, signal)}
           skeleton={
@@ -74,21 +139,87 @@ export function FeaturedDoctors() {
                 {t('home.featuredEmptyBody')}
               </EmptyState>
             ) : (
-              <div className={styles.fourUp} data-testid="featured-doctors">
-                {[...page.results]
-                  .sort(byRating)
-                  .slice(0, 4)
-                  .map((provider, index) => (
-                    <Reveal key={provider.id} index={index}>
-                      <FeaturedProviderCard provider={provider} />
-                    </Reveal>
-                  ))}
+              <div className={styles.railWrap}>
+                <button type="button" className={`${styles.railButton} ${styles.railPrev}`} onClick={() => scroll(-1)} aria-label={t('home.carouselPrev')}>
+                  <Icon name="chevronForward" size={20} flipInRtl />
+                </button>
+                <div className={styles.rail} ref={rail} data-testid="featured-doctors">
+                  {[...page.results]
+                    .sort(byRating)
+                    .slice(0, 8)
+                    .map((provider) => (
+                      <DoctorCard key={provider.id} provider={provider} />
+                    ))}
+                </div>
+                <button type="button" className={`${styles.railButton} ${styles.railNext}`} onClick={() => scroll(1)} aria-label={t('home.carouselNext')}>
+                  <Icon name="chevronBack" size={20} flipInRtl />
+                </button>
               </div>
             )
           }
         </AsyncPage>
       </NearViewport>
     </section>
+  )
+}
+
+/** Specialty slugs shown as "popular services" (in this order, when the API has them) and their icons. */
+const POPULAR: [string, IconName][] = [
+  ['general-medicine', 'stethoscope'],
+  ['laboratory-medicine', 'flask'],
+  ['dentistry', 'tooth'],
+  ['pediatrics', 'baby'],
+  ['cardiology', 'heart'],
+  ['orthopedics', 'bone'],
+  ['ophthalmology', 'eye'],
+]
+
+/** Popular medical services: real specialties from the API, each opening the filtered directory. */
+export function PopularServices() {
+  const { t } = useTranslation()
+  const name = useLocalizedName()
+  return (
+    <NearViewport minHeight="6rem">
+      <AsyncPage load={(signal) => reference.listSpecialties(signal)} skeleton={<span />}>
+        {(specialties: Specialty[]) => {
+          const bySlug = new Map(specialties.map((s) => [s.slug, s]))
+          const items = POPULAR.flatMap(([slug, icon]) => {
+            const specialty = bySlug.get(slug)
+            return specialty ? [{ specialty, icon }] : []
+          })
+          if (items.length === 0) return null
+          return (
+            <section className={styles.block} aria-labelledby="popular-title">
+              <div className={styles.rowHead}>
+                <h2 id="popular-title" className={styles.rowTitle}>
+                  {t('home.popularTitle')}
+                </h2>
+                <Link to="/providers" className={styles.rowLink}>
+                  {t('home.viewAll')}
+                  <Icon name="arrowForward" size={16} flipInRtl />
+                </Link>
+              </div>
+              <ul className={styles.popular} data-testid="popular-services">
+                {items.map(({ specialty, icon }) => (
+                  <li key={specialty.id}>
+                    <Link to={`/providers?specialty=${encodeURIComponent(specialty.slug)}`} className={styles.popularItem}>
+                      <Icon name={icon} size={30} />
+                      <span>{name(specialty)}</span>
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Link to="/providers" className={styles.popularItem}>
+                    <Icon name="dots" size={30} />
+                    <span>{t('home.popularMore')}</span>
+                  </Link>
+                </li>
+              </ul>
+            </section>
+          )
+        }}
+      </AsyncPage>
+    </NearViewport>
   )
 }
 
@@ -136,40 +267,6 @@ export function Facilities() {
         </AsyncPage>
       </NearViewport>
     </section>
-  )
-}
-
-export function SpecialtyChips() {
-  const { t } = useTranslation()
-  const name = useLocalizedName()
-  return (
-    <NearViewport minHeight="6rem">
-      <AsyncPage load={(signal) => reference.listSpecialties(signal)} skeleton={<span />}>
-        {(specialties) =>
-          specialties.length === 0 ? null : (
-            <section className={styles.block} aria-labelledby="specialties-title">
-              <Reveal>
-                <SectionHeader title={<span id="specialties-title">{t('home.specialtiesTitle')}</span>} description={t('home.specialtiesBody')} />
-              </Reveal>
-              <Reveal>
-                <ul className={styles.chips}>
-                  {specialties
-                    .filter((s) => s.parent === null)
-                    .slice(0, 18)
-                    .map((s) => (
-                      <li key={s.id}>
-                        <Link to={`/providers?specialty=${encodeURIComponent(s.slug)}`} className={styles.chip}>
-                          {name(s)}
-                        </Link>
-                      </li>
-                    ))}
-                </ul>
-              </Reveal>
-            </section>
-          )
-        }
-      </AsyncPage>
-    </NearViewport>
   )
 }
 
@@ -305,7 +402,7 @@ export function ProductCategoriesBand() {
       <AsyncPage load={(signal) => marketplace.listCategories(signal)} skeleton={<span />}>
         {(categories) =>
           categories.length === 0 ? null : (
-            <section className={styles.block} aria-labelledby="categories-chips-title">
+            <section className={styles.block} aria-labelledby="categories-chips-title" id="product-categories">
               <Reveal>
                 <SectionHeader title={<span id="categories-chips-title">{t('home.categoriesChipsTitle')}</span>} description={t('home.categoriesChipsBody')} />
               </Reveal>
