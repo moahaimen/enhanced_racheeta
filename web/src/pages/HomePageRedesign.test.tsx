@@ -416,6 +416,13 @@ describe('approved homepage — six principal cards, doctor rail, popular servic
     const cards = nav.querySelectorAll('article')
     expect(cards).toHaveLength(6)
     expect([...cards].map((c) => c.getAttribute('data-tone'))).toEqual(['teal', 'white', 'teal', 'white', 'teal', 'white'])
+    // each card opens with its photograph (SHOW_CARD_PHOTOS), decorative and lazy
+    const photos = [...nav.querySelectorAll('img')]
+    expect(photos).toHaveLength(6)
+    for (const img of photos) {
+      expect(img).toHaveAttribute('alt', '')
+      expect(img).toHaveAttribute('loading', 'lazy')
+    }
     const links = cardLinks(nav)
     expect(links.map(([, href]) => href)).toEqual(['/providers?kind=PRACTITIONER', '/providers?kind=FACILITY', '/jobs', '/real-estate', '/marketplace', '/marketplace'])
     // every pill names its card (visible text first: label-in-name)

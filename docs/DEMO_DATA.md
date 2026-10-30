@@ -148,10 +148,17 @@ for a demo employer — are left in place rather than guessed at. None is create
 
 ## 6. Images
 
-`ProviderProfile.image_url` is an external URL field (the web falls back to a type icon via
-`Avatar`); companies, products, jobs and listings have **no image field** at all, and the platform
-has no upload/storage mechanism. No image was seeded, no external image was referenced, nothing
-paid was introduced. Placeholders appear as the application's own icon fallbacks.
+* **Practitioner portraits:** every fictional practitioner gets a gender-matched portrait through
+  the existing `ProviderProfile.image_url` field: `<FRONTEND_URL>/demo/portraits/<file>.webp`.
+  The 12 portraits (3 women, 9 men, so faces repeat across 27 practitioners) are project-owned
+  crops derived from the owner-approved reference pack (`docs/PROVENANCE.md`), shipped with the web
+  build under `web/public/demo/portraits/` (≈ 70 kB) and served from the same origin (CSP
+  `img-src 'self'`). `FRONTEND_URL` must be the public web origin (on staging it already is, for
+  e-mail links). The seeder sets a portrait only when `image_url` is empty, never replaces one, and
+  an older seed without portraits receives them on the next run of `seed_demo_data` (updates only,
+  no new rows). Real providers never get one.
+* Companies, products, jobs and listings have **no image field**, and the platform has no
+  upload/storage mechanism; no other image is seeded and nothing external is referenced.
 
 ## 7. Deployment boundary
 

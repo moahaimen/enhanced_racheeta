@@ -26,6 +26,7 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction
 from django.utils import timezone
@@ -292,8 +293,22 @@ class DemoSeeder:
                 f"{en_bio} {years} years of experience. Languages: {langs}.",
             )
             profile = self._provider(key, ptype, display, about, gov, city, "", [spec], services, n)
+            self._portrait(profile, key)
             if fac and fac in self.provider_profiles:
                 self._membership(profile, self.provider_profiles[fac], spec)
+
+    def _portrait(self, profile, key: str) -> None:
+        """Give a demo practitioner its portrait (absolute URL on the web origin).
+
+        Only registered demo profiles reach here, and an image someone already set is never
+        replaced; an older seed without portraits receives them on the next (idempotent) run.
+        """
+        filename = providers.PORTRAITS.get(key)
+        if not filename or profile.image_url:
+            return
+        origin = settings.RACHEETA["FRONTEND_URL"]
+        profile.image_url = f"{origin}{providers.PORTRAIT_PATH}{filename}"
+        profile.save(update_fields=["image_url", "updated_at"])
 
     def _membership(self, practitioner, facility, spec) -> None:
         title_ar, title_en = providers.MEMBERSHIP_TITLE.get(

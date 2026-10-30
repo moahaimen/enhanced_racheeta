@@ -144,4 +144,8 @@ Then, in the Railway dashboard for the **staging** service only:
 4. Remove `DEMO_DATA_ENABLED` afterwards if the commands should not stay usable. To empty the
    environment: `python manage.py clear_demo_data --dry-run --yes`, then `--yes`.
 
+**Adding portraits to an existing seed:** run `python manage.py seed_demo_data` again with the same
+`DEMO_DATA_ENABLED=true` and `DEMO_PASSWORD` (the password the demo accounts already use; a different
+one is refused). It only fills empty `image_url` fields of registered demo practitioners.
+
 Never set `DEMO_DATA_ENABLED` on a production service.

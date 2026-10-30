@@ -221,7 +221,7 @@ The other accent families are folded into the palette: `aqua`, `mint`, `blue` ar
 مكان واحد», tagline «ابحث · احجز · تواصل», text, the working search (area tabs, text, governorate,
 teal search button) and a framed photograph; then **six principal cards in a 3 × 2 grid alternating
 teal and white** (doctors, hospitals & centers, jobs / medical real estate, medical products,
-companies). Teal cards: white text, translucent icon chip, white pill button. White cards: teal
+companies). Each card opens with its photograph as a full-bleed strip and the icon chip overlapping it (switch `SHOW_CARD_PHOTOS` in `pages/home/cardPhotos.ts`; `false` = approved icon-only cards). Teal cards: white text, translucent icon chip, white pill button. White cards: teal
 heading, soft-teal icon chip, teal outline pill. Then the featured-doctors rail (best-rated verified
 practitioners from the API, previous/next buttons, "view profile" pill), popular services (real
 specialties from `GET /specialties`, project-drawn icons, "more"), and the existing API sections

@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import { useAuth } from '../auth/useAuth'
 import { Badge, Container, Icon, LinkButton, Reveal, type IconName } from '../design-system'
+import { CARD_PHOTOS, SHOW_CARD_PHOTOS } from './home/cardPhotos'
 import { HeroVisual } from './home/HeroVisual'
 import { useTalentTarget } from './home/talentTarget'
 import { HeroSearch } from './home/HeroSearch'
@@ -24,8 +25,10 @@ type Feature = { key: string; icon: IconName; to: string; tone: 'teal' | 'white'
 
 /** One of the six principal destinations: a teal or a white card, icon chip, title, text, pill. */
 function FeatureCard({ feature }: { feature: Feature }) {
+  const photo = SHOW_CARD_PHOTOS ? CARD_PHOTOS[feature.key] : undefined
   return (
-    <article className={styles.feature} data-tone={feature.tone}>
+    <article className={styles.feature} data-tone={feature.tone} data-photo={photo ? 'true' : undefined}>
+      {photo ? <img className={styles.featurePhoto} src={photo} width={520} height={156} alt="" loading="lazy" decoding="async" /> : null}
       <span className={styles.featureIcon} aria-hidden="true">
         <Icon name={feature.icon} size={28} />
       </span>
