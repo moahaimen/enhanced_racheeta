@@ -203,3 +203,39 @@ def test_second_run_creates_nothing(seeded):
     call_command("seed_demo_data")
     assert _counts() == first
     assert DemoRecord.objects.count() == registry
+
+
+# ---- portraits ----------------------------------------------------------------------------------
+
+PRACTITIONER_TYPES = ("DOCTOR", "NURSE", "THERAPIST")
+
+
+def test_every_demo_practitioner_gets_a_shipped_portrait_and_facilities_none(seeded, settings):
+    from pathlib import Path
+
+    from apps.demo.content import providers as content
+
+    public = Path(__file__).resolve().parents[4] / "web" / "public"
+    origin = settings.RACHEETA["FRONTEND_URL"]
+    assert set(content.PORTRAITS) == {row[0] for row in content.PRACTITIONERS}
+    practitioners = ProviderProfile.objects.filter(provider_type__in=PRACTITIONER_TYPES)
+    assert practitioners.count() == len(content.PRACTITIONERS)
+    for profile in practitioners:
+        assert profile.image_url.startswith(f"{origin}{content.PORTRAIT_PATH}")
+        assert (public / profile.image_url.removeprefix(origin).lstrip("/")).is_file()
+    facilities = ProviderProfile.objects.exclude(provider_type__in=PRACTITIONER_TYPES)
+    assert facilities.exists() and not facilities.exclude(image_url="").exists()
+
+
+def test_a_rerun_adds_missing_portraits_but_never_replaces_a_set_image(seeded):
+    practitioners = ProviderProfile.objects.filter(provider_type__in=PRACTITIONER_TYPES)
+    practitioners.update(image_url="")
+    custom = practitioners.first()
+    custom.image_url = "https://images.example.test/own-photo.webp"
+    custom.save(update_fields=["image_url"])
+    registry = DemoRecord.objects.count()
+    seed()
+    assert DemoRecord.objects.count() == registry  # updates only, nothing new created
+    assert not practitioners.filter(image_url="").exists()
+    custom.refresh_from_db()
+    assert custom.image_url == "https://images.example.test/own-photo.webp"

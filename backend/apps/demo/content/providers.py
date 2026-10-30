@@ -681,3 +681,45 @@ MEMBERSHIP_TITLE = {
     "pediatrics": ("أخصائي أطفال", "Pediatric specialist"),
     "default": ("طبيب مقيم", "Visiting physician"),
 }
+
+
+# Portraits for the fictional practitioners: project-owned images derived from the owner-approved
+# reference pack (docs/PROVENANCE.md), shipped with the web app under /demo/portraits/ and
+# referenced through ProviderProfile.image_url. Gender-matched; 3 women and 9 men, so faces repeat
+# across the 27 demo practitioners (more portraits can be added by extending the files and lists). Real providers never receive one.
+PORTRAIT_PATH = "/demo/portraits/"
+_WOMEN = [
+    "dr-noor-hamdani",
+    "dr-huda-rubaie",
+    "dr-mariam-zubaidi",
+    "dr-zainab-khafaji",
+    "dr-rana-obaidi",
+    "dr-lujain-naqeeb",
+    "dr-sura-kubaisi",
+    "dr-dalia-tamimi",
+    "dr-amal-khazraji",
+    "dr-shahd-qaisi",
+    "dr-reem-ani",
+    "th-layla-nuaimi",
+    "nr-hanan-saidi",
+]
+_MEN = [
+    "dr-karim-saadi",
+    "dr-yusuf-taie",
+    "dr-hasan-bayati",
+    "dr-omar-jumaili",
+    "dr-ali-shammari",
+    "dr-sarmad-azzawi",
+    "dr-bilal-dulaimi",
+    "dr-haider-moussawi",
+    "dr-ahmed-jabouri",
+    "dr-firas-anbari",
+    "dr-mustafa-saffar",
+    "dr-wissam-hilli",
+    "dr-tariq-wasiti",
+    "th-karar-fartosi",
+]
+PORTRAITS = {
+    **{key: f"woman-{i % 3 + 1}.webp" for i, key in enumerate(_WOMEN)},
+    **{key: f"man-{i % 9 + 1}.webp" for i, key in enumerate(_MEN)},
+}
