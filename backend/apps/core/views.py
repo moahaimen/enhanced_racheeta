@@ -1,6 +1,8 @@
+import os
+
 from django.conf import settings
 from django.db import DatabaseError, connection, transaction
-from django.http import FileResponse, Http404, HttpRequest, JsonResponse
+from django.http import FileResponse, Http404, HttpRequest, HttpResponseRedirect, JsonResponse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
@@ -46,6 +48,12 @@ def spa_index(_request: HttpRequest, *_args, **_kwargs):
     """
     dist = settings.SPA_DIST_DIR
     if dist is None:
+        if settings.DEBUG and os.environ.get("RACHEETA_LOCAL_DEMO") == "1":
+            # Local demo only: the web app runs on its own dev server, so a page opened on the
+            # API port goes there instead of a 404 (never active in production: DEBUG is off).
+            return HttpResponseRedirect(
+                settings.RACHEETA["FRONTEND_URL"] + _request.get_full_path()
+            )
         raise Http404("Web application build is not configured.")
     index = dist / "index.html"
     if not index.is_file():
