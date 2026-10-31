@@ -260,6 +260,70 @@ export const paths = {
       <path d="M9.5 14.5v2.2a2.5 2.5 0 0 0 5 0v-2.2M12 19v2" />
     </>
   ),
+  laptop: (
+    <>
+      <rect x="4" y="5" width="16" height="11" rx="1.5" />
+      <path d="M2 19h20M10 9l-2 2 2 2M14 9l2 2-2 2" />
+    </>
+  ),
+  network: (
+    <>
+      <rect x="9" y="3" width="6" height="5" rx="1" />
+      <rect x="3" y="16" width="6" height="5" rx="1" />
+      <rect x="15" y="16" width="6" height="5" rx="1" />
+      <path d="M12 8v4M6 16v-2h12v2" />
+    </>
+  ),
+  scan: (
+    <>
+      <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M12 8v8M9 10.5h6M9.5 14h5" />
+    </>
+  ),
+  wrench: (
+    <>
+      <path d="M14.5 5.5a4 4 0 0 0 4.9 4.9l-9.2 9.2a2.1 2.1 0 0 1-3-3l9.2-9.2a4 4 0 0 0-1.9-1.9Z" />
+      <path d="M14.5 5.5 17 3l1 3 3 1-2.5 2.5" />
+    </>
+  ),
+  calculator: (
+    <>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3M8 18h4" />
+    </>
+  ),
+  megaphone: (
+    <>
+      <path d="M3 10v4h3l7 4V6l-7 4H3Z" />
+      <path d="M17 9a4 4 0 0 1 0 6M6 14l1.5 5h2.5l-1-4" />
+    </>
+  ),
+  headset: (
+    <>
+      <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
+      <rect x="3" y="13" width="4" height="6" rx="1.5" />
+      <rect x="17" y="13" width="4" height="6" rx="1.5" />
+      <path d="M19 19a3 3 0 0 1-3 3h-3" />
+    </>
+  ),
+  syringe: (
+    <>
+      <path d="m18 2 4 4M20 4l-9.5 9.5M14 4l6 6M9 9l6 6-6.5 6.5a1.5 1.5 0 0 1-2.1 0l-3.9-3.9a1.5 1.5 0 0 1 0-2.1Z" />
+      <path d="M3 21l2-2M10.5 13.5l-2 2M12.5 15.5l-2 2" />
+    </>
+  ),
+  clipboard: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4h6v3H9zM9 12h6M9 16h4" />
+    </>
+  ),
+  apple: (
+    <>
+      <path d="M12 7c-2-1.5-7-1.5-7 4.5 0 4.5 3 9.5 5 9.5 1 0 1.3-.5 2-.5s1 .5 2 .5c2 0 5-5 5-9.5C19 5.5 14 5.5 12 7Z" />
+      <path d="M12 7c0-2 1-3.5 3-4" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof paths

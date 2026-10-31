@@ -33,6 +33,8 @@ if ! grep -q '^LOCAL_DEMO_ADMIN_PASSWORD=' "$envfile"; then
 fi
 set -a; . "$envfile"; set +a
 for v in $(env | grep -o '^RAILWAY_[A-Z_]*' || true); do unset "$v"; done
+# Absolute links the seed writes (demo portraits, e-mail links) must point at the demo web origin.
+export FRONTEND_URL="${LOCAL_DEMO_FRONTEND_URL:-http://127.0.0.1:${LOCAL_DEMO_WEB_PORT:-5180}}"
 
 cd "$here/backend"
 py=".venv/bin/python"
