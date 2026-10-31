@@ -6435,6 +6435,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Member'
           description: ''
+  /api/v1/workspaces/dashboard:
+    get:
+      operationId: workspaces_dashboard_retrieve
+      description: |-
+        The module-based dashboard of ONE of the caller's current workspaces. The id is checked
+        against the workspaces computed now; an unknown, forged, revoked or suspended one is 404.
+      summary: Dashboard of one of my workspaces (server-composed modules)
+      parameters:
+      - in: query
+        name: ws
+        schema:
+          type: string
+        description: 'Workspace id; default: my default'
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDashboard'
+          description: ''
   /api/v1/workspaces/facility/{id}:
     get:
       operationId: workspaces_facility_retrieve
@@ -8725,6 +8749,31 @@ components:
       - PUBLISHED
       - REJECTED
       - SUSPENDED
+    DashboardModule:
+      type: object
+      properties:
+        key:
+          type: string
+        variant:
+          type: string
+        stats:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        link:
+          type: string
+      required:
+      - items
+      - key
+      - link
+      - stats
+      - variant
     DashboardOfferSummary:
       type: object
       properties:
@@ -16338,9 +16387,12 @@ components:
           type: array
           items:
             type: string
+        is_default:
+          type: boolean
       required:
       - capabilities
       - id
+      - is_default
       - kind
       - modules
       - org_id
@@ -16350,6 +16402,33 @@ components:
       - team_path
       - title
       - verification_status
+    WorkspaceDashboard:
+      type: object
+      properties:
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardModule'
+        workspace:
+          type: object
+          additionalProperties: {}
+        header:
+          type: object
+          additionalProperties: {}
+        actions:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        generated_at:
+          type: string
+          format: date-time
+      required:
+      - actions
+      - generated_at
+      - header
+      - modules
+      - workspace
     _NoBodyRequest:
       type: object
       properties:

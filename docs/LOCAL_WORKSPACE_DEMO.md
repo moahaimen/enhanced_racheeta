@@ -230,3 +230,94 @@ the web and API origins).
 - An org-workspace view for property sellers.
 - Enforcing `account_type` against the provider or business type when the profile is created later.
 - The refresh-cookie migration (§7).
+
+## 9. Module-based dashboards (all account types)
+
+**Endpoint and composer.** `GET /api/v1/workspaces/dashboard?ws=<workspace id>` is composed by
+`apps/workspaces/dashboard.py`:
+
+- The workspace id is checked against `build_workspaces(account)` as it stands *now*. A forged,
+  foreign, revoked or suspended id answers **404**.
+- Modules are chosen from the workspace kind, its subtype and the caller's **current** capability
+  in that organization.
+- Every figure is a real query over the caller's own rows, or the organization's rows for a
+  member. No impressions, clicks or revenue are invented.
+- Lists contain business facts only: no patient contact data and no requester e-mail.
+- Responses are `Cache-Control: private, no-store`.
+
+**Web page.** `/dashboard` is one React page (`WorkspaceDashboardPage`) that renders exactly the
+modules it receives. Two of them are feeds that load from their own eligibility-checked endpoints:
+`sponsored` («إعلان ممول») and `promoted`. The previous tabbed statistics remain at
+`/dashboard/summary`.
+
+### Compositions
+
+| Workspace | Modules |
+|---|---|
+| Doctor | profile · medical services · appointments · offers · reviews · products for the specialty · my quotes · sponsored · promoted* |
+| Nurse | profile · nursing services · appointments · offers · professional connections · relevant suppliers · my quotes · sponsored · promoted* |
+| Therapist | profile · therapy & rehabilitation services · sessions · offers · reviews · rehabilitation products · my quotes · sponsored · promoted* |
+| Hospital | profile · departments · practitioners · appointments · offers · team · recruitment · equipment suppliers · my quotes · sponsored · promoted* |
+| Medical center | profile · clinics · practitioners · appointments · offers · team · recruitment · suppliers · my quotes · sponsored · promoted* |
+| Pharmacy | pharmacy profile · offers · team · recruitment · eligible product categories · suppliers · my quotes · sponsored · promoted* |
+| Laboratory | profile · lab tests · appointments · offers · team · recruitment (staffing) · lab equipment & supplies · my quotes · sponsored · promoted* |
+| Beauty center | profile · permitted aesthetic services · appointments · promotions & offers · team · recruitment · equipment suppliers · sponsored · promoted* |
+| Pharmaceutical company / distributor | product management (incl. restricted B2B count) · quote requests · campaigns · team · recruitment |
+| Scientific office | product management · quote requests · campaigns · team · recruitment |
+| Equipment supplier / medical supplies office / assistive-device store (retail) | product management · inventory & stock (low / out) · store orders · quote requests · campaigns · team · recruitment |
+| Property owner / agent | listings & publication · promotions |
+| Employer / recruiter | jobs · applicants · interviews · invitations · subscription & seats |
+| Job seeker | professional profile · applications · interviews · invitations · jobs for you |
+| Patient / customer | my store orders · reservations · assistive-device store · my reviews |
+| Administrator | verification queues · review & moderation · campaigns · subscriptions · users · audit |
+
+\* `promoted` appears only for verified providers who opted in to real-estate promotions.
+`sponsored` appears only for verified providers whose display preference is on.
+
+Every dashboard also ends with **notifications & messages** and **account settings**.
+
+**Organization members** get only what their capability allows:
+
+| Role | Gets | Never gets |
+|---|---|---|
+| VIEWER, STAFF | Read modules: services, practitioners, reservations, catalogue, inventory, orders, quotes | Owner tools: campaigns (MANAGER+), team (MANAGER+), recruitment, sponsored, promoted, the B2B catalogue and buyer quotes |
+| MANAGER | Team and campaigns, in addition | Recruitment and the owner-only feeds |
+
+### Switching workspaces
+
+`GET /api/v1/workspaces` marks one entry `is_default`. A personal account with an active
+organization membership (staff) lands in that organization, not in the patient dashboard.
+
+The header switcher lists only server-returned workspaces and changes `?ws=`. The dashboard body
+is keyed by account and workspace, so each switch remounts it:
+
+- previous data is dropped;
+- the in-flight request is aborted;
+- a late response can never render.
+
+Web tests cover workspace switching, logout-and-login as another account, and forged ids.
+
+### Reservations
+
+Booking may leave the business model. `RACHEETA["RESERVATIONS_ENABLED"]` (env
+`RESERVATIONS_ENABLED`, default on) removes every reservation module and action from all dashboards
+when switched off. Tests verify this. The reservation system, its tables and its history are
+untouched.
+
+### Migrations
+
+No new migrations in this step. The capabilities `company.products.view`,
+`company.campaigns.view` and `org.owner_tools` are code-only, and the dashboard reads existing
+tables. The earlier additive migrations of this branch are unchanged:
+
+- `accounts/0003`
+- `marketplace/0002`
+- `jobs/0002`
+- `notifications/0004`
+- `real_estate/0002`
+- `preferences/0001`
+- `commerce/0001`
+- `workspaces/0001`
+
+All of them add columns with defaults, new tables, or choice-list changes. None drops or rewrites
+existing data, so they are backward-compatible with existing rows.

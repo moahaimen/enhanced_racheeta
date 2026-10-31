@@ -132,7 +132,7 @@ describe('Dashboard hub', () => {
     signIn('PATIENT', ['patient'])
     const pending = deferred<PatientDashboard>()
     vi.mocked(dashboardsApi.getPatient).mockReturnValue(pending.promise)
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
 
     // The loading wrapper is replaced between the index load and the dashboard load: assert it in a
     // retry loop rather than holding on to an element that may already have been swapped out.
@@ -162,7 +162,7 @@ describe('Dashboard hub', () => {
       recent: [],
       unread: { notifications: 0, messages: 0 },
     })
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByTestId('upcoming-list-empty')).toHaveTextContent('No reservations to show')
     expect(screen.getByTestId('recent-list-empty')).toBeInTheDocument()
     expect(screen.getByTestId('reservations-total')).toHaveTextContent('0')
@@ -173,7 +173,7 @@ describe('Dashboard hub', () => {
     vi.mocked(dashboardsApi.getPatient)
       .mockRejectedValueOnce(new ApiError(500, 'server_error', 'Server exploded'))
       .mockResolvedValue(patientData())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
 
     expect(await screen.findByTestId('async-error')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /retry/i }))
@@ -184,14 +184,14 @@ describe('Dashboard hub', () => {
   it('shows an error when the index itself cannot be loaded', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount())
     vi.mocked(dashboardsApi.getIndex).mockRejectedValue(new ApiError(503, 'unavailable', 'Down'))
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByTestId('async-error')).toBeInTheDocument()
     expect(dashboardsApi.getPatient).not.toHaveBeenCalled()
   })
 
   it('offers onboarding instead of a dashboard when the server lists none', async () => {
     signIn('PROVIDER', [])
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByTestId('dashboard-none')).toHaveTextContent('No dashboard is available yet')
     const card = screen.getByTestId('dashboard-none').closest('.card-block') as HTMLElement
     expect(within(card).getByRole('link', { name: /my account/i })).toHaveAttribute('href', '/profile')
@@ -199,7 +199,7 @@ describe('Dashboard hub', () => {
 
   it('requires a signed-in account', async () => {
     tokenStore.clear()
-    const { router } = renderApp('/dashboard')
+    const { router } = renderApp('/dashboard/summary')
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(dashboardsApi.getIndex).not.toHaveBeenCalled()
   })
@@ -207,7 +207,7 @@ describe('Dashboard hub', () => {
   it('doctor: rating, upcoming appointments with the patient name, offers', async () => {
     signIn('PROVIDER', ['doctor'])
     vi.mocked(dashboardsApi.getDoctor).mockResolvedValue(providerBase())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-doctor')
     expect(within(dashboard).getByTestId('rating-average')).toHaveTextContent('4.5')
     expect(within(dashboard).getByTestId('rating-count')).toHaveTextContent('4')
@@ -226,7 +226,7 @@ describe('Dashboard hub', () => {
       profile: { display_name: 'Dr New', provider_type: 'DOCTOR', verification_status: 'PENDING', is_visible: true },
       reviews: { average_rating: null, review_count: 0, distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 } },
     })
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByTestId('no-reviews')).toHaveTextContent('No reviews yet')
     expect(screen.queryByTestId('rating-average')).toBeNull()
     expect(screen.getByTestId('provider-not-discoverable')).toBeInTheDocument()
@@ -240,7 +240,7 @@ describe('Dashboard hub', () => {
       practitioners: { active: 7, incoming_requests: 2, outgoing_invitations: 1 },
     }
     vi.mocked(dashboardsApi.getFacility).mockResolvedValue(data)
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-facility')
     expect(within(dashboard).getByTestId('members-active')).toHaveTextContent('7')
     expect(within(dashboard).getByTestId('members-incoming')).toHaveTextContent('2')
@@ -250,7 +250,7 @@ describe('Dashboard hub', () => {
   it('medical company: products, campaigns and payment status, with no analytics claims', async () => {
     signIn('MEDICAL_COMPANY', ['medical_company'])
     vi.mocked(dashboardsApi.getCompany).mockResolvedValue(companyData)
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-company')
     expect(within(dashboard).getByTestId('products-total')).toHaveTextContent('5')
     expect(within(dashboard).getByTestId('products-exposable')).toHaveTextContent('3')
@@ -270,7 +270,7 @@ describe('Dashboard hub', () => {
       listings_sale: 3,
       listings_rent: 5,
     })
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-owner')
     expect(within(dashboard).getByTestId('listings-total')).toHaveTextContent('8')
     expect(within(dashboard).getByTestId('listings-expired')).toHaveTextContent('1')
@@ -281,7 +281,7 @@ describe('Dashboard hub', () => {
   it('recruiter: jobs, applications, interviews and seats', async () => {
     signIn('PROVIDER', ['recruiter'])
     vi.mocked(dashboardsApi.getRecruiter).mockResolvedValue(recruiterData())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-recruiter')
     expect(dashboard).toHaveTextContent('Al-Shifa Hospital')
     expect(within(dashboard).getByTestId('jobs-open')).toHaveTextContent('2')
@@ -302,7 +302,7 @@ describe('Dashboard hub', () => {
         seats: { active_members: 1, enabled: true, limit: null },
       }),
     )
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByTestId('applications-withheld')).toHaveTextContent(/plan that includes application review/i)
     expect(screen.queryByTestId('applications-total')).toBeNull()
     expect(screen.queryByTestId('interview-PROPOSED')).toBeNull()
@@ -326,7 +326,7 @@ describe('Dashboard hub', () => {
         interviews: null,
       }),
     )
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     expect(await screen.findByText(/cannot recruit until it is verified/i)).toBeInTheDocument()
     expect(screen.getByTestId('applications-withheld')).toHaveTextContent(/once your organisation is verified/i)
   })
@@ -334,7 +334,7 @@ describe('Dashboard hub', () => {
   it('administrator: aggregate counts only', async () => {
     signIn('ADMIN', ['admin'], true)
     vi.mocked(dashboardsApi.getAdmin).mockResolvedValue(adminData)
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-admin')
     expect(dashboard).toHaveTextContent(/no personal data is shown here/i)
     expect(within(dashboard).getByTestId('accounts-total')).toHaveTextContent('12')
@@ -350,7 +350,7 @@ describe('Dashboard hub', () => {
       practitioners: { active: 1, incoming_requests: 0, outgoing_invitations: 0 },
     })
     vi.mocked(dashboardsApi.getRecruiter).mockResolvedValue(recruiterData())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
 
     await screen.findByTestId('dashboard-facility')
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Facility', 'Recruiter'])
@@ -370,7 +370,7 @@ describe('Dashboard hub', () => {
     vi.mocked(authApi.logout).mockImplementation(async () => {
       tokenStore.clear()
     })
-    const { router } = renderApp('/dashboard')
+    const { router } = renderApp('/dashboard/summary')
     // Account A's dashboard request is in flight (and stays pending).
     await waitFor(() => expect(dashboardsApi.getPatient).toHaveBeenCalledTimes(1))
     expect(screen.queryByTestId('dashboard-patient')).toBeNull()
@@ -391,7 +391,7 @@ describe('Dashboard hub', () => {
     await userEvent.type(screen.getByLabelText(/^password$/i), 'Str0ng-Passw0rd!{Enter}')
     await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
     await act(async () => {
-      await router.navigate('/dashboard')
+      await router.navigate('/dashboard/summary')
     })
     expect(await screen.findByText('ACCOUNT B VISIT')).toBeInTheDocument()
     expect(screen.queryByText('ACCOUNT A SECRET')).toBeNull()
@@ -402,7 +402,7 @@ describe('Dashboard hub', () => {
     try {
       signIn('PATIENT', ['patient'])
       vi.mocked(dashboardsApi.getPatient).mockResolvedValue(patientData())
-      renderApp('/dashboard')
+      renderApp('/dashboard/summary')
       await screen.findByTestId('dashboard-patient')
       await act(async () => {
         vi.advanceTimersByTime(10 * 60 * 1000)
@@ -447,7 +447,7 @@ describe('Dashboard navigation and language', () => {
     await changeLanguage('ar')
     signIn('PATIENT', ['patient'])
     vi.mocked(dashboardsApi.getPatient).mockResolvedValue(patientData())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-patient')
     expect(dashboard).toHaveTextContent('حجوزاتي')
     expect(dashboard).toHaveTextContent('المواعيد القادمة')
@@ -459,7 +459,7 @@ describe('Dashboard navigation and language', () => {
     await changeLanguage('ar')
     signIn('PROVIDER', ['doctor', 'recruiter'])
     vi.mocked(dashboardsApi.getDoctor).mockResolvedValue(providerBase())
-    renderApp('/dashboard')
+    renderApp('/dashboard/summary')
     await screen.findByTestId('dashboard-doctor')
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['طبيب', 'مسؤول توظيف'])
   })

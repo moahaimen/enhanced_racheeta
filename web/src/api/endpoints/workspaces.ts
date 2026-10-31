@@ -18,6 +18,7 @@ import type {
   StoreCategory,
   StoreProduct,
   Workspace,
+  WorkspaceDashboard,
 } from '../workspaces.types'
 
 const enc = encodeURIComponent
@@ -34,6 +35,12 @@ function companyQuery(companyId?: string, extra: Record<string, string> = {}): s
 // ---- workspaces ---------------------------------------------------------------------------------
 export function listWorkspaces(signal?: AbortSignal): Promise<Workspace[]> {
   return apiRequest<Workspace[]>('/api/v1/workspaces', { signal })
+}
+
+/** The dashboard of one of MY workspaces; omit `ws` for my default. Unknown/foreign ids are 404. */
+export function getWorkspaceDashboard(ws: string | null, signal?: AbortSignal): Promise<WorkspaceDashboard> {
+  const q = ws ? `?ws=${enc(ws)}` : ''
+  return apiRequest<WorkspaceDashboard>(`/api/v1/workspaces/dashboard${q}`, { signal })
 }
 
 export function getOrgSummary(kind: OrgKind, id: string, signal?: AbortSignal): Promise<OrgSummary> {

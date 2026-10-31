@@ -194,6 +194,30 @@ describe('Company workspace', () => {
     expect(screen.queryByRole('button', { name: /طلب التوثيق|request verification/i })).toBeNull()
   })
 
+  it('sets stock and sale channel; a restricted item is forced to professionals only', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.createMyProduct).mockResolvedValue(ownProduct('n-2', 'Walker', false))
+    renderApp('/company')
+    const user = userEvent.setup()
+    const form = await screen.findByTestId('product-form')
+    await user.selectOptions(within(form).getByLabelText(/الفئة|category/i), 'cat-dental')
+    await user.type(within(form).getByLabelText(/اسم المنتج|product name/i), 'Walker')
+    await user.selectOptions(within(form).getByLabelText(/قناة البيع|sale channel/i), 'BOTH')
+    await user.type(within(form).getByLabelText(/^المخزون|^stock/i), 'x')
+    await user.click(within(form).getByRole('button', { name: /إنشاء المنتج|create product/i }))
+    expect(marketplaceApi.createMyProduct).not.toHaveBeenCalled() // non-numeric stock refused
+    await user.clear(within(form).getByLabelText(/^المخزون|^stock/i))
+    await user.type(within(form).getByLabelText(/^المخزون|^stock/i), '12')
+    await user.click(within(form).getByLabelText(/منتج مقيّد|restricted/i))
+    expect(within(form).getByLabelText(/قناة البيع|sale channel/i)).toHaveValue('B2B')
+    await user.click(within(form).getByRole('button', { name: /إنشاء المنتج|create product/i }))
+    await waitFor(() =>
+      expect(marketplaceApi.createMyProduct).toHaveBeenCalledWith(
+        expect.objectContaining({ sale_channel: 'B2B', is_restricted: true, stock_quantity: 12 }),
+      ),
+    )
+  })
+
   it('creates, edits, publishes and unpublishes products', async () => {
     vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
     vi.mocked(marketplaceApi.createMyProduct).mockResolvedValue(ownProduct('n-1', 'New scaler', false))

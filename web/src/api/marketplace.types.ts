@@ -92,9 +92,17 @@ export interface CompanyProduct {
   currency: string
   category: ProductCategory
   is_active: boolean
+  /** B2B = professionals only; B2C/BOTH also list it in the public store (server-checked). */
+  sale_channel?: SaleChannel
+  /** Restricted / prescription items are B2B-only (database constraint). */
+  is_restricted?: boolean
+  /** null = stock not tracked (B2B); consumer listings need a figure. */
+  stock_quantity?: number | null
   created_at: string
   updated_at: string
 }
+
+export type SaleChannel = 'B2B' | 'B2C' | 'BOTH'
 
 /** The only targeting input a company has is the category; audiences are backend rules. */
 export interface ProductWrite {
@@ -105,6 +113,9 @@ export interface ProductWrite {
   model_name?: string
   price?: string | null
   currency?: string
+  sale_channel?: SaleChannel
+  is_restricted?: boolean
+  stock_quantity?: number | null
 }
 
 export type PaginatedMarketplaceProducts = Paginated<MarketplaceProduct>

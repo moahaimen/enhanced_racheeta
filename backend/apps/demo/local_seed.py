@@ -31,9 +31,10 @@ from apps.commerce import services as commerce
 from apps.commerce.models import Order, QuoteRequest
 from apps.jobs.models import EmployerMembership, JobSeekerProfile
 from apps.marketplace.models import MedicalCompany, Product, ProductAudience, ProductCategory
+from apps.offers.services import create_offer
 from apps.preferences import services as preferences
 from apps.preferences.models import MarketingPreference
-from apps.providers.models import ProviderProfile
+from apps.providers.models import ProviderProfile, ServiceOffering
 from apps.real_estate import promotions
 from apps.real_estate.models import ListingPromotion
 from apps.workspaces.models import OrganizationMember
@@ -121,7 +122,41 @@ class LocalExtras:
                 self._person(key, name, is_active=False)
             else:
                 self._person(key, name, email_verified_at=None)
-        for key, name, roles in content.STAFF:
+        for n, (key, ptype, name_ar, name_en, gov, city, svc) in enumerate(
+            content.EXTRA_FACILITIES
+        ):
+            profile = self.s._provider(
+                key,
+                ptype,
+                common.bilingual(name_ar, name_en),
+                common.about("منشأة توضيحية.", "Fictional demo facility."),
+                gov,
+                city,
+                "",
+                [],
+                [(ar, en, Decimal(price), minutes) for ar, en, price, minutes in svc],
+                380 + n,
+            )
+            for m, (fkey, t_ar, t_en, discount, days) in enumerate(content.EXTRA_FACILITY_OFFERS):
+                if fkey != key:
+                    continue
+                service = ServiceOffering.objects.filter(provider=profile).order_by("title").first()
+                price = (service.price * Decimal(str(1 - float(discount)))).quantize(
+                    Decimal("1000")
+                )
+                self.registry.ensure(
+                    f"offer:{key}:{m}",
+                    lambda t=(t_ar, t_en), pr=price, d=days, sv=service: create_offer(
+                        profile,
+                        service_id=sv.pk,
+                        title=common.bilingual(*t),
+                        description="عرض توضيحي. | Demonstration offer.",
+                        offer_price=pr,
+                        starts_at=self.s.now - timedelta(days=1),
+                        ends_at=self.s.now + timedelta(days=d),
+                    ),
+                )
+        for key, name, roles in [*content.STAFF, *content.EXTRA_STAFF]:
             person = self._person(key, name)
             for kind, org_key, role, active in roles:
                 org = self._provider(org_key) if kind == "facility" else self._company(org_key)
@@ -170,7 +205,7 @@ class LocalExtras:
                     discoverable_by_employers=True,
                 ),
             )
-        for key, changes in content.PREFERENCES.items():
+        for key, changes in {**content.PREFERENCES, **content.EXTRA_PREFERENCES}.items():
             account = self.s.accounts.get(key) or self._get(f"account:{key}")
             if account is None:
                 self.s.warnings.append(f"preference target missing: {key}")

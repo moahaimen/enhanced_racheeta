@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 
 import { ApiError, marketplace as marketplaceApi, reference } from '../../api'
-import type { CompanyProduct, Governorate, MedicalCompany, ProductCategory } from '../../api'
+import type { CompanyProduct, Governorate, MedicalCompany, ProductCategory, SaleChannel } from '../../api'
 import {
   Alert,
   ApiActionButton,
+  Checkbox,
   AsyncPage,
   Badge,
   Button,
@@ -290,8 +291,13 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     model_name: product?.model_name ?? '',
     price: product?.price ?? '',
     currency: product?.currency ?? 'IQD',
+    sale_channel: (product?.sale_channel ?? 'B2B') as SaleChannel,
+    stock_quantity: product?.stock_quantity == null ? '' : String(product.stock_quantity),
   })
-  const errors = useFormErrors(['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency'] as const)
+  const [restricted, setRestricted] = useState(product?.is_restricted ?? false)
+  const errors = useFormErrors(
+    ['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency', 'sale_channel', 'is_restricted', 'stock_quantity'] as const,
+  )
   const set = (key: keyof typeof f, value: string) => setF((prev) => ({ ...prev, [key]: value }))
   // The reference list holds active categories only. A product whose category an administrator has since
   // deactivated still references it, so that category is shown once as the current value — never as a
@@ -303,6 +309,8 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     if (!f.category) next.category = t('validation.required')
     if (!f.title.trim()) next.title = t('validation.required')
     if (f.price !== '' && (Number.isNaN(Number(f.price)) || Number(f.price) < 0)) next.price = t('company.invalidPrice')
+    if (f.stock_quantity !== '' && !/^\d+$/.test(f.stock_quantity)) next.stock_quantity = t('company.invalidStock')
+    if (restricted && f.sale_channel !== 'B2B') next.sale_channel = t('company.restrictedB2bOnly')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
@@ -315,6 +323,9 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
       model_name: f.model_name.trim(),
       price: f.price === '' ? null : f.price,
       currency: f.currency,
+      sale_channel: f.sale_channel,
+      is_restricted: restricted,
+      stock_quantity: f.stock_quantity === '' ? null : Number(f.stock_quantity),
     }
     return product ? marketplaceApi.updateMyProduct(product.id, payload) : marketplaceApi.createMyProduct(payload)
   }
@@ -359,6 +370,39 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
           <option value="USD">USD</option>
         </Select>
       </div>
+      <div className="grid-2">
+        <Select
+          label={t('company.saleChannel')}
+          hint={t('company.saleChannelHint')}
+          value={f.sale_channel}
+          onChange={(e) => set('sale_channel', e.target.value)}
+          error={errors.fieldErrors.sale_channel}
+        >
+          {(['B2B', 'B2C', 'BOTH'] as const).map((channel) => (
+            <option key={channel} value={channel} disabled={restricted && channel !== 'B2B'}>
+              {t(`company.saleChannels.${channel}`)}
+            </option>
+          ))}
+        </Select>
+        <TextField
+          label={t('company.stock')}
+          optional
+          hint={t('company.stockHint')}
+          dir="ltr"
+          inputMode="numeric"
+          value={f.stock_quantity}
+          onChange={(e) => set('stock_quantity', e.target.value)}
+          error={errors.fieldErrors.stock_quantity}
+        />
+      </div>
+      <Checkbox
+        label={t('company.restricted')}
+        checked={restricted}
+        onChange={(e) => {
+          setRestricted(e.target.checked)
+          if (e.target.checked) set('sale_channel', 'B2B')
+        }}
+      />
       <FormActions>
         {onCancel ? (
           <Button variant="ghost" onClick={onCancel}>

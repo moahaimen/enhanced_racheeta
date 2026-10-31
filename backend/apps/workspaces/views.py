@@ -2,7 +2,7 @@
 database (apps.workspaces.access) and checks the capability matrix (types.CAPABILITIES)."""
 
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import generics, serializers, status
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -23,7 +23,7 @@ from apps.reservations.serializers import (
 from apps.reservations.types import ReservationStatus
 from apps.reservations.views import reservation_queryset
 
-from . import access, services
+from . import access, dashboard, services
 from .models import OrganizationMember
 from .types import GRANTABLE_ROLES, MemberStatus, role_has
 
@@ -42,6 +42,7 @@ WorkspaceSerializer = inline_serializer(
         "verification_status": serializers.CharField(),
         "modules": serializers.ListField(child=serializers.CharField()),
         "capabilities": serializers.ListField(child=serializers.CharField()),
+        "is_default": serializers.BooleanField(),
     },
 )
 
@@ -55,7 +56,55 @@ class WorkspaceListView(APIView):
         responses=WorkspaceSerializer,
     )
     def get(self, request):
-        return Response(services.build_workspaces(request.user))
+        items = services.build_workspaces(request.user)
+        default = dashboard.default_workspace(items, request.user)
+        for item in items:
+            item["is_default"] = default is not None and item["id"] == default["id"]
+        return Response(items)
+
+
+_ModuleSerializer = inline_serializer(
+    name="DashboardModule",
+    many=True,
+    fields={
+        "key": serializers.CharField(),
+        "variant": serializers.CharField(),
+        "stats": serializers.ListField(child=serializers.DictField()),
+        "items": serializers.ListField(child=serializers.DictField()),
+        "link": serializers.CharField(),
+    },
+)
+WorkspaceDashboardSerializer = inline_serializer(
+    name="WorkspaceDashboard",
+    fields={
+        "workspace": serializers.DictField(),
+        "header": serializers.DictField(),
+        "actions": serializers.ListField(child=serializers.DictField()),
+        "modules": _ModuleSerializer,
+        "generated_at": serializers.DateTimeField(),
+    },
+)
+
+
+class WorkspaceDashboardView(APIView):
+    """The module-based dashboard of ONE of the caller's current workspaces. The id is checked
+    against the workspaces computed now; an unknown, forged, revoked or suspended one is 404."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["workspaces"],
+        summary="Dashboard of one of my workspaces (server-composed modules)",
+        parameters=[OpenApiParameter("ws", str, description="Workspace id; default: my default")],
+        responses=WorkspaceDashboardSerializer,
+    )
+    def get(self, request):
+        payload = dashboard.compose(request.user, request.query_params.get("ws") or None)
+        if payload is None:
+            raise NotFound("Workspace not found.")
+        response = Response(payload)
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class WorkspaceAPIError(APIException):

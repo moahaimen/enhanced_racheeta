@@ -52,9 +52,16 @@ CAPABILITIES: dict[str, frozenset[str]] = {
         {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
     ),
     "company.quotes.respond": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
+    "company.products.view": frozenset(
+        {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
+    ),
+    "company.campaigns.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
     # both
     "members.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
     "members.manage": frozenset({OrgRole.OWNER}),
+    # Owner-only areas of the organization's own account (recruitment, sponsored placement,
+    # the professional B2B catalogue and quotes the ORGANIZATION requests as a buyer).
+    "org.owner_tools": frozenset({OrgRole.OWNER}),
 }
 
 

@@ -27,6 +27,8 @@ export interface Workspace {
   verification_status: string
   modules: string[]
   capabilities: string[]
+  /** The workspace the dashboard opens by default (staff: their organization). */
+  is_default?: boolean
 }
 
 export interface OrgSummary {
@@ -172,3 +174,34 @@ export type PaginatedQuotes = Paginated<Quote>
 export type PaginatedStoreProducts = Paginated<StoreProduct>
 export type PaginatedPromotions = Paginated<ListingPromotion>
 export type PaginatedPromotedListings = Paginated<PromotedListing>
+
+/** Server-composed dashboard of one workspace (`GET /workspaces/dashboard?ws=`). */
+export interface DashboardStat {
+  key: string
+  value: number | string | boolean | null
+}
+
+export interface DashboardItem {
+  id: string
+  title: string
+  subtitle: string
+  status: string
+  status_group: string
+  path: string
+}
+
+export interface DashboardModule {
+  key: string
+  variant: string
+  stats: DashboardStat[]
+  items: DashboardItem[]
+  link: string
+}
+
+export interface WorkspaceDashboard {
+  workspace: Pick<Workspace, 'id' | 'kind' | 'subtype' | 'title' | 'role' | 'verification_status' | 'org_id'>
+  header: { name: string; since: string; reservations_enabled: boolean }
+  actions: { key: string; path: string }[]
+  modules: DashboardModule[]
+  generated_at: string
+}

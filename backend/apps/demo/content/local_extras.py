@@ -55,6 +55,16 @@ EXTRA_COMPANIES = [
         None,
     ),
     (
+        "noor-rejected-supplies",
+        "مستلزمات النور (مرفوضة)",
+        "Noor Supplies (verification rejected)",
+        "MEDICAL_SUPPLIES_OFFICE",
+        "REJECTED",
+        True,
+        "basra",
+        None,
+    ),
+    (
         "tigris-pending-supplies",
         "مستلزمات دجلة (قيد التحقق)",
         "Tigris Supplies (pending verification)",
@@ -81,6 +91,13 @@ EXTRA_CATEGORIES = [
         "Pharmacy supplies",
         False,
         [("PHARMACY", None)],
+    ),
+    (
+        "demo-aesthetic-equipment",
+        "معدات مراكز التجميل",
+        "Aesthetic clinic equipment",
+        False,
+        [("BEAUTY_CENTER", None)],
     ),
     (
         "demo-mobility-aids",
@@ -243,6 +260,39 @@ EXTRA_PRODUCTS = [
         False,
         100,
     ),
+    (
+        "quad-cane",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "عصا رباعية القاعدة",
+        "Quad-base walking cane",
+        "28000",
+        "B2C",
+        False,
+        2,
+    ),
+    (
+        "skin-analyzer",
+        "sharq-devices",
+        "demo-aesthetic-equipment",
+        "جهاز تحليل البشرة",
+        "Skin analysis device",
+        "3200000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "rejected-gauze",
+        "noor-rejected-supplies",
+        "demo-home-monitoring",
+        "شاش طبي",
+        "Medical gauze pack",
+        "3000",
+        "B2C",
+        False,
+        50,
+    ),
 ]
 
 # key, company key, product key, status, payment status, start offset days, length days,
@@ -283,6 +333,17 @@ CAMPAIGNS = [
         -1,
         20,
         [],
+        [],
+    ),
+    (
+        "beauty-live",
+        "sharq-devices",
+        "skin-analyzer",
+        "ACTIVE",
+        "VERIFIED",
+        -1,
+        20,
+        ["BEAUTY_CENTER"],
         [],
     ),
 ]
@@ -415,3 +476,31 @@ PROMOTIONS = [
     ("pharmacy-shop", 1, ["PHARMACY"], 14, "REQUESTED"),
     ("old-villa", 2, [], 7, "REJECTED"),
 ]
+
+
+# A beauty center (facility) with its own services, offer, staff and preferences.
+# key, ptype, name_ar, name_en, gov, city, services [(ar, en, price, minutes)]
+EXTRA_FACILITIES = [
+    (
+        "lamsa-beauty",
+        "BEAUTY_CENTER",
+        "مركز لمسة للتجميل",
+        "Lamsa Beauty Center",
+        "baghdad",
+        "baghdad",
+        [
+            ("جلسة تنظيف بشرة", "Facial cleansing session", "45000", 60),
+            ("استشارة عناية بالبشرة", "Skin-care consultation", "25000", 30),
+            ("جلسة ترطيب", "Hydration session", "35000", 45),
+        ],
+    ),
+]
+EXTRA_FACILITY_OFFERS = [("lamsa-beauty", "عرض جلسة تنظيف", "Facial session offer", "0.2", 20)]
+EXTRA_STAFF = [
+    (
+        "staff-lamsa-reception",
+        "موظفة استقبال لمسة | Lamsa reception",
+        [("facility", "lamsa-beauty", "STAFF", True)],
+    ),
+]
+EXTRA_PREFERENCES = {"lamsa-beauty": {"offers_and_news": True, "real_estate_promotions": False}}

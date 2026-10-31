@@ -5,6 +5,9 @@ from . import views
 urlpatterns = [
     path("workspaces", views.WorkspaceListView.as_view(), name="workspaces"),
     path(
+        "workspaces/dashboard", views.WorkspaceDashboardView.as_view(), name="workspace-dashboard"
+    ),
+    path(
         "workspaces/facility/<uuid:pk>",
         views.FacilityWorkspaceView.as_view(),
         name="workspace-facility",
