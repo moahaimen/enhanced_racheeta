@@ -194,3 +194,11 @@ token.
    and `roles.*` translations).
 3. Migration (choices change → `makemigrations`).
 4. Update this file and `docs/api/openapi.yaml` (`make openapi`).
+
+## Organization workspaces (local branch `feat/local-racheeta-multiworkspace`)
+
+Staff access to facilities and businesses goes through `apps/workspaces.OrganizationMember`. The
+roles are OWNER (implicit), MANAGER, STAFF and VIEWER, and capabilities are decided in
+`apps/workspaces/access.py` from current database state. An organization the caller has no role in
+answers 404; a missing capability answers 403. The full capability matrix is in
+`docs/LOCAL_WORKSPACE_DEMO.md` §3.

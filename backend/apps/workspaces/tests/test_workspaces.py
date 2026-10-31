@@ -131,3 +131,18 @@ def test_deactivated_owner_company_is_inaccessible_to_staff(account_factory, sto
     store.account.is_active = False
     store.account.save(update_fields=["is_active"])
     assert client_for(staff).get(f"{WORKSPACES}/company/{store.pk}").status_code == 404
+
+
+def test_owner_and_member_descriptors_carry_the_org_id_and_team_path(account_factory, store):
+    owner = client_for(store.account).get(WORKSPACES).json()
+    company = next(w for w in owner if w["kind"] == "company")
+    assert company["org_id"] == str(store.pk)
+    assert company["team_path"] == f"/workspace/company/{store.pk}"
+    staff = account_factory(role=AccountRole.PATIENT)
+    OrganizationMember.objects.create(
+        account=staff, company=store, role="STAFF", added_by=store.account
+    )
+    member = next(w for w in client_for(staff).get(WORKSPACES).json() if w["kind"] == "company")
+    assert member["org_id"] == str(store.pk) and member["path"] == member["team_path"]
+    patient = next(w for w in client_for(staff).get(WORKSPACES).json() if w["kind"] == "patient")
+    assert patient["org_id"] is None and patient["team_path"] is None

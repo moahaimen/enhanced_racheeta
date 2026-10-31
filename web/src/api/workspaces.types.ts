@@ -15,6 +15,10 @@ export type OrgRole = 'OWNER' | 'MANAGER' | 'STAFF' | 'VIEWER'
 
 export interface Workspace {
   id: string
+  /** The organization's own id (facility/company workspaces), else null. */
+  org_id: string | null
+  /** Staff workspace (reservations / orders / team) when the role can use one. */
+  team_path: string | null
   kind: WorkspaceKind
   subtype: string
   title: string

@@ -1799,7 +1799,8 @@
     "confirm": "Confirm",
     "reject": "Reject",
     "complete": "Complete",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "team": "Team & operations"
   },
   "store": {
     "title": "Assistive device store",

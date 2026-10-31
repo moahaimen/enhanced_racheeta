@@ -288,3 +288,25 @@ Dependency scanning is **not** wired into CI as a blocking job: advisories appea
 ## Reporting
 
 Security issues: contact the owner directly. Do not open public issues.
+
+## Local multi-workspace branch (2026-10-30)
+
+**Tenant isolation.** Organization access is re-read on every request, and foreign organizations
+return 404.
+
+**Commerce:**
+- Totals are computed on the server from locked rows; price fields sent by the client are ignored.
+- Stock is changed under a row lock (concurrency test).
+- Restricted items are B2B-only by a database constraint.
+- No card data and no real payment: COD or manual transfer, demo only.
+- Buyers see only their own orders; merchants and staff see only their organization's orders.
+
+**Quotes** show minimal requester data. **Outreach** is consent-gated, capped and deduplicated, and
+advertisers never see recipients.
+
+**Local guard.** It no longer mutates live connection settings in tests (this previously leaked a
+fake host into later tests).
+
+**Refresh-token HttpOnly cookie.** The design and required tests are in
+`docs/LOCAL_WORKSPACE_DEMO.md` §7. It is **not implemented**, and the localStorage trade-off
+(ADR-061) is unchanged.

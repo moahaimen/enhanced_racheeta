@@ -193,3 +193,14 @@ only; whether a dedicated storefront redesign is wanted is a separate decision.
   demonstration notice.
 * Slots are generated for the next ~12 days; re-run the seeder (idempotent) before a demo if the
   environment has been idle for weeks.
+
+## 10. Local workspace demo extras (local only)
+
+`seed_local_demo` (guarded, disposable database only) seeds the staging dataset **plus** local
+extras: business classifications, consumer categories and stocked B2C products, a restricted
+medicine, campaigns in every state, preferences, staff memberships, recruiter and IT job seekers,
+contrast accounts, orders, quotes, property promotions and a local-only administrator with its own
+password. The staging `seed_demo_data` never adds these.
+
+See `docs/LOCAL_WORKSPACE_DEMO.md`. The account index lives in the git-ignored
+`local-demo/DEMO_ACCOUNTS.md`.

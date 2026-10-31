@@ -32,6 +32,8 @@ WorkspaceSerializer = inline_serializer(
     many=True,
     fields={
         "id": serializers.CharField(),
+        "org_id": serializers.CharField(allow_null=True),
+        "team_path": serializers.CharField(allow_null=True),
         "kind": serializers.CharField(),
         "subtype": serializers.CharField(),
         "title": serializers.CharField(),

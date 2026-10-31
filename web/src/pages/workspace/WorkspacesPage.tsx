@@ -83,9 +83,16 @@ function WorkspaceCard({ ws }: { ws: Workspace }) {
           </Badge>
         ) : null}
       </div>
-      <LinkButton to={ws.path} size="sm">
-        {t('ws.open')}
-      </LinkButton>
+      <div className="cluster">
+        <LinkButton to={ws.path} size="sm">
+          {t('ws.open')}
+        </LinkButton>
+        {ws.team_path && ws.team_path !== ws.path ? (
+          <LinkButton to={ws.team_path} size="sm" variant="secondary">
+            {t('ws.team')}
+          </LinkButton>
+        ) : null}
+      </div>
     </SectionCard>
   )
 }

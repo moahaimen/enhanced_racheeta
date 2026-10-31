@@ -9,7 +9,8 @@
 #   scripts/local_demo.sh dry-run       # what the seed would create
 #   scripts/local_demo.sh clear-dry     # what clear would delete
 #   scripts/local_demo.sh clear         # delete the demo rows
-#   scripts/local_demo.sh serve         # API on 127.0.0.1:8000 against the demo database
+#   scripts/local_demo.sh serve         # API on 127.0.0.1:8010 against the demo database
+#   scripts/local_demo.sh web           # web on 127.0.0.1:5180, proxied to that API
 #   scripts/local_demo.sh drop-db       # drop the disposable database (asks first)
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -46,9 +47,12 @@ case "${1:-}" in
   dry-run) guard && "$py" manage.py seed_local_demo --dry-run ;;
   clear-dry) guard && "$py" manage.py clear_local_demo --dry-run ;;
   clear) guard && "$py" manage.py clear_local_demo --yes ;;
-  serve) guard && exec "$py" manage.py runserver 127.0.0.1:8000 ;;
+  serve) guard && exec "$py" manage.py runserver "127.0.0.1:${LOCAL_DEMO_API_PORT:-8010}" ;;
+  web)
+    cd "$here/web" && VITE_DEV_PROXY_TARGET="http://127.0.0.1:${LOCAL_DEMO_API_PORT:-8010}" \
+      exec npx vite --host 127.0.0.1 --port "${LOCAL_DEMO_WEB_PORT:-5180}" --strictPort ;;
   drop-db)
     read -r -p "Drop the disposable database $dbname? [y/N] " ok
     [ "$ok" = "y" ] && dropdb -h localhost "$dbname" ;;
-  *) sed -n '2,15p' "$0"; exit 2 ;;
+  *) sed -n '2,16p' "$0"; exit 2 ;;
 esac

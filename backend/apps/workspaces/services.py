@@ -57,7 +57,12 @@ def capabilities_of(role: str) -> list[str]:
 
 
 def _descriptor(**fields) -> dict:
+    """`id` is unique per workspace ("<kind>:<pk>"); `org_id` is the organization's own id for
+    facility/company workspaces (what `/workspaces/<kind>/<org_id>` expects); `team_path` opens
+    the staff workspace (reservations, orders, team) when the role can use one."""
     fields.setdefault("role", OrgRole.OWNER)
+    fields.setdefault("org_id", None)
+    fields.setdefault("team_path", None)
     fields.setdefault("verification_status", "")
     fields.setdefault("subtype", "")
     fields.setdefault("modules", [])
@@ -99,6 +104,8 @@ def build_workspaces(account) -> list[dict]:
             out.append(
                 _descriptor(
                     id=f"facility:{profile.pk}",
+                    org_id=str(profile.pk),
+                    team_path=f"/workspace/facility/{profile.pk}",
                     kind="facility",
                     subtype=profile.provider_type,
                     title=profile.display_name,
@@ -115,6 +122,8 @@ def build_workspaces(account) -> list[dict]:
         out.append(
             _descriptor(
                 id=f"company:{company.pk}",
+                org_id=str(company.pk),
+                team_path=f"/workspace/company/{company.pk}",
                 kind="company",
                 subtype=company.business_type,
                 title=company.name,
@@ -145,6 +154,8 @@ def build_workspaces(account) -> list[dict]:
             out.append(
                 _descriptor(
                     id=f"facility:{member.facility_id}",
+                    org_id=str(member.facility_id),
+                    team_path=f"/workspace/facility/{member.facility_id}",
                     kind="facility",
                     subtype=member.facility.provider_type,
                     title=member.facility.display_name,
@@ -160,6 +171,8 @@ def build_workspaces(account) -> list[dict]:
             out.append(
                 _descriptor(
                     id=f"company:{member.company_id}",
+                    org_id=str(member.company_id),
+                    team_path=f"/workspace/company/{member.company_id}",
                     kind="company",
                     subtype=member.company.business_type,
                     title=member.company.name,

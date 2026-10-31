@@ -45,8 +45,8 @@ describe('workspace switcher', () => {
   it('lists exactly the workspaces the server returns, with their roles', async () => {
     signIn()
     const items: Workspace[] = [
-      { id: 'a', kind: 'patient', subtype: '', title: 'Me', role: null, path: '/dashboard', verification_status: '', modules: [], capabilities: [] },
-      { id: 'b', kind: 'facility', subtype: 'HOSPITAL', title: 'مستشفى دجلة | Dijla Hospital', role: 'STAFF', path: '/workspace/facility/b', verification_status: 'VERIFIED', modules: [], capabilities: [] },
+      { id: 'a', org_id: null, team_path: null, kind: 'patient', subtype: '', title: 'Me', role: null, path: '/dashboard', verification_status: '', modules: [], capabilities: [] },
+      { id: 'b', org_id: 'b', team_path: '/workspace/facility/b', kind: 'facility', subtype: 'HOSPITAL', title: 'مستشفى دجلة | Dijla Hospital', role: 'STAFF', path: '/workspace/facility/b', verification_status: 'VERIFIED', modules: [], capabilities: [] },
     ]
     vi.mocked(workspacesApi.listWorkspaces).mockResolvedValue(items)
     renderApp('/workspaces')

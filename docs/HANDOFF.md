@@ -25,6 +25,14 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 - Design exploration branch `wip/warm-cream-redesign` (local only, two checkpoints) is **not** part
   of any PR; the owner has not chosen a direction.
 
+## Local multi-workspace demo — branch `feat/local-racheeta-multiworkspace` (LOCAL ONLY, not pushed)
+
+- Account types, organization workspaces with a capability matrix, B2C store, orders and B2B quotes,
+  marketing preferences, bounded outreach, property promotions and expanded professions.
+- Disposable local demo database with a guard and a full seed lifecycle.
+- See `docs/LOCAL_WORKSPACE_DEMO.md` and `docs/LOCAL_DEMO_TEST_MATRIX.md`.
+- Not deployed; no remote change.
+
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 
 - Web-only redesign: self-hosted Cairo (`@fontsource-variable/cairo`), tokens/primitives in `web/src/design-system`, page in `web/src/pages/HomePage.tsx` + `pages/home/*`; evidence in `docs/design/home-redesign/`. Review round 2: talent calls to action are entitlement-aware (`pages/home/talentTarget.ts`), the header groups account destinations in a Workspace menu, and the hero/service cards use derived photographs (`web/src/assets/home`). No backend, deployment or Railway change. Backend CSP still lists Google Fonts (can be tightened later).
