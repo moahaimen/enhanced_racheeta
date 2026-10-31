@@ -8,6 +8,7 @@ import * as providersApi from '../../api/endpoints/providers'
 import { tokenStore } from '../../api/tokens'
 import type { ProviderOffer, ServiceOffering } from '../../api'
 import { makeAccount, renderApp } from '../../test/renderApp'
+import { makeOwner } from '../../test/providerFixtures'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/offers')
@@ -47,6 +48,7 @@ describe('ProviderOffersPage', () => {
     vi.resetAllMocks()
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(offersApi.listProviderOffers).mockResolvedValue({
       count: 1,

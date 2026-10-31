@@ -250,7 +250,7 @@ const TONE: Record<string, BadgeTone> = {
 
 function ItemRow({ item }: { item: DashboardItem }) {
   const { t, i18n } = useTranslation()
-  const title = pickScript(item.title, i18n.language)
+  const title = item.status_group === 'dash.step' ? t(`dash.steps.${item.title}`) : pickScript(item.title, i18n.language)
   const isDate = /^\d{4}-\d{2}-\d{2}T/.test(item.subtitle)
   const subtitle = isDate ? new Date(item.subtitle).toLocaleString(i18n.language) : pickScript(item.subtitle, i18n.language)
   return (

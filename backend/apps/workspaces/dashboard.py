@@ -341,6 +341,60 @@ def _recruitment_module(owner_account) -> dict | None:
     return _module("recruitment", stats=stats, link="/employer")
 
 
+# ---- setup (new or unverified accounts) -------------------------------------------------------
+
+
+def _step(key, done: bool, path: str) -> dict:
+    return _item(key, key, "", "DONE" if done else "TODO", "dash.step", path)
+
+
+def _provider_setup(profile: ProviderProfile) -> dict | None:
+    """Checklist for a provider that is not yet verified (nothing to show once it is)."""
+    if profile.verification_status == VerificationStatus.VERIFIED:
+        return None
+    has_services = ServiceOffering.objects.filter(provider=profile, is_active=True).exists()
+    requested = profile.verification_status in (
+        VerificationStatus.PENDING,
+        VerificationStatus.VERIFIED,
+    )
+    return _module(
+        "setup",
+        variant="provider",
+        stats=[_stat("verification", profile.verification_status)],
+        items=[
+            _step("create_profile", True, "/provider/profile"),
+            _step("add_services", has_services, "/provider/profile"),
+            _step("request_verification", requested, "/provider/profile"),
+        ],
+        link="/provider/profile",
+    )
+
+
+def _setup(account) -> list:
+    role = account.role
+    if role == "PROVIDER":
+        steps = [
+            _step("create_profile", False, "/provider/profile"),
+            _step("add_services", False, "/provider/profile"),
+            _step("request_verification", False, "/provider/profile"),
+        ]
+        link = "/provider/profile"
+    elif role == "MEDICAL_COMPANY":
+        steps = [
+            _step("create_company", False, "/company"),
+            _step("add_products", False, "/company"),
+            _step("request_verification", False, "/company"),
+        ]
+        link = "/company"
+    else:
+        steps = [
+            _step("create_seller", False, "/real-estate/owner"),
+            _step("add_listing", False, "/real-estate/owner"),
+        ]
+        link = "/real-estate/owner"
+    return [_module("setup", variant=role.lower(), items=steps, link=link)]
+
+
 # ---- compositions -----------------------------------------------------------------------------
 
 PRACTITIONER_VARIANT = {
@@ -363,6 +417,7 @@ def _practitioner(account, profile: ProviderProfile) -> list:
     )
     verified = profile.verification_status == VerificationStatus.VERIFIED
     modules = [
+        _provider_setup(profile),
         _profile_module(profile),
         _services_module(profile, services_variant),
         _reservations_module(profile, reservation_variant, "/provider/reservations"),
@@ -382,7 +437,10 @@ def _facility(account, facility: ProviderProfile, role: str, team_path: str) -> 
     kind = facility.provider_type
     owner = role_has(role, "org.owner_tools")
     verified = facility.verification_status == VerificationStatus.VERIFIED
-    modules = [_profile_module(facility, edit_path="/provider/profile" if owner else team_path)]
+    modules = [
+        _provider_setup(facility) if owner else None,
+        _profile_module(facility, edit_path="/provider/profile" if owner else team_path),
+    ]
     if kind != "PHARMACY":
         modules.append(
             _services_module(facility, FACILITY_SERVICES.get(kind, "clinics"), team_path)
@@ -916,7 +974,10 @@ def _admin() -> list:
 def _actions(ws: dict, account) -> list[dict]:
     kind, role = ws["kind"], ws.get("role")
     out: list[tuple[str, str]] = []
-    if kind == "patient":
+    verified = ws.get("verification_status") == VerificationStatus.VERIFIED
+    if kind == "setup":
+        out = [("complete_setup", ws["path"])]
+    elif kind == "patient":
         out = [("store", "/store"), ("my_orders", "/orders"), ("find_providers", "/providers")]
         if reservations_enabled():
             out.append(("my_reservations", "/reservations"))
@@ -924,7 +985,8 @@ def _actions(ws: dict, account) -> list[dict]:
         out = [("edit_profile", "/provider/profile"), ("offers", "/provider/offers")]
         if reservations_enabled():
             out.append(("appointments", "/provider/reservations"))
-        out.append(("marketplace", "/marketplace"))
+        if verified:  # the B2B catalogue is for verified providers only
+            out.append(("marketplace", "/marketplace"))
     elif kind == "facility":
         if role_has(role, "org.owner_tools"):
             out = [
@@ -932,8 +994,9 @@ def _actions(ws: dict, account) -> list[dict]:
                 ("offers", "/provider/offers"),
                 ("team", ws["team_path"]),
                 ("recruitment", "/employer"),
-                ("marketplace", "/marketplace"),
             ]
+            if verified:
+                out.append(("marketplace", "/marketplace"))
         else:
             out = [("open_workspace", ws["team_path"])]
     elif kind == "company":
@@ -993,7 +1056,9 @@ def compose(account: Account, ws_id: str | None) -> dict | None:
         return None
     kind, role = ws["kind"], ws.get("role")
     modules: list = []
-    if kind == "patient":
+    if kind == "setup":
+        modules = _setup(account)
+    elif kind == "patient":
         modules = _patient(account)
     elif kind == "practitioner":
         profile = ProviderProfile.objects.filter(account=account).first()

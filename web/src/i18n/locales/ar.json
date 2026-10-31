@@ -1824,7 +1824,8 @@
       "property": "عقارات",
       "employer": "توظيف",
       "job_seeker": "باحث عن عمل",
-      "admin": "إدارة"
+      "admin": "إدارة",
+      "setup": "إعداد الحساب"
     },
     "roles": {
       "OWNER": "مالك",
@@ -2040,7 +2041,9 @@
       "users": "المستخدمون",
       "audit": "سجل التدقيق",
       "notifications": "الإشعارات والرسائل",
-      "account": "إعدادات الحساب"
+      "account": "إعدادات الحساب",
+      "setup": "أكمل إعداد حسابك",
+      "setup_provider": "خطوات التوثيق"
     },
     "stats": {
       "verification": "التوثيق",
@@ -2160,7 +2163,8 @@
       "find_jobs": "ابحث عن وظيفة",
       "my_applications": "طلباتي",
       "admin_console": "لوحة الإدارة",
-      "promotions_review": "مراجعة الترويج"
+      "promotions_review": "مراجعة الترويج",
+      "complete_setup": "أكمل الإعداد"
     },
     "greeting": "مرحباً، {{name}}",
     "switchWorkspace": "مساحة العمل",
@@ -2176,6 +2180,27 @@
       "LOW": "منخفض",
       "OUT": "نفد"
     },
-    "classic": "إحصاءات تفصيلية"
+    "classic": "إحصاءات تفصيلية",
+    "step": {
+      "DONE": "تم",
+      "TODO": "مطلوب"
+    },
+    "steps": {
+      "create_profile": "إنشاء الملف المهني",
+      "add_services": "إضافة الخدمات",
+      "request_verification": "طلب التوثيق",
+      "create_company": "إنشاء ملف الشركة",
+      "add_products": "إضافة المنتجات",
+      "create_seller": "إنشاء ملف البائع",
+      "add_listing": "إضافة عقار"
+    }
+  },
+  "gate": {
+    "noProfileTitle": "أكمل ملفك المهني أولاً",
+    "noProfileHint": "لم تُنشئ ملفك كمقدّم خدمة بعد. أنشئه وأضف خدماتك، ثم اطلب التوثيق لتظهر للمرضى.",
+    "createProfile": "إنشاء الملف المهني",
+    "notVerifiedTitle": "هذه الصفحة للمقدّمين الموثّقين",
+    "notVerifiedHint": "حالة ملفك الآن: {{status}}. السوق الطبي وطلبات التسعير تتاح بعد توثيق ملفك.",
+    "openProfile": "فتح ملفي المهني"
   }
 }

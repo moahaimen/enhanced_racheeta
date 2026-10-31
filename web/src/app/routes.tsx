@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router'
 
 import { AppLayout } from './AppLayout'
+import { RequireProviderProfile } from './ProviderGate'
 import { PublicOnly, RequireAuth, RequireRole, RequireStaff } from './guards'
 import { AdminConsolePage } from '../pages/admin/AdminConsolePage'
 import { ApplicantsPage } from '../pages/employer/ApplicantsPage'
@@ -118,12 +119,23 @@ export const routes: RouteObject[] = [
             element: <RequireRole roles={['PROVIDER']} />,
             children: [
               { path: 'provider/profile', element: <ProviderProfilePage /> },
-              { path: 'provider/reservations', element: <ProviderReservationsPage /> },
-              { path: 'provider/offers', element: <ProviderOffersPage /> },
-              // B2B catalogue: the backend decides which products this provider may see.
-              { path: 'marketplace', element: <MarketplacePage /> },
-              { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
-              { path: 'quotes', element: <MyQuotesPage /> },
+              {
+                // Needs a provider profile: otherwise a "create your profile" prompt, not an error.
+                element: <RequireProviderProfile />,
+                children: [
+                  { path: 'provider/reservations', element: <ProviderReservationsPage /> },
+                  { path: 'provider/offers', element: <ProviderOffersPage /> },
+                ],
+              },
+              {
+                // B2B catalogue and quotes: verified providers only (the backend decides the products).
+                element: <RequireProviderProfile verified />,
+                children: [
+                  { path: 'marketplace', element: <MarketplacePage /> },
+                  { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
+                  { path: 'quotes', element: <MyQuotesPage /> },
+                ],
+              },
             ],
           },
           {

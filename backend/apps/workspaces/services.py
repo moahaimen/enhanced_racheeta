@@ -219,6 +219,28 @@ def build_workspaces(account) -> list[dict]:
                 modules=["verification", "moderation", "billing", "advertising", "audit"],
             )
         )
+    # An account whose role needs a profile it has not created yet gets ONE setup workspace,
+    # so its dashboard always opens (on the next step) instead of erroring.
+    setup_path = {
+        AccountRole.PROVIDER: ("/provider/profile", profile is None),
+        AccountRole.MEDICAL_COMPANY: ("/company", company is None),
+        AccountRole.REAL_ESTATE_SELLER: (
+            "/real-estate/owner",
+            not hasattr(account, "real_estate_seller"),
+        ),
+    }.get(account.role)
+    if setup_path and setup_path[1]:
+        out.insert(
+            0,
+            _descriptor(
+                id="setup",
+                kind="setup",
+                subtype=account.account_type or account.role,
+                title=account.full_name,
+                path=setup_path[0],
+                modules=["setup"],
+            ),
+        )
     for item in out:
         item["capabilities"] = (
             capabilities_of(item["role"]) if item["kind"] in ("facility", "company") else []

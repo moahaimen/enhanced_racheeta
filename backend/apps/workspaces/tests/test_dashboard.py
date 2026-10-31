@@ -218,3 +218,39 @@ def test_dashboard_payload_has_no_personal_contact_data(buyer, store, store_prod
     client_for(buyer).post("/api/v1/orders", checkout([(store_product, 1)]), format="json")
     text = client_for(store.account).get(URL).content.decode()
     assert buyer.email not in text and "+964 770 000 0000" not in text and "Street 1" not in text
+
+
+def test_new_provider_without_profile_gets_a_setup_dashboard(account_factory):
+    newcomer = account_factory(role=AccountRole.PROVIDER, account_type="DOCTOR")
+    listed = client_for(newcomer).get("/api/v1/workspaces").json()
+    assert [w["kind"] for w in listed] == ["setup"] and listed[0]["is_default"]
+    payload = _dash(newcomer)
+    assert payload["workspace"]["kind"] == "setup"
+    setup = _module(payload, "setup")
+    assert [i["id"] for i in setup["items"]] == [
+        "create_profile",
+        "add_services",
+        "request_verification",
+    ]
+    assert all(i["status"] == "TODO" for i in setup["items"])
+    assert payload["actions"] == [{"key": "complete_setup", "path": "/provider/profile"}]
+    for gated in ("sponsored", "products", "promoted", "reservations"):
+        assert gated not in _keys(payload)
+
+
+def test_new_business_and_seller_get_their_own_setup(account_factory):
+    company = account_factory(role=AccountRole.MEDICAL_COMPANY)
+    seller = account_factory(role=AccountRole.REAL_ESTATE_SELLER)
+    assert _module(_dash(company), "setup")["link"] == "/company"
+    assert _module(_dash(seller), "setup")["link"] == "/real-estate/owner"
+
+
+def test_unverified_provider_sees_a_checklist_and_no_marketplace_action(provider_factory):
+    pending = provider_factory(verification_status="PENDING")
+    payload = _dash(pending.account)
+    steps = {i["id"]: i["status"] for i in _module(payload, "setup")["items"]}
+    assert steps["create_profile"] == "DONE" and steps["request_verification"] == "DONE"
+    assert all(a["key"] != "marketplace" for a in payload["actions"])
+    verified = _dash(provider_factory().account)
+    assert "setup" not in _keys(verified)
+    assert any(a["key"] == "marketplace" for a in verified["actions"])

@@ -1776,7 +1776,8 @@
       "property": "Real estate",
       "employer": "Recruitment",
       "job_seeker": "Job seeker",
-      "admin": "Administration"
+      "admin": "Administration",
+      "setup": "Account setup"
     },
     "roles": {
       "OWNER": "Owner",
@@ -1992,7 +1993,9 @@
       "users": "Users",
       "audit": "Audit",
       "notifications": "Notifications & messages",
-      "account": "Account settings"
+      "account": "Account settings",
+      "setup": "Finish setting up your account",
+      "setup_provider": "Verification steps"
     },
     "stats": {
       "verification": "Verification",
@@ -2112,7 +2115,8 @@
       "find_jobs": "Find jobs",
       "my_applications": "My applications",
       "admin_console": "Admin console",
-      "promotions_review": "Review promotions"
+      "promotions_review": "Review promotions",
+      "complete_setup": "Complete setup"
     },
     "greeting": "Welcome, {{name}}",
     "switchWorkspace": "Workspace",
@@ -2128,6 +2132,27 @@
       "LOW": "Low",
       "OUT": "Out"
     },
-    "classic": "Detailed statistics"
+    "classic": "Detailed statistics",
+    "step": {
+      "DONE": "Done",
+      "TODO": "To do"
+    },
+    "steps": {
+      "create_profile": "Create your professional profile",
+      "add_services": "Add your services",
+      "request_verification": "Request verification",
+      "create_company": "Create your business profile",
+      "add_products": "Add products",
+      "create_seller": "Create your seller profile",
+      "add_listing": "Add a listing"
+    }
+  },
+  "gate": {
+    "noProfileTitle": "Complete your professional profile first",
+    "noProfileHint": "You have not created your provider profile yet. Create it, add your services, then request verification to appear to patients.",
+    "createProfile": "Create professional profile",
+    "notVerifiedTitle": "This page is for verified providers",
+    "notVerifiedHint": "Your profile status: {{status}}. The medical marketplace and quote requests open once your profile is verified.",
+    "openProfile": "Open my profile"
   }
 }

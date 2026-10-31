@@ -9,6 +9,7 @@ import * as reviewsApi from '../../api/endpoints/reviews'
 import { tokenStore } from '../../api/tokens'
 import type { AvailabilitySlot, ReservationPatient, ReservationProvider, ServiceOffering } from '../../api'
 import { makeAccount, renderApp } from '../../test/renderApp'
+import { makeOwner } from '../../test/providerFixtures'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/providers')
@@ -107,6 +108,7 @@ describe('Reservations pages', () => {
 
   it('lets a provider create availability and manage a pending reservation', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability)
       .mockResolvedValueOnce({ count: 0, next: null, previous: null, results: [] })
@@ -136,6 +138,7 @@ describe('Reservations pages', () => {
   })
   it('hides accept for a pending reservation after its appointment has started', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability).mockResolvedValue({
       count: 0,
@@ -166,6 +169,7 @@ describe('Reservations pages', () => {
 
   it('paginates provider availability and received reservations independently', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability).mockImplementation(async (page = 1) => ({
       count: 21,
