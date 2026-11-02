@@ -35,6 +35,9 @@ class Order(BaseModel):
         "geography.City", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
     delivery_address = models.CharField(max_length=255)
+    # Optional pin the buyer shared from their device (with permission) to help the delivery.
+    delivery_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     contact_phone = models.CharField(max_length=32)
     note = models.CharField(max_length=500, blank=True, default="")
     status_changed_at = models.DateTimeField(null=True, blank=True)

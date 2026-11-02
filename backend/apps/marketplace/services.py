@@ -79,6 +79,7 @@ PRODUCT_FIELDS = (
     "sale_channel",
     "is_restricted",
     "stock_quantity",
+    "image_url",
 )
 
 

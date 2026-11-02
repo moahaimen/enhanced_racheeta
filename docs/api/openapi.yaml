@@ -4409,6 +4409,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Order'
           description: ''
+  /api/v1/orders/delivery-defaults:
+    get:
+      operationId: orders_delivery_defaults_retrieve
+      description: The caller's own last delivery details (to pre-fill checkout);
+        nobody else's.
+      summary: My default delivery details (last order, else my account phone)
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryDefaults'
+          description: ''
   /api/v1/providers:
     get:
       operationId: providers_list
@@ -7870,6 +7887,16 @@ components:
           type: string
           default: ''
           maxLength: 500
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
       required:
       - address
       - governorate
@@ -9141,6 +9168,26 @@ components:
         * `PHD` - PhD
         * `BOARD` - Board certification
         * `OTHER` - Other
+    DeliveryDefaults:
+      type: object
+      description: 'Pre-fill for checkout: the buyer''s last delivery details, else
+        their account phone.'
+      properties:
+        governorate:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        address:
+          type: string
+        phone:
+          type: string
+      required:
+      - address
+      - city
+      - governorate
+      - phone
     Detail:
       type: object
       properties:
@@ -11533,6 +11580,18 @@ components:
         delivery_address:
           type: string
           readOnly: true
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
         contact_phone:
           type: string
           readOnly: true
@@ -11566,6 +11625,8 @@ components:
       - delivery_address
       - delivery_city
       - delivery_governorate
+      - delivery_latitude
+      - delivery_longitude
       - id
       - items
       - merchant
@@ -13072,6 +13133,13 @@ components:
           type: string
           minLength: 1
           maxLength: 3
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         sale_channel:
           $ref: '#/components/schemas/SaleChannelEnum'
         is_restricted:
@@ -13614,6 +13682,10 @@ components:
         currency:
           type: string
           readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
         sale_channel:
           allOf:
           - $ref: '#/components/schemas/SaleChannelEnum'
@@ -13647,6 +13719,7 @@ components:
       - currency
       - description
       - id
+      - image_url
       - is_active
       - is_restricted
       - model_name
@@ -13684,6 +13757,10 @@ components:
         currency:
           type: string
           readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
         sale_channel:
           allOf:
           - $ref: '#/components/schemas/SaleChannelEnum'
@@ -13712,6 +13789,7 @@ components:
       - currency
       - description
       - id
+      - image_url
       - model_name
       - price
       - sale_channel
@@ -13747,6 +13825,13 @@ components:
           type: string
           minLength: 1
           maxLength: 3
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         sale_channel:
           $ref: '#/components/schemas/SaleChannelEnum'
         is_restricted:
@@ -15903,8 +15988,17 @@ components:
         currency:
           type: string
           readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
         in_stock:
           type: boolean
+          readOnly: true
+        low_stock:
+          type: boolean
+          description: Only a hint ("few left"); the exact quantity is the business's
+            own data.
           readOnly: true
         category:
           allOf:
@@ -15921,7 +16015,9 @@ components:
       - currency
       - description
       - id
+      - image_url
       - in_stock
+      - low_stock
       - model_name
       - price
       - title

@@ -145,6 +145,8 @@ def place_order(buyer, *, items: list[dict], delivery: dict, payment_method: str
         delivery_governorate=delivery["governorate"],
         delivery_city=delivery.get("city"),
         delivery_address=delivery["address"].strip(),
+        delivery_latitude=delivery.get("latitude"),
+        delivery_longitude=delivery.get("longitude"),
         contact_phone=delivery["phone"].strip(),
         note=delivery.get("note", "").strip(),
         status_changed_at=timezone.now(),

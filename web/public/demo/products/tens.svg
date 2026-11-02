@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F1F9F8"/><stop offset="1" stop-color="#D6EEEC"/></linearGradient></defs>
+<rect width="400" height="300" fill="url(#bg)"/>
+<circle cx="330" cy="40" r="90" fill="#FFFFFF" opacity="0.55"/>
+<circle cx="50" cy="270" r="70" fill="#148283" opacity="0.06"/>
+<ellipse cx="200" cy="262" rx="120" ry="11" fill="#0E5E5F" opacity="0.10"/>
+<g transform="translate(110 64) scale(1.8)" fill="none" stroke="#148283" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="34" y="12" width="32" height="44" rx="7" fill="#BFE3E0"/><rect x="34" y="12" width="32" height="44" rx="7"/>
+<rect x="40" y="18" width="20" height="12" rx="2" fill="#fff"/><circle cx="50" cy="44" r="5"/>
+<path d="M42 56 C30 70 26 72 22 78 M58 56 C70 70 74 72 78 78"/>
+<rect x="10" y="76" width="20" height="14" rx="4" fill="#F2A93B" stroke="#F2A93B"/><rect x="70" y="76" width="20" height="14" rx="4" fill="#F2A93B" stroke="#F2A93B"/></g>
+</svg>

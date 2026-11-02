@@ -66,7 +66,10 @@ export interface StoreProduct {
   model_name: string
   price: string
   currency: string
+  image_url?: string
   in_stock: boolean
+  /** "Few left" hint (no exact quantity is published). */
+  low_stock?: boolean
   category: StoreCategory
   company: { id: string; name: string; business_type?: string }
 }
@@ -97,6 +100,8 @@ export interface Order {
   delivery_governorate: { id: string; name_ar: string; name_en: string }
   delivery_city: { id: string; name_ar: string; name_en: string } | null
   delivery_address: string
+  delivery_latitude?: string | null
+  delivery_longitude?: string | null
   contact_phone: string
   note: string
   items: OrderItem[]
@@ -113,6 +118,16 @@ export interface CheckoutRequest {
   address: string
   phone: string
   note?: string
+  /** Optional pin shared from the device (both or neither). */
+  latitude?: string | null
+  longitude?: string | null
+}
+
+export interface DeliveryDefaults {
+  governorate: string | null
+  city: string | null
+  address: string
+  phone: string
 }
 
 export type QuoteStatus = 'REQUESTED' | 'QUOTED' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN'

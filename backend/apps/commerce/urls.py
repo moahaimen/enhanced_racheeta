@@ -7,6 +7,11 @@ urlpatterns = [
     path("store/products/<uuid:pk>", views.StoreProductDetailView.as_view(), name="store-product"),
     path("store/categories", views.StoreCategoryListView.as_view(), name="store-categories"),
     path("orders", views.MyOrderListView.as_view(), name="orders"),
+    path(
+        "orders/delivery-defaults",
+        views.DeliveryDefaultsView.as_view(),
+        name="order-delivery-defaults",
+    ),
     path("orders/<uuid:pk>", views.MyOrderDetailView.as_view(), name="order"),
     path("orders/<uuid:pk>/cancel", views.MyOrderCancelView.as_view(), name="order-cancel"),
     path("merchant/orders", views.MerchantOrderListView.as_view(), name="merchant-orders"),

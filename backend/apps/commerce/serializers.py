@@ -27,8 +27,23 @@ class CheckoutSerializer(serializers.Serializer):
     address = serializers.CharField(max_length=255)
     phone = IraqiPhoneField(allow_landline=False)
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, min_value=-90, max_value=90, required=False, allow_null=True
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=-180,
+        max_value=180,
+        required=False,
+        allow_null=True,
+    )
 
     def validate(self, attrs):
+        if (attrs.get("latitude") is None) != (attrs.get("longitude") is None):
+            raise serializers.ValidationError(
+                {"latitude": "Send both latitude and longitude, or neither."}
+            )
         city = attrs.get("city")
         if city is not None and city.governorate_id != attrs["governorate"].pk:
             raise serializers.ValidationError(
@@ -82,6 +97,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "delivery_governorate",
             "delivery_city",
             "delivery_address",
+            "delivery_latitude",
+            "delivery_longitude",
             "contact_phone",
             "note",
             "items",
@@ -167,3 +184,12 @@ class QuoteSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = fields
+
+
+class DeliveryDefaultsSerializer(serializers.Serializer):
+    """Pre-fill for checkout: the buyer's last delivery details, else their account phone."""
+
+    governorate = serializers.CharField(allow_null=True)
+    city = serializers.CharField(allow_null=True)
+    address = serializers.CharField()
+    phone = serializers.CharField()

@@ -64,6 +64,7 @@ def test_the_product_write_schema_carries_no_targeting_or_state():
         "sale_channel",
         "is_restricted",
         "stock_quantity",
+        "image_url",
     }
 
 

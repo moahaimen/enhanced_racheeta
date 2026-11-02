@@ -1,6 +1,7 @@
 import { apiRequest } from '../client'
 import type {
   CheckoutRequest,
+  DeliveryDefaults,
   ListingPromotion,
   MarketingPreferences,
   Order,
@@ -65,9 +66,10 @@ export function endOrgMember(kind: OrgKind, id: string, memberId: string) {
 }
 
 // ---- public store, cart and orders --------------------------------------------------------------
-export function listStoreProducts(page = 1, category = '', signal?: AbortSignal): Promise<PaginatedStoreProducts> {
+export function listStoreProducts(page = 1, category = '', signal?: AbortSignal, search = ''): Promise<PaginatedStoreProducts> {
   const q = new URLSearchParams({ page: String(page) })
   if (category) q.set('category', category)
+  if (search) q.set('q', search)
   return apiRequest<PaginatedStoreProducts>(`/api/v1/store/products?${q.toString()}`, { auth: false, signal })
 }
 
@@ -77,6 +79,11 @@ export function getStoreProduct(id: string, signal?: AbortSignal): Promise<Store
 
 export function listStoreCategories(signal?: AbortSignal): Promise<StoreCategory[]> {
   return apiRequest<StoreCategory[]>('/api/v1/store/categories', { auth: false, signal })
+}
+
+/** My last delivery details (else my account phone) to pre-fill checkout. */
+export function getDeliveryDefaults(signal?: AbortSignal): Promise<DeliveryDefaults> {
+  return apiRequest<DeliveryDefaults>('/api/v1/orders/delivery-defaults', { signal })
 }
 
 export function placeOrder(payload: CheckoutRequest): Promise<Order> {

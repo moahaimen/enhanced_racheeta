@@ -9,7 +9,7 @@ import { tokenStore } from '../../api/tokens'
 import type { OrgSummary, StoreProduct, Workspace } from '../../api'
 import { baghdad } from '../../test/providerFixtures'
 import { makeAccount, renderApp } from '../../test/renderApp'
-import { cart } from '../store/cart'
+import { cart } from '../../cart/cart'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/reference')
@@ -107,6 +107,9 @@ describe('store and checkout', () => {
     vi.mocked(workspacesApi.listStoreProducts).mockResolvedValue(page([product]))
     vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
     vi.mocked(workspacesApi.placeOrder).mockResolvedValue({ id: 'o-1', number: 'RCH-1' } as never)
+    vi.mocked(workspacesApi.getStoreProduct).mockResolvedValue(product)
+    vi.mocked(workspacesApi.listMyOrders).mockResolvedValue(page([]))
+    vi.mocked(workspacesApi.getDeliveryDefaults).mockResolvedValue({ governorate: null, city: null, address: '', phone: '' })
     const { router } = renderApp('/store')
     await userEvent.click(await screen.findByTestId('add-p-1'))
     await router.navigate('/cart')

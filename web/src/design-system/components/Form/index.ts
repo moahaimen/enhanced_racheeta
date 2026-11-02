@@ -15,3 +15,4 @@ export {
 } from './fields'
 export { useFormErrors, type FieldErrors } from './useFormErrors'
 export { LocationPicker, type LocationPickerProps } from './LocationPicker'
+export { PHONE_MAX_DIGITS, toPhoneDigits } from './phone'

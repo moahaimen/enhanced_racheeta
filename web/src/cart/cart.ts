@@ -13,6 +13,8 @@ export interface CartLine {
   currency: string
   merchantId: string
   merchantName: string
+  /** Display snapshot only (the server re-reads the product at checkout). */
+  image?: string
   quantity: number
 }
 
@@ -68,6 +70,13 @@ function subscribe(fn: () => void) {
   listeners.add(fn)
   return () => listeners.delete(fn)
 }
+
+/** Total number of units in the cart (for the header badge). */
+export function useCartCount(): number {
+  return useCart().reduce((n, line) => n + line.quantity, 0)
+}
+
+export const MAX_CART_QUANTITY = MAX_QUANTITY
 
 export function useCart(): CartLine[] {
   return useSyncExternalStore(subscribe, () => lines, () => lines)

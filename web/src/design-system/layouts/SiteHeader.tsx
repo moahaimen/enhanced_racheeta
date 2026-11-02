@@ -5,6 +5,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
 import { useChat } from '../../chat/useChat'
 import { useNotifications } from '../../notifications/useNotifications'
+import { useCartCount } from '../../cart/cart'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
 import { Icon } from '../icons'
 import { ApiActionButton } from '../components/Button/ApiActionButton'
@@ -74,6 +75,23 @@ function NotificationsLink({ compact = false }: { compact?: boolean }) {
           data-testid="notifications-badge"
           aria-label={t('notifications.unreadLabel', { count })}
         >
+          {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
+        </span>
+      ) : null}
+    </NavLink>
+  )
+}
+
+/** "My cart" with the number of units chosen (browser-local cart; hidden count at 0). */
+function CartLink({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation()
+  const count = useCartCount()
+  return (
+    <NavLink to="/cart" className={compact ? styles.iconLink : styles.link} data-testid="header-cart">
+      <Icon name="cart" size={compact ? 20 : 18} />
+      <span className={compact ? 'visually-hidden' : undefined}>{t('nav.myCart')}</span>
+      {count > 0 ? (
+        <span className={styles.badge} data-testid="cart-badge" aria-label={t('store.cartCountLabel', { count })}>
           {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
         </span>
       ) : null}
@@ -306,6 +324,7 @@ export function SiteHeader() {
           </nav>
           <span className={styles.spacer} />
           <div className={styles.actions}>
+            <CartLink compact />
             {authenticated ? (
               <>
                 <MessagesLink compact />
@@ -333,6 +352,7 @@ export function SiteHeader() {
           <nav id="mobile-nav" className={styles.mobilePanel} aria-label={t('nav.main')}>
             {publicLinks}
             {accountLinks}
+            <CartLink />
             {authenticated ? <MessagesLink /> : null}
             {authenticated ? <NotificationsLink /> : null}
             <div className={styles.mobileActions}>

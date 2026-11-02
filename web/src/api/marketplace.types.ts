@@ -76,6 +76,8 @@ export interface MarketplaceProduct {
   /** Null = price on request. */
   price: string | null
   currency: string
+  /** Product photo; empty = none (the UI shows a neutral placeholder). */
+  image_url?: string
   category: ProductCategory
   company: CompanySummary
   created_at: string
@@ -90,6 +92,7 @@ export interface CompanyProduct {
   model_name: string
   price: string | null
   currency: string
+  image_url?: string
   category: ProductCategory
   is_active: boolean
   /** B2B = professionals only; B2C/BOTH also list it in the public store (server-checked). */
@@ -116,6 +119,7 @@ export interface ProductWrite {
   sale_channel?: SaleChannel
   is_restricted?: boolean
   stock_quantity?: number | null
+  image_url?: string
 }
 
 export type PaginatedMarketplaceProducts = Paginated<MarketplaceProduct>

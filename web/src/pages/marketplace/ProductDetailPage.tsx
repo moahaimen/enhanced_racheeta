@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
 import { ApiError, marketplace as marketplaceApi } from '../../api'
-import { AsyncPage, Badge, Container, Icon, PageHeader, PageStack, SectionCard } from '../../design-system'
+import { AsyncPage, Badge, Container, Icon, PageHeader, PageStack, ProductImage, SectionCard } from '../../design-system'
 import { RequestQuoteForm } from '../quotes/QuotesPages'
 import { useLocalizedName } from '../../i18n/localized'
 import { formatProductPrice } from './MarketplacePage'
@@ -36,6 +36,7 @@ export function ProductDetailPage() {
               actions={<Badge tone="brand">{name(product.category)}</Badge>}
             />
             <PageStack>
+              <ProductImage src={product.image_url} alt={product.title} size="lg" />
               <SectionCard title={t('marketplace.price')} headingLevel={2}>
                 <p className="text-secondary" dir="auto" data-testid="product-price">
                   {formatProductPrice(product, i18n.language, t('marketplace.priceOnRequest'))}

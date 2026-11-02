@@ -20,6 +20,7 @@ import {
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
 import { pickScript, useLocalizedName } from '../../i18n/localized'
+import { OrderTracker } from './OrderTracker'
 
 const TONE: Record<OrderStatus, BadgeTone> = {
   PLACED: 'warning',
@@ -57,6 +58,7 @@ function OrderCard({ order, children }: { order: Order; children?: React.ReactNo
         <Badge tone={order.payment_status === 'PAID' ? 'success' : 'neutral'}>{t(`store.paymentStatus.${order.payment_status}`)}</Badge>
         <time dateTime={order.created_at}>{new Date(order.created_at).toLocaleString(i18n.language)}</time>
       </div>
+      <OrderTracker status={order.status} />
       {children}
     </SectionCard>
   )
@@ -126,6 +128,18 @@ export function MerchantOrdersPage() {
                 <OrderCard key={order.id} order={order}>
                   <p className="text-caption">
                     {t('store.buyer')}: {order.buyer_name} · {name(order.delivery_governorate)} · {order.delivery_address}
+                    {order.delivery_latitude && order.delivery_longitude ? (
+                      <>
+                        {' · '}
+                        <a
+                          href={`https://www.openstreetmap.org/?mlat=${order.delivery_latitude}&mlon=${order.delivery_longitude}#map=17/${order.delivery_latitude}/${order.delivery_longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t('store.deliveryPin')}
+                        </a>
+                      </>
+                    ) : null}
                   </p>
                   <div className="cluster">
                     {(MERCHANT_NEXT[order.status] ?? []).map((next) => (

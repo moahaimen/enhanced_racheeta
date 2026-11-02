@@ -97,7 +97,8 @@
     "merchantOrders": "Store orders",
     "merchantQuotes": "Incoming quote requests",
     "preferences": "Ad preferences",
-    "cart": "Cart"
+    "cart": "Cart",
+    "myCart": "My cart"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -1346,7 +1347,10 @@
     "stockHint": "Leave empty if not tracked (professional products).",
     "invalidStock": "Enter a whole number.",
     "restricted": "Restricted / prescription item (professionals only)",
-    "restrictedB2bOnly": "A restricted item is for professionals only."
+    "restrictedB2bOnly": "A restricted item is for professionals only.",
+    "imageUrl": "Product photo (link)",
+    "imageUrlHint": "An image link starting with https:// — shown to buyers in the store and marketplace.",
+    "invalidImageUrl": "Enter a valid link starting with https://"
   },
   "propertyTypes": {
     "CLINIC": "Clinic",
@@ -1882,7 +1886,41 @@
       "CANCELLED": "Cancel"
     },
     "buyer": "Buyer",
-    "items": "Items"
+    "items": "Items",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "fewLeft": "Few left",
+    "search": "Search",
+    "searchPlaceholder": "Search wheelchairs, blood-pressure monitors, braces…",
+    "categories": "Categories",
+    "noResults": "No results for “{{q}}”.",
+    "count_one": "1 product",
+    "count_other": "{{count}} products",
+    "inCartCount_one": "In your cart: 1",
+    "inCartCount_other": "In your cart: {{count}}",
+    "goToCart": "Go to cart",
+    "backToStore": "Back to the store",
+    "cartCountLabel_one": "1 item in the cart",
+    "cartCountLabel_other": "{{count}} items in the cart",
+    "cartSummary_one": "1 item in your cart",
+    "cartSummary_other": "{{count}} items in your cart",
+    "continueShopping": "Continue shopping",
+    "cartEmptyHint": "Browse the store and add what you need; it appears here with the status of each item.",
+    "fromStore": "From {{name}}",
+    "checking": "Checking…",
+    "noLongerSold": "No longer available",
+    "available": "Available",
+    "priceChanged": "Current price {{price}}",
+    "orderSummary": "Order summary",
+    "fixCart": "Remove unavailable items before placing the order.",
+    "chooseGovernorate": "Choose a governorate",
+    "addressHint": "Enter a clear address (area, street, nearest landmark).",
+    "recentOrders": "My order status",
+    "allOrders": "All orders",
+    "orderProgress": "Order progress",
+    "prefilled": "Filled in from your previous order — you can change anything.",
+    "pinAttached": "Your location is attached for delivery.",
+    "deliveryPin": "Delivery location on the map"
   },
   "quotes": {
     "title": "Quote requests",

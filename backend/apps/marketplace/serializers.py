@@ -228,6 +228,7 @@ class ProductPublicSerializer(serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "image_url",
             "sale_channel",
             "category",
             "company",
@@ -250,6 +251,7 @@ class ProductOwnerSerializer(serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "image_url",
             "sale_channel",
             "is_restricted",
             "stock_quantity",
@@ -283,6 +285,7 @@ class ProductWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "image_url",
             "sale_channel",
             "is_restricted",
             "stock_quantity",
@@ -293,12 +296,16 @@ class ProductWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
             "sale_channel": {"required": False},
             "is_restricted": {"required": False},
             "stock_quantity": {"required": False},
+            "image_url": {"required": False},
         }
 
     def validate_currency(self, value: str) -> str:
         if value not in settings.RACHEETA["CURRENCIES"]:
             raise serializers.ValidationError("Unsupported currency.")
         return value
+
+
+LOW_STOCK_HINT = 5
 
 
 class StoreCategorySerializer(serializers.ModelSerializer):
@@ -317,9 +324,14 @@ class StoreProductSerializer(serializers.ModelSerializer):
     category = StoreCategorySerializer(read_only=True)
     company = CompanySummarySerializer(read_only=True)
     in_stock = serializers.SerializerMethodField()
+    low_stock = serializers.SerializerMethodField()
 
     def get_in_stock(self, obj) -> bool:
         return bool(obj.stock_quantity)
+
+    def get_low_stock(self, obj) -> bool:
+        """Only a hint ("few left"); the exact quantity is the business's own data."""
+        return obj.stock_quantity is not None and 0 < obj.stock_quantity <= LOW_STOCK_HINT
 
     class Meta:
         model = Product
@@ -331,7 +343,9 @@ class StoreProductSerializer(serializers.ModelSerializer):
             "model_name",
             "price",
             "currency",
+            "image_url",
             "in_stock",
+            "low_stock",
             "category",
             "company",
         )

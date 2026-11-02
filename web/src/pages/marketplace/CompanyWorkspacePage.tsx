@@ -9,6 +9,7 @@ import {
   ApiActionButton,
   Checkbox,
   PhoneField,
+  ProductImage,
   AsyncPage,
   Badge,
   Button,
@@ -155,6 +156,7 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
               {(products.data?.results ?? []).map((product) => (
                 <li key={product.id} className="card-block" data-testid="company-product">
                   <div className="cluster">
+                    <ProductImage src={product.image_url} alt={product.title} size="sm" />
                     <strong>{product.title}</strong>
                     <Badge tone="outline">{name(product.category)}</Badge>
                     <Badge tone={product.is_active ? 'success' : 'neutral'}>{product.is_active ? t('company.active') : t('company.inactive')}</Badge>
@@ -296,10 +298,11 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     currency: product?.currency ?? 'IQD',
     sale_channel: (product?.sale_channel ?? 'B2B') as SaleChannel,
     stock_quantity: product?.stock_quantity == null ? '' : String(product.stock_quantity),
+    image_url: product?.image_url ?? '',
   })
   const [restricted, setRestricted] = useState(product?.is_restricted ?? false)
   const errors = useFormErrors(
-    ['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency', 'sale_channel', 'is_restricted', 'stock_quantity'] as const,
+    ['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency', 'sale_channel', 'is_restricted', 'stock_quantity', 'image_url'] as const,
   )
   const set = (key: keyof typeof f, value: string) => setF((prev) => ({ ...prev, [key]: value }))
   // The reference list holds active categories only. A product whose category an administrator has since
@@ -314,6 +317,7 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     if (f.price !== '' && (Number.isNaN(Number(f.price)) || Number(f.price) < 0)) next.price = t('company.invalidPrice')
     if (f.stock_quantity !== '' && !/^\d+$/.test(f.stock_quantity)) next.stock_quantity = t('company.invalidStock')
     if (restricted && f.sale_channel !== 'B2B') next.sale_channel = t('company.restrictedB2bOnly')
+    if (f.image_url.trim() && !/^https?:\/\/[^\s]+$/i.test(f.image_url.trim())) next.image_url = t('company.invalidImageUrl')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
@@ -329,6 +333,7 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
       sale_channel: f.sale_channel,
       is_restricted: restricted,
       stock_quantity: f.stock_quantity === '' ? null : Number(f.stock_quantity),
+      image_url: f.image_url.trim(),
     }
     return product ? marketplaceApi.updateMyProduct(product.id, payload) : marketplaceApi.createMyProduct(payload)
   }
@@ -397,6 +402,19 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
           onChange={(e) => set('stock_quantity', e.target.value)}
           error={errors.fieldErrors.stock_quantity}
         />
+      </div>
+      <div className="grid-2">
+        <TextField
+          label={t('company.imageUrl')}
+          optional
+          hint={t('company.imageUrlHint')}
+          dir="ltr"
+          inputMode="url"
+          value={f.image_url}
+          onChange={(e) => set('image_url', e.target.value)}
+          error={errors.fieldErrors.image_url}
+        />
+        <ProductImage src={f.image_url.trim() || null} alt={f.title || t('company.imageUrl')} />
       </div>
       <Checkbox
         label={t('company.restricted')}

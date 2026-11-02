@@ -20,6 +20,7 @@ from .models import Order, OrderTransition, QuoteRequest
 from .serializers import (
     CancelSerializer,
     CheckoutSerializer,
+    DeliveryDefaultsSerializer,
     OrderSerializer,
     OrderTransitionRequestSerializer,
     QuoteCloseSerializer,
@@ -153,6 +154,8 @@ class MyOrderListView(generics.ListAPIView):
                     "address": data["address"],
                     "phone": data["phone"],
                     "note": data.get("note", ""),
+                    "latitude": data.get("latitude"),
+                    "longitude": data.get("longitude"),
                 },
                 payment_method=data["payment_method"],
             )
@@ -161,6 +164,34 @@ class MyOrderListView(generics.ListAPIView):
         return Response(
             OrderSerializer(_orders().get(pk=order.pk)).data, status=status.HTTP_201_CREATED
         )
+
+
+class DeliveryDefaultsView(APIView):
+    """The caller's own last delivery details (to pre-fill checkout); nobody else's."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["store"],
+        summary="My default delivery details (last order, else my account phone)",
+        responses=DeliveryDefaultsSerializer,
+    )
+    def get(self, request):
+        last = (
+            Order.objects.filter(buyer=request.user)
+            .order_by("-created_at")
+            .values(
+                "delivery_governorate_id", "delivery_city_id", "delivery_address", "contact_phone"
+            )
+            .first()
+        )
+        payload = {
+            "governorate": str(last["delivery_governorate_id"]) if last else None,
+            "city": str(last["delivery_city_id"]) if last and last["delivery_city_id"] else None,
+            "address": last["delivery_address"] if last else "",
+            "phone": last["contact_phone"] if last else request.user.phone_number,
+        }
+        return Response(DeliveryDefaultsSerializer(payload).data)
 
 
 @extend_schema(tags=["store"], summary="One of my store orders")

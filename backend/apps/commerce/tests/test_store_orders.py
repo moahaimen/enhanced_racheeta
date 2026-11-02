@@ -262,3 +262,66 @@ def test_staff_roles_viewer_reads_staff_manages_ended_loses_access(
     membership.ended_at = timezone.now()
     membership.save()
     assert client_for(staff).get(f"{MERCHANT}{query}").status_code == 403
+
+
+def test_store_shows_photo_and_only_a_few_left_hint(
+    api_client, store, store_category, product_factory
+):
+    few = product_factory(
+        store,
+        store_category,
+        price=Decimal("10"),
+        sale_channel=SaleChannel.B2C,
+        stock_quantity=3,
+        image_url="https://example.com/walker.png",
+    )
+    plenty = product_factory(
+        store, store_category, price=Decimal("10"), sale_channel=SaleChannel.B2C, stock_quantity=40
+    )
+    rows = {r["id"]: r for r in api_client.get(STORE).json()["results"]}
+    assert rows[str(few.pk)]["image_url"] == "https://example.com/walker.png"
+    assert rows[str(few.pk)]["low_stock"] is True and rows[str(plenty.pk)]["low_stock"] is False
+    assert "stock_quantity" not in rows[str(few.pk)]  # the exact figure stays private
+
+
+def test_business_can_set_a_product_photo_but_not_a_non_url(store, store_category):
+    from .conftest import client_for
+
+    client = client_for(store.account)
+    base = {"category": str(store_category.pk), "title": "Photo walker", "price": "10"}
+    bad = client.post(
+        "/api/v1/marketplace/company/products", {**base, "image_url": "not a link"}, format="json"
+    )
+    assert bad.status_code == 400 and "image_url" in bad.json()["error"]["details"]
+    ok = client.post(
+        "/api/v1/marketplace/company/products",
+        {**base, "image_url": "https://example.com/p.png"},
+        format="json",
+    )
+    assert ok.status_code == 201 and ok.json()["image_url"] == "https://example.com/p.png"
+
+
+def test_delivery_defaults_come_from_my_last_order_only(
+    buyer, account_factory, store_product, checkout, baghdad
+):
+    buyer.phone_number = "07801112233"
+    buyer.save(update_fields=["phone_number"])
+    first = client_for(buyer).get(f"{ORDERS}/delivery-defaults").json()
+    assert first == {"governorate": None, "city": None, "address": "", "phone": "07801112233"}
+    body = checkout([(store_product, 1)], address="Karrada, street 5", phone="0770 999 8877")
+    assert client_for(buyer).post(ORDERS, body, format="json").status_code == 201
+    after = client_for(buyer).get(f"{ORDERS}/delivery-defaults").json()
+    assert after["governorate"] == str(baghdad.pk)
+    assert after["address"] == "Karrada, street 5" and after["phone"] == "07709998877"
+    stranger = account_factory(role=AccountRole.PATIENT)
+    assert client_for(stranger).get(f"{ORDERS}/delivery-defaults").json()["address"] == ""
+
+
+def test_delivery_pin_is_optional_but_must_be_a_pair(buyer, store_product, checkout):
+    client = client_for(buyer)
+    half = checkout([(store_product, 1)], latitude="33.312805")
+    assert client.post(ORDERS, half, format="json").status_code == 400
+    pinned = checkout([(store_product, 1)], latitude="33.312805", longitude="44.361488")
+    response = client.post(ORDERS, pinned, format="json")
+    assert response.status_code == 201
+    assert response.json()["delivery_latitude"] == "33.312805"

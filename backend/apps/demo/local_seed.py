@@ -17,6 +17,8 @@ import os
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
+
 from apps.accounts.models import Account
 from apps.accounts.roles import AccountRole, AccountType
 from apps.advertising.models import (
@@ -326,6 +328,21 @@ class LocalExtras:
             )
         self._campaigns()
 
+    def _product_images(self) -> None:
+        """Every demo product gets a picture (local demo illustrations on the demo web origin).
+        A picture someone already set is never replaced."""
+        origin = settings.RACHEETA["FRONTEND_URL"]
+        demo_pks = DemoRecord.objects.filter(model_label="marketplace.Product").values_list(
+            "object_pk", flat=True
+        )
+        for product in Product.objects.filter(pk__in=list(demo_pks), image_url="").select_related(
+            "category"
+        ):
+            name = content.product_image_name(product.title, product.category.slug)
+            Product.objects.filter(pk=product.pk).update(
+                image_url=f"{origin}/demo/products/{name}.svg"
+            )
+
     def _campaigns(self) -> None:
         rate, _ = self.registry.ensure(
             "rate:local-demo",
@@ -471,4 +488,5 @@ class LocalExtras:
                 return ListingPromotion.objects.get(pk=promotion.pk)
 
             self.registry.ensure(f"promotion:{tag}", make)
+        self._product_images()  # after the commerce step committed its product records
         self._account_types()

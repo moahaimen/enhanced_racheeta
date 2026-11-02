@@ -297,6 +297,8 @@ class Product(BaseModel):
     is_restricted = models.BooleanField(default=False)
     # Merchant-owned inventory for store orders; null = not stocked (quote/price on request only).
     stock_quantity = models.PositiveIntegerField(null=True, blank=True)
+    # Product photo (an https link the business provides; no file uploads exist yet).
+    image_url = models.URLField(max_length=500, blank=True, default="")
 
     objects = ProductQuerySet.as_manager()
 

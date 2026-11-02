@@ -45,6 +45,7 @@ import { PreferencesPage } from '../pages/settings/PreferencesPage'
 import { CartPage } from '../pages/store/CartPage'
 import { MerchantOrdersPage, MyOrdersPage } from '../pages/store/OrdersPages'
 import { StorePage } from '../pages/store/StorePage'
+import { StoreProductPage } from '../pages/store/StoreProductPage'
 import { OrgWorkspacePage } from '../pages/workspace/OrgWorkspacePage'
 import { WorkspacesPage } from '../pages/workspace/WorkspacesPage'
 
@@ -70,6 +71,7 @@ export const routes: RouteObject[] = [
       { path: 'real-estate/:id', element: <RealEstateDetailPage /> },
       // Public consumer store: the backend exposes only allowed, non-restricted products.
       { path: 'store', element: <StorePage /> },
+      { path: 'store/:id', element: <StoreProductPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
