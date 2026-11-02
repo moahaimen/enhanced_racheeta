@@ -95,19 +95,23 @@ ADMIN_POLICY = _join(
     "frame-ancestors 'none'",
 )
 
+# Location is allowed for Racheeta's own pages only ("self"): the profile and listing forms ask
+# the user for their position (the browser shows its own permission prompt). Everything else is off.
 PERMISSIONS_POLICY = ", ".join(
-    f"{feature}=()"
-    for feature in (
-        "accelerometer",
-        "camera",
-        "geolocation",
-        "gyroscope",
-        "magnetometer",
-        "microphone",
-        "payment",
-        "usb",
-        "interest-cohort",
-    )
+    ["geolocation=(self)"]
+    + [
+        f"{feature}=()"
+        for feature in (
+            "accelerometer",
+            "camera",
+            "gyroscope",
+            "magnetometer",
+            "microphone",
+            "payment",
+            "usb",
+            "interest-cohort",
+        )
+    ]
 )
 
 

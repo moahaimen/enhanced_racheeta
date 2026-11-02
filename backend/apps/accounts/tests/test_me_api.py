@@ -49,7 +49,7 @@ def test_me_patch_updates_allowed_fields(auth_client, account):
     assert response.status_code == 200, response.content
     account.refresh_from_db()
     assert account.full_name == "Renamed"
-    assert account.phone_number == "+9647700000000"
+    assert account.phone_number == "07700000000"  # stored in the national form
     assert account.preferred_language == "en"
     assert response.json()["full_name"] == "Renamed"
 

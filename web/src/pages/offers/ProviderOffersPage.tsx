@@ -21,8 +21,11 @@ import {
   Select,
   Textarea,
   TextField,
+  LinkButton,
+  useFormErrors,
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
+import { ClientValidationError, decimalOnly } from '../validation'
 
 const PAGE_SIZE = 20
 
@@ -39,17 +42,30 @@ export function ProviderOffersPage() {
   const [price, setPrice] = useState('')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const errors = useFormErrors(['service', 'title', 'description', 'offer_price', 'starts_at', 'ends_at'] as const)
+  const active = (services.data ?? []).filter((item) => item.is_active)
+  const chosen = active.find((item) => item.id === service)
 
   const create = async () => {
-    if (!service || !title.trim() || !price || !startsAt || !endsAt) {
-      throw new Error(t('validation.required'))
+    const next: Record<string, string> = {}
+    if (!service) next.service = t('validation.required')
+    if (!title.trim()) next.title = t('validation.required')
+    if (!price) next.offer_price = t('validation.required')
+    else if (Number.isNaN(Number(price)) || Number(price) <= 0) next.offer_price = t('offers.invalidPrice')
+    else if (chosen?.price != null && Number(price) >= Number(chosen.price)) {
+      next.offer_price = t('offers.priceBelowService', { price: Number(chosen.price).toLocaleString(i18n.language) })
     }
     const start = new Date(startsAt)
     const end = new Date(endsAt)
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-      throw new Error(t('offers.invalidWindow'))
+    if (!startsAt) next.starts_at = t('validation.required')
+    if (!endsAt) next.ends_at = t('validation.required')
+    else if (Number.isNaN(end.getTime()) || end.getTime() <= Date.now()) next.ends_at = t('offers.endInFuture')
+    else if (startsAt && end <= start) next.ends_at = t('offers.invalidWindow')
+    if (Object.keys(next).length) {
+      errors.setFieldErrors(next)
+      throw new ClientValidationError()
     }
+    errors.setFieldErrors({})
     return offersApi.createProviderOffer({
       service,
       title: title.trim(),
@@ -69,45 +85,73 @@ export function ProviderOffersPage() {
       />
       <PageStack>
         <SectionCard title={t('offers.createTitle')} headingLevel={2}>
-          {error ? <Alert kind="error">{error}</Alert> : null}
+          {errors.formError ? <Alert kind="error">{errors.formError}</Alert> : null}
           {services.loading ? (
             <LoadingState />
           ) : services.error ? (
             <ErrorState error={services.error} onRetry={services.reload} />
+          ) : active.length === 0 ? (
+            <EmptyState
+              icon="tag"
+              title={t('offers.noServicesTitle')}
+              action={<LinkButton to="/provider/profile">{t('offers.addService')}</LinkButton>}
+              testId="offers-no-services"
+            >
+              {t('offers.noServicesHint')}
+            </EmptyState>
           ) : (
-            <form noValidate onSubmit={(event) => event.preventDefault()}>
+            <form noValidate onSubmit={(event) => event.preventDefault()} data-testid="offer-form">
               <div className="grid-2">
-                <Select label={t('offers.service')} value={service} onChange={(event) => setService(event.target.value)}>
-                  <option value="">—</option>
-                  {(services.data ?? []).filter((item) => item.is_active).map((item) => (
+                <Select
+                  label={t('offers.service')}
+                  value={service}
+                  onChange={(event) => setService(event.target.value)}
+                  error={errors.fieldErrors.service}
+                  hint={chosen?.price != null ? t('offers.servicePrice', { price: Number(chosen.price).toLocaleString(i18n.language), currency: chosen.currency }) : undefined}
+                  required
+                >
+                  <option value="">{t('offers.chooseService')}</option>
+                  {active.map((item) => (
                     <option key={item.id} value={item.id}>{item.title}</option>
                   ))}
                 </Select>
-                <TextField label={t('offers.title')} value={title} onChange={(event) => setTitle(event.target.value)} />
+                <TextField label={t('offers.title')} value={title} maxLength={150} onChange={(event) => setTitle(event.target.value)} error={errors.fieldErrors.title} required />
               </div>
-              <Textarea label={t('offers.description')} optional rows={2} value={description} onChange={(event) => setDescription(event.target.value)} />
+              <Textarea label={t('offers.description')} optional rows={2} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} error={errors.fieldErrors.description} />
               <div className="grid-2">
-                <TextField label={t('offers.offerPrice')} dir="ltr" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
+                <TextField
+                  label={t('offers.offerPrice')}
+                  dir="ltr"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(event) => setPrice(decimalOnly(event.target.value))}
+                  error={errors.fieldErrors.offer_price}
+                  required
+                />
                 <span />
               </div>
               <div className="grid-2">
-                <TextField label={t('offers.startsAt')} type="datetime-local" dir="ltr" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
-                <TextField label={t('offers.endsAt')} type="datetime-local" dir="ltr" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
+                <TextField label={t('offers.startsAt')} type="datetime-local" dir="ltr" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} error={errors.fieldErrors.starts_at} required />
+                <TextField label={t('offers.endsAt')} type="datetime-local" dir="ltr" value={endsAt} min={startsAt || undefined} onChange={(event) => setEndsAt(event.target.value)} error={errors.fieldErrors.ends_at} required />
               </div>
               <FormActions>
                 <ApiActionButton
                   type="submit"
                   action={create}
                   onSuccess={() => {
+                    setService('')
                     setTitle('')
                     setDescription('')
                     setPrice('')
                     setStartsAt('')
                     setEndsAt('')
-                    setError(null)
+                    errors.setFieldErrors({})
+                    errors.setFormError(null)
                     offers.reload()
                   }}
-                  onError={(err) => setError(toErrorMessage(err))}
+                  onError={(err) => {
+                    if (!(err instanceof ClientValidationError)) errors.applyApiError(err)
+                  }}
                   leading={<Icon name="plus" size={18} />}
                 >
                   {t('offers.create')}
@@ -156,7 +200,7 @@ export function ProviderOffersPage() {
                           variant="ghost"
                           action={() => offersApi.updateProviderOffer(offer.id, { is_active: false })}
                           onSuccess={() => offers.reload()}
-                          onError={(err) => setError(toErrorMessage(err))}
+                          onError={(err) => errors.setFormError(toErrorMessage(err))}
                         >
                           {t('offers.deactivate')}
                         </ApiActionButton>

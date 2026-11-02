@@ -15,6 +15,7 @@ import {
   Icon,
   PageHeader,
   PageStack,
+  PhoneField,
   SectionCard,
   Select,
   TextField,
@@ -22,7 +23,7 @@ import {
 } from '../design-system'
 import { changeLanguage, isLanguage } from '../i18n'
 import styles from './ProfilePage.module.css'
-import { ClientValidationError, isPhone } from './validation'
+import { ClientValidationError, isFullName, isIraqiPhone, normalizeIraqiPhone } from './validation'
 
 /**
  * /profile — identity comes exclusively from GET /api/v1/me (loaded fresh
@@ -58,13 +59,14 @@ function ProfileView({ account, reload }: { account: Account; reload: () => void
     setSaved(false)
     const next: Partial<Record<(typeof FIELDS)[number], string>> = {}
     if (!fullName.trim()) next.full_name = t('validation.required')
-    if (phone.trim() && !isPhone(phone)) next.phone_number = t('validation.phone')
+    else if (!isFullName(fullName)) next.full_name = t('validation.fullName')
+    if (phone.trim() && !isIraqiPhone(phone, { mobileOnly: true })) next.phone_number = t('validation.mobile')
     errors.setFieldErrors(next)
     errors.setFormError(null)
     if (Object.keys(next).length > 0) throw new ClientValidationError()
     return updateAccount({
       full_name: fullName.trim(),
-      phone_number: phone.replace(/[\s-]/g, ''),
+      phone_number: normalizeIraqiPhone(phone, { mobileOnly: true }) ?? phone,
       preferred_language: language,
     })
   }
@@ -113,13 +115,10 @@ function ProfileView({ account, reload }: { account: Account; reload: () => void
                 error={errors.fieldErrors.full_name}
                 required
               />
-              <TextField
+              <PhoneField
                 label={t('fields.phone')}
-                type="tel"
+                hint={t('validation.mobileHint')}
                 name="phone_number"
-                autoComplete="tel"
-                dir="ltr"
-                leading={<Icon name="phone" size={18} />}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 error={errors.fieldErrors.phone_number}

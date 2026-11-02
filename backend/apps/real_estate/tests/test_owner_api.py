@@ -99,11 +99,11 @@ def test_profile_update_changes_only_editable_fields(seller_factory):
     seller = seller_factory(display_name="Old")
     client = client_for(seller.account)
     resp = client.patch(
-        OWNER, {"display_name": "New", "about": "Bio", "phone": "0770"}, format="json"
+        OWNER, {"display_name": "New", "about": "Bio", "phone": "0770 123 4567"}, format="json"
     )
     assert resp.status_code == 200 and resp.json()["display_name"] == "New"
     seller.refresh_from_db()
-    assert (seller.display_name, seller.about, seller.phone) == ("New", "Bio", "0770")
+    assert (seller.display_name, seller.about, seller.phone) == ("New", "Bio", "07701234567")
     assert AuditEvent.objects.filter(action="real_estate.seller.updated").count() == 1
 
 

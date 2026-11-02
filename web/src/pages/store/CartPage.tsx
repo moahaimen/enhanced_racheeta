@@ -19,10 +19,12 @@ import {
   SectionCard,
   Select,
   TextField,
+  PhoneField,
   Textarea,
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
 import { pickScript, useLocalizedName } from '../../i18n/localized'
+import { normalizeIraqiPhone } from '../validation'
 import { cart, useCart, type CartLine } from './cart'
 
 /** /cart — one checkout per store. Only ids and quantities are sent; the server prices the order. */
@@ -69,8 +71,15 @@ function MerchantCheckout({ lines, onPlaced }: { lines: CartLine[]; onPlaced: (o
   const [busy, setBusy] = useState(false)
   const estimate = lines.reduce((sum, l) => sum + Number(l.price) * l.quantity, 0)
 
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    const normalized = normalizeIraqiPhone(phone, { mobileOnly: true })
+    if (!normalized) {
+      setPhoneError(t('validation.mobile'))
+      return
+    }
+    setPhoneError(null)
     setBusy(true)
     setError(null)
     try {
@@ -79,7 +88,7 @@ function MerchantCheckout({ lines, onPlaced }: { lines: CartLine[]; onPlaced: (o
         payment_method: method,
         governorate,
         address,
-        phone,
+        phone: normalized,
         note,
       })
       onPlaced(order)
@@ -131,7 +140,7 @@ function MerchantCheckout({ lines, onPlaced }: { lines: CartLine[]; onPlaced: (o
             )}
           </AsyncPage>
           <TextField label={t('store.address')} required maxLength={255} value={address} onChange={(e) => setAddress(e.target.value)} />
-          <TextField label={t('store.phone')} required inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <PhoneField label={t('store.phone')} required hint={t('validation.mobileHint')} value={phone} onChange={(e) => setPhone(e.target.value)} error={phoneError ?? undefined} />
           <Select label={t('store.payment')} value={method} onChange={(e) => setMethod(e.target.value as StorePaymentMethod)}>
             <option value="CASH_ON_DELIVERY">{t('store.paymentMethods.CASH_ON_DELIVERY')}</option>
             <option value="MANUAL_TRANSFER">{t('store.paymentMethods.MANUAL_TRANSFER')}</option>

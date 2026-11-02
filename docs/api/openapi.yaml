@@ -7866,7 +7866,6 @@ components:
           type: string
           minLength: 1
           maxLength: 32
-          pattern: ^\+?[0-9 ]{7,20}$
         note:
           type: string
           default: ''

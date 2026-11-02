@@ -276,9 +276,13 @@
     "email": "Enter a valid email address.",
     "passwordMin": "Password must be at least 8 characters.",
     "passwordMismatch": "Passwords do not match.",
-    "phone": "Enter a valid phone number (digits, optional country code).",
+    "phone": "Enter a valid Iraqi phone number, e.g. 0770 123 4567 or 01 234 5678.",
     "number": "Enter a valid number.",
-    "url": "Enter a link starting with https://"
+    "url": "Enter a link starting with https://",
+    "mobile": "Enter a valid Iraqi mobile number, e.g. 0770 123 4567.",
+    "phoneHint": "Iraqi number: a mobile starting with 07, or a landline; +964 is accepted.",
+    "mobileHint": "Iraqi mobile number starting with 07 (or +964).",
+    "fullName": "Enter your full name (at least 2 letters)."
   },
   "passwordRules": {
     "title": "Password rules",
@@ -1249,7 +1253,15 @@
     "invalidWindow": "The offer end time must be after the start time.",
     "publicTitle": "Current offers",
     "publicIntro": "Active time-limited offers from this provider.",
-    "ends": "Ends {{date}}"
+    "ends": "Ends {{date}}",
+    "noServicesTitle": "Add a service first",
+    "noServicesHint": "An offer is built on one of your active services (with its price). Add a service in your professional profile, then come back.",
+    "addService": "Add a service",
+    "chooseService": "Choose the service",
+    "servicePrice": "Current service price: {{price}} {{currency}}",
+    "invalidPrice": "Enter a price above zero.",
+    "priceBelowService": "The offer price must be lower than the service price ({{price}}).",
+    "endInFuture": "The offer must end in the future."
   },
   "marketplace": {
     "title": "Medical marketplace",
@@ -2154,5 +2166,22 @@
     "notVerifiedTitle": "This page is for verified providers",
     "notVerifiedHint": "Your profile status: {{status}}. The medical marketplace and quote requests open once your profile is verified.",
     "openProfile": "Open my profile"
+  },
+  "location": {
+    "title": "Location on the map",
+    "explain": "Press the button and your browser will ask your permission to share your current location. It is only used to show your location to patients on the map, and nothing is sent until you save.",
+    "useMine": "Use my current location",
+    "update": "Update location",
+    "locating": "Finding your location…",
+    "set": "Location set",
+    "viewMap": "View on map",
+    "clear": "Remove",
+    "manual": "Enter manually (advanced)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "denied": "Location permission was not granted. Allow it in your browser settings and try again, or enter it manually.",
+    "unavailable": "Your location could not be determined right now. Make sure location services are on and try again.",
+    "unsupported": "Your browser cannot share its location; use manual entry.",
+    "outsideIraq": "The selected location is outside Iraq. Please check it."
   }
 }

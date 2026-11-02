@@ -402,7 +402,7 @@ class LocalExtras:
                         "governorate": governorate,
                         "city": city,
                         "address": "عنوان توضيحي | Demo address, Karrada",
-                        "phone": "0700 000 0000",
+                        "phone": "07700000000",
                         "note": "Demo order",
                     },
                     payment_method=method,

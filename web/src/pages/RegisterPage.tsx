@@ -6,9 +6,9 @@ import type { AccountType, PreferredLanguage } from '../api'
 import { DEFAULT_AUTHENTICATED_PATH } from '../app/guards'
 import { ACCOUNT_TYPE_GROUPS, roleForAccountType } from '../auth/roles'
 import { useAuth } from '../auth/useAuth'
-import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, Select, TextField, useFormErrors } from '../design-system'
+import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, PhoneField, Select, TextField, useFormErrors } from '../design-system'
 import { AuthShell } from './auth/AuthShell'
-import { ClientValidationError, isEmail, isPhone, PASSWORD_MIN_LENGTH } from './validation'
+import { ClientValidationError, isEmail, isFullName, isIraqiPhone, normalizeIraqiPhone, PASSWORD_MIN_LENGTH } from './validation'
 
 const FIELDS = ['full_name', 'email', 'phone_number', 'password', 'confirm_password', 'role'] as const
 
@@ -27,9 +27,10 @@ export function RegisterPage() {
   const validate = (): boolean => {
     const next: Partial<Record<(typeof FIELDS)[number], string>> = {}
     if (!fullName.trim()) next.full_name = t('validation.required')
+    else if (!isFullName(fullName)) next.full_name = t('validation.fullName')
     if (!email.trim()) next.email = t('validation.required')
     else if (!isEmail(email)) next.email = t('validation.email')
-    if (phone.trim() && !isPhone(phone)) next.phone_number = t('validation.phone')
+    if (phone.trim() && !isIraqiPhone(phone, { mobileOnly: true })) next.phone_number = t('validation.mobile')
     if (!password) next.password = t('validation.required')
     else if (password.length < PASSWORD_MIN_LENGTH) next.password = t('validation.passwordMin')
     if (confirm !== password) next.confirm_password = t('validation.passwordMismatch')
@@ -47,7 +48,7 @@ export function RegisterPage() {
       role: roleForAccountType(accountType),
       account_type: accountType,
       preferred_language: i18n.language as PreferredLanguage,
-      ...(phone.trim() ? { phone_number: phone.replace(/[\s-]/g, '') } : {}),
+      ...(phone.trim() ? { phone_number: normalizeIraqiPhone(phone, { mobileOnly: true }) ?? phone } : {}),
     })
   }
 
@@ -92,15 +93,11 @@ export function RegisterPage() {
             error={errors.fieldErrors.email}
             required
           />
-          <TextField
+          <PhoneField
             label={t('fields.phone')}
             optional
-            type="tel"
+            hint={t('validation.mobileHint')}
             name="phone_number"
-            autoComplete="tel"
-            inputMode="tel"
-            dir="ltr"
-            leading={<Icon name="phone" size={18} />}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             error={errors.fieldErrors.phone_number}

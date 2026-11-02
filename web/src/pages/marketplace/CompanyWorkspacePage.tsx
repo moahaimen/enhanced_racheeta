@@ -8,6 +8,7 @@ import {
   Alert,
   ApiActionButton,
   Checkbox,
+  PhoneField,
   AsyncPage,
   Badge,
   Button,
@@ -30,7 +31,7 @@ import {
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
-import { ClientValidationError } from '../validation'
+import { ClientValidationError, isEmail, isIraqiPhone, normalizeIraqiPhone } from '../validation'
 import { formatProductPrice } from './MarketplacePage'
 
 const PAGE_SIZE = 20
@@ -239,11 +240,13 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
     const next: Record<string, string> = {}
     if (!f.name.trim()) next.name = t('validation.required')
     if (!f.governorate) next.governorate = t('validation.required')
+    if (f.phone.trim() && !isIraqiPhone(f.phone)) next.phone = t('validation.phone')
+    if (f.public_email.trim() && !isEmail(f.public_email)) next.public_email = t('validation.email')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
     }
-    const editable = { description: f.description.trim(), phone: f.phone, public_email: f.public_email }
+    const editable = { description: f.description.trim(), phone: normalizeIraqiPhone(f.phone) ?? f.phone, public_email: f.public_email }
     const payload = identityLocked
       ? editable
       : { ...editable, name: f.name.trim(), governorate: f.governorate, address: f.address.trim(), website: f.website }
@@ -267,7 +270,7 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
         <TextField label={t('company.address')} optional value={f.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} disabled={identityLocked} />
       </div>
       <div className="grid-2">
-        <TextField label={t('company.phone')} optional dir="ltr" value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
+        <PhoneField label={t('company.phone')} optional hint={t('validation.phoneHint')} value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
         <TextField label={t('company.email')} optional dir="ltr" type="email" value={f.public_email} onChange={(e) => set('public_email', e.target.value)} error={errors.fieldErrors.public_email} />
       </div>
       <TextField label={t('company.website')} optional dir="ltr" value={f.website} onChange={(e) => set('website', e.target.value)} error={errors.fieldErrors.website} disabled={identityLocked} />

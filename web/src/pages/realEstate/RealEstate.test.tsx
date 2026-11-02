@@ -419,6 +419,7 @@ describe('Seller workspace', () => {
     await user.selectOptions(within(form).getByLabelText(/نوع العقار|property type/i), 'CLINIC')
     await user.selectOptions(within(form).getByLabelText(/نوع الصفقة|transaction/i), 'SALE')
     await user.selectOptions(within(form).getByLabelText(/^المحافظة|^governorate/i), 'g-baghdad')
+    await user.click(within(form).getByRole('button', { name: /إدخال يدوي|enter manually/i }))
     await user.type(within(form).getByLabelText(/خط العرض|latitude/i), '33.3')
     await user.click(within(form).getByRole('button', { name: /إنشاء الإعلان|create listing/i }))
     expect(realEstateApi.createMyListing).not.toHaveBeenCalled()

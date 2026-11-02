@@ -34,6 +34,30 @@ export function TextField({ label, optional, hint, error, className, leading, tr
   )
 }
 
+/**
+ * Phone input: only digits, spaces and a leading "+" can be typed; LTR; phone keyboard on mobile.
+ * Validation (Iraqi format) happens in the form and again on the server.
+ */
+export function PhoneField({ onChange, ...props }: Omit<TextFieldProps, 'type' | 'leading'>) {
+  return (
+    <TextField
+      {...props}
+      type="tel"
+      inputMode="tel"
+      dir="ltr"
+      autoComplete={props.autoComplete ?? 'tel'}
+      maxLength={18}
+      placeholder={props.placeholder ?? '07XX XXX XXXX'}
+      leading={<Icon name="phone" size={18} />}
+      onChange={(event) => {
+        const clean = event.target.value.replace(/[^\d +]/g, '').replace(/(?!^)\+/g, '')
+        if (clean !== event.target.value) event.target.value = clean
+        onChange?.(event)
+      }}
+    />
+  )
+}
+
 export function PasswordField(props: Omit<TextFieldProps, 'type' | 'trailing' | 'leading'>) {
   const { t } = useTranslation()
   const [visible, setVisible] = useState(false)

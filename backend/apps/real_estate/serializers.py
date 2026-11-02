@@ -4,6 +4,7 @@ from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.phone import IraqiPhoneField
 from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 
@@ -121,6 +122,8 @@ class SellerOwnerSerializer(serializers.ModelSerializer):
 
 
 class SellerWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
+    phone = IraqiPhoneField(required=False, allow_blank=True)
+
     forbidden = CLIENT_FORBIDDEN_SELLER_FIELDS
 
     class Meta:
@@ -253,6 +256,8 @@ class PropertyListingWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerial
     """Create (POST) and partial update (PATCH) by the owning seller. Drafts may
     be incomplete: only the identity of the ad (title, types, governorate) is
     required; completeness is the publication gate's job."""
+
+    contact_phone = IraqiPhoneField(required=False, allow_blank=True)
 
     forbidden = CLIENT_FORBIDDEN_LISTING_FIELDS
     governorate = serializers.PrimaryKeyRelatedField(

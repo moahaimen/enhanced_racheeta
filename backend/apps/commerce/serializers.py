@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.core.phone import IraqiPhoneField
 from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 
@@ -24,7 +25,7 @@ class CheckoutSerializer(serializers.Serializer):
         queryset=City.objects.filter(is_active=True), allow_null=True, required=False
     )
     address = serializers.CharField(max_length=255)
-    phone = serializers.RegexField(r"^\+?[0-9 ]{7,20}$", max_length=32)
+    phone = IraqiPhoneField(allow_landline=False)
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
     def validate(self, attrs):

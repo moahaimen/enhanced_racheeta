@@ -29,9 +29,11 @@ import {
   FormActions,
   Icon,
   LoadingState,
+  LocationPicker,
   PageHeader,
   PageStack,
   Pagination,
+  PhoneField,
   SectionCard,
   Select,
   Spinner,
@@ -42,7 +44,7 @@ import {
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
-import { ClientValidationError } from '../validation'
+import { ClientValidationError, isEmail, isIraqiPhone, normalizeIraqiPhone } from '../validation'
 import { formatArea, formatListingPrice, fromLocalInput, publicationGaps, toLocalInput } from './realEstateFormat'
 
 const PAGE_SIZE = 20
@@ -255,11 +257,13 @@ function SellerForm({ seller, onSaved }: { seller: RealEstateSeller | null; onSa
     const next: Record<string, string> = {}
     if (!f.seller_type) next.seller_type = t('validation.required')
     if (!f.display_name.trim()) next.display_name = t('validation.required')
+    if (f.phone.trim() && !isIraqiPhone(f.phone)) next.phone = t('validation.phone')
+    if (f.public_email.trim() && !isEmail(f.public_email)) next.public_email = t('validation.email')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
     }
-    const payload = { seller_type: f.seller_type as SellerType, display_name: f.display_name.trim(), about: f.about.trim(), phone: f.phone, public_email: f.public_email }
+    const payload = { seller_type: f.seller_type as SellerType, display_name: f.display_name.trim(), about: f.about.trim(), phone: normalizeIraqiPhone(f.phone) ?? f.phone, public_email: f.public_email }
     return seller ? realEstateApi.updateMySeller(payload) : realEstateApi.createMySeller(payload)
   }
   return (
@@ -278,7 +282,7 @@ function SellerForm({ seller, onSaved }: { seller: RealEstateSeller | null; onSa
       </div>
       <Textarea label={t('realEstateOwner.about')} optional rows={3} value={f.about} onChange={(e) => set('about', e.target.value)} error={errors.fieldErrors.about} />
       <div className="grid-2">
-        <TextField label={t('realEstateOwner.phone')} optional dir="ltr" value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
+        <PhoneField label={t('realEstateOwner.phone')} optional hint={t('validation.phoneHint')} value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
         <TextField label={t('realEstateOwner.email')} optional dir="ltr" type="email" value={f.public_email} onChange={(e) => set('public_email', e.target.value)} error={errors.fieldErrors.public_email} />
       </div>
       <FormActions>
@@ -347,6 +351,8 @@ function ListingForm({ listing, governorates, onSaved, onCancel }: { listing: Ow
     if (f.price !== '' && (Number.isNaN(Number(f.price)) || Number(f.price) < 0)) next.price = t('realEstateOwner.invalidPrice')
     if (f.area_sqm !== '' && (Number.isNaN(Number(f.area_sqm)) || Number(f.area_sqm) <= 0)) next.area_sqm = t('realEstateOwner.invalidArea')
     if ((f.latitude === '') !== (f.longitude === '')) next.latitude = t('realEstateOwner.coordinatePair')
+    if (f.contact_phone.trim() && !isIraqiPhone(f.contact_phone)) next.contact_phone = t('validation.phone')
+    if (f.contact_email.trim() && !isEmail(f.contact_email)) next.contact_email = t('validation.email')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
@@ -364,7 +370,7 @@ function ListingForm({ listing, governorates, onSaved, onCancel }: { listing: Ow
       currency: f.currency,
       facilities: f.facilities.trim(),
       contact_method: f.contact_method,
-      contact_phone: f.contact_phone.trim(),
+      contact_phone: normalizeIraqiPhone(f.contact_phone) ?? f.contact_phone.trim(),
       contact_email: f.contact_email.trim(),
       expires_at: fromLocalInput(f.expires_at),
       suitable_uses: f.suitable_uses,
@@ -438,8 +444,14 @@ function ListingForm({ listing, governorates, onSaved, onCancel }: { listing: Ow
       </div>
       <TextField label={t('realEstateOwner.district')} optional value={f.district} onChange={(e) => set('district', e.target.value)} error={errors.fieldErrors.district} />
       <div className="grid-2">
-        <TextField label={t('realEstateOwner.latitude')} optional dir="ltr" inputMode="decimal" value={f.latitude} onChange={(e) => set('latitude', e.target.value)} error={errors.fieldErrors.latitude} />
-        <TextField label={t('realEstateOwner.longitude')} optional dir="ltr" inputMode="decimal" value={f.longitude} onChange={(e) => set('longitude', e.target.value)} error={errors.fieldErrors.longitude} />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <LocationPicker
+            latitude={f.latitude}
+            longitude={f.longitude}
+            onChange={(latitude, longitude) => setF((prev) => ({ ...prev, latitude, longitude }))}
+            error={errors.fieldErrors.latitude ?? errors.fieldErrors.longitude}
+          />
+        </div>
       </div>
       <div className="grid-2">
         <TextField label={t('realEstate.area')} optional dir="ltr" inputMode="decimal" hint={t('realEstateOwner.areaHint')} value={f.area_sqm} onChange={(e) => set('area_sqm', e.target.value)} error={errors.fieldErrors.area_sqm} />
@@ -466,7 +478,7 @@ function ListingForm({ listing, governorates, onSaved, onCancel }: { listing: Ow
         <TextField label={t('realEstateOwner.expiresAt')} optional type="datetime-local" dir="ltr" hint={t('realEstateOwner.expiresHint')} value={f.expires_at} onChange={(e) => set('expires_at', e.target.value)} error={errors.fieldErrors.expires_at} />
       </div>
       <div className="grid-2">
-        <TextField label={t('realEstateOwner.contactPhone')} optional dir="ltr" value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} error={errors.fieldErrors.contact_phone} />
+        <PhoneField label={t('realEstateOwner.contactPhone')} optional hint={t('validation.phoneHint')} value={f.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} error={errors.fieldErrors.contact_phone} />
         <TextField label={t('realEstateOwner.contactEmail')} optional dir="ltr" type="email" value={f.contact_email} onChange={(e) => set('contact_email', e.target.value)} error={errors.fieldErrors.contact_email} />
       </div>
       <FormActions>

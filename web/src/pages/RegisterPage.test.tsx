@@ -55,6 +55,28 @@ describe('RegisterPage', () => {
     expect(screen.getByText(/شروط كلمة المرور|password rules/i)).toBeInTheDocument()
   })
 
+  it('phone accepts only digits and must be an Iraqi mobile number', async () => {
+    renderApp('/register')
+    await fillValid()
+    const phone = screen.getByLabelText(/الهاتف|phone/i)
+    await userEvent.type(phone, '07ab70-123')
+    expect(phone).toHaveValue('0770123') // letters and symbols are dropped while typing
+    await userEvent.click(submitButton())
+    expect(await screen.findByText(/رقم موبايل عراقي صحيحاً|valid Iraqi mobile/i)).toBeInTheDocument()
+    expect(authApi.register).not.toHaveBeenCalled()
+  })
+
+  it('rejects a name without letters', async () => {
+    renderApp('/register')
+    await fillValid()
+    const name = screen.getByLabelText(/الاسم الكامل|full name/i)
+    await userEvent.clear(name)
+    await userEvent.type(name, '12')
+    await userEvent.click(submitButton())
+    expect(await screen.findByText(/حرفان على الأقل|at least 2 letters/i)).toBeInTheDocument()
+    expect(authApi.register).not.toHaveBeenCalled()
+  })
+
   it('rejects mismatched passwords on the client', async () => {
     renderApp('/register')
     await fillValid()

@@ -7,6 +7,7 @@ from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.phone import IraqiPhoneField
 from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 from apps.specialties.models import Specialty
@@ -243,6 +244,8 @@ class ProviderOwnerSerializer(serializers.ModelSerializer):
 
 class ProviderWriteSerializer(ForbidAdminFieldsMixin, serializers.ModelSerializer):
     """Create (POST) and partial update (PATCH) by the owner."""
+
+    phone = IraqiPhoneField(required=False, allow_blank=True)
 
     governorate = serializers.PrimaryKeyRelatedField(
         queryset=Governorate.objects.filter(is_active=True)

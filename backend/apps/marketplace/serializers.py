@@ -1,6 +1,7 @@
 from django.conf import settings
 from rest_framework import serializers
 
+from apps.core.phone import IraqiPhoneField
 from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 
@@ -146,6 +147,8 @@ class CompanyOwnerSerializer(serializers.ModelSerializer):
 
 
 class CompanyWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
+    phone = IraqiPhoneField(required=False, allow_blank=True)
+
     forbidden = CLIENT_FORBIDDEN_COMPANY_FIELDS
     governorate = serializers.PrimaryKeyRelatedField(
         queryset=Governorate.objects.filter(is_active=True)

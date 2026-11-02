@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -69,5 +69,28 @@ describe('ProviderOffersPage', () => {
     await waitFor(() =>
       expect(offersApi.updateProviderOffer).toHaveBeenCalledWith(offer.id, { is_active: false }),
     )
+  })
+
+  it('without an active service, explains and links to adding one instead of an empty list', async () => {
+    vi.mocked(providersApi.listMyServices).mockResolvedValue([{ ...service, is_active: false }])
+    renderApp('/provider/offers')
+    expect(await screen.findByTestId('offers-no-services')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /إضافة خدمة|add a service/i })).toHaveAttribute('href', '/provider/profile')
+  })
+
+  it('validates each field on the field itself and never calls the API with bad input', async () => {
+    const user = userEvent.setup()
+    renderApp('/provider/offers')
+    const form = await screen.findByTestId('offer-form')
+    await user.click(within(form).getByRole('button', { name: /إنشاء العرض|create offer/i }))
+    expect(within(form).getAllByText(/هذا الحقل مطلوب|required/i).length).toBeGreaterThanOrEqual(4)
+    await user.selectOptions(within(form).getByLabelText(/الخدمة|service/i), service.id)
+    expect(within(form).getByText(/25,000|٢٥٬٠٠٠/)).toBeInTheDocument() // the service price is shown as a hint
+    await user.type(within(form).getByLabelText(/عنوان العرض|offer title/i), 'Promo')
+    await user.type(within(form).getByLabelText(/سعر العرض|offer price/i), '3a0000')
+    expect(within(form).getByLabelText(/سعر العرض|offer price/i)).toHaveValue('30000') // letters are dropped
+    await user.click(within(form).getByRole('button', { name: /إنشاء العرض|create offer/i }))
+    expect(within(form).getByText(/أقل من سعر الخدمة|lower than the service price/i)).toBeInTheDocument()
+    expect(offersApi.createProviderOffer).not.toHaveBeenCalled()
   })
 })
