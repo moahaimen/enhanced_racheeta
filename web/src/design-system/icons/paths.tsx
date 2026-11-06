@@ -286,6 +286,24 @@ export const paths = {
       <path d="M14.5 5.5 17 3l1 3 3 1-2.5 2.5" />
     </>
   ),
+  graduationCap: (
+    <>
+      <path d="M2 9l10-5 10 5-10 5-10-5Z" />
+      <path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6" />
+    </>
+  ),
+  truck: (
+    <>
+      <path d="M2 6h11v10H2zM13 10h4l3 3v3h-7" />
+      <circle cx="6" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
+    </>
+  ),
+  flag: (
+    <>
+      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+    </>
+  ),
   calculator: (
     <>
       <rect x="5" y="3" width="14" height="18" rx="2" />

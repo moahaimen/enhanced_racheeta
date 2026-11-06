@@ -32,6 +32,10 @@ const PROFESSION_ICON: Record<string, IconName> = {
   SALES: 'tag',
   HUMAN_RESOURCES: 'users',
   CUSTOMER_SERVICE: 'headset',
+  MANAGER: 'flag',
+  OPERATIONS: 'truck',
+  TEACHER: 'graduationCap',
+  OTHER_PROFESSION: 'dots',
   OTHER: 'hospital',
 }
 

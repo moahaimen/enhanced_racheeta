@@ -1452,6 +1452,7 @@ paths:
           type: string
           enum:
           - BEAUTY_CENTER
+          - BUSINESS
           - CLINIC
           - HEALTHCARE_INSTITUTION
           - HOSPITAL
@@ -1474,6 +1475,7 @@ paths:
           * `UNIVERSITY` - University / college
           * `RECRUITMENT_AGENCY` - Recruitment agency
           * `OTHER` - Other approved healthcare organisation
+          * `BUSINESS` - Non-healthcare business
       - name: page
         required: false
         in: query
@@ -3179,6 +3181,7 @@ paths:
           - HUMAN_RESOURCES
           - IT_SUPPORT
           - LAB_TECHNICIAN
+          - MANAGER
           - MARKETING
           - MEDICAL_ASSISTANT
           - MEDICAL_REPRESENTATIVE
@@ -3186,8 +3189,10 @@ paths:
           - NETWORK_ENGINEER
           - NURSE
           - NUTRITIONIST
+          - OPERATIONS
           - OPTOMETRIST
           - OTHER
+          - OTHER_PROFESSION
           - PHARMACIST
           - PHARMACY_TECHNICIAN
           - PHYSIOTHERAPIST
@@ -3196,6 +3201,7 @@ paths:
           - SALES
           - SOFTWARE_DEVELOPER
           - SPEECH_THERAPIST
+          - TEACHER
         description: |-
           * `DOCTOR` - Physician
           * `DENTIST` - Dentist
@@ -3228,6 +3234,10 @@ paths:
           * `HUMAN_RESOURCES` - Human resources
           * `ENGINEER` - Engineer (facilities / maintenance)
           * `CUSTOMER_SERVICE` - Customer service
+          * `MANAGER` - Management / project manager
+          * `OPERATIONS` - Operations / logistics
+          * `TEACHER` - Teacher / trainer
+          * `OTHER_PROFESSION` - Other profession
       - name: page
         required: false
         in: query
@@ -8745,8 +8755,12 @@ components:
     AccountTypeEnum:
       enum:
       - PATIENT
+      - JOB_SEEKER
+      - EMPLOYER
       - DOCTOR
+      - DENTIST
       - NURSE
+      - MIDWIFE
       - THERAPIST
       - HOSPITAL
       - MEDICAL_CENTER
@@ -8764,8 +8778,12 @@ components:
       type: string
       description: |-
         * `PATIENT` - Patient
+        * `JOB_SEEKER` - Job seeker (any profession)
+        * `EMPLOYER` - Employer / recruiter
         * `DOCTOR` - Doctor
+        * `DENTIST` - Dentist
         * `NURSE` - Nurse
+        * `MIDWIFE` - Midwife
         * `THERAPIST` - Therapist
         * `HOSPITAL` - Hospital
         * `MEDICAL_CENTER` - Medical center / clinic
@@ -15092,6 +15110,7 @@ components:
       - UNIVERSITY
       - RECRUITMENT_AGENCY
       - OTHER
+      - BUSINESS
       type: string
       description: |-
         * `HOSPITAL` - Hospital
@@ -15105,6 +15124,7 @@ components:
         * `UNIVERSITY` - University / college
         * `RECRUITMENT_AGENCY` - Recruitment agency
         * `OTHER` - Other approved healthcare organisation
+        * `BUSINESS` - Non-healthcare business
     OutcomeEnum:
       enum:
       - ACCEPTED
@@ -17872,6 +17892,10 @@ components:
       - HUMAN_RESOURCES
       - ENGINEER
       - CUSTOMER_SERVICE
+      - MANAGER
+      - OPERATIONS
+      - TEACHER
+      - OTHER_PROFESSION
       type: string
       description: |-
         * `DOCTOR` - Physician
@@ -17905,6 +17929,10 @@ components:
         * `HUMAN_RESOURCES` - Human resources
         * `ENGINEER` - Engineer (facilities / maintenance)
         * `CUSTOMER_SERVICE` - Customer service
+        * `MANAGER` - Management / project manager
+        * `OPERATIONS` - Operations / logistics
+        * `TEACHER` - Teacher / trainer
+        * `OTHER_PROFESSION` - Other profession
     ProfessionGroup:
       type: object
       properties:

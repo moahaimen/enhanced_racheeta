@@ -559,7 +559,11 @@
     "SALES": "Sales",
     "HUMAN_RESOURCES": "Human resources",
     "ENGINEER": "Engineer (facilities / maintenance)",
-    "CUSTOMER_SERVICE": "Customer service"
+    "CUSTOMER_SERVICE": "Customer service",
+    "MANAGER": "Management / project manager",
+    "OPERATIONS": "Operations / logistics",
+    "TEACHER": "Teacher / trainer",
+    "OTHER_PROFESSION": "Other profession"
   },
   "degrees": {
     "DIPLOMA": "Diploma",
@@ -613,7 +617,8 @@
     "HEALTHCARE_INSTITUTION": "Healthcare institution",
     "UNIVERSITY": "University / college",
     "RECRUITMENT_AGENCY": "Recruitment agency",
-    "OTHER": "Other healthcare organisation"
+    "OTHER": "Other healthcare organisation",
+    "BUSINESS": "Non-healthcare business (non-clinical roles only)"
   },
   "jobStatus": {
     "DRAFT": "Draft",
@@ -1779,7 +1784,9 @@
     "HEALTHCARE": "Healthcare professions",
     "HEALTH_BUSINESS": "Health business",
     "TECHNOLOGY": "Technology",
-    "BUSINESS": "Business & operations"
+    "BUSINESS": "Business & operations",
+    "EDUCATION": "Education",
+    "OTHER_FIELDS": "Other fields"
   },
   "accountTypes": {
     "PATIENT": "Patient / user",

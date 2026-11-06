@@ -568,7 +568,11 @@
     "SALES": "مبيعات",
     "HUMAN_RESOURCES": "موارد بشرية",
     "ENGINEER": "مهندس (صيانة ومرافق)",
-    "CUSTOMER_SERVICE": "خدمة العملاء"
+    "CUSTOMER_SERVICE": "خدمة العملاء",
+    "MANAGER": "الإدارة / مدير مشاريع",
+    "OPERATIONS": "العمليات / اللوجستيات",
+    "TEACHER": "معلّم / مدرّب",
+    "OTHER_PROFESSION": "مهنة أخرى"
   },
   "degrees": {
     "DIPLOMA": "دبلوم",
@@ -622,7 +626,8 @@
     "HEALTHCARE_INSTITUTION": "مؤسسة صحية",
     "UNIVERSITY": "جامعة / كلية",
     "RECRUITMENT_AGENCY": "مكتب توظيف",
-    "OTHER": "مؤسسة صحية أخرى"
+    "OTHER": "مؤسسة صحية أخرى",
+    "BUSINESS": "شركة غير صحية (وظائف غير سريرية فقط)"
   },
   "jobStatus": {
     "DRAFT": "مسودة",
@@ -1827,7 +1832,9 @@
     "HEALTHCARE": "المهن الصحية",
     "HEALTH_BUSINESS": "أعمال صحية مساندة",
     "TECHNOLOGY": "التقنية",
-    "BUSINESS": "الأعمال والإدارة"
+    "BUSINESS": "الأعمال والإدارة",
+    "EDUCATION": "التعليم",
+    "OTHER_FIELDS": "مجالات أخرى"
   },
   "accountTypes": {
     "PATIENT": "مريض / مستخدم",

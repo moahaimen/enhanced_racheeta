@@ -120,6 +120,9 @@ STATUS_FOR_CODE = {
 
 
 def raise_api(exc: services.JobsError):
+    if isinstance(exc, services.FieldsInvalid):
+        # Field-level rules (e.g. a business posting a clinical role) keep the serializer shape.
+        raise ValidationError(exc.errors) from exc
     err = JobsAPIError(str(exc) or exc.code, code=exc.code)
     err.status_code = STATUS_FOR_CODE.get(exc.code, status.HTTP_400_BAD_REQUEST)
     raise err from exc
@@ -1286,7 +1289,16 @@ class TalentSearchView(_Throttled, generics.ListAPIView):
             return _materialized_list(self, request, lambda p: p, allow_applicants=False)
 
     def get_queryset(self):
-        return _talent_queryset()
+        return _scoped_talent(_talent_queryset(), getattr(self.request, "employer", None))
+
+
+def _scoped_talent(qs, employer):
+    """A non-healthcare business searches non-clinical candidates only (its explicit scope)."""
+    from .types import CLINICAL_PROFESSIONS, NON_HEALTHCARE_EMPLOYER_TYPES
+
+    if employer is not None and employer.organization_type in NON_HEALTHCARE_EMPLOYER_TYPES:
+        return qs.exclude(profession__in=CLINICAL_PROFESSIONS)
+    return qs
 
 
 @extend_schema(
