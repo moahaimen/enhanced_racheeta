@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
 import { useChat } from '../../chat/useChat'
+import { useFeatures } from '../../hooks/useFeatures'
 import { useNotifications } from '../../notifications/useNotifications'
 import { useCartCount } from '../../cart/cart'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
@@ -186,6 +187,7 @@ function AccountMenu({ children, name, role }: { children: ReactNode; name: stri
 export function SiteHeader() {
   const { t } = useTranslation()
   const { status, account, logout } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const navigate = useNavigate()
   const location = useLocation()
   // The panel is "open for this path"; navigating closes it without an effect.
@@ -234,7 +236,7 @@ export function SiteHeader() {
       {account?.role === 'PATIENT' ? (
         <NavLink to="/reservations" className={styles.link}>
           <Icon name="calendar" size={18} />
-          {t('nav.myReservations')}
+          {bookingOn ? t('nav.myReservations') : t('nav.reservationHistory')}
         </NavLink>
       ) : null}
       {account?.role === 'PROVIDER' ? (
@@ -245,7 +247,7 @@ export function SiteHeader() {
           </NavLink>
           <NavLink to="/provider/reservations" className={styles.link}>
             <Icon name="calendar" size={18} />
-            {t('nav.providerReservations')}
+            {bookingOn ? t('nav.providerReservations') : t('nav.reservationHistory')}
           </NavLink>
           <NavLink to="/provider/offers" className={styles.link}>
             <Icon name="tag" size={18} />

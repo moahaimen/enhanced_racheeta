@@ -1,16 +1,20 @@
 import { useTranslation } from 'react-i18next'
 
 import { dashboards as dashboardsApi } from '../../api'
+import { useFeatures } from '../../hooks/useFeatures'
 import { AsyncPage, LinkButton, SectionCard } from '../../design-system'
 import styles from './Dashboard.module.css'
 import { CountGrid, Metric, ReservationRows, UnreadBlock } from './widgets'
 
 export function PatientDashboard() {
   const { t, i18n } = useTranslation()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   return (
     <AsyncPage load={(signal) => dashboardsApi.getPatient(signal)}>
       {(data) => (
         <div className={styles.panel} data-testid="dashboard-patient">
+          {bookingOn ? (
+          <>
           <SectionCard
             title={t('dashboard.patient.reservations')}
             headingLevel={2}
@@ -43,6 +47,8 @@ export function PatientDashboard() {
           <SectionCard title={t('dashboard.patient.recentList')} headingLevel={2}>
             <ReservationRows rows={data.recent} testId="recent-list" />
           </SectionCard>
+          </>
+          ) : null}
 
           <SectionCard title={t('dashboard.unread')} headingLevel={2}>
             <UnreadBlock {...data.unread} />

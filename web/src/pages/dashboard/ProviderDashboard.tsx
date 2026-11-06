@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { dashboards as dashboardsApi } from '../../api'
+import { useFeatures } from '../../hooks/useFeatures'
 import type { DoctorDashboard, FacilityDashboard } from '../../api'
 import { AsyncPage, Badge, SectionCard } from '../../design-system'
 import { SponsoredSection } from '../advertising/SponsoredSection'
@@ -12,6 +13,7 @@ function ProviderView({ data, facility }: { data: DoctorDashboard | FacilityDash
   const { t, i18n } = useTranslation()
   const n = (value: number) => value.toLocaleString(i18n.language)
   const { profile, reviews, offers } = data
+  const { reservationsEnabled: bookingOn } = useFeatures()
   return (
     <div className={styles.panel} data-testid={facility ? 'dashboard-facility' : 'dashboard-doctor'}>
       <SectionCard
@@ -31,13 +33,15 @@ function ProviderView({ data, facility }: { data: DoctorDashboard | FacilityDash
         ) : null}
         <WorkspaceLinks
           links={[
-            { to: '/provider/reservations', label: t('nav.providerReservations') },
+            ...(bookingOn ? [{ to: '/provider/reservations', label: t('nav.providerReservations') }] : []),
             { to: '/provider/offers', label: t('nav.providerOffers') },
             { to: '/provider/profile', label: t('nav.providerProfile') },
           ]}
         />
       </SectionCard>
 
+      {bookingOn ? (
+      <>
       <SectionCard title={t('dashboard.provider.reservations')} headingLevel={2}>
         <div className="grid-2">
           <Metric label={t('dashboard.total')} value={n(data.reservations.total)} testId="reservations-total" />
@@ -54,6 +58,8 @@ function ProviderView({ data, facility }: { data: DoctorDashboard | FacilityDash
       <SectionCard title={t('dashboard.provider.upcomingList')} headingLevel={2}>
         <ReservationRows rows={data.upcoming} patientName testId="upcoming-list" />
       </SectionCard>
+      </>
+      ) : null}
 
       <SectionCard title={t('dashboard.provider.reviews')} headingLevel={2}>
         {reviews.review_count === 0 ? (

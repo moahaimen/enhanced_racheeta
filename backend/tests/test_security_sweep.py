@@ -34,6 +34,7 @@ PUBLIC_OPERATIONS = {
     ("POST", "api/v1/auth/password-reset/confirm"),
     ("POST", "api/v1/auth/email-verification/confirm"),
     # public reference data and catalogues (read-only)
+    ("GET", "api/v1/platform/features"),  # product switches only (apps.core.features)
     ("GET", "api/v1/geo/countries"),
     ("GET", "api/v1/geo/governorates"),
     ("GET", "api/v1/geo/cities"),

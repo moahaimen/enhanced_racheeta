@@ -22,6 +22,7 @@ import {
   TextField,
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
+import { useFeatures } from '../../hooks/useFeatures'
 import { pickScript } from '../../i18n/localized'
 import styles from '../dashboard/Dashboard.module.css'
 import { CountGrid } from '../dashboard/widgets'
@@ -78,6 +79,9 @@ function FacilityReservations({ org, onChange }: { org: OrgSummary; onChange: ()
   const { t, i18n } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const canManage = org.capabilities.includes('facility.reservations.manage')
+  const { reservationsEnabled: bookingOn } = useFeatures()
+  // Booking off: a pending booking can be rejected but no longer accepted (the server agrees).
+  const next = (status: ReservationStatus) => (NEXT[status] ?? []).filter((s) => bookingOn || s !== 'CONFIRMED')
   if (!org.capabilities.includes('facility.reservations.view')) return null
   return (
     <SectionCard title={t('ws.reservations')} headingLevel={2}>
@@ -98,9 +102,9 @@ function FacilityReservations({ org, onChange }: { org: OrgSummary; onChange: ()
                     {row.patient.full_name ? `${row.patient.full_name} · ` : ''}
                     <time dateTime={row.starts_at}>{new Date(row.starts_at).toLocaleString(i18n.language)}</time>
                   </p>
-                  {canManage && NEXT[row.status] ? (
+                  {canManage && next(row.status).length > 0 ? (
                     <div className="cluster">
-                      {NEXT[row.status]!.map((status) => (
+                      {next(row.status).map((status) => (
                         <ApiActionButton
                           key={status}
                           size="sm"

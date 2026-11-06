@@ -3,10 +3,12 @@
 from django.urls import include, path, re_path
 
 from apps.accounts.views import ApiNotFoundView
+from apps.core.views import PlatformFeaturesView
 
 app_name = "v1"
 
 urlpatterns = [
+    path("platform/features", PlatformFeaturesView.as_view(), name="platform-features"),
     path("", include("apps.accounts.urls")),
     path("", include("apps.geography.urls")),
     path("", include("apps.specialties.urls")),

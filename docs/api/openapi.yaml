@@ -6373,6 +6373,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeliveryDefaults'
           description: ''
+  /api/v1/platform/features:
+    get:
+      operationId: platform_features_retrieve
+      description: Public, read-only product switches (apps.core.features). Never
+        per-user, never secret.
+      summary: Product switches the web app follows (e.g. whether online booking is
+        on)
+      tags:
+      - platform
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformFeatures'
+          description: ''
   /api/v1/providers:
     get:
       operationId: providers_list
@@ -17271,6 +17289,13 @@ components:
       description: |-
         * `BOOLEAN` - Capability on/off
         * `LIMIT` - Numeric limit
+    PlatformFeatures:
+      type: object
+      properties:
+        reservations_enabled:
+          type: boolean
+      required:
+      - reservations_enabled
     Policy:
       type: object
       properties:

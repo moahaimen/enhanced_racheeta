@@ -368,7 +368,7 @@ class DemoSeeder:
                     self.registry.ensure(
                         key,
                         lambda s=starts_at: reservation_services.create_availability_slot(
-                            profile, service_id=service.pk, starts_at=s
+                            profile, service_id=service.pk, starts_at=s, enforce_switch=False
                         ),
                     )
                     made += 1
@@ -394,6 +394,7 @@ class DemoSeeder:
                 patient=patient,
                 slot_id=slot.pk,
                 patient_note=people.PATIENT_NOTES[index % len(people.PATIENT_NOTES)],
+                enforce_switch=False,  # demo history exists whatever the booking switch says
             )
             if action == "confirm":
                 reservation_services.transition_as_provider(
@@ -401,6 +402,7 @@ class DemoSeeder:
                     provider=profile,
                     actor=profile.account,
                     target_status=ReservationStatus.CONFIRMED,
+                    enforce_switch=False,
                 )
             elif action == "cancel":
                 reservation_services.cancel_as_patient(

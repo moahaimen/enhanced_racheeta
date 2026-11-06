@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
+import { useFeatures } from '../../hooks/useFeatures'
 import { Badge } from '../components/Badge/Badge'
 import { Container } from './Container'
 import { BrandMark } from './SiteHeader'
@@ -12,6 +13,7 @@ const UPCOMING = ['offers', 'marketplace'] as const
 export function SiteFooter() {
   const { t } = useTranslation()
   const { status } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   return (
     <footer className={styles.footer}>
       <Container width="xl">
@@ -35,9 +37,11 @@ export function SiteFooter() {
               <li>
                 <Link to="/real-estate">{t('modules.realEstate')}</Link>
               </li>
-              <li>
-                <Link to="/providers">{t('modules.reservations')}</Link>
-              </li>
+              {bookingOn ? (
+                <li>
+                  <Link to="/providers">{t('modules.reservations')}</Link>
+                </li>
+              ) : null}
               {status === 'authenticated' ? (
                 <li>
                   <Link to="/profile">{t('nav.profile')}</Link>

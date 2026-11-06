@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import has_role
 from apps.accounts.roles import AccountRole
+from apps.core.features import reservations_enabled
 from apps.providers.models import ProviderProfile
 from apps.providers.permissions import HasProviderProfile
 
@@ -42,6 +43,7 @@ STATUS_FOR_CODE = {
     "service_unavailable": status.HTTP_409_CONFLICT,
     "provider_unavailable": status.HTTP_409_CONFLICT,
     "not_found": status.HTTP_404_NOT_FOUND,
+    "service_disabled": status.HTTP_403_FORBIDDEN,  # RESERVATIONS_ENABLED is off
 }
 
 
@@ -85,6 +87,8 @@ class PublicAvailabilityView(APIView):
             ProviderProfile.objects.discoverable(),
             pk=provider_id,
         )
+        if not reservations_enabled():
+            return Response([])  # nothing is bookable while the switch is off
         query_data = {}
         if "service" in request.query_params:
             query_data["service"] = request.query_params["service"]

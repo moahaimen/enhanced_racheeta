@@ -2,6 +2,9 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
+import { resetFeaturesForTests } from '../hooks/useFeatures'
+import { resetTestFeatures } from './features'
+
 // The header asks the backend for the unread count once an account is signed in. Tests
 // that exercise other pages must not hit the network; notification tests override this.
 vi.mock('../api/endpoints/chat', () => ({
@@ -20,7 +23,16 @@ vi.mock('../api/endpoints/notifications', () => ({
   markAllRead: vi.fn(),
 }))
 
+// Booking is ON in the legacy UI tests (the baseline behaviour); the sunset tests switch it off
+// with setBookingEnabled(false). A plain function, so vi.resetAllMocks() cannot clear it.
+vi.mock('../api/endpoints/platform', async () => {
+  const { testFeatures } = await import('./features')
+  return { getFeatures: () => Promise.resolve(testFeatures()) }
+})
+
 afterEach(() => {
   cleanup()
+  resetFeaturesForTests()
+  resetTestFeatures()
   window.localStorage.clear()
 })

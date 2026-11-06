@@ -11,6 +11,7 @@ import type { OrgSummary, StoreProduct, Workspace } from '../../api'
 import { baghdad } from '../../test/providerFixtures'
 import { makeAccount, renderApp } from '../../test/renderApp'
 import { cart } from '../../cart/cart'
+import { setBookingEnabled } from '../../test/features'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/reference')
@@ -99,6 +100,20 @@ describe('organization workspace', () => {
     renderApp('/workspace/facility/fac-1')
     await userEvent.click(await screen.findByRole('button', { name: /^مؤكد$/ }))
     await waitFor(() => expect(workspacesApi.transitionFacilityReservation).toHaveBeenCalledWith('fac-1', 'r-1', 'CONFIRMED'))
+  })
+
+  it('booking switched off: offers reject but not confirm for a pending booking', async () => {
+    setBookingEnabled(false)
+    signIn()
+    vi.mocked(workspacesApi.getOrgSummary).mockResolvedValue(
+      summary(['facility.view', 'facility.reservations.view', 'facility.reservations.manage'], 'STAFF'),
+    )
+    vi.mocked(workspacesApi.listFacilityReservations).mockResolvedValue(
+      page([{ id: 'r-1', status: 'PENDING', service_title_snapshot: 'Consultation', starts_at: '2026-11-02T09:00:00Z', patient: { id: 'x', full_name: 'P' } } as never]),
+    )
+    renderApp('/workspace/facility/fac-1')
+    expect(await screen.findByRole('button', { name: /^مرفوض$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^مؤكد$/ })).toBeNull()
   })
 })
 

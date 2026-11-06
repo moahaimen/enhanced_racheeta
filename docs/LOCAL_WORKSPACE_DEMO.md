@@ -299,10 +299,14 @@ Web tests cover workspace switching, logout-and-login as another account, and fo
 
 ### Reservations
 
-Booking may leave the business model. `RACHEETA["RESERVATIONS_ENABLED"]` (env
-`RESERVATIONS_ENABLED`, default on) removes every reservation module and action from all dashboards
-when switched off. Tests verify this. The reservation system, its tables and its history are
-untouched.
+Online booking is switched **off by default** (reversible sunset; details in
+`docs/RESERVATIONS.md` "Booking sunset switch"). One server setting controls it:
+`RACHEETA["RESERVATIONS_ENABLED"]`, read from the env variable `RESERVATIONS_ENABLED`
+(default `false`). The web app reads it from `GET /api/v1/platform/features`.
+
+To see the old booking behaviour locally, add `RESERVATIONS_ENABLED=true` to
+`local-demo/.env.demo` and restart `scripts/local_demo.sh serve`; remove the line (or set it to
+`false`) to switch booking off again. No migration, no data change either way.
 
 ### Migrations
 

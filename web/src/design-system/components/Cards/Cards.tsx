@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { ProviderCard as ProviderCardData } from '../../../api'
+import { useFeatures } from '../../../hooks/useFeatures'
 import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon, type IconName } from '../../icons'
 import { Avatar } from '../Avatar/Avatar'
@@ -14,7 +15,7 @@ import styles from './Cards.module.css'
 /**
  * Showcase card for a verified provider (homepage). Real API fields only: image (when the profile
  * has one, otherwise the type icon), name, first specialty or type, rating when reviews exist,
- * location, and a booking call-to-action that opens the profile (where booking lives).
+ * location, and (while online booking is on) a booking call-to-action that opens the profile.
  */
 export function FeaturedProviderCard({ provider }: { provider: ProviderCardData }) {
   const { t } = useTranslation()
@@ -22,6 +23,7 @@ export function FeaturedProviderCard({ provider }: { provider: ProviderCardData 
   const text = useScriptText()
   const specialty = provider.specialties[0]
   const practitioner = provider.kind === 'PRACTITIONER'
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const rated = provider.review_count > 0 && provider.average_rating !== null
   return (
     <article className={styles.provider}>
@@ -53,7 +55,7 @@ export function FeaturedProviderCard({ provider }: { provider: ProviderCardData 
       </p>
       <span className={styles.ctaRow} aria-hidden="true">
         <span className={styles.profileCta}>{t('providers.viewProfile')}</span>
-        {practitioner ? (
+        {practitioner && bookingOn ? (
           <span className={styles.bookCta}>
             <Icon name="calendar" size={14} />
             {t('home.bookNow')}

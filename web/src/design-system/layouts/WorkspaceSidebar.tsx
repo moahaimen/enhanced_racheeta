@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
+import { useFeatures } from '../../hooks/useFeatures'
 import { Icon, type IconName } from '../icons'
 import styles from './WorkspaceSidebar.module.css'
 
@@ -39,18 +40,21 @@ export function isWorkspacePath(pathname: string): boolean {
 export function WorkspaceSidebar() {
   const { t } = useTranslation()
   const { account } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   if (!account) return null
   const role = account.role
   const items: Item[] = [
     { to: '/dashboard', icon: 'chart', label: t('nav.dashboard') },
     { to: '/workspaces', icon: 'building', label: t('nav.workspaces') },
   ]
-  if (role === 'PATIENT') items.push({ to: '/reservations', icon: 'calendar', label: t('nav.myReservations') })
+  // Booking off: the same page is reachable as read-only history, never as a booking entry point.
+  const reservationsLabel = (onLabel: string) => (bookingOn ? onLabel : t('nav.reservationHistory'))
+  if (role === 'PATIENT') items.push({ to: '/reservations', icon: 'calendar', label: reservationsLabel(t('nav.myReservations')) })
   if (role === 'PATIENT' || role === 'PROVIDER') items.push({ to: '/orders', icon: 'box', label: t('nav.myOrders') })
   if (role === 'PROVIDER') {
     items.push(
       { to: '/provider/profile', icon: 'briefcase', label: t('nav.providerProfile') },
-      { to: '/provider/reservations', icon: 'calendar', label: t('nav.providerReservations') },
+      { to: '/provider/reservations', icon: 'calendar', label: reservationsLabel(t('nav.providerReservations')) },
       { to: '/provider/offers', icon: 'tag', label: t('nav.providerOffers') },
       { to: '/marketplace', icon: 'cart', label: t('nav.marketplace') },
       { to: '/quotes', icon: 'tag', label: t('nav.quotes') },

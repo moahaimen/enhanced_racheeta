@@ -221,6 +221,10 @@ class FacilityReservationTransitionView(APIView):
             )
         except reservation_services.NotAParty as exc:
             raise NotFound("Reservation not found.") from exc
+        except reservation_services.BookingDisabled as exc:
+            err = WorkspaceAPIError(str(exc), code="service_disabled")
+            err.status_code = status.HTTP_403_FORBIDDEN
+            raise err from exc
         except reservation_services.ReservationError as exc:
             err = WorkspaceAPIError(str(exc) or "invalid_transition", code="invalid_transition")
             err.status_code = status.HTTP_409_CONFLICT

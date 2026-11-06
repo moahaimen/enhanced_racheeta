@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useAuth } from '../auth/useAuth'
+import { useFeatures } from '../hooks/useFeatures'
 import { Badge, Container, Icon, LinkButton, Reveal, type IconName } from '../design-system'
 import { CARD_PHOTOS, SHOW_CARD_PHOTOS } from './home/cardPhotos'
 import { HeroVisual } from './home/HeroVisual'
@@ -52,6 +53,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
 export function HomePage() {
   const { t } = useTranslation()
   const { status, account } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const isProvider = status === 'authenticated' && account?.role === 'PROVIDER'
   const isCompany = status === 'authenticated' && account?.role === 'MEDICAL_COMPANY'
   const isAnonymous = status === 'anonymous'
@@ -86,7 +88,7 @@ export function HomePage() {
               <h1 id="hero-title" className={styles.title}>
                 <span>{t('home.heroTitleLead')}</span> <span className={styles.titleAccent}>{t('home.heroTitleAccent')}</span>
               </h1>
-              <p className={styles.tagline}>{t('home.heroTagline')}</p>
+              <p className={styles.tagline}>{bookingOn ? t('home.heroTagline') : t('home.heroTaglineNoBooking')}</p>
               <p className={styles.body}>{t('home.heroBody')}</p>
               <section className={styles.searchCard} aria-labelledby="search-title">
                 <h2 id="search-title" className="visually-hidden">

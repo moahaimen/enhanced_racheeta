@@ -102,7 +102,8 @@
     "sellerCenter": "مركز البائع",
     "sellerFinance": "كشف حساب البائع",
     "adminFinance": "مالية السوق",
-    "pharmacyStore": "متجر صيدليتي"
+    "pharmacyStore": "متجر صيدليتي",
+    "reservationHistory": "سجل الحجوزات"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -255,7 +256,8 @@
     "popularTitle": "خدمات شائعة",
     "popularMore": "المزيد",
     "carouselPrev": "السابق",
-    "carouselNext": "التالي"
+    "carouselNext": "التالي",
+    "heroTaglineNoBooking": "ابحث · تواصل · وظّف"
   },
   "fields": {
     "email": "البريد الإلكتروني",
@@ -762,7 +764,8 @@
     "quantity_limit": "طلبت أكثر من الحد المسموح لهذا المنتج.",
     "no_delivery": "هذا البائع لا يوصل إلى المحافظة المختارة.",
     "documents_missing": "بعض المستندات المطلوبة لم تُقبل بعد.",
-    "invalid_file": "رُفض هذا الملف."
+    "invalid_file": "رُفض هذا الملف.",
+    "service_disabled": "الحجز الإلكتروني متوقف في رشيتة."
   },
   "jobs": {
     "featured": "مميّزة",
@@ -1267,7 +1270,9 @@
     "count_zero": "لا توجد حجوزات",
     "count_two": "حجزان",
     "count_few": "{{count}} حجوزات",
-    "count_many": "{{count}} حجزاً"
+    "count_many": "{{count}} حجزاً",
+    "historyTitle": "سجل الحجوزات",
+    "sunsetNotice": "الحجز الإلكتروني متوقف في رشيتة. تبقى حجوزاتك السابقة هنا للرجوع إليها، ويمكنك إلغاء حجز قادم."
   },
   "providerReservations": {
     "title": "المواعيد والحجوزات",
@@ -1286,7 +1291,9 @@
     "receivedIntro": "اسم المريض وبيانات الموعد فقط؛ قرارات الحالة تتم من الخادم.",
     "noReservations": "لا توجد حجوزات واردة بعد.",
     "complete": "إكمال",
-    "noShow": "لم يحضر"
+    "noShow": "لم يحضر",
+    "historyTitle": "سجل الحجوزات",
+    "sunsetNotice": "الحجز الإلكتروني متوقف في رشيتة: لا يمكن إضافة مواعيد جديدة. تبقى الحجوزات السابقة والمتبقية هنا للرجوع إليها."
   },
   "reviews": {
     "title": "التقييمات",

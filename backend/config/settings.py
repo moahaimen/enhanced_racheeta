@@ -454,9 +454,10 @@ LOGGING = {
 # Racheeta application settings
 # ---------------------------------------------------------------------------
 RACHEETA = {
-    # Product decision pending (2026-10-31): booking may leave the business model. Dashboards
-    # compose reservation modules only while this is on; the reservation system itself is kept.
-    "RESERVATIONS_ENABLED": env.bool("RESERVATIONS_ENABLED", default=True),
+    # Online booking is being removed from the product, reversibly (apps.core.features).
+    # OFF by default: no new bookings or slots, booking entry points hidden, history kept.
+    # Set RESERVATIONS_ENABLED=true to restore the previous behaviour.
+    "RESERVATIONS_ENABLED": env.bool("RESERVATIONS_ENABLED", default=False),
     # Roles a client is allowed to choose at registration. ADMIN is never
     # client-assignable (see apps.accounts.roles).
     "SELF_REGISTRATION_ROLES": ("PATIENT", "PROVIDER", "MEDICAL_COMPANY", "REAL_ESTATE_SELLER"),

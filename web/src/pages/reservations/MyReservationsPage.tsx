@@ -22,6 +22,7 @@ import {
   Textarea,
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
+import { useFeatures } from '../../hooks/useFeatures'
 import styles from './ReservationsPage.module.css'
 
 const PAGE_SIZE = 20
@@ -37,16 +38,23 @@ export function MyReservationsPage() {
   const [params, setParams] = useSearchParams()
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
   const goTo = (next: number) => setParams(next > 1 ? { page: String(next) } : {})
+  // Booking switched off: the page stays as read-only history (plus cancelling a live booking).
+  const { reservationsEnabled: bookingOn } = useFeatures()
 
   return (
     <Container width="xl">
       <PageHeader
         eyebrow={<><Icon name="calendar" size={16} />{t('modules.reservations')}</>}
-        title={t('reservations.title')}
-        description={t('reservations.intro')}
-        actions={<LinkButton to="/providers" leading={<Icon name="search" size={18} />}>{t('reservations.findProvider')}</LinkButton>}
+        title={bookingOn ? t('reservations.title') : t('reservations.historyTitle')}
+        description={bookingOn ? t('reservations.intro') : undefined}
+        actions={bookingOn ? <LinkButton to="/providers" leading={<Icon name="search" size={18} />}>{t('reservations.findProvider')}</LinkButton> : undefined}
       />
       <PageStack>
+        {bookingOn ? null : (
+          <Alert kind="info" testId="booking-off-notice">
+            {t('reservations.sunsetNotice')}
+          </Alert>
+        )}
         <AsyncPage load={(signal) => reservationsApi.listMyReservations(page, signal)} deps={[page]}>
           {(result, reload) =>
             result.results.length === 0 ? (
@@ -54,7 +62,7 @@ export function MyReservationsPage() {
                 <EmptyState
                   icon="calendar"
                   title={page > 1 ? t('reservations.emptyPage') : t('reservations.empty')}
-                  action={<LinkButton to="/providers">{t('reservations.findProvider')}</LinkButton>}
+                  action={bookingOn ? <LinkButton to="/providers">{t('reservations.findProvider')}</LinkButton> : undefined}
                 />
               </div>
             ) : (

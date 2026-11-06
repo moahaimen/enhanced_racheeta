@@ -14,6 +14,9 @@ os.environ.setdefault("EMAIL_URL", "smtp://localhost:25")
 os.environ.setdefault("FRONTEND_URL", "https://app.test")
 # Keep a developer's local .env (http dev origins) from tripping racheeta.E007.
 os.environ.setdefault("CSRF_TRUSTED_ORIGINS", "https://app.test")
+# The booking suite predates the reservations sunset; it runs with booking ON and the sunset
+# tests switch it OFF explicitly (apps/reservations/tests/test_reservations_flag.py).
+os.environ.setdefault("RESERVATIONS_ENABLED", "true")
 
 from config.settings import *  # noqa: E402, F403
 

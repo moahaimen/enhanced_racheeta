@@ -20,7 +20,6 @@ own eligibility-checked endpoints, and they are included only when the caller is
 
 from __future__ import annotations
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.accounts.models import Account
@@ -29,6 +28,7 @@ from apps.advertising.types import CampaignStatus
 from apps.chat import services as chat_services
 from apps.commerce.models import Order, QuoteRequest
 from apps.commerce.types import OPEN_QUOTE_STATUSES, OrderStatus, QuoteStatus
+from apps.core.features import reservations_enabled
 from apps.dashboards.services import admin as admin_services
 from apps.dashboards.services import providers as provider_services
 from apps.dashboards.services import recruiter as recruiter_services
@@ -92,10 +92,6 @@ def _module(key, *, variant="", stats=(), items=(), link="") -> dict:
         "items": list(items),
         "link": link,
     }
-
-
-def reservations_enabled() -> bool:
-    return bool(settings.RACHEETA.get("RESERVATIONS_ENABLED", True))
 
 
 def _money(value, currency) -> str:

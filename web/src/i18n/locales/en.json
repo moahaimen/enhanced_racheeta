@@ -102,7 +102,8 @@
     "sellerCenter": "Seller center",
     "sellerFinance": "Seller statement",
     "adminFinance": "Marketplace finance",
-    "pharmacyStore": "My pharmacy store"
+    "pharmacyStore": "My pharmacy store",
+    "reservationHistory": "Reservation history"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -255,7 +256,8 @@
     "popularTitle": "Popular services",
     "popularMore": "More",
     "carouselPrev": "Previous",
-    "carouselNext": "Next"
+    "carouselNext": "Next",
+    "heroTaglineNoBooking": "Search · Connect · Hire"
   },
   "fields": {
     "email": "Email address",
@@ -753,7 +755,8 @@
     "quantity_limit": "You ordered more than the limit for this product.",
     "no_delivery": "This seller does not deliver to the chosen governorate.",
     "documents_missing": "Some required documents are not approved yet.",
-    "invalid_file": "This file was refused."
+    "invalid_file": "This file was refused.",
+    "service_disabled": "Online booking is switched off on Racheeta."
   },
   "jobs": {
     "featured": "Featured",
@@ -1231,7 +1234,9 @@
     "booking": "Booking…",
     "booked": "Reservation created successfully. You can follow it from My reservations.",
     "cancel": "Cancel reservation",
-    "cancelling": "Cancelling…"
+    "cancelling": "Cancelling…",
+    "historyTitle": "Reservation history",
+    "sunsetNotice": "Online booking is switched off on Racheeta. Your past reservations stay here for reference, and you can still cancel an upcoming one."
   },
   "providerReservations": {
     "title": "Appointments & reservations",
@@ -1250,7 +1255,9 @@
     "receivedIntro": "Only the patient's name and appointment details are shown; status decisions remain server-authoritative.",
     "noReservations": "No reservations received yet.",
     "complete": "Complete",
-    "noShow": "No show"
+    "noShow": "No show",
+    "historyTitle": "Reservation history",
+    "sunsetNotice": "Online booking is switched off on Racheeta: new appointment times cannot be added. Past and remaining reservations stay here for reference."
   },
   "reviews": {
     "title": "Reviews",
