@@ -234,7 +234,9 @@ the web and API origins).
 ## 9. Module-based dashboards (all account types)
 
 **Endpoint and composer.** `GET /api/v1/workspaces/dashboard?ws=<workspace id>` is composed by
-`apps/workspaces/dashboard.py`:
+`apps/workspaces/dashboard/` (package: `primitives` = payload blocks, `modules` = reusable
+modules and setup steps, `builders` = modules per workspace kind, `__init__` = actions, default
+workspace and `compose`):
 
 - The workspace id is checked against `build_workspaces(account)` as it stands *now*. A forged,
   foreign, revoked or suspended id answers **404**.
