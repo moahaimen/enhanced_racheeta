@@ -142,6 +142,30 @@ identity; changing role, account state, verification, type, specialty or governo
 or any company/product/category/audience state, hides the ad on the next request.
 Queries are bounded (Exists/Subquery; target checks are not per row).
 
+### Targeting matrix (platform completion, Phase D)
+
+`apps/advertising/tests/test_targeting_matrix.py` proves through the real API
+(`GET /advertising/marketplace`) and the model rule that each profession receives exactly
+the sponsored products of its own field, and nothing else:
+
+| Viewer | Dental | Cardiology | Pharmacy stock | Lab supplies | Rehab equipment |
+|---|---|---|---|---|---|
+| Dentist (doctor + dentistry) | ✓ | – | – | – | – |
+| Cardiologist | – | ✓ | – | – | – |
+| Pharmacy | – | – | ✓ | – | – |
+| Laboratory | – | – | – | ✓ | – |
+| Therapist (rehabilitation) | – | – | – | – | ✓ |
+| Unverified or suspended provider | – | – | – | – | – |
+| Patient / anonymous | 403 / 401 (no B2B price, photo or campaign) | | | | |
+
+Also covered: expired and future windows, unpaid campaigns, a suspended seller (all of its
+campaigns stop), and regulated products (restricted items, PROHIBITED categories) that can
+never be submitted. Every row is served with `sponsored: true`, which the web renders as the
+«إعلان ممول» / "Sponsored" badge. Consent: marketing outreach and property promotions reach only
+opted-in accounts and opting out hides them at once; transactional notifications (orders,
+reservations, inquiries) ignore marketing preferences (`apps/preferences/tests`,
+`apps/real_estate/tests/test_promotions.py`).
+
 ## API (`/api/v1/`)
 
 | Method | Path | Who | Notes |
