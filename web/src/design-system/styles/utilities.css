@@ -137,6 +137,11 @@
 .table-scroll {
   overflow-x: auto;
   max-width: 100%;
+  /* a grid/flex child: allow it to be narrower than the table so the table scrolls inside */
+  min-width: 0;
+  width: 100%;
+  /* contain absolutely positioned descendants (e.g. .visually-hidden labels) */
+  position: relative;
 }
 .seller-nav-link {
   display: inline-flex;
