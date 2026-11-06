@@ -12,8 +12,12 @@ export type PreferredLanguage = 'ar' | 'en'
 /** Onboarding account type; the server derives the account role from it. */
 export type AccountType =
   | 'PATIENT'
+  | 'JOB_SEEKER'
+  | 'EMPLOYER'
   | 'DOCTOR'
+  | 'DENTIST'
   | 'NURSE'
+  | 'MIDWIFE'
   | 'THERAPIST'
   | 'HOSPITAL'
   | 'MEDICAL_CENTER'

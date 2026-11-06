@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useAuth } from '../../auth/useAuth'
+import { ACCOUNT_TYPE_PROVIDER } from '../../auth/roles'
+
 import { PROVIDER_TYPES, reference } from '../../api'
 import type { City, Governorate, ProviderOwner, ProviderType, ProviderWrite, Specialty } from '../../api'
 import {
@@ -57,9 +60,9 @@ interface FormState {
   is_visible: boolean
 }
 
-function fromProfile(profile: ProviderOwner | null): FormState {
+function fromProfile(profile: ProviderOwner | null, preset?: { providerType: string; specialtyId: string | null }): FormState {
   return {
-    provider_type: profile?.provider_type ?? 'DOCTOR',
+    provider_type: profile?.provider_type ?? ((preset?.providerType as FormState['provider_type']) || 'DOCTOR'),
     display_name: profile?.display_name ?? '',
     about: profile?.about ?? '',
     phone: profile?.phone ?? '',
@@ -71,7 +74,7 @@ function fromProfile(profile: ProviderOwner | null): FormState {
     latitude: profile?.latitude ?? '',
     longitude: profile?.longitude ?? '',
     image_url: profile?.image_url ?? '',
-    specialty_ids: profile?.specialties.map((s) => s.id) ?? [],
+    specialty_ids: profile?.specialties.map((s) => s.id) ?? (preset?.specialtyId ? [preset.specialtyId] : []),
     is_visible: profile?.is_visible ?? true,
   }
 }
@@ -90,7 +93,13 @@ export interface ProviderFormProps {
 export function ProviderForm({ profile, governorates, specialties, submit, onSaved, submitLabel, pendingLabel }: ProviderFormProps) {
   const { t } = useTranslation()
   const name = useLocalizedName()
-  const [form, setForm] = useState<FormState>(() => fromProfile(profile))
+  const { account } = useAuth()
+  // A new profile starts from the onboarding choice (dentist -> doctor + dentistry, midwife ->
+  // nurse + midwifery); everything stays editable and the server re-validates it.
+  const [form, setForm] = useState<FormState>(() => {
+    const preset = !profile && account?.account_type ? ACCOUNT_TYPE_PROVIDER[account.account_type] : undefined
+    return fromProfile(profile, preset ? { providerType: preset.providerType, specialtyId: specialties.find((s) => s.slug === preset.specialty)?.id ?? null } : undefined)
+  })
   const [saved, setSaved] = useState(false)
   const errors = useFormErrors(FIELDS)
   const typeLocked = profile !== null && !profile.can_change_type

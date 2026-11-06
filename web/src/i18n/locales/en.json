@@ -1798,7 +1798,11 @@
     "ASSISTIVE_DEVICE_STORE": "Assistive device store",
     "PHARMA_DISTRIBUTOR": "Pharma distributor",
     "PROPERTY_OWNER": "Medical property owner",
-    "PROPERTY_AGENT": "Medical property agent"
+    "PROPERTY_AGENT": "Medical property agent",
+    "JOB_SEEKER": "Job seeker (any profession)",
+    "EMPLOYER": "Employer / recruiter",
+    "DENTIST": "Dentist",
+    "MIDWIFE": "Midwife"
   },
   "accountTypeGroups": {
     "people": "Individuals",
@@ -2087,7 +2091,9 @@
       "account": "Account settings",
       "setup": "Finish setting up your account",
       "setup_provider": "Verification steps",
-      "store_finance": "Sales & 20% commission"
+      "store_finance": "Sales & 20% commission",
+      "setup_employer": "Set up hiring",
+      "setup_job_seeker": "Start your job search"
     },
     "stats": {
       "verification": "Verification",
@@ -2242,7 +2248,11 @@
       "create_company": "Create your business profile",
       "add_products": "Add products",
       "create_seller": "Create your seller profile",
-      "add_listing": "Add a listing"
+      "add_listing": "Add a listing",
+      "create_employer": "Create your organization (employer)",
+      "post_job": "Post your first job",
+      "create_resume": "Create your résumé",
+      "browse_jobs": "Browse jobs"
     }
   },
   "gate": {

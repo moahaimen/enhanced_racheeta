@@ -44,8 +44,15 @@ class AccountType(models.TextChoices):
     """
 
     PATIENT = "PATIENT", "Patient"
+    # Individuals who come for work: an individual account (role PATIENT = personal account)
+    # whose next step is the job-seeker profile or the employer workspace (both verified/gated
+    # separately). Any account may also add these later without a second account.
+    JOB_SEEKER = "JOB_SEEKER", "Job seeker (any profession)"
+    EMPLOYER = "EMPLOYER", "Employer / recruiter"
     DOCTOR = "DOCTOR", "Doctor"
+    DENTIST = "DENTIST", "Dentist"
     NURSE = "NURSE", "Nurse"
+    MIDWIFE = "MIDWIFE", "Midwife"
     THERAPIST = "THERAPIST", "Therapist"
     HOSPITAL = "HOSPITAL", "Hospital"
     MEDICAL_CENTER = "MEDICAL_CENTER", "Medical center / clinic"
@@ -65,7 +72,9 @@ class AccountType(models.TextChoices):
 PROVIDER_ACCOUNT_TYPES = frozenset(
     {
         AccountType.DOCTOR,
+        AccountType.DENTIST,
         AccountType.NURSE,
+        AccountType.MIDWIFE,
         AccountType.THERAPIST,
         AccountType.HOSPITAL,
         AccountType.MEDICAL_CENTER,
@@ -85,9 +94,27 @@ BUSINESS_ACCOUNT_TYPES = frozenset(
     }
 )
 PROPERTY_ACCOUNT_TYPES = frozenset({AccountType.PROPERTY_OWNER, AccountType.PROPERTY_AGENT})
+INDIVIDUAL_ACCOUNT_TYPES = frozenset(
+    {AccountType.PATIENT, AccountType.JOB_SEEKER, AccountType.EMPLOYER}
+)
+# The provider profile an account type preselects (provider type, specialty slug or None). A
+# dentist is a DOCTOR with dentistry; a midwife is a NURSE with midwifery (verification is the
+# provider profile's own, unchanged).
+ACCOUNT_TYPE_PROVIDER = {
+    AccountType.DOCTOR: ("DOCTOR", None),
+    AccountType.DENTIST: ("DOCTOR", "dentistry"),
+    AccountType.NURSE: ("NURSE", None),
+    AccountType.MIDWIFE: ("NURSE", "midwifery"),
+    AccountType.THERAPIST: ("THERAPIST", None),
+    AccountType.HOSPITAL: ("HOSPITAL", None),
+    AccountType.MEDICAL_CENTER: ("MEDICAL_CENTER", None),
+    AccountType.PHARMACY: ("PHARMACY", None),
+    AccountType.LABORATORY: ("LABORATORY", None),
+    AccountType.BEAUTY_CENTER: ("BEAUTY_CENTER", None),
+}
 
 ACCOUNT_TYPE_ROLE: dict[str, str] = {
-    AccountType.PATIENT: AccountRole.PATIENT,
+    **{t: AccountRole.PATIENT for t in INDIVIDUAL_ACCOUNT_TYPES},
     **{t: AccountRole.PROVIDER for t in PROVIDER_ACCOUNT_TYPES},
     **{t: AccountRole.MEDICAL_COMPANY for t in BUSINESS_ACCOUNT_TYPES},
     **{t: AccountRole.REAL_ESTATE_SELLER for t in PROPERTY_ACCOUNT_TYPES},

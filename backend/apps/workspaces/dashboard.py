@@ -386,6 +386,21 @@ def _setup(account) -> list:
             _step("request_verification", False, "/company"),
         ]
         link = "/company"
+    elif role == "PATIENT" and account.account_type == "EMPLOYER":
+        steps = [
+            _step("create_employer", False, "/employer"),
+            _step("request_verification", False, "/employer"),
+            _step("post_job", False, "/employer/jobs/new"),
+        ]
+        link = "/employer"
+        return [_module("setup", variant="employer", items=steps, link=link)]
+    elif role == "PATIENT" and account.account_type == "JOB_SEEKER":
+        steps = [
+            _step("create_resume", False, "/jobs/profile"),
+            _step("browse_jobs", False, "/jobs"),
+        ]
+        link = "/jobs/profile"
+        return [_module("setup", variant="job_seeker", items=steps, link=link)]
     else:
         steps = [
             _step("create_seller", False, "/real-estate/owner"),
@@ -1071,6 +1086,11 @@ def default_workspace(workspaces: list[dict], account) -> dict | None:
     if account.role == "PATIENT":
         for ws in workspaces:
             if ws["kind"] in ("facility", "company") and ws.get("role") != "OWNER":
+                return ws
+        # Registered to hire or to find work: open that workspace (or its setup step) first.
+        wanted = {"EMPLOYER": "employer", "JOB_SEEKER": "job_seeker"}.get(account.account_type)
+        for ws in workspaces:
+            if ws["kind"] == wanted or (wanted and ws["kind"] == "setup"):
                 return ws
     return workspaces[0]
 

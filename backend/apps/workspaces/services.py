@@ -226,7 +226,17 @@ def build_workspaces(account) -> list[dict]:
         )
     # An account whose role needs a profile it has not created yet gets ONE setup workspace,
     # so its dashboard always opens (on the next step) instead of erroring.
-    setup_path = {
+    individual_setup = None
+    if account.role == AccountRole.PATIENT:
+        # An individual account registered to hire or to find work gets ONE next step until it
+        # has that workspace (the account type is a hint, never a permission).
+        if account.account_type == "EMPLOYER" and not any(w["kind"] == "employer" for w in out):
+            individual_setup = ("/employer", True)
+        elif account.account_type == "JOB_SEEKER" and not any(
+            w["kind"] == "job_seeker" for w in out
+        ):
+            individual_setup = ("/jobs/profile", True)
+    setup_path = individual_setup or {
         AccountRole.PROVIDER: ("/provider/profile", profile is None),
         AccountRole.MEDICAL_COMPANY: ("/company", company is None),
         AccountRole.REAL_ESTATE_SELLER: (

@@ -31,8 +31,12 @@ describe('RegisterPage', () => {
     expect(options).not.toContain('ADMIN')
     expect(options).toEqual([
       'PATIENT',
+      'JOB_SEEKER',
+      'EMPLOYER',
       'DOCTOR',
+      'DENTIST',
       'NURSE',
+      'MIDWIFE',
       'THERAPIST',
       'HOSPITAL',
       'MEDICAL_CENTER',

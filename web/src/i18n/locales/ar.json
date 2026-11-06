@@ -1846,7 +1846,11 @@
     "ASSISTIVE_DEVICE_STORE": "متجر أجهزة مساعدة",
     "PHARMA_DISTRIBUTOR": "موزّع أدوية",
     "PROPERTY_OWNER": "مالك عقار طبي",
-    "PROPERTY_AGENT": "وكيل عقارات طبية"
+    "PROPERTY_AGENT": "وكيل عقارات طبية",
+    "JOB_SEEKER": "باحث عن عمل (أي مهنة)",
+    "EMPLOYER": "صاحب عمل / مسؤول توظيف",
+    "DENTIST": "طبيب أسنان",
+    "MIDWIFE": "قابلة"
   },
   "accountTypeGroups": {
     "people": "أفراد",
@@ -2155,7 +2159,9 @@
       "account": "إعدادات الحساب",
       "setup": "أكمل إعداد حسابك",
       "setup_provider": "خطوات التوثيق",
-      "store_finance": "المبيعات وعمولة 20٪"
+      "store_finance": "المبيعات وعمولة 20٪",
+      "setup_employer": "إعداد التوظيف",
+      "setup_job_seeker": "ابدأ البحث عن عمل"
     },
     "stats": {
       "verification": "التوثيق",
@@ -2310,7 +2316,11 @@
       "create_company": "إنشاء ملف الشركة",
       "add_products": "إضافة المنتجات",
       "create_seller": "إنشاء ملف البائع",
-      "add_listing": "إضافة عقار"
+      "add_listing": "إضافة عقار",
+      "create_employer": "أنشئ جهة العمل",
+      "post_job": "انشر أول وظيفة",
+      "create_resume": "أنشئ سيرتك المهنية",
+      "browse_jobs": "تصفّح الوظائف"
     }
   },
   "gate": {
