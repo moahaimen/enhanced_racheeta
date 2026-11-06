@@ -69,7 +69,7 @@ function company(overrides: Partial<MedicalCompany> = {}): MedicalCompany {
 const page2 = (results: CompanyProduct[]) => ({ count: results.length, next: null, previous: null, results })
 
 function ownProduct(id: string, title: string, is_active: boolean): CompanyProduct {
-  const { company: _c, ...rest } = product(id, title)
+  const { company: _c, variants: _v, ...rest } = product(id, title)
   return { ...rest, is_active }
 }
 

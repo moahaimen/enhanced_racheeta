@@ -2,7 +2,7 @@ import type { RouteObject } from 'react-router'
 
 import { AppLayout } from './AppLayout'
 import { RequireProviderProfile } from './ProviderGate'
-import { PublicOnly, RequireAuth, RequireRole, RequireStaff } from './guards'
+import { PublicOnly, RequireAuth, RequireRole, RequireStaff, RequireStoreOwner } from './guards'
 import { AdminConsolePage } from '../pages/admin/AdminConsolePage'
 import { AdminFinancePage } from '../pages/market/AdminFinancePage'
 import { SellerCenterPage } from '../pages/market/SellerCenterPage'
@@ -46,6 +46,7 @@ import { MerchantQuotesPage, MyQuotesPage } from '../pages/quotes/QuotesPages'
 import { PreferencesPage } from '../pages/settings/PreferencesPage'
 import { CartPage } from '../pages/store/CartPage'
 import { MerchantOrdersPage, MyOrdersPage } from '../pages/store/OrdersPages'
+import { MyOrderDocumentsPage, SellerOrderDocumentsPage } from '../pages/store/DocumentsPage'
 import { StorePage } from '../pages/store/StorePage'
 import { StoreProductPage } from '../pages/store/StoreProductPage'
 import { OrgWorkspacePage } from '../pages/workspace/OrgWorkspacePage'
@@ -100,8 +101,10 @@ export const routes: RouteObject[] = [
           { path: 'workspace/:kind/:id', element: <OrgWorkspacePage /> },
           { path: 'settings/preferences', element: <PreferencesPage /> },
           { path: 'orders', element: <MyOrdersPage /> },
+          { path: 'orders/:orderId/documents', element: <MyOrderDocumentsPage /> },
           // Merchant pages serve owners AND staff (?company=); the server checks the capability.
           { path: 'merchant/orders', element: <MerchantOrdersPage /> },
+          { path: 'merchant/orders/:orderId/documents', element: <SellerOrderDocumentsPage /> },
           { path: 'merchant/quotes', element: <MerchantQuotesPage /> },
           { path: 'merchant/center', element: <SellerCenterPage /> },
           {
@@ -148,7 +151,8 @@ export const routes: RouteObject[] = [
             ],
           },
           {
-            element: <RequireRole roles={['MEDICAL_COMPANY']} deniedTitleKey="company.notCompany" />,
+            // Business accounts, and pharmacies (a PROVIDER with a pharmacy profile) for their store.
+            element: <RequireStoreOwner deniedTitleKey="company.notCompany" />,
             children: [
               { path: 'company', element: <CompanyWorkspacePage /> },
               { path: 'company/advertising', element: <AdvertisingWorkspacePage /> },

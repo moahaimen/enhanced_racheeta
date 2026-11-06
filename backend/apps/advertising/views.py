@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from django.db.models import Prefetch
+from django.db.models import OuterRef, Prefetch, Subquery
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminAccount
-from apps.marketplace.models import MedicalCompany, ProductCategory
+from apps.marketplace.models import MedicalCompany, ProductCategory, ProductImage
 from apps.marketplace.permissions import (
     BROWSE_DENIED,
     CanBrowseMarketplace,
@@ -311,6 +311,13 @@ class SponsoredCampaignListView(generics.ListAPIView):
             return AdvertisingCampaign.objects.none()
         return (
             AdvertisingCampaign.objects.visible_to(provider)
+            .annotate(
+                product_photo_id=Subquery(
+                    ProductImage.objects.filter(product_id=OuterRef("product_id"))
+                    .order_by("sort_order", "created_at", "id")
+                    .values("pk")[:1]
+                )
+            )
             .select_related(
                 "product",
                 "product__company",

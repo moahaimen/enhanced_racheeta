@@ -26,8 +26,9 @@ import { pickScript } from '../../i18n/localized'
 import { RETURN_TONE } from './tones'
 import { useMoney } from './money'
 import { SellerNav } from './SellerNav'
+import { CatalogTab, DeliveryTab, ReportsTab, SetupTab } from './SellerSetupTabs'
 
-const TABS = ['returns', 'inventory', 'promotions', 'finance'] as const
+const TABS = ['setup', 'catalog', 'delivery', 'returns', 'inventory', 'promotions', 'finance', 'reports'] as const
 type Tab = (typeof TABS)[number]
 
 /**
@@ -46,7 +47,23 @@ export function SellerCenterPage() {
       <PageHeader eyebrow={<><Icon name="building" size={16} />{t('market.sellerCenter')}</>} title={t(`market.nav.${tab}`)} description={t(`market.intro.${tab}`)} />
       <SellerNav active={tab} />
       <PageStack>
-        {tab === 'returns' ? <ReturnsTab company={company} /> : tab === 'promotions' ? <PromotionsTab company={company} /> : tab === 'finance' ? <FinanceTab company={company} /> : <InventoryTab company={company} />}
+        {tab === 'returns' ? (
+          <ReturnsTab company={company} />
+        ) : tab === 'promotions' ? (
+          <PromotionsTab company={company} />
+        ) : tab === 'finance' ? (
+          <FinanceTab company={company} />
+        ) : tab === 'setup' ? (
+          <SetupTab company={company} />
+        ) : tab === 'catalog' ? (
+          <CatalogTab company={company} />
+        ) : tab === 'delivery' ? (
+          <DeliveryTab company={company} />
+        ) : tab === 'reports' ? (
+          <ReportsTab company={company} />
+        ) : (
+          <InventoryTab company={company} />
+        )}
       </PageStack>
     </Container>
   )

@@ -4,6 +4,12 @@ import type { Order, ReturnRequest, Dispute } from './workspaces.types'
 /** Server price of a cart (nothing here is computed by the browser). */
 export interface PreviewLine {
   product: string
+  variant?: string | null
+  variant_label?: string
+  sku?: string
+  /** Tax the seller adds on this line (EXCLUSIVE), or the part of its price that is tax (INCLUSIVE). */
+  tax?: string
+  tax_included?: string
   title: string
   image_url: string
   quantity: number
@@ -22,6 +28,16 @@ export interface PreviewOrder {
   list_total: string
   seller_discount_total: string
   platform_discount_total: string
+  merchandise_total?: string
+  /** null = not known until the delivery governorate is chosen. */
+  shipping_fee?: string | null
+  shipping_min_days?: number | null
+  shipping_max_days?: number | null
+  tax_mode?: 'NONE' | 'INCLUSIVE' | 'EXCLUSIVE'
+  tax_rate?: string
+  tax_label?: string
+  tax_total?: string
+  tax_included_total?: string
   total: string
 }
 
@@ -32,6 +48,10 @@ export interface CheckoutPreview {
   list_total: string
   seller_discount_total: string
   platform_discount_total: string
+  merchandise_total?: string
+  shipping_known?: boolean
+  shipping_total?: string
+  tax_total?: string
   total: string
 }
 
@@ -49,6 +69,10 @@ export interface CheckoutResult {
 
 export interface InventoryRow {
   id: string
+  /** Set when the row is one variant of the product (its own SKU and stock). */
+  variant_id?: string | null
+  variant_label?: string
+  sku?: string
   title: string
   image_url: string
   is_active: boolean
@@ -62,6 +86,7 @@ export interface InventoryRow {
 
 export interface StockMovement {
   id: string
+  variant_id?: string | null
   kind: 'RESERVE' | 'RELEASE' | 'CONSUME' | 'RESTOCK' | 'ADJUST'
   quantity: number
   on_hand_after: number
@@ -142,6 +167,9 @@ export interface MerchantStatement {
   commission: string
   refunded_commission: string
   refunded_seller_payable: string
+  /** Delivery fees and seller-declared tax the seller received in full (no commission). */
+  shipping_collected?: string
+  tax_collected?: string
   seller_earnings: string
   paid_out: string
   payable: string
@@ -212,4 +240,58 @@ export interface SellerRecovery {
   amount: string
   reference_note: string
   created_at: string
+}
+
+export interface SalesReportRow {
+  order: string
+  placed: string
+  completed: string
+  status: string
+  payment: string
+  list: string
+  seller_discount: string
+  merchandise_net: string
+  commission: string
+  shipping: string
+  tax: string
+  refunded: string
+  earnings: string
+  settled: string
+}
+
+export interface SalesReport {
+  company_id: string
+  from: string
+  to: string
+  currency: string
+  commission_note: string
+  orders: SalesReportRow[]
+  totals: Record<string, string | number>
+  months: ({ month: string } & Record<string, string | number>)[]
+  balances: { payable: string; receivable: string }
+}
+
+export interface MarketplaceReportRow {
+  seller: string
+  business_type: string
+  orders_paid: number
+  gmv: string
+  refunds: string
+  commission: string
+  racheeta_discounts: string
+  charges_passed_through: string
+  paid_out: string
+  recovered: string
+  payable: string
+  receivable: string
+}
+
+export interface MarketplaceReport {
+  from: string
+  to: string
+  currency: string
+  sellers: MarketplaceReportRow[]
+  totals: Record<string, string | number>
+  reconciliation_ok: boolean
+  balances: Record<string, string>
 }

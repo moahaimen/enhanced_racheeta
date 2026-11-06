@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { commerce, workspaces as api } from '../../api'
-import type { Order, ReturnStatus } from '../../api'
+import type { Order, ReturnStatus, TrackingStatus } from '../../api'
 import {
   Alert,
   ApiActionButton,
@@ -28,6 +28,7 @@ import { useMoney } from '../market/money'
 import { MoneyTable } from '../market/MoneyTable'
 import { ORDER_TONE, PAYMENT_TONE, RETURN_TONE } from '../market/tones'
 import { SellerNav } from '../market/SellerNav'
+import { merchandise } from './orderLines'
 import { OrderTracker } from './OrderTracker'
 
 /** One order: items, server amounts, status, tracker, returns/disputes/refunds history. */
@@ -47,11 +48,13 @@ export function OrderCard({ order, seller = false, children }: { order: Order; s
       }
     >
       <ul className="stack-sm" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-        {order.items.map((item) => (
+        {merchandise(order).map((item) => (
           <li key={item.id} className="cluster" data-testid="order-item">
             <ProductImage src={item.image_url} alt="" size="sm" />
             <span>
-              {pickScript(item.title_snapshot, i18n.language)} × {item.quantity}
+              {pickScript(item.title_snapshot, i18n.language)}
+              {item.variant_label_snapshot ? <span className="text-caption"> · {item.variant_label_snapshot}</span> : null} × {item.quantity}
+              {seller && item.sku_snapshot ? <span className="text-caption ltr"> · {item.sku_snapshot}</span> : null}
               {item.refunded_quantity ? <> · <Badge tone="neutral">{t('market.refundedUnits', { count: item.refunded_quantity })}</Badge></> : null}
             </span>
             <span className="ltr text-caption">{money(item.buyer_paid, order.currency)}</span>
@@ -64,6 +67,8 @@ export function OrderCard({ order, seller = false, children }: { order: Order; s
           { label: t('market.listTotal'), value: order.list_total },
           { label: t('market.sellerDiscount'), value: order.seller_discount_total, minus: true, hidden: Number(order.seller_discount_total) === 0 },
           { label: t('market.racheetaDiscount'), value: order.platform_discount_total, minus: true, hidden: Number(order.platform_discount_total) === 0 },
+          { label: t('market.deliveryFee'), value: order.shipping_total, hidden: !Number(order.shipping_total ?? 0) },
+          { label: `${order.tax_label || t('market.tax')} (${Number(order.tax_rate ?? 0)}%)`, value: order.tax_total, hidden: !Number(order.tax_total ?? 0) },
           { label: t('market.buyerPays'), value: order.total, strong: !seller },
           { label: t('market.refunded'), value: order.refunded_total, minus: true, hidden: Number(order.refunded_total) === 0 },
           { label: t('market.commissionBase'), value: order.merchandise_net, hidden: !seller },
@@ -81,7 +86,25 @@ export function OrderCard({ order, seller = false, children }: { order: Order; s
         {order.shipping_reference ? <span>{t('market.shippingRef')}: <span className="ltr">{order.shipping_reference}</span></span> : null}
         <time dateTime={order.created_at}>{new Date(order.created_at).toLocaleString(i18n.language)}</time>
       </div>
+      {Number(order.tax_included_total ?? 0) > 0 ? (
+        <p className="text-caption">{t('market.taxIncluded', { amount: money(order.tax_included_total, order.currency), label: order.tax_label || t('market.tax') })}</p>
+      ) : null}
+      {seller && (Number(order.shipping_total ?? 0) > 0 || Number(order.tax_total ?? 0) > 0) ? (
+        <p className="text-caption">{t('market.chargesNoCommission')}</p>
+      ) : null}
       <OrderTracker status={order.status} />
+      <Tracking order={order} />
+      {order.paid_at ? (
+        <p className="cluster text-caption" data-testid="order-documents">
+          <Icon name="clipboard" size={14} />
+          <Link to={seller ? `/merchant/orders/${order.id}/documents${companyQuery()}` : `/orders/${order.id}/documents`}>
+            {t('market.documents')}
+          </Link>
+          {(order.invoices ?? []).map((d) => (
+            <span key={d.id} className="ltr">{d.number}</span>
+          ))}
+        </p>
+      ) : null}
       {order.returns.map((r) => (
         <p key={r.id} className="text-caption" data-testid="order-return">
           <Icon name="refresh" size={14} /> {t('market.returnLabel')}: <Badge tone={RETURN_TONE[r.status]}>{t(`market.returnStatus.${r.status}`)}</Badge>{' '}
@@ -101,6 +124,42 @@ export function OrderCard({ order, seller = false, children }: { order: Order; s
       ))}
       {children}
     </SectionCard>
+  )
+}
+
+function companyQuery(): string {
+  const company = new URLSearchParams(window.location.search).get('company')
+  return company ? `?company=${encodeURIComponent(company)}` : ''
+}
+
+/** Courier, reference and the seller's delivery updates (they never change the order status). */
+function Tracking({ order }: { order: Order }) {
+  const { t, i18n } = useTranslation()
+  const events = order.tracking_events ?? []
+  if (!order.courier_name && !events.length && !order.shipping_min_days) return null
+  return (
+    <div className="stack-xs" data-testid="order-tracking">
+      {order.courier_name ? (
+        <p className="text-caption">
+          <Icon name="box" size={14} /> {t('market.courier')}: {order.courier_name}
+        </p>
+      ) : null}
+      {order.shipping_min_days != null && !order.delivered_at ? (
+        <p className="text-caption">{t('market.deliveryDays', { min: order.shipping_min_days, max: order.shipping_max_days })}</p>
+      ) : null}
+      {events.length ? (
+        <ol className="timeline">
+          {events.map((e) => (
+            <li key={e.id}>
+              <strong>{t(`market.tracking.${e.status}`)}</strong>
+              {e.location ? ` · ${e.location}` : ''}
+              {e.note ? ` — ${e.note}` : ''}{' '}
+              <time className="text-caption" dateTime={e.created_at}>{new Date(e.created_at).toLocaleString(i18n.language)}</time>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
   )
 }
 
@@ -165,7 +224,7 @@ function BuyerActions({ order, onDone, onError }: { order: Order; onDone: () => 
   const openReturn = order.returns.some((r) => OPEN_RETURN.includes(r.status))
   const openDispute = order.disputes.some((d) => d.status === 'OPEN')
   const inWindow = order.return_deadline ? new Date(order.return_deadline) > new Date() : false
-  const returnable = ['DELIVERED', 'COMPLETED'].includes(order.status) && inWindow && !openReturn && order.items.some((i) => i.quantity > i.refunded_quantity)
+  const returnable = ['DELIVERED', 'COMPLETED'].includes(order.status) && inWindow && !openReturn && merchandise(order).some((i) => i.quantity > i.refunded_quantity)
   const disputable = ['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(order.status) && !openDispute
   return (
     <div className="stack-sm">
@@ -220,8 +279,8 @@ function ReturnForm({ order, onDone, onError }: { order: Order; onDone: () => vo
   return (
     <form onSubmit={submit} className="stack-sm card-block" data-testid="return-form" noValidate>
       {invalid ? <Alert kind="warning">{invalid}</Alert> : null}
-      {order.items.filter((i) => i.quantity > i.refunded_quantity).map((item) => (
-        <Select key={item.id} label={pickScript(item.title_snapshot, i18n.language)} value={String(qty[item.id] ?? 0)} onChange={(e) => setQty({ ...qty, [item.id]: Number(e.target.value) })}>
+      {merchandise(order).filter((i) => i.quantity > i.refunded_quantity).map((item) => (
+        <Select key={item.id} label={pickScript(item.title_snapshot, i18n.language) + (item.variant_label_snapshot ? ` · ${item.variant_label_snapshot}` : '')} value={String(qty[item.id] ?? 0)} onChange={(e) => setQty({ ...qty, [item.id]: Number(e.target.value) })}>
           {Array.from({ length: item.quantity - item.refunded_quantity + 1 }, (_, n) => (
             <option key={n} value={n}>{n}</option>
           ))}
@@ -309,6 +368,7 @@ export function MerchantOrdersPage() {
 function SellerActions({ order, company, onDone, onError }: { order: Order; company?: string; onDone: () => void; onError: (e: unknown) => void }) {
   const { t } = useTranslation()
   const [reference, setReference] = useState('')
+  const [courier, setCourier] = useState('')
   if (order.status === 'PLACED') {
     return (
       <div className="cluster">
@@ -324,8 +384,9 @@ function SellerActions({ order, company, onDone, onError }: { order: Order; comp
   if (order.status === 'CONFIRMED') {
     return (
       <div className="cluster" style={{ alignItems: 'flex-end' }}>
+        <TextField label={t('market.courier')} optional maxLength={80} value={courier} onChange={(e) => setCourier(e.target.value)} />
         <TextField label={t('market.shippingRef')} optional maxLength={120} value={reference} onChange={(e) => setReference(e.target.value)} />
-        <ApiActionButton size="sm" action={() => commerce.moveOrder(order.id, 'SHIPPED', company, { shipping_reference: reference })} onSuccess={onDone} onError={onError} leading={<Icon name="box" size={14} />}>
+        <ApiActionButton size="sm" action={() => commerce.moveOrder(order.id, 'SHIPPED', company, { shipping_reference: reference, courier_name: courier })} onSuccess={onDone} onError={onError} leading={<Icon name="box" size={14} />}>
           {t('market.ship')}
         </ApiActionButton>
         <ApiActionButton size="sm" variant="ghost" action={() => commerce.moveOrder(order.id, 'CANCELLED', company, { reason: t('market.declinedReason') })} onSuccess={onDone} onError={onError}>
@@ -334,7 +395,47 @@ function SellerActions({ order, company, onDone, onError }: { order: Order; comp
       </div>
     )
   }
-  if (order.status === 'SHIPPED') return <p className="text-caption">{t('market.waitingBuyer')}</p>
+  if (order.status === 'SHIPPED') {
+    return (
+      <div className="stack-sm">
+        <p className="text-caption">{t('market.waitingBuyer')}</p>
+        <TrackingForm order={order} company={company} onDone={onDone} onError={onError} />
+      </div>
+    )
+  }
   if (order.status === 'DELIVERED') return <p className="text-caption">{t('market.waitingFinance')}</p>
   return null
+}
+
+const TRACKING: TrackingStatus[] = ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERY_ATTEMPTED', 'DELAYED', 'NOTE']
+
+function TrackingForm({ order, company, onDone, onError }: { order: Order; company?: string; onDone: () => void; onError: (e: unknown) => void }) {
+  const { t } = useTranslation()
+  const [status, setStatus] = useState<TrackingStatus>('IN_TRANSIT')
+  const [location, setLocation] = useState('')
+  const [note, setNote] = useState('')
+  return (
+    <div className="cluster" style={{ alignItems: 'flex-end' }} data-testid="tracking-form">
+      <Select label={t('market.trackingUpdate')} value={status} onChange={(e) => setStatus(e.target.value as TrackingStatus)}>
+        {TRACKING.map((s) => (
+          <option key={s} value={s}>{t(`market.tracking.${s}`)}</option>
+        ))}
+      </Select>
+      <TextField label={t('market.trackingLocation')} optional maxLength={120} value={location} onChange={(e) => setLocation(e.target.value)} />
+      <TextField label={t('market.trackingNote')} optional maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
+      <ApiActionButton
+        size="sm"
+        variant="secondary"
+        action={() => commerce.addTracking(order.id, { status, location: location.trim(), note: note.trim() }, company)}
+        onSuccess={() => {
+          setLocation('')
+          setNote('')
+          onDone()
+        }}
+        onError={onError}
+      >
+        {t('market.addTracking')}
+      </ApiActionButton>
+    </div>
+  )
 }

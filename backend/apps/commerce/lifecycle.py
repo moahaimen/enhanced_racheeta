@@ -23,16 +23,26 @@ from apps.ledger.posting import Line, dinars
 from apps.ledger.types import Account, EntryKind
 from apps.notifications.types import NotificationEventType
 
-from . import inventory
+from . import inventory, invoices
 from .checkout import notify, release_coupons
 from .errors import CommerceError
-from .models import Dispute, Order, OrderItem, OrderTransition, Refund, ReturnLine, ReturnRequest
+from .models import (
+    Dispute,
+    Order,
+    OrderItem,
+    OrderTransition,
+    Refund,
+    ReturnLine,
+    ReturnRequest,
+    TrackingEvent,
+)
 from .types import (
     BUYER_CANCELLABLE,
     MERCHANT_TRANSITIONS,
     RETURN_WINDOW_DAYS,
     RETURNABLE_STATUSES,
     DisputeStatus,
+    ItemKind,
     OrderStatus,
     PaymentStatus,
     ReturnStatus,
@@ -125,7 +135,14 @@ def _cancel(order: Order, actor, reason: str) -> Order:
 
 @transaction.atomic
 def seller_transition(
-    order_id, *, company_id, actor, to_status: str, reason: str = "", shipping_reference: str = ""
+    order_id,
+    *,
+    company_id,
+    actor,
+    to_status: str,
+    reason: str = "",
+    shipping_reference: str = "",
+    courier_name: str = "",
 ) -> Order:
     order = _lock(order_id, merchant_id=company_id)
     if to_status not in MERCHANT_TRANSITIONS.get(order.status, frozenset()):
@@ -141,8 +158,43 @@ def seller_transition(
             reason,
             shipped_at=timezone.now(),
             shipping_reference=shipping_reference.strip()[:120],
+            courier_name=courier_name.strip()[:80],
         )
     return _move(order, to_status, actor, reason)
+
+
+@transaction.atomic
+def add_tracking_event(
+    order_id, *, company_id, actor, status: str, note: str = "", location: str = ""
+) -> TrackingEvent:
+    """The seller's fulfillment staff report delivery progress of a SHIPPED order. A tracking
+    event never changes the order or payment status (delivery is confirmed by the buyer or
+    Racheeta)."""
+    from .types import TrackingStatus
+
+    order = _lock(order_id, merchant_id=company_id)
+    if status not in TrackingStatus.values:
+        raise LifecycleError("Unknown tracking status.", "invalid")
+    if order.status != OrderStatus.SHIPPED:
+        raise LifecycleError("Tracking updates are for shipped orders.")
+    if order.tracking_events.count() >= 50:
+        raise LifecycleError("Too many tracking updates for one order.", "invalid")
+    event = TrackingEvent.objects.create(
+        order=order,
+        status=status,
+        note=(note or "").strip()[:300],
+        location=(location or "").strip()[:120],
+        actor=actor,
+    )
+    audit.record(actor=actor, action="commerce.order.tracking", target=order, summary=f"{status}")
+    notify(
+        order.buyer_id,
+        NotificationEventType.ORDER_STATUS_CHANGED,
+        order,
+        f"tracking:{event.pk}",
+        {"order_number": order.number, "status": status},
+    )
+    return event
 
 
 # ---- buyer --------------------------------------------------------------------------------------
@@ -202,6 +254,7 @@ def verify_payment(order_id, *, actor, reference: str) -> Order:
     order.paid_at = timezone.now()
     order.payment_verified_by = actor
     order.save()
+    invoices.on_payment(order)
     _note(order, actor, "PAYMENT_VERIFIED", {"reference": reference, "amount": str(order.total)})
     notify(
         order.merchant.account_id,
@@ -349,6 +402,7 @@ def _refund(order: Order, quantities: dict, *, actor, reason: str, return_reques
     fully = all(i.refunded_quantity == i.quantity for i in items.values())
     order.payment_status = PaymentStatus.REFUNDED if fully else PaymentStatus.PARTIALLY_REFUNDED
     order.save()
+    invoices.on_refund(order, refund)
     _note(
         order,
         actor,
@@ -401,7 +455,8 @@ def request_return(order_id, *, buyer, lines: list[dict], reason: str) -> Return
     reason = (reason or "").strip()
     if not reason:
         raise LifecycleError("Tell the seller why you are returning the items.", "invalid")
-    items = {str(i.pk): i for i in order.items.all()}
+    # Only products can be returned; the delivery fee and tax lines follow their rules in refunds.
+    items = {str(i.pk): i for i in order.items.filter(kind=ItemKind.MERCHANDISE)}
     if not lines:
         raise LifecycleError("Choose at least one item to return.", "invalid")
     request = ReturnRequest.objects.create(order=order, reason=reason[:500])
@@ -472,6 +527,13 @@ def refund_return(return_id, *, actor) -> Refund:
         raise LifecycleError("Refund after the seller has received the items.")
     order = _lock(request.order_id)
     quantities = {line.item_id: line.quantity for line in request.lines.all()}
+    # A returned unit gives back the tax added on it too (the TAX line moves in step with it).
+    # The delivery fee is not refunded for a return (it was used); a cancellation or a dispute
+    # refund gives back everything that remains, delivery included.
+    for tax in OrderItem.objects.filter(
+        order=order, kind=ItemKind.TAX, parent_item_id__in=list(quantities)
+    ):
+        quantities[tax.pk] = quantities[tax.parent_item_id]
     refund = _refund(
         order, quantities, actor=actor, reason=f"Return: {request.reason}", return_request=request
     )

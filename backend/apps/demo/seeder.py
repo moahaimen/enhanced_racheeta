@@ -116,6 +116,7 @@ class DemoSeeder:
                 ("local: people, staff, preferences", extras.phase_people),
                 ("local: business types, store, campaigns", extras.phase_commerce),
                 ("local: orders, quotes, promotions", extras.phase_activity),
+                ("local: seller workspaces, documents, delivery", extras.phase_sellers),
             ]
         with self.registry:
             for title, phase in phases:

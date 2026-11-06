@@ -50,8 +50,9 @@ def test_product_price_is_nullable_and_dashboard_is_backend_computed():
 
 def test_the_product_write_schema_carries_no_targeting_or_state():
     """No audience targeting and no server state (status, verification) is writable. The sale
-    channel, restricted flag and stock are the business's own catalogue facts, and the services
-    validate them (a restricted item is B2B-only; a consumer item needs an allowed category)."""
+    channel, restricted flag, stock and SKU are the business's own catalogue facts, and the services
+    validate them (a restricted item is B2B-only; a consumer item needs an allowed category; a SKU
+    is unique within the business)."""
     props = set(_component("ProductWriteRequest")["properties"])
     assert props == {
         "category",
@@ -65,6 +66,7 @@ def test_the_product_write_schema_carries_no_targeting_or_state():
         "is_restricted",
         "stock_quantity",
         "image_url",
+        "sku",
     }
 
 

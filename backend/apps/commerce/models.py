@@ -12,6 +12,8 @@ from .types import (
     CouponFunding,
     DiscountKind,
     DisputeStatus,
+    InvoiceKind,
+    ItemKind,
     OrderStatus,
     PaymentMethod,
     PaymentStatus,
@@ -20,6 +22,7 @@ from .types import (
     SalesChannel,
     SettlementState,
     StockMovementKind,
+    TrackingStatus,
 )
 
 MONEY = {"max_digits": 16, "decimal_places": 2, "default": 0}
@@ -42,6 +45,8 @@ class Checkout(BaseModel):
     list_total = models.DecimalField(**MONEY)
     seller_discount_total = models.DecimalField(**MONEY)
     platform_discount_total = models.DecimalField(**MONEY)
+    shipping_total = models.DecimalField(**MONEY)
+    tax_total = models.DecimalField(**MONEY)
     total = models.DecimalField(**MONEY)
 
     class Meta:
@@ -120,6 +125,17 @@ class Order(BaseModel):
     contact_phone = models.CharField(max_length=32)
     note = models.CharField(max_length=500, blank=True, default="")
     status_changed_at = models.DateTimeField(null=True, blank=True)
+    # Pass-through charges (SHIPPING / TAX order lines; no commission). Snapshots at checkout.
+    shipping_total = models.DecimalField(**MONEY)
+    shipping_min_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    shipping_max_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    tax_mode = models.CharField(max_length=10, default="NONE")
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    tax_label = models.CharField(max_length=40, blank=True, default="")
+    tax_registration_number = models.CharField(max_length=40, blank=True, default="")
+    tax_total = models.DecimalField(**MONEY)  # EXCLUSIVE tax added on top (a TAX line)
+    tax_included_total = models.DecimalField(**MONEY)  # INCLUSIVE: informational only
+    courier_name = models.CharField(max_length=80, blank=True, default="")
 
     class Meta:
         db_table = "commerce_order"
@@ -145,9 +161,28 @@ class OrderItem(BaseModel):
     only ever grow, in step with compensating ledger entries."""
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    kind = models.CharField(max_length=12, choices=ItemKind.choices, default=ItemKind.MERCHANDISE)
+    # Null only for charge lines (delivery fee, tax).
     product = models.ForeignKey(
-        "marketplace.Product", on_delete=models.PROTECT, related_name="order_items"
+        "marketplace.Product",
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        null=True,
+        blank=True,
     )
+    variant = models.ForeignKey(
+        "marketplace.ProductVariant",
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        null=True,
+        blank=True,
+    )
+    # A TAX line belongs to the merchandise line it was computed on (refunded in step with it).
+    parent_item = models.ForeignKey(
+        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="charges"
+    )
+    sku_snapshot = models.CharField(max_length=64, blank=True, default="")
+    variant_label_snapshot = models.CharField(max_length=80, blank=True, default="")
     title_snapshot = models.CharField(max_length=150)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     quantity = models.PositiveIntegerField()
@@ -172,7 +207,27 @@ class OrderItem(BaseModel):
         constraints = [
             models.CheckConstraint(condition=Q(quantity__gte=1), name="commerce_item_qty_ge1"),
             models.UniqueConstraint(
-                fields=["order", "product"], name="commerce_item_one_per_product"
+                fields=["order", "product", "variant"],
+                condition=Q(kind="MERCHANDISE"),
+                name="commerce_item_one_per_product_variant",
+                nulls_distinct=False,
+            ),
+            models.UniqueConstraint(
+                fields=["order"], condition=Q(kind="SHIPPING"), name="commerce_item_one_shipping"
+            ),
+            # Merchandise names a product; a charge names none and never carries commission.
+            models.CheckConstraint(
+                condition=(Q(kind="MERCHANDISE") & Q(product__isnull=False))
+                | (
+                    ~Q(kind="MERCHANDISE")
+                    & Q(product__isnull=True)
+                    & Q(variant__isnull=True)
+                    & Q(commission=0)
+                    & Q(seller_discount=0)
+                    & Q(platform_discount=0)
+                    & Q(stock_tracked=False)
+                ),
+                name="commerce_item_kind_shape",
             ),
             models.CheckConstraint(
                 condition=Q(refunded_quantity__lte=models.F("quantity")),
@@ -217,6 +272,13 @@ class QuoteRequest(BaseModel):
     )
     product = models.ForeignKey(
         "marketplace.Product", on_delete=models.PROTECT, related_name="quote_requests"
+    )
+    variant = models.ForeignKey(
+        "marketplace.ProductVariant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="quote_requests",
     )
     quantity = models.PositiveIntegerField()
     message = models.CharField(max_length=1000, blank=True, default="")
@@ -354,6 +416,13 @@ class StockMovement(BaseModel):
     product = models.ForeignKey(
         "marketplace.Product", on_delete=models.PROTECT, related_name="stock_movements"
     )
+    variant = models.ForeignKey(
+        "marketplace.ProductVariant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="stock_movements",
+    )
     kind = models.CharField(max_length=8, choices=StockMovementKind.choices)
     quantity = models.IntegerField()
     on_hand_after = models.PositiveIntegerField()
@@ -371,9 +440,10 @@ class StockMovement(BaseModel):
         ordering = ["-created_at", "-id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["order", "product", "kind"],
+                fields=["order", "product", "variant", "kind"],
                 condition=Q(order__isnull=False),
                 name="commerce_stock_once_per_order_event",
+                nulls_distinct=False,
             )
         ]
 
@@ -455,4 +525,51 @@ class Dispute(BaseModel):
             models.UniqueConstraint(
                 fields=["order"], condition=Q(status="OPEN"), name="commerce_one_open_dispute"
             )
+        ]
+
+
+class TrackingEvent(BaseModel):
+    """Delivery progress reported by the seller's fulfillment staff after shipping (append-only).
+    Visible to the buyer and the seller; it never changes the order or payment status."""
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="tracking_events")
+    status = models.CharField(max_length=20, choices=TrackingStatus.choices)
+    note = models.CharField(max_length=300, blank=True, default="")
+    location = models.CharField(max_length=120, blank=True, default="")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
+    )
+
+    class Meta:
+        db_table = "commerce_tracking_event"
+        ordering = ["created_at", "id"]
+
+
+class Invoice(BaseModel):
+    """An issued buyer document (invoice at payment, receipt, credit note per refund). Its content
+    is a frozen snapshot: later changes to products, names or addresses never alter it."""
+
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="invoices")
+    kind = models.CharField(max_length=12, choices=InvoiceKind.choices)
+    number = models.CharField(max_length=32, unique=True)
+    refund = models.OneToOneField(
+        Refund, on_delete=models.PROTECT, null=True, blank=True, related_name="credit_note"
+    )
+    total = models.DecimalField(**MONEY)
+    snapshot = models.JSONField()
+
+    class Meta:
+        db_table = "commerce_invoice"
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "kind"],
+                condition=Q(kind__in=["INVOICE", "RECEIPT"]),
+                name="commerce_invoice_one_per_order",
+            ),
+            models.CheckConstraint(
+                condition=Q(kind="CREDIT_NOTE", refund__isnull=False)
+                | (~Q(kind="CREDIT_NOTE") & Q(refund__isnull=True)),
+                name="commerce_invoice_credit_note_has_refund",
+            ),
         ]

@@ -33,10 +33,20 @@ from apps.commerce import checkout as store_checkout
 from apps.commerce import lifecycle
 from apps.commerce import services as commerce
 from apps.commerce.models import Checkout, Coupon, Order, ProductOffer, QuoteRequest
+from apps.geography.models import Governorate
 from apps.jobs.models import EmployerMembership, JobSeekerProfile
 from apps.ledger import settlement
 from apps.ledger.models import SettlementBatch
-from apps.marketplace.models import MedicalCompany, Product, ProductAudience, ProductCategory
+from apps.marketplace import sellers
+from apps.marketplace import services as marketplace_services
+from apps.marketplace.models import (
+    MedicalCompany,
+    Product,
+    ProductAudience,
+    ProductCategory,
+    ProductImage,
+)
+from apps.marketplace.types import REQUIRED_DOCUMENTS, DocumentStatus, StoreStatus
 from apps.offers.services import create_offer
 from apps.preferences import services as preferences
 from apps.preferences.models import MarketingPreference
@@ -45,7 +55,7 @@ from apps.real_estate import promotions
 from apps.real_estate.models import ListingPromotion
 from apps.workspaces.models import OrganizationMember
 
-from . import local_guard
+from . import demo_files, local_guard
 from .content import common
 from .content import local_extras as content
 from .models import DemoRecord
@@ -698,3 +708,220 @@ class LocalExtras:
             self.registry.ensure(f"promotion:{tag}", make)
         self._product_images()  # after the commerce step committed its product records
         self._account_types()
+
+    # -- phase 4: seller workspaces for every seller category ----------------------------------
+    def _seller(self, key: str) -> MedicalCompany | None:
+        if key.startswith("store:"):
+            return self.s.companies.get(key) or self._get(f"company:{key}")
+        return self._company(key)
+
+    def phase_sellers(self) -> None:
+        """Pharmacy store, a MEDICAL_COMPANY seller, documents, delivery fees, declared tax,
+        products with options and uploaded photos. Runs AFTER the order scenarios, so the
+        documented scenario amounts (100,000 -> 20,000 -> 80,000 ...) are unchanged."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self._guard()
+        admin = self.admin or self._get("account:local-admin")
+        for key, name_ar, name_en in content.PHARMACY_STORES:
+            facility = self._provider(key)
+            store, _ = self.registry.ensure(
+                f"company:store:{key}",
+                lambda: sellers.open_pharmacy_store(
+                    facility.account, {"name": common.bilingual(name_ar, name_en)}
+                ),
+            )
+            self.s.companies[f"store:{key}"] = store
+        for key, name_ar, name_en, business, gov in content.NEW_SELLERS:
+            account = self.s._account(
+                f"company-{key}", AccountRole.MEDICAL_COMPANY, name_en, phone_n=None
+            )
+            governorate, city = self.s._place(gov, gov)
+            company, _ = self.registry.ensure(
+                f"company:{key}",
+                lambda: marketplace_services.create_company(
+                    account,
+                    {
+                        "name": common.bilingual(name_ar, name_en),
+                        "business_type": business,
+                        "description": common.about("شركة توضيحية.", "Fictional demo business."),
+                        "governorate": governorate,
+                        "city": city,
+                    },
+                ),
+            )
+            self.s.companies[key] = company
+        # Documents: every verified seller has its required documents approved; two sellers show
+        # the review queue (pending) and a rejection.
+        demo_companies = DemoRecord.objects.filter(model_label="marketplace.MedicalCompany")
+        ids = [pk for pk in demo_companies.values_list("object_pk", flat=True)]
+        ids += [str(c.pk) for c in self.s.companies.values() if c is not None]
+        for company in MedicalCompany.objects.filter(pk__in=set(ids)).select_related("account"):
+            key = next(
+                (k for k, c in self.s.companies.items() if c is not None and c.pk == company.pk),
+                str(company.pk),
+            )
+            state = content.DOCUMENT_STATES.get(key, "APPROVED")
+            for kind in REQUIRED_DOCUMENTS.get(company.business_type, ()):
+                pdf = demo_files.licence_pdf(
+                    kind.replace("_", " ").title(),
+                    [company.name.split(" | ")[-1], "Issued by: Demo Authority (fictional)"],
+                )
+
+                def make():
+                    return sellers.upload_document(
+                        company.pk,
+                        actor=company.account,
+                        kind=kind,
+                        upload=SimpleUploadedFile(f"{kind.lower()}.pdf", pdf),
+                        reference_number=f"DEMO-{kind[:3]}-{str(company.pk)[:6].upper()}",
+                    )
+
+                doc, _ = self.registry.ensure(f"seller-doc:{company.pk}:{kind}", make)
+                if doc.status == DocumentStatus.PENDING and state != "PENDING":
+                    sellers.review_document(
+                        doc.pk,
+                        admin=admin,
+                        approve=state == "APPROVED",
+                        note=""
+                        if state == "APPROVED"
+                        else "صورة غير واضحة (توضيحي) | Unreadable scan (demo)",
+                    )
+        # New sellers: request verification, Racheeta verifies, the owner activates the store.
+        for key in [f"store:{k}" for k, *_ in content.PHARMACY_STORES] + [
+            k for k, *_ in content.NEW_SELLERS
+        ]:
+            company = MedicalCompany.objects.get(pk=self._seller(key).pk)
+            if company.verification_status == "UNVERIFIED":
+                marketplace_services.request_verification(company)
+                marketplace_services.set_verification(
+                    company, "VERIFIED", admin=admin, note="توضيحي | Demo verification"
+                )
+            if company.store_status != StoreStatus.ACTIVE:
+                sellers.set_store_status(company.pk, actor=company.account, active=True)
+        self._delivery_and_tax()
+        self._seller_products()
+
+    def _delivery_and_tax(self) -> None:
+        for key, (default, free_over, rates) in content.SHIPPING.items():
+            company = self._seller(key)
+            if company is None:
+                continue
+            fresh = MedicalCompany.objects.get(pk=company.pk)
+            if fresh.default_shipping_fee is None and fresh.free_shipping_over is None:
+                sellers.update_store_settings(
+                    company.pk,
+                    actor=fresh.account,
+                    data={"default_shipping_fee": default, "free_shipping_over": free_over},
+                )
+            for gov, fee, low, high in rates:
+                governorate = Governorate.objects.get(slug=gov)
+                if not fresh.shipping_rates.filter(governorate=governorate).exists():
+                    rate = sellers.set_shipping_rate(
+                        company.pk,
+                        actor=fresh.account,
+                        governorate=governorate,
+                        fee=fee,
+                        min_days=low,
+                        max_days=high,
+                    )
+                    self.registry.ensure(f"shipping:{company.pk}:{gov}", lambda: rate)
+        for key, (mode, rate, label, number) in content.TAX.items():
+            company = self._seller(key)
+            if company is not None and company.tax_mode == "NONE":
+                sellers.update_store_settings(
+                    company.pk,
+                    actor=company.account,
+                    data={
+                        "tax_mode": mode,
+                        "tax_rate": rate,
+                        "tax_label": label,
+                        "tax_registration_number": number,
+                    },
+                )
+
+    def _seller_products(self) -> None:
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        slug, name_ar, name_en = content.PHARMACY_CATEGORY
+        notice_ar, notice_en = content.PHARMACY_CATEGORY_NOTICE
+
+        def make_category():
+            category = ProductCategory.objects.create(
+                slug=slug,
+                name_ar=name_ar,
+                name_en=name_en,
+                sort_order=990,
+                is_active=True,
+                consumer_allowed=True,
+                compliance_class="B2C_ALLOWED",
+                allowed_business_types=["PHARMACY"],
+                max_order_quantity=3,
+                buyer_notice_ar=notice_ar,
+                buyer_notice_en=notice_en,
+            )
+            ProductAudience.objects.create(category=category, provider_type="PHARMACY")
+            return category
+
+        self.registry.ensure(f"category:{slug}", make_category)
+        for row in content.SELLER_PRODUCTS:
+            key, ckey, cat, t_ar, t_en, price, channel, stock, variants, colours = row
+            company = self._seller(ckey)
+            category = ProductCategory.objects.get(slug=cat)
+
+            def make():
+                product = marketplace_services.create_product(
+                    company,
+                    {
+                        "category": category,
+                        "title": common.bilingual(t_ar, t_en),
+                        "description": f"{common.DEMO_NOTE_AR} {common.DEMO_NOTE_EN}",
+                        "price": Decimal(price),
+                        "currency": "IQD",
+                        "sale_channel": channel,
+                        "stock_quantity": stock,
+                        "sku": f"{key.upper()[:20]}",
+                    },
+                )
+                return product
+
+            product, _ = self.registry.ensure(f"product:seller:{key}", make)
+            self.products[key] = product
+            for order, (label, sku, vprice, vstock) in enumerate(variants):
+                self.registry.ensure(
+                    f"variant:{key}:{sku}",
+                    lambda: sellers.create_variant(
+                        company.pk,
+                        product.pk,
+                        actor=company.account,
+                        data={
+                            "label": label,
+                            "sku": sku,
+                            "price": vprice,
+                            "stock_quantity": vstock,
+                            "sort_order": order,
+                        },
+                    ),
+                )
+            self._photo(product, company, colours, SimpleUploadedFile)
+            if not Product.objects.get(pk=product.pk).is_active:
+                marketplace_services.update_product(company, product.pk, {}, active=True)
+        for pkey, colours in content.EXTRA_PHOTOS.items():
+            product = self.products.get(pkey)
+            if product is not None:
+                self._photo(product, product.company, colours, SimpleUploadedFile)
+
+    def _photo(self, product, company, colours, uploaded) -> None:
+        if ProductImage.objects.filter(product=product).exists():
+            return
+        rgb, accent = colours
+        self.registry.ensure(
+            f"photo:{product.pk}",
+            lambda: sellers.add_image(
+                company.pk,
+                product.pk,
+                actor=company.account,
+                upload=uploaded("photo.png", demo_files.photo_png(rgb, accent)),
+                alt_text=product.title.split(" | ")[-1],
+            ),
+        )

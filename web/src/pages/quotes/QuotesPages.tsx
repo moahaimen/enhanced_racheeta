@@ -176,8 +176,9 @@ function RespondForm({ quote, company, onDone, onError }: { quote: Quote; compan
 }
 
 /** Inline "request a quote" control for a targeted product (used on the product page). */
-export function RequestQuoteForm({ productId }: { productId: string }) {
+export function RequestQuoteForm({ productId, variants = [] }: { productId: string; variants?: { id: string; label: string }[] }) {
   const { t } = useTranslation()
+  const [variant, setVariant] = useState(variants[0]?.id ?? '')
   const [quantity, setQuantity] = useState('1')
   const [message, setMessage] = useState('')
   const [state, setState] = useState<{ ok?: boolean; error?: string }>({})
@@ -186,7 +187,7 @@ export function RequestQuoteForm({ productId }: { productId: string }) {
     event.preventDefault()
     setBusy(true)
     try {
-      await api.requestQuote(productId, Number(quantity), message)
+      await api.requestQuote(productId, Number(quantity), message, variant || null)
       setState({ ok: true })
     } catch (e) {
       setState({ error: toErrorMessage(e) })
@@ -198,6 +199,13 @@ export function RequestQuoteForm({ productId }: { productId: string }) {
   return (
     <form onSubmit={submit} className="stack-sm" data-testid="quote-form">
       {state.error ? <Alert kind="error">{state.error}</Alert> : null}
+      {variants.length ? (
+        <Select label={t('store.chooseOption')} value={variant} onChange={(e) => setVariant(e.target.value)}>
+          {variants.map((v) => (
+            <option key={v.id} value={v.id}>{v.label}</option>
+          ))}
+        </Select>
+      ) : null}
       <TextField label={t('store.quantity')} type="number" min={1} max={10000} required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       <Textarea label={t('quotes.message')} optional maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} />
       <FormActions>

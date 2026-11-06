@@ -9,6 +9,7 @@ import {
   ApiActionButton,
   AsyncPage,
   Badge,
+  Button,
   Container,
   EmptyState,
   Icon,
@@ -27,8 +28,9 @@ import { OrderCard } from '../store/OrdersPages'
 import { RETURN_TONE } from './tones'
 import { CouponForm } from './SellerCenterPage'
 import { useMoney } from './money'
+import { downloadBlob } from './files'
 
-const TABS = ['orders', 'returns', 'disputes', 'settlements', 'reconciliation', 'coupons', 'ledger', 'policy'] as const
+const TABS = ['orders', 'returns', 'disputes', 'settlements', 'reconciliation', 'reports', 'coupons', 'ledger', 'policy'] as const
 type Tab = (typeof TABS)[number]
 
 /**
@@ -47,7 +49,7 @@ export function AdminFinancePage() {
       <Tabs id="finance" aria-label={t('market.finance.title')} value={tab} onChange={(next) => setParams({ tab: next })} tabs={TABS.map((id) => ({ id, label: t(`market.finance.tabs.${id}`) }))} />
       <div {...tabPanelProps('finance', tab)}>
         <PageStack>
-          {tab === 'orders' ? <OrdersTab /> : tab === 'returns' ? <ReturnsTab /> : tab === 'disputes' ? <DisputesTab /> : tab === 'settlements' ? <SettlementsTab /> : tab === 'reconciliation' ? <ReconciliationTab /> : tab === 'coupons' ? <CouponsTab /> : tab === 'ledger' ? <LedgerTab /> : <PolicyTab />}
+          {tab === 'orders' ? <OrdersTab /> : tab === 'returns' ? <ReturnsTab /> : tab === 'disputes' ? <DisputesTab /> : tab === 'settlements' ? <SettlementsTab /> : tab === 'reconciliation' ? <ReconciliationTab /> : tab === 'reports' ? <MarketplaceReportTab /> : tab === 'coupons' ? <CouponsTab /> : tab === 'ledger' ? <LedgerTab /> : <PolicyTab />}
         </PageStack>
       </div>
     </Container>
@@ -421,5 +423,69 @@ function RecoveryForm({ companyId, owed, onDone, onError }: { companyId: string;
         {t('market.finance.recordRecovery')}
       </ApiActionButton>
     </div>
+  )
+}
+
+/** Per-seller accounting for a period (simulated money), with the reconciliation verdict and CSV. */
+function MarketplaceReportTab() {
+  const { t, i18n } = useTranslation()
+  const money = useMoney()
+  const [range, setRange] = useState<{ from?: string; to?: string }>({})
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <>
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      <form className="cluster" style={{ alignItems: 'flex-end' }} onSubmit={(e) => { e.preventDefault(); setRange({ from: from || undefined, to: to || undefined }) }}>
+        <TextField label={t('sellerSetup.from')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <TextField label={t('sellerSetup.to')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Button type="submit" size="sm" variant="secondary">{t('sellerSetup.show')}</Button>
+        <ApiActionButton size="sm" action={() => commerce.downloadMarketplaceReport(range)} onSuccess={(blob) => downloadBlob(blob as Blob, 'racheeta-marketplace-report.csv')} onError={(e) => setError(toErrorMessage(e))}>
+          {t('sellerSetup.downloadCsv')}
+        </ApiActionButton>
+      </form>
+      <AsyncPage load={(signal) => commerce.getMarketplaceReport(range, signal)} deps={[range.from, range.to]}>
+        {(r) => (
+          <>
+            <Alert kind={r.reconciliation_ok ? 'success' : 'error'}>{r.reconciliation_ok ? t('market.finance.reconciled') : t('market.finance.notReconciled')} · {r.from} → {r.to}</Alert>
+            <div className="table-scroll">
+              <table className="data-table" data-testid="marketplace-report">
+                <thead>
+                  <tr>
+                    <th scope="col">{t('market.finance.seller')}</th>
+                    <th scope="col" className="num">{t('sellerSetup.ordersPaid')}</th>
+                    <th scope="col" className="num">{t('sellerSetup.gmv')}</th>
+                    <th scope="col" className="num">{t('market.commission', { rate: 20 })}</th>
+                    <th scope="col" className="num">{t('market.racheetaDiscount')}</th>
+                    <th scope="col" className="num">{t('sellerSetup.charges')}</th>
+                    <th scope="col" className="num">{t('market.refunded')}</th>
+                    <th scope="col" className="num">{t('market.paidOut')}</th>
+                    <th scope="col" className="num">{t('market.owedNow')}</th>
+                    <th scope="col" className="num">{t('market.finance.sellerOwes')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.sellers.map((row) => (
+                    <tr key={row.seller}>
+                      <td>{pickScript(row.seller, i18n.language)}<div className="text-caption">{t(`accountTypes.${row.business_type}`, { defaultValue: row.business_type })}</div></td>
+                      <td className="num ltr">{row.orders_paid}</td>
+                      <td className="num ltr">{money(row.gmv)}</td>
+                      <td className="num ltr">{money(row.commission)}</td>
+                      <td className="num ltr">{money(row.racheeta_discounts)}</td>
+                      <td className="num ltr">{money(row.charges_passed_through)}</td>
+                      <td className="num ltr">{money(row.refunds)}</td>
+                      <td className="num ltr">{money(row.paid_out)}</td>
+                      <td className="num ltr">{money(row.payable)}</td>
+                      <td className="num ltr">{money(row.receivable)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </AsyncPage>
+    </>
   )
 }

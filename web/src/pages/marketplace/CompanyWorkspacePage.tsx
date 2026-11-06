@@ -32,6 +32,7 @@ import {
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
+import { useAuth } from '../../auth/useAuth'
 import { ClientValidationError, isEmail, isIraqiPhone, normalizeIraqiPhone } from '../validation'
 import { formatProductPrice } from './MarketplacePage'
 
@@ -43,6 +44,7 @@ type Loaded = [MedicalCompany | null, Governorate[], ProductCategory[]]
 /** /company — medical company onboarding, verification, dashboard and products. */
 export function CompanyWorkspacePage() {
   const { t } = useTranslation()
+  const { account } = useAuth()
   const load = async (signal: AbortSignal): Promise<Loaded> => {
     const company = await marketplaceApi.getMyCompany(signal).catch((e: unknown) => {
       if (e instanceof ApiError && e.status === 404) return null
@@ -67,9 +69,13 @@ export function CompanyWorkspacePage() {
                 title={t('company.onboardingTitle')}
                 description={t('company.onboardingIntro')}
               />
-              <div className="card-block" data-testid="company-onboarding">
-                <CompanyForm company={null} governorates={governorates} onSaved={reload} />
-              </div>
+              {account?.role === 'PROVIDER' ? (
+                <PharmacyStoreStart onOpened={reload} />
+              ) : (
+                <div className="card-block" data-testid="company-onboarding">
+                  <CompanyForm company={null} governorates={governorates} onSaved={reload} />
+                </div>
+              )}
             </Container>
           )
         }
@@ -109,6 +115,7 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
         }
       />
       <PageStack>
+        <StoreSetupBanner company={company} />
         <SectionCard title={t('company.dashboard')} headingLevel={2}>
           {dashboard.loading ? (
             <LoadingState testId="company-dashboard-loading" />
@@ -435,5 +442,37 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
         </ApiActionButton>
       </FormActions>
     </form>
+  )
+}
+
+/** A pharmacy keeps its provider identity and opens a linked store (server-checked). */
+function PharmacyStoreStart({ onOpened }: { onOpened: () => void }) {
+  const { t } = useTranslation()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <div className="card-block stack-sm" data-testid="pharmacy-store-start">
+      <Alert kind="info">{t('sellerSetup.pharmacyIntro')}</Alert>
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      <ApiActionButton action={() => marketplaceApi.openPharmacyStore()} onSuccess={onOpened} onError={(e) => setError(toErrorMessage(e))} leading={<Icon name="building" size={16} />}>
+        {t('sellerSetup.openPharmacyStore')}
+      </ApiActionButton>
+    </div>
+  )
+}
+
+/** Where the store stands: verification, documents, activation (details in the seller center). */
+function StoreSetupBanner({ company }: { company: MedicalCompany }) {
+  const { t } = useTranslation()
+  const status = company.store_status ?? 'ACTIVE'
+  const missing = company.missing_documents ?? []
+  return (
+    <Alert kind={company.can_sell ? 'success' : 'warning'} data-testid="store-setup-banner">
+      <strong>{t(`sellerSetup.storeStatus.${status}`)}</strong>
+      {company.can_sell ? ` — ${t('sellerSetup.selling')}` : ` — ${t('sellerSetup.notSelling')}`}
+      {missing.length ? ` · ${t('sellerSetup.missingDocs', { count: missing.length })}` : ''}{' '}
+      <LinkButton to="/merchant/center?tab=setup" size="sm" variant="subtle">
+        {t('sellerSetup.open')}
+      </LinkButton>
+    </Alert>
   )
 }

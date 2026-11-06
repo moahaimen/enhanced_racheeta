@@ -56,6 +56,11 @@ export interface StoreCategory {
   slug: string
   name_ar: string
   name_en: string
+  /** Category rule shown to buyers (e.g. "use under supervision"). */
+  buyer_notice_ar?: string
+  buyer_notice_en?: string
+  /** Most units of one product per order (null = the general limit). */
+  max_order_quantity?: number | null
 }
 
 export interface StoreProduct {
@@ -70,6 +75,9 @@ export interface StoreProduct {
   in_stock: boolean
   /** "Few left" hint (no exact quantity is published). */
   low_stock?: boolean
+  images?: import('./marketplace.types').ProductPhoto[]
+  /** When present, the buyer picks one (each has its own price and availability). */
+  variants?: import('./marketplace.types').PublicVariant[]
   category: StoreCategory
   company: { id: string; name: string; business_type?: string }
 }
@@ -80,7 +88,13 @@ export type StorePaymentStatus = 'UNPAID' | 'PAID' | 'REFUND_PENDING' | 'PARTIAL
 
 export interface OrderItem {
   id: string
-  product_id: string
+  /** MERCHANDISE lines are products; SHIPPING and TAX are seller charges (no commission). */
+  kind?: 'MERCHANDISE' | 'SHIPPING' | 'TAX'
+  product_id: string | null
+  variant_id?: string | null
+  parent_item_id?: string | null
+  sku_snapshot?: string
+  variant_label_snapshot?: string
   image_url: string
   title_snapshot: string
   unit_price: string
@@ -149,6 +163,18 @@ export interface Order {
   contact_phone: string
   note: string
   shipping_reference: string
+  courier_name?: string
+  shipping_total?: string
+  shipping_min_days?: number | null
+  shipping_max_days?: number | null
+  tax_mode?: 'NONE' | 'INCLUSIVE' | 'EXCLUSIVE'
+  tax_rate?: string
+  tax_label?: string
+  tax_registration_number?: string
+  tax_total?: string
+  tax_included_total?: string
+  tracking_events?: TrackingEvent[]
+  invoices?: InvoiceSummary[]
   paid_at: string | null
   shipped_at: string | null
   delivered_at: string | null
@@ -174,8 +200,60 @@ export interface Order {
   payment_verified_by?: string
 }
 
+export type TrackingStatus = 'PICKED_UP' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERY_ATTEMPTED' | 'DELAYED' | 'NOTE'
+
+export interface TrackingEvent {
+  id: string
+  status: TrackingStatus
+  note: string
+  location: string
+  created_at: string
+}
+
+export type InvoiceKind = 'INVOICE' | 'RECEIPT' | 'CREDIT_NOTE'
+
+export interface InvoiceSummary {
+  id: string
+  kind: InvoiceKind
+  number: string
+  total: string
+  created_at: string
+}
+
+export interface InvoiceLine {
+  title: string
+  variant: string
+  sku: string
+  quantity: number
+  unit_price: string
+  line_total: string
+  seller_discount: string
+  platform_discount: string
+  tax: string
+  total: string
+  refunded_quantity: number
+}
+
+/** A frozen, issued document (later product or address edits never change it). */
+export interface InvoiceDocument extends InvoiceSummary {
+  snapshot: {
+    kind: InvoiceKind
+    issued_at: string
+    currency: string
+    notice: string
+    operator: string
+    seller: { name: string; business_type: string; address: string; governorate: string; phone: string; email: string; tax_registration_number: string }
+    buyer: { name: string; address: string; governorate: string; city: string; phone: string }
+    order: { number: string; checkout: string; placed_at: string; channel: string; payment_method: string; payment_reference: string; paid_at: string | null }
+    lines: InvoiceLine[]
+    tax: { mode: string; rate: string; label: string; added: string; included: string }
+    totals: { list: string; seller_discount: string; platform_discount: string; shipping: string; tax: string; total: string; refunded: string }
+    refund?: { amount: string; reason: string; executed_at: string }
+  }
+}
+
 export interface CheckoutRequest {
-  items: { product: string; quantity: number }[]
+  items: { product: string; variant?: string | null; quantity: number }[]
   coupons?: string[]
   /** One per press of "Place order": a retried request returns the first checkout. */
   idempotency_key: string

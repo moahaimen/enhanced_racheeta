@@ -6,6 +6,7 @@ import type {
   Coupon,
   CouponInput,
   InventoryRow,
+  MarketplaceReport,
   MerchantStatement,
   PaginatedAdminOrders,
   PaginatedCoupons,
@@ -17,11 +18,20 @@ import type {
   PaginatedStockMovements,
   ProductSale,
   Reconciliation,
+  SalesReport,
   SellerPayable,
   SellerRecovery,
   Settlement,
 } from '../commerce.types'
-import type { CheckoutRequest, Order, ReturnRequest } from '../workspaces.types'
+import type {
+  CheckoutRequest,
+  InvoiceDocument,
+  InvoiceSummary,
+  Order,
+  ReturnRequest,
+  TrackingEvent,
+  TrackingStatus,
+} from '../workspaces.types'
 
 const enc = encodeURIComponent
 
@@ -35,9 +45,28 @@ function q(params: Record<string, string | undefined>): string {
 const post = <T,>(url: string, body: unknown = {}) => apiRequest<T>(url, { method: 'POST', body })
 
 // ---- buyer ----------------------------------------------------------------------------------------
-export function previewCheckout(items: CheckoutRequest['items'], coupons: string[], signal?: AbortSignal) {
-  return apiRequest<CheckoutPreview>('/api/v1/checkouts/preview', { method: 'POST', body: { items, coupons }, signal })
+export function previewCheckout(items: CheckoutRequest['items'], coupons: string[], signal?: AbortSignal, governorate?: string) {
+  const body = governorate ? { items, coupons, governorate } : { items, coupons }
+  return apiRequest<CheckoutPreview>('/api/v1/checkouts/preview', { method: 'POST', body, signal })
 }
+export const listMyInvoices = (orderId: string, signal?: AbortSignal) =>
+  apiRequest<InvoiceSummary[]>(`/api/v1/orders/${enc(orderId)}/invoices`, { signal })
+export const getMyInvoice = (orderId: string, invoiceId: string, signal?: AbortSignal) =>
+  apiRequest<InvoiceDocument>(`/api/v1/orders/${enc(orderId)}/invoices/${enc(invoiceId)}`, { signal })
+export const listSellerInvoices = (orderId: string, company?: string, signal?: AbortSignal) =>
+  apiRequest<InvoiceSummary[]>(`/api/v1/merchant/orders/${enc(orderId)}/invoices${q({ company })}`, { signal })
+export const getSellerInvoice = (orderId: string, invoiceId: string, company?: string, signal?: AbortSignal) =>
+  apiRequest<InvoiceDocument>(`/api/v1/merchant/orders/${enc(orderId)}/invoices/${enc(invoiceId)}${q({ company })}`, { signal })
+export const addTracking = (orderId: string, body: { status: TrackingStatus; note?: string; location?: string }, company?: string) =>
+  post<TrackingEvent>(`/api/v1/merchant/orders/${enc(orderId)}/tracking${q({ company })}`, body)
+export const getSalesReport = (range: { from?: string; to?: string }, company?: string, signal?: AbortSignal) =>
+  apiRequest<SalesReport>(`/api/v1/merchant/reports/sales${q({ ...range, company })}`, { signal })
+export const downloadSalesReport = (range: { from?: string; to?: string }, company?: string) =>
+  apiRequest<Blob>(`/api/v1/merchant/reports/sales${q({ ...range, company, export: 'csv' })}`, { responseType: 'blob' })
+export const getMarketplaceReport = (range: { from?: string; to?: string }, signal?: AbortSignal) =>
+  apiRequest<MarketplaceReport>(`/api/v1/admin/commerce/reports/marketplace${q(range)}`, { signal })
+export const downloadMarketplaceReport = (range: { from?: string; to?: string }) =>
+  apiRequest<Blob>(`/api/v1/admin/commerce/reports/marketplace${q({ ...range, export: 'csv' })}`, { responseType: 'blob' })
 export const placeCheckout = (payload: CheckoutRequest) => post<CheckoutResult>('/api/v1/checkouts', payload)
 export const confirmDelivery = (id: string) => post<Order>(`/api/v1/orders/${enc(id)}/confirm-delivery`)
 export const requestReturn = (id: string, lines: { item: string; quantity: number }[], reason: string) =>
@@ -47,7 +76,7 @@ export const orderFromQuote = (id: string, payload: Omit<CheckoutRequest, 'items
   post<CheckoutResult>(`/api/v1/quotes/${enc(id)}/order`, payload)
 
 // ---- seller (owner or staff with ?company=) ---------------------------------------------------------
-export const moveOrder = (id: string, status: 'CONFIRMED' | 'SHIPPED' | 'CANCELLED', company?: string, extra: { reason?: string; shipping_reference?: string } = {}) =>
+export const moveOrder = (id: string, status: 'CONFIRMED' | 'SHIPPED' | 'CANCELLED', company?: string, extra: { reason?: string; shipping_reference?: string; courier_name?: string } = {}) =>
   post<Order>(`/api/v1/merchant/orders/${enc(id)}/transition${q({ company })}`, { status, ...extra })
 export const listSellerReturns = (company?: string, signal?: AbortSignal) =>
   apiRequest<PaginatedReturns>(`/api/v1/merchant/returns${q({ company })}`, { signal })
@@ -57,10 +86,10 @@ export const receiveReturn = (id: string, company?: string) =>
   post<ReturnRequest>(`/api/v1/merchant/returns/${enc(id)}/received${q({ company })}`)
 export const listInventory = (company?: string, signal?: AbortSignal) =>
   apiRequest<InventoryRow[]>(`/api/v1/merchant/inventory${q({ company })}`, { signal })
-export const adjustStock = (id: string, delta: number, reason: string, company?: string) =>
-  post<InventoryRow>(`/api/v1/merchant/inventory/${enc(id)}/adjust${q({ company })}`, { delta, reason })
-export const setReorderLevel = (id: string, threshold: number | null, company?: string) =>
-  post<InventoryRow>(`/api/v1/merchant/inventory/${enc(id)}/threshold${q({ company })}`, { threshold })
+export const adjustStock = (id: string, delta: number, reason: string, company?: string, variant?: string | null) =>
+  post<InventoryRow>(`/api/v1/merchant/inventory/${enc(id)}/adjust${q({ company })}`, { delta, reason, variant_id: variant ?? null })
+export const setReorderLevel = (id: string, threshold: number | null, company?: string, variant?: string | null) =>
+  post<InventoryRow>(`/api/v1/merchant/inventory/${enc(id)}/threshold${q({ company })}`, { threshold, variant_id: variant ?? null })
 export const listMovements = (id: string, company?: string, signal?: AbortSignal) =>
   apiRequest<PaginatedStockMovements>(`/api/v1/merchant/inventory/${enc(id)}/movements${q({ company })}`, { signal })
 export const listSellerCoupons = (company?: string, signal?: AbortSignal) =>

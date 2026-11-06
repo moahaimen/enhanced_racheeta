@@ -153,6 +153,128 @@ Locally the developer role owns everything, so the command reports that, on purp
 - Ownership of rows created in walkthroughs is proven transitively: every reference chain must end
   in registered demo rows. Accounts are never inferred, so a real user's row is always refused.
 
+## Sellers and onboarding (`marketplace/sellers.py`)
+
+Seller categories (`BusinessType`): pharmacy, pharmaceutical company, scientific office, medical
+company, medical equipment supplier, medical supplies office, assistive-device store and
+pharmaceutical distributor. Retail types (equipment supplier, supplies office, assistive-device
+store, pharmacy) may sell allowed products to the public; the others sell to verified
+professionals (direct B2B or quotation).
+
+**A pharmacy keeps its identity.** A PROVIDER account whose own profile is a PHARMACY opens its
+store with `POST marketplace/pharmacy-store`. It keeps its PROVIDER role, provider profile and
+facility workspace. The store is a `MedicalCompany` row linked to that facility
+(`MedicalCompany.facility`, business type PHARMACY; a database constraint ties the two
+together). Staff, permissions, orders and the ledger then work as for any seller.
+`seller_account_q()` is the one rule: a MEDICAL_COMPANY account, or a PROVIDER whose store is
+linked to its own VERIFIED pharmacy profile. If the pharmacy loses verification, its store stops
+selling at once.
+
+**Steps.**
+1. Register: `POST marketplace/company`, or `…/pharmacy-store` for a pharmacy. New stores start
+   INACTIVE.
+2. Upload documents: `POST marketplace/company/documents`. The required kinds are listed per
+   business type in `REQUIRED_DOCUMENTS` (a fictional, conservative local rule set, not a
+   statement of Iraqi licensing law).
+3. Request verification. A Racheeta administrator reviews each document (approve, or reject with
+   a reason) and verifies the business (`admin/marketplace/documents…`,
+   `admin/marketplace/companies/<id>/verification`).
+4. Activate: `POST marketplace/company/store/status {active: true}`. This is refused unless the
+   business is verified and every required document is APPROVED. Pausing is always allowed.
+
+`selling_q()` = verified, active seller account, store ACTIVE. It gates the public store, the
+targeted B2B catalogue, checkout, quote orders and advertising.
+
+Stores that existed before activation was introduced keep selling: the migration default is
+ACTIVE, and the demo seeds their documents as approved. Only onboarding creates INACTIVE stores.
+A (re)verification of an ACTIVE store whose required documents are not all approved puts it back
+to INACTIVE, so a legacy store can never start selling again without approved licences.
+
+## Uploads (`marketplace/uploads.py`)
+
+- **Seller documents:** PDF, JPEG or PNG, up to 5 MB.
+- **Product photos:** JPEG, PNG or WebP, up to 3 MB, 64 to 6000 px per side.
+- The type is sniffed from the bytes, never taken from the name or the client's header.
+- SVG, HTML and Office files are refused, as are PDFs with JavaScript, launch actions, embedded
+  files, rich media or XFA.
+- Files are stored under `PRIVATE_MEDIA_ROOT`, never under the public `MEDIA_ROOT`, with a random
+  `<uuid>.<ext>` name. The original name is kept for display only, stripped of paths and control
+  characters. A SHA-256 is stored.
+- Files are streamed only by permission-checked views, with `X-Content-Type-Options: nosniff`,
+  `Content-Security-Policy: default-src 'none'; sandbox`, and `attachment` for documents.
+- Documents can be opened by the business's OWNER/MANAGER (`company.documents.manage`) and
+  Racheeta administrators.
+- Photos are public only for a product on sale; otherwise they are visible to the business's team
+  and staff. An unknown or hidden photo is a 404 either way.
+- An approved document cannot be withdrawn (the history is kept).
+- Production must use private object storage with the same rules (local filesystem here).
+
+## Products: SKUs, variants, category rules
+
+- **SKUs.** `Product.sku` and `ProductVariant.sku` are unique within a business, across products
+  and variants (database constraints plus a service check).
+- **Variants.** A variant has its own label, SKU, price (empty = the product price), stock and
+  alert level. Once a product has active variants, the buyer must pick one (`variant_required`)
+  and stock lives on the variants.
+- **Inventory.** Reserve, release, consume and restock work on the variant row, and the movement
+  ledger records the variant. Stock changes go through a stock adjustment with a reason.
+- **Category rules** (administrator data on `ProductCategory`), enforced at publication, in the
+  store query and at checkout:
+  - `allowed_business_types`;
+  - `required_documents` (approved seller documents needed to publish);
+  - `max_order_quantity` (`quantity_limit`);
+  - a bilingual buyer notice.
+- **Direct B2B purchase.** `can_buy_directly` (a UI hint) is true for a priced, non-restricted
+  product in an explicit B2B_VERIFIED_ONLY category. Checkout re-decides.
+
+## Delivery fees and seller-declared tax (pass-through charges)
+
+**Delivery fees.**
+- A seller sets a fee per governorate (`ShippingRate`, with an estimate in days), a default fee
+  and a free-over threshold.
+- A seller with no delivery settings delivers free, as before. A seller with governorate rates
+  and no default refuses other governorates (`no_delivery`).
+- The fee becomes one SHIPPING order line.
+
+**Tax.** Racheeta decides no tax obligation. The default is NONE.
+- A seller may declare INCLUSIVE (the included part is shown only) or EXCLUSIVE (0–30%, added on
+  top as a TAX line per merchandise line, with the same quantity) and a registration number.
+
+**How the charge lines are treated.**
+- Charge lines carry no product, no discount and **no commission**: merchandise_net =
+  seller_payable = buyer_paid = the amount.
+- The 20% commission base stays merchandise after seller discounts.
+- The ledger and reconciliation need no change: charges are ordinary item snapshots accrued to the
+  seller and refunded with the same cumulative rounding.
+
+**Refunds.**
+- A cancellation or dispute refund returns everything that remains, delivery included.
+- A return refunds the returned units and their tax, not the delivery fee.
+
+## Tracking, invoices, reports
+
+- **Tracking.** At shipment the seller records a courier and a reference.
+  `POST merchant/orders/<id>/tracking` adds progress events (picked up, in transit, out for
+  delivery, attempted, delayed, note) to a SHIPPED order. Tracking never changes the order or
+  payment status: delivery is still confirmed by the buyer or Racheeta finance.
+- **Documents.** An INVOICE and a RECEIPT are issued when finance verifies the (simulated)
+  payment, and a CREDIT_NOTE for each refund.
+  - Each is a frozen JSON snapshot: seller of record, buyer, lines with variant and SKU, discounts,
+    delivery, tax and totals. Later edits never change it.
+  - Buyers see them at `orders/<id>/invoices`, and the seller's team at
+    `merchant/orders/<id>/invoices`. Anyone else gets a 404.
+  - Buyers never see the commission.
+  - Orders paid before documents existed get theirs on first request (idempotent).
+  - The web page is printable.
+- **Reports.**
+  - `merchant/reports/sales` (`company.reports.view` = OWNER, MANAGER, FINANCE): orders in a
+    period, commission, delivery, tax, refunds, earnings, monthly totals and payouts.
+  - `admin/commerce/reports/marketplace` (finance only): per-seller GMV, commission,
+    Racheeta-funded discounts, charges, refunds, payouts, payable and receivable, with the
+    reconciliation verdict.
+  - `?export=csv` downloads either report as a spreadsheet; cells that start like a formula are
+    neutralized.
+
 ## Seller roles (`workspaces/types.py`)
 
 | Capability | Roles |
@@ -164,6 +286,9 @@ Locally the developer role owns everything, so the command reports that, on purp
 | stock adjust / alert level | OWNER, MANAGER, STOCK_MANAGER |
 | coupons and sales | OWNER, MANAGER |
 | statement (finance view) | OWNER, FINANCE |
+| store activation, delivery and tax settings | OWNER, MANAGER |
+| verification documents | OWNER, MANAGER |
+| accounting report (CSV) | OWNER, MANAGER, FINANCE |
 
 The specialist roles exist only for businesses, never for facilities.
 
@@ -186,7 +311,24 @@ The specialist roles exist only for businesses, never for facilities.
 - `merchant/offers`
 - `merchant/finance`
 
+**Seller onboarding and catalogue** (`?company=` for staff)
+- `POST marketplace/pharmacy-store`
+- `marketplace/company/store` (GET, PATCH) and `…/store/status`
+- `marketplace/company/documents`, `…/<id>` (DELETE), `…/<id>/file`
+- `marketplace/company/shipping-rates` and `…/<id>`
+- `marketplace/company/products/<id>/variants`, `marketplace/company/variants/<id>`
+- `marketplace/company/products/<id>/images`, `marketplace/company/images/<id>`
+- `GET marketplace/images/<id>` (public only for a product on sale)
+- `merchant/orders/<id>/tracking`
+- `merchant/orders/<id>/invoices[/<invoice>]`
+- `merchant/reports/sales[?export=csv]`
+- Administrators: `admin/marketplace/documents`, `…/<id>/decision`, `…/<id>/file`
+
+**Buyer documents**
+- `orders/<id>/invoices[/<invoice>]`
+
 **Finance**
+- `admin/commerce/reports/marketplace[?export=csv]`
 - `admin/commerce/orders` and `…/verify-payment`, `…/confirm-delivery`, `…/complete`, `…/refund-cancelled`
 - `admin/commerce/returns/<id>/refund`
 - `admin/commerce/disputes/<id>/resolve`
@@ -208,6 +350,16 @@ The contract is in `docs/api/openapi.yaml`.
 | `ledger 0004` | Strict immutability: no session bypass, TRUNCATE triggers, recovery and policy tables protected |
 | `marketplace 0005` | Legacy tightening: inactive legacy consumer categories, or ones containing a restricted product → RESTRICTED_PENDING_REVIEW |
 | `commerce 0004` | `Checkout.request_hash` (idempotency-key reuse with a different request → 409) |
+| `marketplace 0006` | Pharmacy store link, store status (existing rows ACTIVE), seller-declared tax, delivery defaults, category rules, product SKU, `ProductVariant`, `ProductImage`, `SellerDocument`, `ShippingRate` |
+| `commerce 0005` | Order item kind (MERCHANDISE / SHIPPING / TAX), variant and SKU snapshots, order delivery and tax snapshots, variant-aware stock movements and quotes, `TrackingEvent`, `Invoice` |
+
+To roll back the seller and product slice: run `migrate commerce 0004`, then
+`migrate marketplace 0005`. This was verified on 2026-11-06 on a throwaway database (migrate →
+roll back → re-migrate).
+
+With data, first delete the SHIPPING/TAX lines and the variant orders (the old schema needs a
+product on every line), the invoices and tracking events. On the demo database that means
+`scripts/local_demo.sh clear`, which also deletes the uploaded demo files.
 
 To roll back the audit migrations only:
 - `migrate ledger 0002`;

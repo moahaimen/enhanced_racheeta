@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
-import { ApiError, commerce, reference, workspaces as api } from '../../api'
+import { ApiError, commerce, marketplace as marketplaceApi, reference, workspaces as api } from '../../api'
 import type { CheckoutResult, DeliveryDefaults, Governorate, StorePaymentMethod, StoreProduct } from '../../api'
 import { useAuth } from '../../auth/useAuth'
-import { cart, useCart, type CartLine } from '../../cart/cart'
+import { cart, lineKey, useCart, type CartLine } from '../../cart/cart'
 import { nearestGovernorateSlug } from '../../cart/governorates'
 import {
   Alert,
@@ -47,16 +47,25 @@ export function CartPage() {
   const { account } = useAuth()
   const lines = useCart()
   const [placed, setPlaced] = useState<CheckoutResult | null>(null)
-  const ids = lines.map((line) => line.product).sort().join(',')
+  const ids = lines.map(lineKey).sort().join(',')
   const live = useAsyncData(
     async (signal) => {
       const entries = await Promise.all(
         lines.map(async (line): Promise<[string, Availability]> => {
+          const key = lineKey(line)
           try {
-            const p: StoreProduct = await api.getStoreProduct(line.product, signal)
-            return [line.product, { state: !p.in_stock ? 'out' : p.low_stock ? 'few' : 'ok', price: p.price }]
+            const p: Pick<StoreProduct, 'price' | 'in_stock' | 'low_stock' | 'variants'> =
+              line.source === 'B2B' ? await professionalProduct(line.product, signal) : await api.getStoreProduct(line.product, signal)
+            if (line.variant) {
+              // The chosen option has its own price and availability.
+              const v = p.variants?.find((x) => x.id === line.variant)
+              if (!v) return [key, { state: 'gone' }]
+              return [key, { state: !v.in_stock ? 'out' : v.low_stock ? 'few' : 'ok', price: v.price ?? p.price }]
+            }
+            if (p.variants?.length) return [key, { state: 'gone' }] // an option must be chosen now
+            return [key, { state: !p.in_stock ? 'out' : p.low_stock ? 'few' : 'ok', price: p.price }]
           } catch (error) {
-            if (error instanceof ApiError && error.status === 404) return [line.product, { state: 'gone' }]
+            if (error instanceof ApiError && error.status === 404) return [key, { state: 'gone' }]
             throw error
           }
         }),
@@ -102,7 +111,7 @@ export function CartPage() {
                 </h2>
                 <ul className={styles.lines} data-testid="cart-lines">
                   {group.map((line) => (
-                    <CartRow key={line.product} line={line} availability={live.data?.[line.product]} />
+                    <CartRow key={lineKey(line)} line={line} availability={live.data?.[lineKey(line)]} />
                   ))}
                 </ul>
               </section>
@@ -110,7 +119,7 @@ export function CartPage() {
           </div>
           <CheckoutPanel
             lines={lines}
-            blocked={lines.some((l) => ['out', 'gone'].includes(live.data?.[l.product]?.state ?? 'ok'))}
+            blocked={lines.some((l) => ['out', 'gone'].includes(live.data?.[lineKey(l)]?.state ?? 'ok'))}
             signedIn={Boolean(account)}
             onPlaced={(result) => {
               cart.clear()
@@ -124,6 +133,12 @@ export function CartPage() {
   )
 }
 
+/** A professional (B2B) line is re-read from the targeted catalogue; stock is checked at checkout. */
+async function professionalProduct(id: string, signal: AbortSignal): Promise<Pick<StoreProduct, 'price' | 'in_stock' | 'low_stock' | 'variants'>> {
+  const p = await marketplaceApi.getTargetedProduct(id, signal)
+  return { price: p.price ?? '0', in_stock: p.variants?.length ? p.variants.some((v) => v.in_stock) : true, low_stock: false, variants: p.variants }
+}
+
 function CartRow({ line, availability }: { line: CartLine; availability: Availability | undefined }) {
   const { t, i18n } = useTranslation()
   const title = pickScript(line.title, i18n.language)
@@ -132,9 +147,10 @@ function CartRow({ line, availability }: { line: CartLine; availability: Availab
     <li className={styles.line} data-testid="cart-line">
       <ProductImage src={line.image} alt={title} size="sm" />
       <div className={styles.lineBody}>
-        <Link to={`/store/${line.product}`} className={styles.lineTitle}>
+        <Link to={line.source === 'B2B' ? `/marketplace/products/${line.product}` : `/store/${line.product}`} className={styles.lineTitle}>
           {title}
         </Link>
+        {line.variantLabel ? <span className="text-caption" data-testid="cart-variant">{t('store.option')}: {line.variantLabel}</span> : null}
         <span className={`${styles.lineMeta} ltr`}>
           {formatPrice(line.price, line.currency, i18n.language)} × {line.quantity}
         </span>
@@ -157,9 +173,9 @@ function CartRow({ line, availability }: { line: CartLine; availability: Availab
           ) : null}
         </div>
         <div className={styles.lineFoot}>
-          <QuantityStepper value={line.quantity} onChange={(next) => cart.setQuantity(line.product, next)} />
+          <QuantityStepper value={line.quantity} onChange={(next) => cart.setQuantity(lineKey(line), next)} />
           <span className={`${styles.lineTotal} ltr`}>{formatPrice(Number(line.price) * line.quantity, line.currency, i18n.language)}</span>
-          <button type="button" className={styles.remove} onClick={() => cart.remove(line.product)}>
+          <button type="button" className={styles.remove} onClick={() => cart.remove(lineKey(line))}>
             <Icon name="trash" size={14} /> {t('store.remove')}
           </button>
         </div>
@@ -187,13 +203,15 @@ function CheckoutPanel({
   const money = useMoney()
   const [codes, setCodes] = useState<string[]>([])
   const [codeInput, setCodeInput] = useState('')
-  const signature = lines.map((l) => `${l.product}:${l.quantity}`).sort().join(',')
+  // The delivery governorate (chosen in the form below) lets the server add each seller's fee.
+  const [governorate, setGovernorate] = useState('')
+  const signature = lines.map((l) => `${lineKey(l)}:${l.quantity}`).sort().join(',')
   const preview = useAsyncData(
     (signal) =>
       signedIn
-        ? commerce.previewCheckout(lines.map((l) => ({ product: l.product, quantity: l.quantity })), codes, signal)
+        ? commerce.previewCheckout(cartItems(lines), codes, signal, governorate || undefined)
         : Promise.resolve(null),
-    [signature, codes.join(','), signedIn],
+    [signature, codes.join(','), signedIn, governorate],
   )
   const estimate = lines.reduce((sum, l) => sum + Number(l.price) * l.quantity, 0)
   const data = preview.data
@@ -218,9 +236,18 @@ function CheckoutPanel({
                   { label: t('market.listTotal'), value: order.list_total },
                   { label: t('market.sellerDiscount') + (order.seller_coupon ? ` (${order.seller_coupon})` : ''), value: order.seller_discount_total, minus: true, hidden: Number(order.seller_discount_total) === 0 },
                   { label: t('market.racheetaDiscount'), value: order.platform_discount_total, minus: true, hidden: Number(order.platform_discount_total) === 0 },
+                  { label: t('market.deliveryFee'), value: order.shipping_fee ?? 0, hidden: order.shipping_fee == null },
+                  { label: `${order.tax_label || t('market.tax')} (${Number(order.tax_rate ?? 0)}%)`, value: order.tax_total, hidden: !Number(order.tax_total ?? 0) },
                   { label: t('market.orderTotal'), value: order.total, strong: true },
                 ]}
               />
+              {order.shipping_fee == null ? <p className="text-caption" data-testid="shipping-pending">{t('market.deliveryAfterAddress')}</p> : null}
+              {order.shipping_fee != null && order.shipping_min_days != null ? (
+                <p className="text-caption">{t('market.deliveryDays', { min: order.shipping_min_days, max: order.shipping_max_days })}</p>
+              ) : null}
+              {Number(order.tax_included_total ?? 0) > 0 ? (
+                <p className="text-caption" data-testid="tax-included">{t('market.taxIncluded', { amount: money(order.tax_included_total), label: order.tax_label || t('market.tax') })}</p>
+              ) : null}
             </div>
           ))}
           <div className={styles.summaryRow}>
@@ -285,6 +312,8 @@ function CheckoutPanel({
             <CheckoutForm
               lines={lines}
               coupons={codes}
+              governorate={governorate}
+              setGovernorate={setGovernorate}
               blocked={blocked || Boolean(preview.error)}
               defaults={defaults}
               governorates={governorates}
@@ -299,9 +328,16 @@ function CheckoutPanel({
 
 type Pin = { latitude: string; longitude: string } | null
 
+/** Only ids, options and quantities go to the server (never a price). */
+function cartItems(lines: CartLine[]) {
+  return lines.map((l) => ({ product: l.product, ...(l.variant ? { variant: l.variant } : {}), quantity: l.quantity }))
+}
+
 function CheckoutForm({
   lines,
   coupons,
+  governorate,
+  setGovernorate,
   blocked,
   defaults,
   governorates,
@@ -309,6 +345,8 @@ function CheckoutForm({
 }: {
   lines: CartLine[]
   coupons: string[]
+  governorate: string
+  setGovernorate: (id: string) => void
   blocked: boolean
   defaults: DeliveryDefaults
   governorates: Governorate[]
@@ -317,7 +355,10 @@ function CheckoutForm({
   const { t } = useTranslation()
   const name = useLocalizedName()
   // Pre-filled from the buyer's last delivery (or account phone); every field stays editable.
-  const [governorate, setGovernorate] = useState(defaults.governorate ?? '')
+  useEffect(() => {
+    if (!governorate && defaults.governorate) setGovernorate(defaults.governorate)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, from the server defaults
+  }, [])
   const [address, setAddress] = useState(defaults.address)
   const [phone, setPhone] = useState(defaults.phone)
   const [note, setNote] = useState('')
@@ -331,7 +372,7 @@ function CheckoutForm({
   // One key per attempt: a retried or double-clicked submit returns the same checkout. A changed
   // cart starts a new attempt.
   const attempt = useRef<string | null>(null)
-  const signature = `${lines.map((l) => `${l.product}:${l.quantity}`).join(',')}|${coupons.join(',')}`
+  const signature = `${lines.map((l) => `${lineKey(l)}:${l.quantity}`).join(',')}|${coupons.join(',')}`
   useEffect(() => {
     attempt.current = null
   }, [signature])
@@ -377,7 +418,7 @@ function CheckoutForm({
       const result = await commerce.placeCheckout({
         idempotency_key: attempt.current,
         coupons,
-        items: lines.map((l) => ({ product: l.product, quantity: l.quantity })),
+        items: cartItems(lines),
         payment_method: method,
         governorate,
         address: address.trim(),

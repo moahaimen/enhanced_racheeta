@@ -56,13 +56,21 @@ export function WorkspaceSidebar() {
       { to: '/quotes', icon: 'tag', label: t('nav.quotes') },
     )
   }
+  if (role === 'PROVIDER' && account.account_type === 'PHARMACY') {
+    // A pharmacy keeps its provider tools above and runs a linked store.
+    items.push(
+      { to: '/company', icon: 'pill', label: t('nav.pharmacyStore'), end: true },
+      { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
+      { to: '/merchant/center?tab=setup', icon: 'clipboard', label: t('nav.sellerCenter') },
+    )
+  }
   if (role === 'REAL_ESTATE_SELLER') items.push({ to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace') })
   if (role === 'MEDICAL_COMPANY') {
     items.push(
       { to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true },
       { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') },
       { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
-      { to: '/merchant/center?tab=inventory', icon: 'clipboard', label: t('nav.sellerCenter') },
+      { to: '/merchant/center?tab=setup', icon: 'clipboard', label: t('nav.sellerCenter') },
       { to: '/merchant/quotes', icon: 'mail', label: t('nav.merchantQuotes') },
     )
   }

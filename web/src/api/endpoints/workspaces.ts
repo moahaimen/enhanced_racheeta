@@ -101,8 +101,8 @@ export function listMerchantOrders(companyId?: string, page = 1, signal?: AbortS
 
 
 // ---- B2B quotes ---------------------------------------------------------------------------------
-export function requestQuote(product: string, quantity: number, message = ''): Promise<Quote> {
-  return apiRequest<Quote>('/api/v1/quotes', { method: 'POST', body: { product, quantity, message } })
+export function requestQuote(product: string, quantity: number, message = '', variant?: string | null): Promise<Quote> {
+  return apiRequest<Quote>('/api/v1/quotes', { method: 'POST', body: variant ? { product, quantity, message, variant } : { product, quantity, message } })
 }
 
 export function listMyQuotes(page = 1, signal?: AbortSignal): Promise<PaginatedQuotes> {

@@ -285,3 +285,50 @@
     gap: var(--space-4);
   }
 }
+
+/* product options (variants) and photo thumbnails */
+.options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.options legend {
+  font-weight: 600;
+  margin-block-end: var(--space-2);
+}
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width, 1px) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  min-height: 44px;
+}
+.option input {
+  accent-color: var(--color-primary-600);
+}
+.optionActive {
+  border-color: var(--border-brand);
+  background: var(--surface-brand);
+}
+.thumb {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface-primary);
+  cursor: pointer;
+  line-height: 0;
+}
+.thumb img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.thumbActive {
+  border-color: var(--border-brand);
+}

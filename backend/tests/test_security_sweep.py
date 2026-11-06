@@ -45,6 +45,9 @@ PUBLIC_OPERATIONS = {
     ("GET", "api/v1/providers/<uuid:provider_id>/reviews"),
     ("GET", "api/v1/providers/<uuid:provider_id>/offers"),
     ("GET", "api/v1/marketplace/categories"),
+    # Product photos: public only for a product on sale; otherwise 404 unless the caller is the
+    # business's own team or Racheeta staff (apps.marketplace.sellers.image_visible_to).
+    ("GET", "api/v1/marketplace/images/<uuid:pk>"),
     ("GET", "api/v1/real-estate/listings"),
     ("GET", "api/v1/real-estate/listings/<uuid:pk>"),
     ("GET", "api/v1/jobs"),

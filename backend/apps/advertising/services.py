@@ -26,10 +26,9 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from apps.accounts.roles import AccountRole
 from apps.audit import services as audit
 from apps.geography.models import Governorate
-from apps.marketplace.models import MedicalCompany, Product
+from apps.marketplace.models import MedicalCompany, Product, seller_workspace_q
 from apps.marketplace.types import NOT_PURCHASABLE_CLASSES
 from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
@@ -144,17 +143,21 @@ def _lock_company(company_id) -> MedicalCompany:
 
 
 def _require_company_account(company: MedicalCompany) -> None:
-    """Drafts need an active MEDICAL_COMPANY account (not yet a verified company)."""
-    if not (company.account.is_active and company.account.role == AccountRole.MEDICAL_COMPANY):
-        raise CompanyNotEligible("Your account must be an active medical company account.")
+    """Drafts need an active seller account (not yet a verified company): a MEDICAL_COMPANY, or
+    a pharmacy whose store is linked to its own facility (seller_workspace_q)."""
+    if not (
+        company.account.is_active
+        and MedicalCompany.objects.filter(seller_workspace_q(), pk=company.pk).exists()
+    ):
+        raise CompanyNotEligible("Your account must be an active seller account.")
 
 
 def _require_company_eligible(company: MedicalCompany) -> None:
     """Submission and payment verification need the marketplace's own publisher
-    eligibility (VERIFIED, active account, role MEDICAL_COMPANY): one definition."""
-    if not company.can_publish:
+    eligibility (VERIFIED, active seller account, store ACTIVE): one definition."""
+    if not company.can_sell:
         raise CompanyNotEligible(
-            "The company must be verified, on an active medical company account."
+            "The store must be verified and active, on an active seller account."
         )
 
 

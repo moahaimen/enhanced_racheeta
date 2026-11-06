@@ -1261,3 +1261,155 @@ def product_image_name(title: str, category_slug: str) -> str:
         if keyword in english:
             return name
     return CATEGORY_IMAGE.get(category_slug, "box")
+
+
+# ---- seller workspaces for EVERY seller category (fictional) ----------------------------------
+# One account per seller category, ready for a purchase-and-refund walkthrough:
+#   ASSISTIVE_DEVICE_STORE rehab-mobility · EQUIPMENT_SUPPLIER sharq-devices ·
+#   MEDICAL_SUPPLIES_OFFICE aman-consumables · PHARMACY amal-pharmacy (its store) ·
+#   PHARMACEUTICAL_COMPANY dijla-pharma · SCIENTIFIC_OFFICE ibn-sina-scientific ·
+#   PHARMA_DISTRIBUTOR kurdistan-medicines · MEDICAL_COMPANY hayat-medical (new).
+# A pharmacy keeps its provider account; its store is linked to its pharmacy profile.
+PHARMACY_STORES = [("amal-pharmacy", "متجر صيدلية الأمل", "Al-Amal Pharmacy Store")]
+
+# key, name_ar, name_en, business type, governorate
+NEW_SELLERS = [
+    (
+        "hayat-medical",
+        "شركة الحياة الطبية",
+        "Al-Hayat Medical Company",
+        "MEDICAL_COMPANY",
+        "baghdad",
+    ),
+]
+
+# Category with its own compliance rules (pharmacies only, at most 3 per order, buyer notice).
+PHARMACY_CATEGORY = (
+    "demo-pharmacy-care",
+    "عناية صيدلانية (بدون وصفة)",
+    "Pharmacy care (no prescription)",
+)
+PHARMACY_CATEGORY_NOTICE = (
+    "منتج عناية بدون وصفة. اقرأ التعليمات؛ استشر الصيدلاني عند الحاجة. (توضيحي)",
+    "Non-prescription care item. Read the instructions; ask the pharmacist if unsure. (demo)",
+)
+
+# Seller documents: verified sellers get every required document APPROVED; these get a state.
+DOCUMENT_STATES = {
+    "tigris-pending-supplies": "PENDING",  # shows in Racheeta's review queue
+    "noor-rejected-supplies": "REJECTED",
+}
+
+# company key -> delivery: (default fee or None, free over or None, [(governorate, fee, min, max)])
+SHIPPING = {
+    "rehab-mobility": ("12000", "500000", [("baghdad", "5000", 1, 2), ("basra", "10000", 2, 4)]),
+    "aman-consumables": ("8000", None, [("baghdad", "3000", 1, 2)]),
+    "sharq-devices": ("25000", None, [("baghdad", "15000", 1, 3)]),
+    "store:amal-pharmacy": (None, "50000", [("baghdad", "2000", 0, 1)]),
+    "hayat-medical": ("10000", None, []),
+    "dijla-pharma": ("7000", None, []),
+}
+
+# company key -> (mode, rate, label, registration no.). Fictional and seller-declared.
+TAX = {
+    "sharq-devices": ("EXCLUSIVE", "5", "ضريبة مبيعات توضيحية | Demo sales tax", "DEMO-TAX-0001"),
+    "aman-consumables": ("INCLUSIVE", "5", "ضريبة توضيحية مشمولة | Demo tax included", ""),
+}
+
+# key, company key, category slug, title_ar, title_en, price, channel, stock (None = variants),
+# variants [(label, sku, price or None, stock)], photo colours
+SELLER_PRODUCTS = [
+    (
+        "amal-bandage",
+        "store:amal-pharmacy",
+        "demo-pharmacy-care",
+        "رباط ضاغط مرن",
+        "Elastic compression bandage",
+        "4000",
+        "B2C",
+        None,
+        [("5 سم | 5 cm", "AML-BND-5", None, 30), ("10 سم | 10 cm", "AML-BND-10", "6000", 20)],
+        ((25, 120, 110), (235, 245, 240)),
+    ),
+    (
+        "amal-first-aid",
+        "store:amal-pharmacy",
+        "demo-first-aid",
+        "حقيبة إسعافات أولية للسفر",
+        "Travel first-aid kit",
+        "18000",
+        "B2C",
+        20,
+        [],
+        ((200, 60, 60), (250, 240, 240)),
+    ),
+    (
+        "aman-compression-sleeve",
+        "aman-consumables",
+        "demo-orthopedic-supports",
+        "كم ضاغط للذراع",
+        "Arm compression sleeve",
+        "24000",
+        "B2C",
+        None,
+        [("S", "AMN-SLV-S", None, 6), ("M", "AMN-SLV-M", None, 10), ("L", "AMN-SLV-L", "26000", 4)],
+        ((60, 90, 170), (230, 236, 250)),
+    ),
+    (
+        "dijla-chlorhexidine",
+        "dijla-pharma",
+        "demo-antiseptics",
+        "مسحات كلورهيكسيدين 2%",
+        "Chlorhexidine 2% skin-prep swabs",
+        "18000",
+        "B2B",
+        None,
+        [
+            ("علبة 50 | Box of 50", "DJL-CHX-50", None, 40),
+            ("علبة 200 | Box of 200", "DJL-CHX-200", "60000", 15),
+        ],
+        ((90, 60, 150), (240, 236, 250)),
+    ),
+    (
+        "ibnsina-control-solution",
+        "ibn-sina-scientific",
+        "demo-consumables",
+        "محلول ضبط لأجهزة السكر (مختبري)",
+        "Glucose meter control solution (lab)",
+        "22000",
+        "B2B",
+        30,
+        [],
+        ((20, 110, 160), (230, 245, 250)),
+    ),
+    (
+        "kurdistan-gauze",
+        "kurdistan-medicines",
+        "demo-consumables",
+        "شاش معقم 10×10 (100 قطعة)",
+        "Sterile gauze swabs 10×10 (pack of 100)",
+        "9000",
+        "B2B",
+        60,
+        [],
+        ((120, 120, 120), (245, 245, 245)),
+    ),
+    (
+        "hayat-gloves",
+        "hayat-medical",
+        "demo-consumables",
+        "قفازات فحص نتريل (100)",
+        "Nitrile examination gloves (100)",
+        "12000",
+        "B2B",
+        None,
+        [("S", "HYT-GLV-S", None, 25), ("M", "HYT-GLV-M", None, 25), ("L", "HYT-GLV-L", None, 25)],
+        ((30, 140, 90), (232, 248, 238)),
+    ),
+]
+
+# Photos for existing demo products (product key -> colours).
+EXTRA_PHOTOS = {
+    "walker": ((40, 120, 140), (235, 245, 248)),
+    "digital-scale": ((70, 70, 90), (240, 240, 245)),
+}

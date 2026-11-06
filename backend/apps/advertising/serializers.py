@@ -1,3 +1,4 @@
+from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -297,12 +298,33 @@ class PaginatedCampaignOwnerSerializer(serializers.Serializer):
 # ---- providers -----------------------------------------------------------------------------
 
 
+class SponsoredProductSerializer(ProductPublicSerializer):
+    """The organic product card without variants and the photo list (the campaign carries its
+    first photo), so the sponsored list keeps a constant number of queries."""
+
+    photo_url = serializers.SerializerMethodField()
+
+    def get_photo_url(self, obj) -> str:
+        return obj.image_url or ""  # replaced by the first uploaded photo (campaign annotation)
+
+    class Meta(ProductPublicSerializer.Meta):
+        fields = (
+            *(
+                f
+                for f in ProductPublicSerializer.Meta.fields
+                if f not in ("images", "variants", "can_buy_directly")
+            ),
+            "photo_url",
+        )
+        read_only_fields = fields
+
+
 class SponsoredCampaignSerializer(serializers.ModelSerializer):
     """What an eligible provider sees: the existing product (organic representation) and
     the window — never payment, price, notes or lifecycle internals."""
 
     sponsored = serializers.SerializerMethodField()
-    product = ProductPublicSerializer(read_only=True)
+    product = SponsoredProductSerializer(read_only=True)
 
     class Meta:
         model = AdvertisingCampaign
@@ -312,6 +334,14 @@ class SponsoredCampaignSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_sponsored(self, obj) -> bool:
         return True
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # The product's first uploaded photo (annotated in the list query: no extra query).
+        photo = getattr(obj, "product_photo_id", None)
+        if photo:
+            data["product"]["photo_url"] = reverse("v1:marketplace-product-image", args=[photo])
+        return data
 
 
 # ---- administrators ------------------------------------------------------------------------

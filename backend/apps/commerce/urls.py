@@ -22,6 +22,12 @@ urlpatterns = [
     ),
     path("orders/<uuid:pk>/returns", v.MyOrderReturnView.as_view(), name="order-return"),
     path("orders/<uuid:pk>/disputes", v.MyOrderDisputeView.as_view(), name="order-dispute"),
+    path("orders/<uuid:pk>/invoices", v.MyOrderInvoiceListView.as_view(), name="order-invoices"),
+    path(
+        "orders/<uuid:pk>/invoices/<uuid:invoice_id>",
+        v.MyOrderInvoiceDetailView.as_view(),
+        name="order-invoice",
+    ),
     # seller
     path("merchant/orders", v.MerchantOrderListView.as_view(), name="merchant-orders"),
     path("merchant/orders/<uuid:pk>", v.MerchantOrderDetailView.as_view(), name="merchant-order"),
@@ -29,6 +35,27 @@ urlpatterns = [
         "merchant/orders/<uuid:pk>/transition",
         v.MerchantOrderTransitionView.as_view(),
         name="merchant-order-transition",
+    ),
+    path(
+        "merchant/orders/<uuid:pk>/tracking",
+        v.MerchantTrackingView.as_view(),
+        name="merchant-order-tracking",
+    ),
+    path(
+        "merchant/orders/<uuid:pk>/invoices",
+        v.MerchantOrderInvoiceListView.as_view(),
+        name="merchant-order-invoices",
+    ),
+    path(
+        "merchant/orders/<uuid:pk>/invoices/<uuid:invoice_id>",
+        v.MerchantOrderInvoiceDetailView.as_view(),
+        name="merchant-order-invoice",
+    ),
+    path("merchant/reports/sales", v.MerchantSalesReportView.as_view(), name="merchant-report"),
+    path(
+        "admin/commerce/reports/marketplace",
+        v.AdminMarketplaceReportView.as_view(),
+        name="admin-marketplace-report",
     ),
     path("merchant/returns", v.MerchantReturnListView.as_view(), name="merchant-returns"),
     path(

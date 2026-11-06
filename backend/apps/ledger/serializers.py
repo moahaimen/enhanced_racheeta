@@ -146,6 +146,8 @@ class StatementSerializer(serializers.Serializer):
     commission = serializers.DecimalField(**MONEY)
     refunded_commission = serializers.DecimalField(**MONEY)
     refunded_seller_payable = serializers.DecimalField(**MONEY)
+    shipping_collected = serializers.DecimalField(**MONEY)
+    tax_collected = serializers.DecimalField(**MONEY)
     seller_earnings = serializers.DecimalField(**MONEY)
     paid_out = serializers.DecimalField(**MONEY)
     payable = serializers.DecimalField(**MONEY)

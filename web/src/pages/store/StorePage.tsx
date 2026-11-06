@@ -111,7 +111,7 @@ function StoreCard({ product }: { product: StoreProduct }) {
   return (
     <article className={styles.card} data-testid="store-card">
       <Link to={`/store/${product.id}`} className={styles.imageLink} tabIndex={-1} aria-hidden="true">
-        <ProductImage src={product.image_url} alt={title} />
+        <ProductImage src={product.images?.[0]?.url || product.image_url} alt={title} />
         <span className={styles.stockBadge}>
           <StockBadge product={product} />
         </span>

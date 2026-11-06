@@ -104,3 +104,33 @@ class DisputeStatus(models.TextChoices):
     OPEN = "OPEN", "Open"
     RESOLVED_REFUND = "RESOLVED_REFUND", "Resolved with refund"
     RESOLVED_REJECTED = "RESOLVED_REJECTED", "Resolved without refund"
+
+
+class ItemKind(models.TextChoices):
+    """An order line is merchandise, or a pass-through charge the seller declared. Charges carry
+    no commission (the commission base is merchandise only) and go to the seller in full."""
+
+    MERCHANDISE = "MERCHANDISE", "Product"
+    SHIPPING = "SHIPPING", "Delivery fee"
+    TAX = "TAX", "Tax (declared by the seller)"
+
+
+CHARGE_KINDS = frozenset({ItemKind.SHIPPING, ItemKind.TAX})
+
+
+class TrackingStatus(models.TextChoices):
+    """Delivery progress the seller (or its courier) reports after shipping. Only the buyer or
+    Racheeta confirms DELIVERED (the order status), never a tracking event."""
+
+    PICKED_UP = "PICKED_UP", "Picked up by the courier"
+    IN_TRANSIT = "IN_TRANSIT", "In transit"
+    OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY", "Out for delivery"
+    DELIVERY_ATTEMPTED = "DELIVERY_ATTEMPTED", "Delivery attempted"
+    DELAYED = "DELAYED", "Delayed"
+    NOTE = "NOTE", "Note"
+
+
+class InvoiceKind(models.TextChoices):
+    INVOICE = "INVOICE", "Invoice"
+    RECEIPT = "RECEIPT", "Payment receipt"
+    CREDIT_NOTE = "CREDIT_NOTE", "Credit note (refund)"

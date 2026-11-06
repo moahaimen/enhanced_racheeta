@@ -87,7 +87,7 @@ export function MarketplacePage() {
               {(products.data?.results ?? []).map((product) => (
                 <li key={product.id} className={storeStyles.card} data-testid="marketplace-product">
                   <Link to={`/marketplace/products/${product.id}`} className={storeStyles.imageLink} tabIndex={-1} aria-hidden="true">
-                    <ProductImage src={product.image_url} alt={product.title} />
+                    <ProductImage src={product.images?.[0]?.url || product.image_url} alt={product.title} />
                   </Link>
                   <span className={storeStyles.category}>{name(product.category)}</span>
                   <h3 className={storeStyles.title}>

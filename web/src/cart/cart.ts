@@ -8,6 +8,9 @@ import { useSyncExternalStore } from 'react'
  */
 export interface CartLine {
   product: string
+  /** The chosen option (size, pack...) when the product has variants. */
+  variant?: string
+  variantLabel?: string
   title: string
   price: string
   currency: string
@@ -15,6 +18,8 @@ export interface CartLine {
   merchantName: string
   /** Display snapshot only (the server re-reads the product at checkout). */
   image?: string
+  /** 'B2B': bought from the professional catalogue (re-read there, not in the public store). */
+  source?: 'STORE' | 'B2B'
   quantity: number
 }
 
@@ -43,20 +48,27 @@ function commit(next: CartLine[]) {
   listeners.forEach((fn) => fn())
 }
 
+/** One cart line per product AND option; a product without options keeps its id as the key. */
+export function lineKey(line: Pick<CartLine, 'product' | 'variant'>): string {
+  return line.variant ? `${line.product}:${line.variant}` : line.product
+}
+
 export const cart = {
   add(line: Omit<CartLine, 'quantity'>, quantity = 1) {
-    const existing = lines.find((l) => l.product === line.product)
+    const key = lineKey(line)
+    const existing = lines.find((l) => lineKey(l) === key)
     if (existing) {
-      commit(lines.map((l) => (l.product === line.product ? { ...l, quantity: Math.min(MAX_QUANTITY, l.quantity + quantity) } : l)))
+      commit(lines.map((l) => (lineKey(l) === key ? { ...l, quantity: Math.min(MAX_QUANTITY, l.quantity + quantity) } : l)))
     } else {
       commit([...lines, { ...line, quantity: Math.min(MAX_QUANTITY, quantity) }])
     }
   },
-  setQuantity(product: string, quantity: number) {
-    commit(lines.map((l) => (l.product === product ? { ...l, quantity: Math.max(1, Math.min(MAX_QUANTITY, quantity)) } : l)))
+  /** `key` is lineKey(line) (the product id for a product without options). */
+  setQuantity(key: string, quantity: number) {
+    commit(lines.map((l) => (lineKey(l) === key ? { ...l, quantity: Math.max(1, Math.min(MAX_QUANTITY, quantity)) } : l)))
   },
-  remove(product: string) {
-    commit(lines.filter((l) => l.product !== product))
+  remove(key: string) {
+    commit(lines.filter((l) => lineKey(l) !== key))
   },
   removeMerchant(merchantId: string) {
     commit(lines.filter((l) => l.merchantId !== merchantId))

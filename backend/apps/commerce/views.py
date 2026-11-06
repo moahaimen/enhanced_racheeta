@@ -19,12 +19,13 @@ from apps.marketplace.permissions import BROWSE_DENIED, current_verified_provide
 from apps.marketplace.serializers import StoreCategorySerializer, StoreProductSerializer
 from apps.workspaces import access
 
-from . import checkout, inventory, lifecycle, promotions, services
+from . import checkout, inventory, invoices, lifecycle, promotions, reports, services
 from .errors import CommerceError
 from .models import (
     Checkout,
     Coupon,
     Dispute,
+    Invoice,
     Order,
     OrderTransition,
     ProductOffer,
@@ -46,6 +47,8 @@ from .serializers import (
     DisputeResolveSerializer,
     DisputeSerializer,
     InventoryRowSerializer,
+    InvoiceSerializer,
+    InvoiceSummarySerializer,
     OrderSerializer,
     OrderTransitionRequestSerializer,
     ProductSaleCreateSerializer,
@@ -62,6 +65,8 @@ from .serializers import (
     StockAdjustSerializer,
     StockMovementSerializer,
     StockThresholdSerializer,
+    TrackingEventCreateSerializer,
+    TrackingEventSerializer,
     VerifyPaymentSerializer,
     preview_payload,
 )
@@ -77,6 +82,9 @@ STATUS_FOR_CODE = {
     "already_exists": status.HTTP_409_CONFLICT,
     "stale": status.HTTP_409_CONFLICT,
     "idempotency_conflict": status.HTTP_409_CONFLICT,
+    "variant_required": status.HTTP_400_BAD_REQUEST,
+    "quantity_limit": status.HTTP_400_BAD_REQUEST,
+    "no_delivery": status.HTTP_400_BAD_REQUEST,
 }
 
 
@@ -103,8 +111,10 @@ def _orders():
         "delivery_city",
         "payment_verified_by",
     ).prefetch_related(
-        "items__product",
+        "items__product__images",
         "refunds",
+        "tracking_events",
+        "invoices",
         Prefetch("returns", queryset=ReturnRequest.objects.prefetch_related("lines__item")),
         "disputes",
         Prefetch("transitions", queryset=OrderTransition.objects.order_by("created_at")),
@@ -147,8 +157,10 @@ class StoreProductListView(generics.ListAPIView):
     serializer_class = StoreProductSerializer
 
     def get_queryset(self):
-        qs = Product.objects.consumer_store().select_related(
-            "company", "company__governorate", "company__city", "category"
+        qs = (
+            Product.objects.consumer_store()
+            .select_related("company", "company__governorate", "company__city", "category")
+            .prefetch_related("variants", "images")
         )
         category = self.request.query_params.get("category")
         if category:
@@ -167,7 +179,11 @@ class StoreProductDetailView(generics.RetrieveAPIView):
     serializer_class = StoreProductSerializer
 
     def get_queryset(self):
-        return Product.objects.consumer_store().select_related("company", "category")
+        return (
+            Product.objects.consumer_store()
+            .select_related("company", "category")
+            .prefetch_related("variants", "images")
+        )
 
 
 @extend_schema(tags=["store"], summary="Public store categories that currently have products")
@@ -202,6 +218,7 @@ class CheckoutPreviewView(APIView):
                 request.user,
                 items=[dict(line) for line in data["items"]],
                 coupons=data["coupons"],
+                governorate=data.get("governorate"),
             )
         except ERRORS as exc:
             raise_api(exc)
@@ -400,10 +417,178 @@ class MerchantOrderTransitionView(APIView):
                 to_status=data["status"],
                 reason=data["reason"],
                 shipping_reference=data["shipping_reference"],
+                courier_name=data.get("courier_name", ""),
             )
         except ERRORS as exc:
             raise_api(exc)
         return Response(SellerOrderSerializer(_orders().get(pk=pk)).data)
+
+
+class MerchantTrackingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["seller"],
+        summary="Report delivery progress of a shipped order (never changes its status)",
+        parameters=[COMPANY_PARAM],
+        request=TrackingEventCreateSerializer,
+        responses={201: TrackingEventSerializer},
+    )
+    def post(self, request, pk):
+        company_id = _merchant_company_id(request, "company.orders.manage")
+        serializer = TrackingEventCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            event = lifecycle.add_tracking_event(
+                pk, company_id=company_id, actor=request.user, **serializer.validated_data
+            )
+        except ERRORS as exc:
+            raise_api(exc)
+        return Response(TrackingEventSerializer(event).data, status=status.HTTP_201_CREATED)
+
+
+# ---- invoices, receipts, credit notes -----------------------------------------------------------
+
+
+def _documents(order) -> Response:
+    invoices.ensure_issued(order)
+    rows = Invoice.objects.filter(order=order).order_by("created_at", "id")
+    return Response(InvoiceSummarySerializer(rows, many=True).data)
+
+
+def _document(order, invoice_id) -> Response:
+    invoices.ensure_issued(order)
+    row = Invoice.objects.filter(order=order, pk=invoice_id).first()
+    if row is None:
+        return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+    return Response(InvoiceSerializer(row).data)
+
+
+class MyOrderInvoiceListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["store"],
+        summary="My invoice, receipt and credit notes for one order",
+        responses=InvoiceSummarySerializer(many=True),
+    )
+    def get(self, request, pk):
+        order = Order.objects.filter(pk=pk, buyer=request.user).first()
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return _documents(order)
+
+
+class MyOrderInvoiceDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["store"], summary="One printable document", responses=InvoiceSerializer)
+    def get(self, request, pk, invoice_id):
+        order = Order.objects.filter(pk=pk, buyer=request.user).first()
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return _document(order, invoice_id)
+
+
+class MerchantOrderInvoiceListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["seller"],
+        summary="Documents issued for one of my orders",
+        parameters=[COMPANY_PARAM],
+        responses=InvoiceSummarySerializer(many=True),
+    )
+    def get(self, request, pk):
+        company_id = _merchant_company_id(request, "company.orders.view")
+        order = Order.objects.filter(pk=pk, merchant_id=company_id).first()
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return _documents(order)
+
+
+class MerchantOrderInvoiceDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["seller"],
+        summary="One document of one of my orders",
+        parameters=[COMPANY_PARAM],
+        responses=InvoiceSerializer,
+    )
+    def get(self, request, pk, invoice_id):
+        company_id = _merchant_company_id(request, "company.orders.view")
+        order = Order.objects.filter(pk=pk, merchant_id=company_id).first()
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return _document(order, invoice_id)
+
+
+# ---- accounting reports -------------------------------------------------------------------------
+
+
+REPORT_PARAMS = [
+    OpenApiParameter("from", str, description="YYYY-MM-DD (default: 90 days ago)"),
+    OpenApiParameter("to", str, description="YYYY-MM-DD (default: today)"),
+    OpenApiParameter("export", str, description="csv to download a spreadsheet"),
+]
+
+
+def _report_period(request):
+    try:
+        return reports.period(request.query_params.get("from"), request.query_params.get("to"))
+    except reports.ReportError as exc:
+        raise_api(exc)
+
+
+def _csv(text: str, name: str):
+    from django.http import HttpResponse
+
+    response = HttpResponse(text, content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{name}"'
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+class MerchantSalesReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["seller"],
+        summary="My sales and commission report (JSON or CSV)",
+        parameters=[COMPANY_PARAM, *REPORT_PARAMS],
+        responses={200: dict},
+    )
+    def get(self, request):
+        company_id = _merchant_company_id(request, "company.reports.view")
+        start, end = _report_period(request)
+        report = reports.seller_report(company_id, start, end)
+        if request.query_params.get("export") == "csv":
+            return _csv(
+                reports.to_csv(report["orders"], reports.ORDER_COLUMNS),
+                f"racheeta-sales-{start}-{end}.csv",
+            )
+        return Response(report)
+
+
+class AdminMarketplaceReportView(APIView):
+    permission_classes = FINANCE
+
+    @extend_schema(
+        tags=["finance"],
+        summary="Marketplace accounting report per seller (JSON or CSV)",
+        parameters=REPORT_PARAMS,
+        responses={200: dict},
+    )
+    def get(self, request):
+        start, end = _report_period(request)
+        report = reports.platform_report(start, end)
+        if request.query_params.get("export") == "csv":
+            return _csv(
+                reports.to_csv(report["sellers"], reports.SELLER_COLUMNS),
+                f"racheeta-marketplace-{start}-{end}.csv",
+            )
+        return Response(report)
 
 
 def _returns():
@@ -466,24 +651,49 @@ class MerchantReturnReceivedView(APIView):
         return Response(ReturnSerializer(_returns().get(pk=pk)).data)
 
 
-def _inventory_row(product) -> dict:
-    left = inventory.available(product)
+def _inventory_row(unit) -> dict:
+    """A product without variants, or one variant (its own SKU, price and stock)."""
+    from apps.marketplace.models import ProductVariant
+
+    left = inventory.available(unit)
+    variant = unit if isinstance(unit, ProductVariant) else None
+    product = variant.product if variant is not None else unit
     return {
         "id": product.pk,
+        "variant_id": variant.pk if variant is not None else None,
+        "variant_label": variant.label if variant is not None else "",
+        "sku": (variant.sku if variant is not None else product.sku) or "",
         "title": product.title,
         "image_url": product.image_url or "",
-        "is_active": product.is_active,
-        "price": product.price,
-        "on_hand": product.stock_quantity,
-        "reserved": product.stock_reserved,
+        "is_active": product.is_active and (variant is None or variant.is_active),
+        "price": variant.effective_price if variant is not None else product.price,
+        "on_hand": unit.stock_quantity,
+        "reserved": unit.stock_reserved,
         "available": left,
-        "reorder_threshold": product.reorder_threshold,
+        "reorder_threshold": unit.reorder_threshold,
         "low": bool(
             left is not None
-            and product.reorder_threshold is not None
-            and left <= product.reorder_threshold
+            and unit.reorder_threshold is not None
+            and left <= unit.reorder_threshold
         ),
     }
+
+
+def _inventory_rows(company_id) -> list[dict]:
+    rows = []
+    products = (
+        Product.objects.filter(company_id=company_id)
+        .prefetch_related("variants")
+        .order_by("title", "id")
+    )
+    for product in products:
+        variants = list(product.variants.all())
+        if not variants:
+            rows.append(_inventory_row(product))
+        for variant in variants:
+            variant.product = product
+            rows.append(_inventory_row(variant))
+    return rows
 
 
 class MerchantInventoryView(APIView):
@@ -497,10 +707,7 @@ class MerchantInventoryView(APIView):
     )
     def get(self, request):
         company_id = _merchant_company_id(request, "company.products.view")
-        products = Product.objects.filter(company_id=company_id).order_by("title", "id")
-        return Response(
-            InventoryRowSerializer([_inventory_row(p) for p in products], many=True).data
-        )
+        return Response(InventoryRowSerializer(_inventory_rows(company_id), many=True).data)
 
 
 class MerchantStockAdjustView(APIView):
@@ -517,13 +724,19 @@ class MerchantStockAdjustView(APIView):
         company_id = _merchant_company_id(request, "company.stock.manage")
         serializer = StockAdjustSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
         try:
-            product = inventory.adjust(
-                pk, company_id=company_id, actor=request.user, **serializer.validated_data
+            unit = inventory.adjust(
+                pk,
+                company_id=company_id,
+                actor=request.user,
+                delta=data["delta"],
+                reason=data["reason"],
+                variant_id=data.get("variant_id"),
             )
         except ERRORS as exc:
             raise_api(exc)
-        return Response(InventoryRowSerializer(_inventory_row(product)).data)
+        return Response(InventoryRowSerializer(_inventory_row(unit)).data)
 
 
 class MerchantStockThresholdView(APIView):
@@ -541,12 +754,15 @@ class MerchantStockThresholdView(APIView):
         serializer = StockThresholdSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            product = inventory.set_threshold(
-                pk, company_id=company_id, threshold=serializer.validated_data["threshold"]
+            unit = inventory.set_threshold(
+                pk,
+                company_id=company_id,
+                threshold=serializer.validated_data["threshold"],
+                variant_id=serializer.validated_data.get("variant_id"),
             )
         except ERRORS as exc:
             raise_api(exc)
-        return Response(InventoryRowSerializer(_inventory_row(product)).data)
+        return Response(InventoryRowSerializer(_inventory_row(unit)).data)
 
 
 @extend_schema(
@@ -894,6 +1110,7 @@ class MyQuoteListView(generics.ListAPIView):
                 product_id=serializer.validated_data["product"],
                 quantity=serializer.validated_data["quantity"],
                 message=serializer.validated_data["message"],
+                variant_id=serializer.validated_data.get("variant"),
             )
         except ERRORS as exc:
             raise_api(exc)

@@ -164,3 +164,52 @@
   border-color: var(--color-primary-600);
   color: var(--color-neutral-0);
 }
+
+/* A simple vertical timeline (delivery tracking). */
+.timeline {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  border-inline-start: 2px solid var(--border-subtle);
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+}
+.timeline > li {
+  position: relative;
+}
+.timeline > li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--space-5) - 6px);
+  inset-block-start: 0.45em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+}
+
+/* Printing (invoices, receipts): only the document is printed. */
+@media print {
+  .no-print,
+  header:not(article header),
+  footer:not(article footer),
+  nav,
+  aside {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}
+
+/* A button that looks like a link (opens a private file, etc.). */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--color-primary-700);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+}

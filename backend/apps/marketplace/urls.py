@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import seller_views, views
 
 urlpatterns = [
     # reference data
@@ -50,7 +50,84 @@ urlpatterns = [
         views.MyProductDeactivateView.as_view(),
         name="marketplace-company-product-deactivate",
     ),
+    # seller onboarding and store management
+    path(
+        "marketplace/pharmacy-store",
+        seller_views.PharmacyStoreView.as_view(),
+        name="marketplace-pharmacy-store",
+    ),
+    path("marketplace/company/store", seller_views.StoreView.as_view(), name="marketplace-store"),
+    path(
+        "marketplace/company/store/status",
+        seller_views.StoreStatusView.as_view(),
+        name="marketplace-store-status",
+    ),
+    path(
+        "marketplace/company/documents",
+        seller_views.DocumentListView.as_view(),
+        name="marketplace-documents",
+    ),
+    path(
+        "marketplace/company/documents/<uuid:pk>",
+        seller_views.DocumentDetailView.as_view(),
+        name="marketplace-document",
+    ),
+    path(
+        "marketplace/company/documents/<uuid:pk>/file",
+        seller_views.DocumentFileView.as_view(),
+        name="marketplace-document-file",
+    ),
+    path(
+        "marketplace/company/shipping-rates",
+        seller_views.ShippingRateListView.as_view(),
+        name="marketplace-shipping-rates",
+    ),
+    path(
+        "marketplace/company/shipping-rates/<uuid:pk>",
+        seller_views.ShippingRateDetailView.as_view(),
+        name="marketplace-shipping-rate",
+    ),
+    path(
+        "marketplace/company/products/<uuid:pk>/variants",
+        seller_views.VariantListView.as_view(),
+        name="marketplace-product-variants",
+    ),
+    path(
+        "marketplace/company/variants/<uuid:pk>",
+        seller_views.VariantDetailView.as_view(),
+        name="marketplace-variant",
+    ),
+    path(
+        "marketplace/company/products/<uuid:pk>/images",
+        seller_views.ProductImageUploadView.as_view(),
+        name="marketplace-product-images",
+    ),
+    path(
+        "marketplace/company/images/<uuid:pk>",
+        seller_views.ProductImageDeleteView.as_view(),
+        name="marketplace-company-image",
+    ),
+    path(
+        "marketplace/images/<uuid:pk>",
+        seller_views.ProductImageFileView.as_view(),
+        name="marketplace-product-image",
+    ),
     # administrators
+    path(
+        "admin/marketplace/documents",
+        seller_views.AdminDocumentListView.as_view(),
+        name="admin-marketplace-documents",
+    ),
+    path(
+        "admin/marketplace/documents/<uuid:pk>/decision",
+        seller_views.AdminDocumentDecisionView.as_view(),
+        name="admin-marketplace-document-decision",
+    ),
+    path(
+        "admin/marketplace/documents/<uuid:pk>/file",
+        seller_views.AdminDocumentFileView.as_view(),
+        name="admin-marketplace-document-file",
+    ),
     path(
         "admin/marketplace/companies",
         views.AdminCompanyListView.as_view(),

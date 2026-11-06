@@ -21,9 +21,12 @@ Evidence keys:
 | Per-organization capability checks on every seller endpoint (`?company=`) | PASS | T: `test_seller_endpoints_never_cross_organizations` (9 reads + 8 writes × rival owner and rival MANAGER), `test_an_ended_membership_loses_every_seller_tool_at_once`, `test_a_seller_never_sees_the_other_sellers_order_of_the_same_checkout`, `test_another_seller_cannot_touch_my_orders_returns_or_stock` |
 | PRODUCT_EDITOR edits products of the business it works for | PASS | T: specialist-roles test (PATCH via `?company=`); VIEWER is refused |
 | Seller cannot set verification, commission, payment, refund or payout | PASS | no such seller endpoint; T: `test_seller_cannot_mark_delivered_or_paid_…`, `test_only_finance_can_…` |
-| Company onboarding and verification request (existing) | PASS (pre-existing) | `apps/marketplace` (unchanged) |
-| Seller document upload / licence evidence | NOT IMPLEMENTED | there is no safe file storage yet; verification stays an admin decision |
-| Store activation request as a separate step | NOT IMPLEMENTED | publication is gated by company verification plus category compliance |
+| Company onboarding and verification request | PASS | T: `test_every_seller_category_onboards_sells_and_refunds_with_20_percent` (×8 business types, all through the API) |
+| Pharmacy sells WITHOUT leaving its provider identity (store linked to its pharmacy profile; role stays PROVIDER; facility workspace kept) | PASS | T: `test_a_pharmacy_opens_its_store_and_keeps_its_provider_identity`, `test_only_a_pharmacy_can_open_a_pharmacy_store`, `test_a_pharmacy_store_stops_selling_when_the_pharmacy_loses_verification`; W: pharmacy start + doctor refused; B: Al-Amal store order RCH-261106-A850B0 |
+| Seller document upload / licence evidence (private, type-sniffed, size-limited, active PDFs refused, random names, nosniff + sandbox CSP) | PASS (local storage) | T: `test_dangerous_or_broken_documents_are_refused` (×7), `test_documents_are_private_random_named_and_served_safely`; production needs private object storage and malware scanning (NOT IMPLEMENTED) |
+| Racheeta document review (approve, reject with reason) and verification decision in the web console | PASS | T: activation test; W: admin sellers tab; S: Tigris (pending doc), Noor (rejected doc) |
+| Store activation as a separate step (needs verification AND every required document approved; pause any time) | PASS | T: `test_store_activation_needs_verification_and_approved_documents_and_pausing_hides_products`; W: setup tab refuses activation while a document is missing. Stores that existed before keep selling (migration default ACTIVE, documented). Re-verifying a store with missing documents puts it back to INACTIVE: T: `test_reverifying_a_legacy_store_without_documents_does_not_reopen_it`; the existing visibility test now also proves the store stays hidden until its documents are approved and it is re-activated |
+| Required documents per business type | PASS (fictional rule set) | `marketplace.types.REQUIRED_DOCUMENTS`; not a statement of Iraqi licensing law |
 
 ## 2. Compliance (fail closed)
 
@@ -54,7 +57,9 @@ Evidence keys:
 | Proportional compensating refunds (cumulative rounding, adds up exactly) | PASS | T: `test_partial_then_full_return_reverses_commission_proportionally`, `test_refunding_unit_by_unit_adds_up_exactly_with_odd_amounts`; B: return refund 92,000 |
 | Reconciliation: 5 balances re-derived (cash, buyer funds held, commission, Racheeta coupons, seller net position) plus 6 integrity checks (entries balance, no negative payable, no negative receivable, payable/receivable netted, payment entry per paid order, one accrual per order) | PASS | T: every finance and audit test asserts `reconciliation()["ok"]`; demo DB reconciled after seed → seed → clear → seed |
 | Separate accounting domain (not `billing` or `advertising` payments) | PASS | `apps/ledger` only posts marketplace orders and settlements |
-| Shipping fees, taxes, processing costs | NOT IMPLEMENTED | no shipping or tax lines exist; the commission base is merchandise only, as specified |
+| Delivery fees (per governorate, default, free-over, delivery estimate) as pass-through SHIPPING lines, no commission | PASS | T: `test_delivery_fee_goes_to_the_seller_without_commission`, `test_delivery_rules_free_over_threshold_and_unserved_governorates`, `test_cancelled_paid_order_refunds_delivery_but_a_return_does_not`; B: 8 walkthrough orders |
+| Seller-declared tax (NONE default / INCLUSIVE shown only / EXCLUSIVE 0–30% TAX lines refunded with the goods), no commission on tax | PASS | T: `test_seller_declared_tax_is_passed_through_and_refunded_with_the_goods`; B: Sharq 5% EXCLUSIVE, Aman INCLUSIVE. Racheeta decides no tax obligation |
+| Payment processing costs | NOT IMPLEMENTED (by design) | no payment provider exists |
 | Multi-currency | NOT IMPLEMENTED (by design) | IQD only; any other currency is refused (no exchange-rate snapshot exists) |
 
 ## 4. Payments, payouts (simulated)
@@ -86,8 +91,14 @@ Evidence keys:
 | Disputes (one open per order) → finance resolves with or without refund | PASS | T: `test_dispute_resolved_with_refund_after_completion`; S: `ali-open-dispute` |
 | Paid order cancelled before shipping → REFUND_PENDING → finance refund | PASS | T: `test_paid_order_cancelled_before_shipping_is_refunded_by_finance`; S: `zainab-paid-cancelled-refunded` |
 | Quote → accept → order at quoted price, 20%, once; expired quote refused | PASS | T: `test_accepted_quote_becomes_one_order_at_the_quoted_price`, `test_expired_quote_cannot_be_accepted`; S: `amal-fridge` |
-| Product variants / SKUs, bundles | NOT IMPLEMENTED | one price per product |
-| Buyer invoice / receipt document | PARTIAL | the order card shows the full server breakdown (items, discounts, paid, refunded); there is no printable invoice |
+| SKUs (unique per business across products and variants) and product variants with their own price and stock | PASS | T: `test_variants_have_their_own_sku_price_and_stock`, `test_a_variant_of_another_product_or_store_cannot_be_bought_or_edited`, `test_the_last_unit_of_a_variant_is_sold_once` (threads), `test_a_product_whose_options_are_all_hidden_cannot_be_bought`; W: option picker, one cart line per option; B: sleeve M, bandage 10 cm, gloves M, swabs box of 50 |
+| Bundles | NOT IMPLEMENTED | — |
+| Product photos (validated JPEG/PNG/WebP, private until the product is on sale) | PASS | T: `test_product_photos_are_validated_and_hidden_until_the_product_is_on_sale`. Not re-encoded (no image library installed): EXIF metadata is not stripped (PARTIAL for privacy) |
+| Category-specific compliance rules (allowed business types, required documents, max per order, buyer notice) | PASS | T: `test_category_rules_limit_who_publishes_what_and_how_many`; S: `demo-pharmacy-care` (pharmacies only, 3 per order) |
+| Buyer invoice, payment receipt, credit note per refund (frozen snapshots, buyer + seller only, printable) | PASS (HTML print) | T: `test_invoices_are_frozen_snapshots_visible_only_to_the_buyer_and_the_seller`, `test_orders_paid_before_documents_existed_get_them_on_first_request`; W: printable document; B: all 8 orders have INVOICE + RECEIPT + CREDIT_NOTE. No server PDF or legal e-invoice numbering |
+| Delivery tracking (courier, reference, progress events; never changes the order status) | PASS (manual) | T: `test_tracking_events_are_the_sellers_and_never_change_the_status`; B: 8 sellers posted "In transit". No courier integration |
+| Seller and platform accounting reports, CSV (formula-safe) | PASS | T: `test_accounting_reports_match_the_ledger_and_are_scoped`, `test_report_csv_cannot_inject_spreadsheet_formulas`; W: seller report; finance report tab |
+| Direct B2B purchase from the professional catalogue (B2B_VERIFIED_ONLY, with options) | PASS | T: every-category test (4 B2B types); B: CHK-261106-07943C |
 
 ## 6. Dashboards, notifications, UI
 
@@ -140,3 +151,60 @@ Verification after the audit:
 and re-seeded through the guarded tooling only. No test expectation was weakened; the only edited
 expectation (finding 6) is stricter.
 
+
+## Seller workspaces, products, orders and advertising (2026-11-06, second slice)
+
+Verification: backend 2,227 passed, 1 skipped (firebase SDK not installed locally); web 559
+passed, typecheck clean, lint at the 6 pre-existing warnings, build OK; OpenAPI 0 errors, 0
+warnings; migrations `marketplace 0006` and `commerce 0005` roll back and re-apply on a throwaway
+database; demo seed → seed (2,333 rows each) → clear (all uploaded demo files deleted, 0 disabled
+ledger triggers) → seed.
+
+New tests: `apps/commerce/tests/test_sellers_products_orders.py` (28 functions, 41 cases) and
+`web/src/pages/market/SellerFeatures.test.tsx` (9). Existing tests were not weakened. Three exact
+expectations were extended with new fields: the dashboard counts dict, the reviewed public-API list
+(product photos), and the writable product fields (`sku`). One existing test
+(`test_visibility_follows_current_server_state`) gained steps: a re-verified store without approved
+documents must now stay hidden, so the test approves the documents and re-activates the store
+before asserting that the product is visible again. Two query-count budgets were kept by
+restructuring the code, not by raising them.
+
+### Browser purchase-and-refund walkthrough, one per seller type (local demo DB)
+
+Buyers: `patient-sara` (public store, cash on delivery) and `dr-ahmed-jabouri` (verified doctor,
+direct B2B, simulated manual transfer). Each seller accepted, shipped with a courier and posted a
+tracking update. Each buyer confirmed receipt. `local-finance` verified the simulated payment and
+completed the order (20% accrued), then refunded it: Rehab through a return (the seller approved it
+and marked it received), the other seven through disputes.
+
+| Seller type | Account | Order | Paid (incl. delivery/tax) | Commission (20% of goods) | Refund | Ledger | Documents |
+|---|---|---|---|---|---|---|---|
+| Assistive device store | `company-rehab-mobility` | RCH-261106-767AEA | 70,000 (5,000 delivery) | 13,000 | 65,000 via return (delivery kept) | PAYMENT, ACCRUAL, REFUND | invoice, receipt, credit note |
+| Medical equipment supplier | `company-sharq-devices` | RCH-261106-B570B2 | 46,500 (15,000 delivery + 1,500 tax 5%) | 6,000 | 46,500 via dispute | same | same |
+| Medical supplies office | `company-aman-consumables` | RCH-261106-0D5C32 | 27,000 (3,000 delivery; 1,143 tax included) | 4,800 | 27,000 | same | same |
+| Pharmacy (provider account) | `amal-pharmacy` | RCH-261106-A850B0 | 8,000 (2,000 delivery) | 1,200 | 8,000 | same | same |
+| Pharmaceutical company | `company-dijla-pharma` | RCH-261106-1E6D2E | 25,000 (7,000 delivery) | 3,600 | 25,000 | same | same |
+| Scientific office | `company-ibn-sina-scientific` | RCH-261106-FB0D4F | 22,000 | 4,400 | 22,000 | same | same |
+| Pharmaceutical distributor | `company-kurdistan-medicines` | RCH-261106-DCDC90 | 9,000 | 1,800 | 9,000 | same | same |
+| Medical company (new seller) | `company-hayat-medical` | RCH-261106-AFE4B5 | 22,000 (10,000 delivery) | 2,400 | 22,000 | same | same |
+
+After the walkthrough, reconciliation passed all 11 checks.
+
+### Advertising (Priority 4)
+
+| Feature | Status | Evidence / note |
+|---|---|---|
+| Targeted professional product advertisements | PASS (pre-existing, re-run) | `apps/advertising/tests` (264 pass); sponsored products now carry the first uploaded photo with no extra query |
+| Clearly labelled sponsored dashboard placements | PASS (pre-existing) | W: `sponsored section appears only when the server includes it, labelled as sponsored`; `sponsored: true` on every ad payload |
+| User-controlled optional notification preferences (display off; outreach opt-in, all off by default) | PASS (pre-existing) | `apps/preferences/tests` |
+| No advertising of regulated medicines or devices; only selling stores (verified + store ACTIVE) can advertise | PASS | T: `test_regulated_products_can_never_be_advertised`, `test_a_pharmacy_can_advertise_only_while_selling_and_never_regulated_items`; `selling_q` in `visible_to` |
+
+### Known gaps (honest)
+
+- Uploads use the local filesystem: there is no object storage, malware scanning or EXIF stripping.
+- Invoices are browser-printable HTML: there is no server-side PDF or legal e-invoice numbering.
+- Tracking is entered manually: there is no courier integration.
+- Required documents and tax treatment are fictional, seller-declared local rules, not legal or
+  tax advice.
+- Delivery fees are not refunded on a return (a stated policy). A cancellation or dispute refund
+  returns them.

@@ -4,11 +4,15 @@ import { NavLink, useSearchParams } from 'react-router'
 import { Icon, type IconName } from '../../design-system'
 
 const LINKS: { id: string; to: string; icon: IconName }[] = [
+  { id: 'setup', to: '/merchant/center?tab=setup', icon: 'building' },
+  { id: 'catalog', to: '/merchant/center?tab=catalog', icon: 'tag' },
   { id: 'orders', to: '/merchant/orders', icon: 'box' },
   { id: 'returns', to: '/merchant/center?tab=returns', icon: 'refresh' },
   { id: 'inventory', to: '/merchant/center?tab=inventory', icon: 'clipboard' },
   { id: 'promotions', to: '/merchant/center?tab=promotions', icon: 'tag' },
+  { id: 'delivery', to: '/merchant/center?tab=delivery', icon: 'mapPin' },
   { id: 'finance', to: '/merchant/center?tab=finance', icon: 'calculator' },
+  { id: 'reports', to: '/merchant/center?tab=reports', icon: 'clipboard' },
   { id: 'quotes', to: '/merchant/quotes', icon: 'mail' },
 ]
 

@@ -268,6 +268,13 @@ SPECTACULAR_SETTINGS = {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
         "AccountTypeEnum": "apps.accounts.roles.AccountType.choices",
         "BusinessTypeEnum": "apps.marketplace.types.BusinessType.choices",
+        "StoreStatusEnum": "apps.marketplace.types.StoreStatus.choices",
+        "TaxModeEnum": "apps.marketplace.types.TaxMode.choices",
+        "SellerDocumentKindEnum": "apps.marketplace.types.SellerDocumentKind.choices",
+        "SellerDocumentStatusEnum": "apps.marketplace.types.DocumentStatus.choices",
+        "OrderItemKindEnum": "apps.commerce.types.ItemKind.choices",
+        "TrackingStatusEnum": "apps.commerce.types.TrackingStatus.choices",
+        "InvoiceKindEnum": "apps.commerce.types.InvoiceKind.choices",
         "SaleChannelEnum": "apps.marketplace.types.SaleChannel.choices",
         "OrderStatusEnum": "apps.commerce.types.OrderStatus.choices",
         "StorePaymentMethodEnum": "apps.commerce.types.PaymentMethod.choices",
@@ -401,6 +408,9 @@ STORAGES = {
 # use S3-compatible object storage (see docs/ARCHITECTURE.md, Phase "media").
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Uploaded seller documents and product photos: never under MEDIA_ROOT (which DEBUG serves
+# publicly). Only permission-checked views stream these files.
+PRIVATE_MEDIA_ROOT = Path(env("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media")))
 
 # If the React build exists, WhiteNoise serves its assets from the URL root
 # and apps.core.views.spa_index serves index.html for non-API routes.

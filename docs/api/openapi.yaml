@@ -736,6 +736,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminOrder'
           description: ''
+  /api/v1/admin/commerce/reports/marketplace:
+    get:
+      operationId: admin_commerce_reports_marketplace_retrieve
+      summary: Marketplace accounting report per seller (JSON or CSV)
+      parameters:
+      - in: query
+        name: export
+        schema:
+          type: string
+        description: csv to download a spreadsheet
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: 'YYYY-MM-DD (default: 90 days ago)'
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'YYYY-MM-DD (default: today)'
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/admin/commerce/returns:
     get:
       operationId: admin_commerce_returns_list
@@ -1187,6 +1219,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/CompanyAdmin'
           description: ''
+  /api/v1/admin/marketplace/documents:
+    get:
+      operationId: admin_marketplace_documents_list
+      summary: Seller documents to review (administrators)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminSellerDocumentList'
+          description: ''
+  /api/v1/admin/marketplace/documents/{id}/decision:
+    post:
+      operationId: admin_marketplace_documents_decision_create
+      summary: Approve or reject a seller document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentDecisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSellerDocument'
+          description: ''
+  /api/v1/admin/marketplace/documents/{id}/file:
+    get:
+      operationId: admin_marketplace_documents_file_retrieve
+      summary: Open a document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - admin
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: The file
   /api/v1/admin/providers/{id}/verification:
     post:
       operationId: admin_providers_verification_create
@@ -4314,6 +4435,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/CompanyDashboard'
           description: ''
+  /api/v1/marketplace/company/documents:
+    get:
+      operationId: marketplace_company_documents_list
+      summary: My documents
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SellerDocument'
+          description: ''
+    post:
+      operationId: marketplace_company_documents_create
+      summary: Upload a verification document (PDF, JPEG or PNG; 5 MB)
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SellerDocumentUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerDocument'
+          description: ''
+  /api/v1/marketplace/company/documents/{id}:
+    delete:
+      operationId: marketplace_company_documents_destroy
+      summary: Withdraw a document that is not approved
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/marketplace/company/documents/{id}/file:
+    get:
+      operationId: marketplace_company_documents_file_retrieve
+      summary: Open my document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: The file
+  /api/v1/marketplace/company/images/{id}:
+    delete:
+      operationId: marketplace_company_images_destroy
+      summary: Remove a product photo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/marketplace/company/products:
     get:
       operationId: marketplace_company_products_list
@@ -4447,6 +4659,238 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductOwner'
           description: ''
+  /api/v1/marketplace/company/products/{id}/images:
+    post:
+      operationId: marketplace_company_products_images_create
+      summary: Add a product photo (JPEG, PNG or WebP; 3 MB)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImage'
+          description: ''
+  /api/v1/marketplace/company/products/{id}/variants:
+    get:
+      operationId: marketplace_company_products_variants_list
+      summary: Variants
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VariantOwner'
+          description: ''
+    post:
+      operationId: marketplace_company_products_variants_create
+      summary: Add a variant (its own SKU, price and stock)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VariantWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantOwner'
+          description: ''
+  /api/v1/marketplace/company/shipping-rates:
+    get:
+      operationId: marketplace_company_shipping_rates_list
+      summary: Delivery fees
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShippingRate'
+          description: ''
+    post:
+      operationId: marketplace_company_shipping_rates_create
+      summary: Set the delivery fee to one governorate
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingRateWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ShippingRateWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingRate'
+          description: ''
+  /api/v1/marketplace/company/shipping-rates/{id}:
+    delete:
+      operationId: marketplace_company_shipping_rates_destroy
+      summary: Remove a delivery fee
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/marketplace/company/store:
+    get:
+      operationId: marketplace_company_store_retrieve
+      description: The acting business's store (owner, or staff with `?company=`).
+      summary: My store (status, rules)
+      tags:
+      - marketplace-company
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyOwner'
+          description: ''
+    patch:
+      operationId: marketplace_company_store_partial_update
+      description: The acting business's store (owner, or staff with `?company=`).
+      summary: Update my store's tax treatment and delivery defaults
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStoreSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStoreSettingsRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyOwner'
+          description: ''
+  /api/v1/marketplace/company/store/status:
+    post:
+      operationId: marketplace_company_store_status_create
+      summary: Activate or pause my store (activation needs verification and documents)
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoreStatusRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyOwner'
+          description: ''
+  /api/v1/marketplace/company/variants/{id}:
+    patch:
+      operationId: marketplace_company_variants_partial_update
+      summary: Edit a variant (stock changes go through a stock adjustment)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVariantWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantOwner'
+          description: ''
   /api/v1/marketplace/company/verification/request:
     post:
       operationId: marketplace_company_verification_request_create
@@ -4457,6 +4901,52 @@ paths:
       - jwtAuth: []
       responses:
         '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyOwner'
+          description: ''
+  /api/v1/marketplace/images/{id}:
+    get:
+      operationId: marketplace_images_retrieve
+      description: |-
+        A product photo: public for a product on sale, the business's team (and Racheeta staff)
+        otherwise. Unknown and hidden photos are both 404.
+      summary: Product photo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - marketplace
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: The image
+  /api/v1/marketplace/pharmacy-store:
+    post:
+      operationId: marketplace_pharmacy_store_create
+      description: A pharmacy opens its store without leaving its provider identity.
+      summary: Open my pharmacy's store (linked to my pharmacy provider profile)
+      tags:
+      - marketplace-company
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PharmacyStoreRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PharmacyStoreRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
           content:
             application/json:
               schema:
@@ -5035,6 +5525,104 @@ paths:
               schema:
                 $ref: '#/components/schemas/SellerOrder'
           description: ''
+  /api/v1/merchant/orders/{id}/invoices:
+    get:
+      operationId: merchant_orders_invoices_list
+      summary: Documents issued for one of my orders
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InvoiceSummary'
+          description: ''
+  /api/v1/merchant/orders/{id}/invoices/{invoice_id}:
+    get:
+      operationId: merchant_orders_invoices_retrieve
+      summary: One document of one of my orders
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+  /api/v1/merchant/orders/{id}/tracking:
+    post:
+      operationId: merchant_orders_tracking_create
+      summary: Report delivery progress of a shipped order (never changes its status)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingEventCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrackingEventCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingEvent'
+          description: ''
   /api/v1/merchant/orders/{id}/transition:
     post:
       operationId: merchant_orders_transition_create
@@ -5178,6 +5766,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quote'
+          description: ''
+  /api/v1/merchant/reports/sales:
+    get:
+      operationId: merchant_reports_sales_retrieve
+      summary: My sales and commission report (JSON or CSV)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: query
+        name: export
+        schema:
+          type: string
+        description: csv to download a spreadsheet
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: 'YYYY-MM-DD (default: 90 days ago)'
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'YYYY-MM-DD (default: today)'
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/merchant/returns:
     get:
@@ -5637,6 +6262,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}/invoices:
+    get:
+      operationId: orders_invoices_list
+      summary: My invoice, receipt and credit notes for one order
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InvoiceSummary'
+          description: ''
+  /api/v1/orders/{id}/invoices/{invoice_id}:
+    get:
+      operationId: orders_invoices_retrieve
+      summary: One printable document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: invoice_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
           description: ''
   /api/v1/orders/{id}/returns:
     post:
@@ -8300,6 +8977,56 @@ components:
         shipping_reference:
           type: string
           readOnly: true
+        courier_name:
+          type: string
+          readOnly: true
+        shipping_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        shipping_min_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        shipping_max_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        tax_mode:
+          type: string
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+          readOnly: true
+        tax_registration_number:
+          type: string
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_included_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tracking_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingEvent'
+          readOnly: true
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceSummary'
+          readOnly: true
         paid_at:
           type: string
           format: date-time
@@ -8406,6 +9133,7 @@ components:
       - commission_total
       - completed_at
       - contact_phone
+      - courier_name
       - created_at
       - currency
       - delivered_at
@@ -8416,6 +9144,7 @@ components:
       - delivery_longitude
       - disputes
       - id
+      - invoices
       - items
       - list_total
       - merchandise_net
@@ -8436,10 +9165,20 @@ components:
       - seller_payable_total
       - settlement_state
       - shipped_at
+      - shipping_max_days
+      - shipping_min_days
       - shipping_reference
+      - shipping_total
       - status
       - status_changed_at
+      - tax_included_total
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_registration_number
+      - tax_total
       - total
+      - tracking_events
       - transitions
     AdminPayment:
       type: object
@@ -8489,6 +9228,83 @@ components:
       - status
       - verified_at
       - verified_by_email
+    AdminSellerDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/SellerDocumentKindEnum'
+          readOnly: true
+        original_name:
+          type: string
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        size:
+          type: integer
+          readOnly: true
+        sha256:
+          type: string
+          readOnly: true
+        reference_number:
+          type: string
+          readOnly: true
+        expires_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SellerDocumentStatusEnum'
+          readOnly: true
+        review_note:
+          type: string
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        file_url:
+          type: string
+          readOnly: true
+        company_id:
+          type: string
+          format: uuid
+          readOnly: true
+        company_name:
+          type: string
+          readOnly: true
+        business_type:
+          type: string
+          readOnly: true
+      required:
+      - business_type
+      - company_id
+      - company_name
+      - content_type
+      - created_at
+      - expires_on
+      - file_url
+      - id
+      - kind
+      - original_name
+      - reference_number
+      - review_note
+      - reviewed_at
+      - sha256
+      - size
+      - status
     AdminSubscription:
       type: object
       properties:
@@ -8904,6 +9720,7 @@ components:
       - EQUIPMENT_SUPPLIER
       - ASSISTIVE_DEVICE_STORE
       - PHARMA_DISTRIBUTOR
+      - PHARMACY
       type: string
       description: |-
         * `MEDICAL_COMPANY` - Medical company
@@ -8913,6 +9730,7 @@ components:
         * `EQUIPMENT_SUPPLIER` - Medical equipment supplier
         * `ASSISTIVE_DEVICE_STORE` - Assistive devices store
         * `PHARMA_DISTRIBUTOR` - Pharmaceutical distributor
+        * `PHARMACY` - Pharmacy
     CampaignAdmin:
       type: object
       properties:
@@ -9258,6 +10076,10 @@ components:
         product:
           type: string
           format: uuid
+        variant:
+          type: string
+          format: uuid
+          nullable: true
         quantity:
           type: integer
           maximum: 20
@@ -9279,6 +10101,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CartLineRequest'
+        governorate:
+          type: string
+          format: uuid
+          nullable: true
       required:
       - items
     ChatAccount:
@@ -9455,6 +10281,23 @@ components:
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
           readOnly: true
+        merchandise_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        shipping_known:
+          type: boolean
+        shipping_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
         total:
           type: string
           format: decimal
@@ -9463,10 +10306,14 @@ components:
       required:
       - currency
       - list_total
+      - merchandise_total
       - orders
       - platform_coupon
       - platform_discount_total
       - seller_discount_total
+      - shipping_known
+      - shipping_total
+      - tax_total
       - total
     CheckoutRequest:
       type: object
@@ -9555,6 +10402,16 @@ components:
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
           readOnly: true
+        shipping_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
         total:
           type: string
           format: decimal
@@ -9578,6 +10435,8 @@ components:
       - orders
       - platform_discount_total
       - seller_discount_total
+      - shipping_total
+      - tax_total
       - total
     City:
       type: object
@@ -9671,11 +10530,67 @@ components:
         can_publish:
           type: boolean
           readOnly: true
+        can_sell:
+          type: boolean
+          readOnly: true
         identity_locked:
           type: boolean
           description: Name, location and website are frozen while review is pending
             or granted.
           readOnly: true
+        facility_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        store_status:
+          allOf:
+          - $ref: '#/components/schemas/StoreStatusEnum'
+          readOnly: true
+        store_status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        required_documents:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        missing_documents:
+          type: array
+          items:
+            type: string
+          description: Required kinds without an APPROVED document (the store cannot
+            be activated yet).
+          readOnly: true
+        tax_mode:
+          allOf:
+          - $ref: '#/components/schemas/TaxModeEnum'
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+          readOnly: true
+        tax_registration_number:
+          type: string
+          readOnly: true
+        default_shipping_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        free_shipping_over:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -9693,15 +10608,27 @@ components:
       - address
       - business_type
       - can_publish
+      - can_sell
       - city
       - created_at
+      - default_shipping_fee
       - description
+      - facility_id
+      - free_shipping_over
       - governorate
       - id
       - identity_locked
+      - missing_documents
       - name
       - phone
       - public_email
+      - required_documents
+      - store_status
+      - store_status_changed_at
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_registration_number
       - updated_at
       - verification_changed_at
       - verification_note
@@ -9716,6 +10643,10 @@ components:
           type: string
         can_publish:
           type: boolean
+        can_sell:
+          type: boolean
+        store_status:
+          type: string
         products_total:
           type: integer
         products_active:
@@ -9726,10 +10657,12 @@ components:
           type: integer
       required:
       - can_publish
+      - can_sell
       - products_active
       - products_exposable
       - products_inactive
       - products_total
+      - store_status
       - verification_status
     CompanyOwner:
       type: object
@@ -9796,11 +10729,67 @@ components:
         can_publish:
           type: boolean
           readOnly: true
+        can_sell:
+          type: boolean
+          readOnly: true
         identity_locked:
           type: boolean
           description: Name, location and website are frozen while review is pending
             or granted.
           readOnly: true
+        facility_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        store_status:
+          allOf:
+          - $ref: '#/components/schemas/StoreStatusEnum'
+          readOnly: true
+        store_status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        required_documents:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        missing_documents:
+          type: array
+          items:
+            type: string
+          description: Required kinds without an APPROVED document (the store cannot
+            be activated yet).
+          readOnly: true
+        tax_mode:
+          allOf:
+          - $ref: '#/components/schemas/TaxModeEnum'
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+          readOnly: true
+        tax_registration_number:
+          type: string
+          readOnly: true
+        default_shipping_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        free_shipping_over:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -9813,15 +10802,27 @@ components:
       - address
       - business_type
       - can_publish
+      - can_sell
       - city
       - created_at
+      - default_shipping_fee
       - description
+      - facility_id
+      - free_shipping_over
       - governorate
       - id
       - identity_locked
+      - missing_documents
       - name
       - phone
       - public_email
+      - required_documents
+      - store_status
+      - store_status_changed_at
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_registration_number
       - updated_at
       - verification_changed_at
       - verification_note
@@ -11071,6 +12072,17 @@ components:
       - reviews
       - unread
       - upcoming
+    DocumentDecisionRequest:
+      type: object
+      properties:
+        approve:
+          type: boolean
+        note:
+          type: string
+          default: ''
+          maxLength: 300
+      required:
+      - approve
     Education:
       type: object
       properties:
@@ -11627,6 +12639,17 @@ components:
       - name_ar
       - name_en
       - slug
+    ImageUploadRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        alt_text:
+          type: string
+          maxLength: 150
+      required:
+      - file
     InitiatedByEnum:
       enum:
       - PRACTITIONER
@@ -11730,6 +12753,14 @@ components:
         id:
           type: string
           format: uuid
+        variant_id:
+          type: string
+          format: uuid
+          nullable: true
+        variant_label:
+          type: string
+        sku:
+          type: string
         title:
           type: string
         image_url:
@@ -11764,7 +12795,10 @@ components:
       - price
       - reorder_threshold
       - reserved
+      - sku
       - title
+      - variant_id
+      - variant_label
     Invitation:
       type: object
       properties:
@@ -11881,6 +12915,77 @@ components:
       required:
       - job
       - job_seeker
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceKindEnum'
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        snapshot:
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - kind
+      - number
+      - snapshot
+      - total
+    InvoiceKindEnum:
+      enum:
+      - INVOICE
+      - RECEIPT
+      - CREDIT_NOTE
+      type: string
+      description: |-
+        * `INVOICE` - Invoice
+        * `RECEIPT` - Payment receipt
+        * `CREDIT_NOTE` - Credit note (refund)
+    InvoiceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceKindEnum'
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - kind
+      - number
+      - total
     JobAdmin:
       type: object
       description: 'Employer view: real salary values, status, moderation, counts.'
@@ -13630,6 +14735,56 @@ components:
         shipping_reference:
           type: string
           readOnly: true
+        courier_name:
+          type: string
+          readOnly: true
+        shipping_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        shipping_min_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        shipping_max_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        tax_mode:
+          type: string
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+          readOnly: true
+        tax_registration_number:
+          type: string
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_included_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tracking_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingEvent'
+          readOnly: true
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceSummary'
+          readOnly: true
         paid_at:
           type: string
           format: date-time
@@ -13694,6 +14849,7 @@ components:
       - checkout_number
       - completed_at
       - contact_phone
+      - courier_name
       - created_at
       - currency
       - delivered_at
@@ -13704,6 +14860,7 @@ components:
       - delivery_longitude
       - disputes
       - id
+      - invoices
       - items
       - list_total
       - merchant
@@ -13719,10 +14876,20 @@ components:
       - returns
       - seller_discount_total
       - shipped_at
+      - shipping_max_days
+      - shipping_min_days
       - shipping_reference
+      - shipping_total
       - status
       - status_changed_at
+      - tax_included_total
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_registration_number
+      - tax_total
       - total
+      - tracking_events
       - transitions
     OrderItem:
       type: object
@@ -13731,9 +14898,30 @@ components:
           type: string
           format: uuid
           readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/OrderItemKindEnum'
+          readOnly: true
         product_id:
           type: string
           format: uuid
+          readOnly: true
+          nullable: true
+        variant_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        parent_item_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        sku_snapshot:
+          type: string
+          readOnly: true
+        variant_label_snapshot:
+          type: string
           readOnly: true
         image_url:
           type: string
@@ -13781,15 +14969,30 @@ components:
       - buyer_paid
       - id
       - image_url
+      - kind
       - line_total
+      - parent_item_id
       - platform_discount
       - product_id
       - quantity
       - refunded_buyer_paid
       - refunded_quantity
       - seller_discount
+      - sku_snapshot
       - title_snapshot
       - unit_price
+      - variant_id
+      - variant_label_snapshot
+    OrderItemKindEnum:
+      enum:
+      - MERCHANDISE
+      - SHIPPING
+      - TAX
+      type: string
+      description: |-
+        * `MERCHANDISE` - Product
+        * `SHIPPING` - Delivery fee
+        * `TAX` - Tax (declared by the seller)
     OrderStatusEnum:
       enum:
       - PLACED
@@ -13840,6 +15043,10 @@ components:
           type: string
           default: ''
           maxLength: 120
+        courier_name:
+          type: string
+          default: ''
+          maxLength: 80
       required:
       - status
     OrderTransitionRequestStatusEnum:
@@ -14065,6 +15272,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdminOrder'
+    PaginatedAdminSellerDocumentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSellerDocument'
     PaginatedAdminSubscriptionList:
       type: object
       required:
@@ -15509,6 +16739,9 @@ components:
           maximum: 2147483647
           minimum: 0
           nullable: true
+        sku:
+          type: string
+          maxLength: 64
     PatchedPropertyListingWriteRequest:
       type: object
       description: |-
@@ -15702,6 +16935,63 @@ components:
           type: string
           minLength: 1
           maxLength: 80
+    PatchedStoreSettingsRequest:
+      type: object
+      description: Seller-declared tax treatment and delivery defaults (validated
+        again in the service).
+      properties:
+        tax_mode:
+          $ref: '#/components/schemas/TaxModeEnum'
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        tax_label:
+          type: string
+          maxLength: 40
+        tax_registration_number:
+          type: string
+          maxLength: 40
+        default_shipping_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+        free_shipping_over:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+    PatchedVariantWriteRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 64
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+        stock_quantity:
+          type: integer
+          minimum: 0
+          nullable: true
+        reorder_threshold:
+          type: integer
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 999
+          minimum: 0
     PatchedWorkExperienceRequest:
       type: object
       properties:
@@ -15842,6 +17132,22 @@ components:
         * `DAILY` - Per day
         * `MONTHLY` - Per calendar month
         * `SUBSCRIPTION` - Per subscription term
+    PharmacyStoreRequest:
+      type: object
+      description: 'Opening a pharmacy''s store: everything else comes from the pharmacy''s
+        own profile.'
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+        public_email:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
     Plan:
       type: object
       properties:
@@ -16004,6 +17310,24 @@ components:
         product:
           type: string
           format: uuid
+        variant:
+          type: string
+          format: uuid
+          nullable: true
+        variant_label:
+          type: string
+        sku:
+          type: string
+        tax:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_included:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
         title:
           type: string
         image_url:
@@ -16046,8 +17370,13 @@ components:
       - product
       - quantity
       - seller_discount
+      - sku
+      - tax
+      - tax_included
       - title
       - unit_price
+      - variant
+      - variant_label
     PreviewOrder:
       type: object
       properties:
@@ -16076,6 +17405,42 @@ components:
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
           readOnly: true
+        merchandise_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        shipping_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        shipping_min_days:
+          type: integer
+          nullable: true
+        shipping_max_days:
+          type: integer
+          nullable: true
+        tax_mode:
+          type: string
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_included_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
         total:
           type: string
           format: decimal
@@ -16084,10 +17449,19 @@ components:
       required:
       - lines
       - list_total
+      - merchandise_total
       - merchant
       - platform_discount_total
       - seller_coupon
       - seller_discount_total
+      - shipping_fee
+      - shipping_max_days
+      - shipping_min_days
+      - tax_included_total
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_total
       - total
     ProductCategory:
       type: object
@@ -16133,6 +17507,35 @@ components:
       - parent_id
       - slug
       - sort_order
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        url:
+          type: string
+          readOnly: true
+        width:
+          type: integer
+          readOnly: true
+        height:
+          type: integer
+          readOnly: true
+        alt_text:
+          type: string
+          readOnly: true
+        sort_order:
+          type: integer
+          readOnly: true
+      required:
+      - alt_text
+      - height
+      - id
+      - sort_order
+      - url
+      - width
     ProductOwner:
       type: object
       properties:
@@ -16176,6 +17579,26 @@ components:
           type: integer
           readOnly: true
           nullable: true
+        stock_reserved:
+          type: integer
+          readOnly: true
+        reorder_threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        sku:
+          type: string
+          readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantOwner'
+          readOnly: true
         category:
           allOf:
           - $ref: '#/components/schemas/ProductCategory'
@@ -16199,14 +17622,19 @@ components:
       - description
       - id
       - image_url
+      - images
       - is_active
       - is_restricted
       - model_name
       - price
+      - reorder_threshold
       - sale_channel
+      - sku
       - stock_quantity
+      - stock_reserved
       - title
       - updated_at
+      - variants
     ProductPublic:
       type: object
       description: A targeted provider's view of a product.
@@ -16240,6 +17668,27 @@ components:
           type: string
           format: uri
           readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        variants:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        can_buy_directly:
+          type: boolean
+          description: |-
+            UI hint only (checkout re-decides): a priced product in an explicit
+            B2B_VERIFIED_ONLY category; everything else is by quotation.
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+          default: ''
         sale_channel:
           allOf:
           - $ref: '#/components/schemas/SaleChannelEnum'
@@ -16262,6 +17711,7 @@ components:
           readOnly: true
       required:
       - brand
+      - can_buy_directly
       - category
       - company
       - created_at
@@ -16269,11 +17719,14 @@ components:
       - description
       - id
       - image_url
+      - images
       - model_name
       - price
       - sale_channel
+      - sku
       - title
       - updated_at
+      - variants
     ProductSale:
       type: object
       properties:
@@ -16380,6 +17833,9 @@ components:
           maximum: 2147483647
           minimum: 0
           nullable: true
+        sku:
+          type: string
+          maxLength: 64
       required:
       - category
       - title
@@ -17632,6 +19088,10 @@ components:
         product:
           type: string
           format: uuid
+        variant:
+          type: string
+          format: uuid
+          nullable: true
         quantity:
           type: integer
           maximum: 10000
@@ -18463,6 +19923,116 @@ components:
         * `PROVIDER` - Healthcare provider
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    SellerDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/SellerDocumentKindEnum'
+          readOnly: true
+        original_name:
+          type: string
+          readOnly: true
+        content_type:
+          type: string
+          readOnly: true
+        size:
+          type: integer
+          readOnly: true
+        sha256:
+          type: string
+          readOnly: true
+        reference_number:
+          type: string
+          readOnly: true
+        expires_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SellerDocumentStatusEnum'
+          readOnly: true
+        review_note:
+          type: string
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        file_url:
+          type: string
+          readOnly: true
+      required:
+      - content_type
+      - created_at
+      - expires_on
+      - file_url
+      - id
+      - kind
+      - original_name
+      - reference_number
+      - review_note
+      - reviewed_at
+      - sha256
+      - size
+      - status
+    SellerDocumentKindEnum:
+      enum:
+      - COMMERCIAL_REGISTRATION
+      - PHARMACY_LICENSE
+      - MOH_IMPORT_LICENSE
+      - SCIENTIFIC_OFFICE_LICENSE
+      - DEVICE_REGISTRATION
+      - OWNER_ID
+      - OTHER
+      type: string
+      description: |-
+        * `COMMERCIAL_REGISTRATION` - Commercial registration
+        * `PHARMACY_LICENSE` - Pharmacy practice licence
+        * `MOH_IMPORT_LICENSE` - Ministry of Health import / trade licence
+        * `SCIENTIFIC_OFFICE_LICENSE` - Scientific office licence
+        * `DEVICE_REGISTRATION` - Medical device registration
+        * `OWNER_ID` - Owner identity document
+        * `OTHER` - Other supporting document
+    SellerDocumentStatusEnum:
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `PENDING` - Waiting for review
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
+    SellerDocumentUploadRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SellerDocumentKindEnum'
+        file:
+          type: string
+          format: binary
+        reference_number:
+          type: string
+          maxLength: 60
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - file
+      - kind
     SellerOrder:
       type: object
       properties:
@@ -18560,6 +20130,56 @@ components:
         shipping_reference:
           type: string
           readOnly: true
+        courier_name:
+          type: string
+          readOnly: true
+        shipping_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        shipping_min_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        shipping_max_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        tax_mode:
+          type: string
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_label:
+          type: string
+          readOnly: true
+        tax_registration_number:
+          type: string
+          readOnly: true
+        tax_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tax_included_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        tracking_events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingEvent'
+          readOnly: true
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceSummary'
+          readOnly: true
         paid_at:
           type: string
           format: date-time
@@ -18655,6 +20275,7 @@ components:
       - commission_total
       - completed_at
       - contact_phone
+      - courier_name
       - created_at
       - currency
       - delivered_at
@@ -18665,6 +20286,7 @@ components:
       - delivery_longitude
       - disputes
       - id
+      - invoices
       - items
       - list_total
       - merchandise_net
@@ -18683,10 +20305,20 @@ components:
       - seller_payable_total
       - settlement_state
       - shipped_at
+      - shipping_max_days
+      - shipping_min_days
       - shipping_reference
+      - shipping_total
       - status
       - status_changed_at
+      - tax_included_total
+      - tax_label
+      - tax_mode
+      - tax_rate
+      - tax_registration_number
+      - tax_total
       - total
+      - tracking_events
       - transitions
     SellerOrderItem:
       type: object
@@ -18695,9 +20327,30 @@ components:
           type: string
           format: uuid
           readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/OrderItemKindEnum'
+          readOnly: true
         product_id:
           type: string
           format: uuid
+          readOnly: true
+          nullable: true
+        variant_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        parent_item_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        sku_snapshot:
+          type: string
+          readOnly: true
+        variant_label_snapshot:
+          type: string
           readOnly: true
         image_url:
           type: string
@@ -18782,8 +20435,10 @@ components:
       - commission_rate
       - id
       - image_url
+      - kind
       - line_total
       - merchandise_net
+      - parent_item_id
       - platform_discount
       - product_id
       - quantity
@@ -18794,8 +20449,11 @@ components:
       - refunded_seller_payable
       - seller_discount
       - seller_payable
+      - sku_snapshot
       - title_snapshot
       - unit_price
+      - variant_id
+      - variant_label_snapshot
     SellerOwner:
       type: object
       properties:
@@ -19093,6 +20751,64 @@ components:
         * `ROTATING` - Rotating
         * `FLEXIBLE` - Flexible
         * `ON_CALL` - On call
+    ShippingRate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        min_days:
+          type: integer
+          readOnly: true
+        max_days:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+      required:
+      - fee
+      - governorate
+      - id
+      - is_active
+      - max_days
+      - min_days
+    ShippingRateWriteRequest:
+      type: object
+      properties:
+        governorate:
+          type: string
+          format: uuid
+        fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+        min_days:
+          type: integer
+          maximum: 60
+          minimum: 0
+          default: 1
+        max_days:
+          type: integer
+          maximum: 60
+          minimum: 0
+          default: 3
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - fee
+      - governorate
     Skill:
       type: object
       properties:
@@ -19168,7 +20884,7 @@ components:
           nullable: true
         product:
           allOf:
-          - $ref: '#/components/schemas/ProductPublic'
+          - $ref: '#/components/schemas/SponsoredProduct'
           readOnly: true
       required:
       - ends_on
@@ -19176,6 +20892,84 @@ components:
       - product
       - sponsored
       - starts_on
+    SponsoredProduct:
+      type: object
+      description: |-
+        The organic product card without variants and the photo list (the campaign carries its
+        first photo), so the sponsored list keeps a constant number of queries.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        brand:
+          type: string
+          readOnly: true
+        model_name:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        currency:
+          type: string
+          readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+          default: ''
+        sale_channel:
+          allOf:
+          - $ref: '#/components/schemas/SaleChannelEnum'
+          readOnly: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/ProductCategory'
+          readOnly: true
+        company:
+          allOf:
+          - $ref: '#/components/schemas/CompanySummary'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        photo_url:
+          type: string
+          readOnly: true
+      required:
+      - brand
+      - category
+      - company
+      - created_at
+      - currency
+      - description
+      - id
+      - image_url
+      - model_name
+      - photo_url
+      - price
+      - sale_channel
+      - sku
+      - title
+      - updated_at
     Statement:
       type: object
       properties:
@@ -19206,6 +21000,14 @@ components:
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
         refunded_seller_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        shipping_collected:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        tax_collected:
           type: string
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
@@ -19266,6 +21068,8 @@ components:
       - seller_discounts
       - seller_earnings
       - settlements
+      - shipping_collected
+      - tax_collected
     StatementEntry:
       type: object
       properties:
@@ -19310,6 +21114,10 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        variant_id:
+          type: string
+          format: uuid
+          nullable: true
       required:
       - delta
       - reason
@@ -19320,6 +21128,11 @@ components:
           type: string
           format: uuid
           readOnly: true
+        variant_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         kind:
           allOf:
           - $ref: '#/components/schemas/StockMovementKindEnum'
@@ -19352,6 +21165,7 @@ components:
       - quantity
       - reason
       - reserved_after
+      - variant_id
     StockMovementKindEnum:
       enum:
       - RESERVE
@@ -19369,6 +21183,10 @@ components:
     StockThresholdRequest:
       type: object
       properties:
+        variant_id:
+          type: string
+          format: uuid
+          nullable: true
         threshold:
           type: integer
           maximum: 100000
@@ -19378,7 +21196,8 @@ components:
       - threshold
     StoreCategory:
       type: object
-      description: 'Public store category: names only (no catalogue-governance flags).'
+      description: 'Public store category: names and the buyer notice (no catalogue-governance
+        flags).'
       properties:
         id:
           type: string
@@ -19394,8 +21213,21 @@ components:
         name_en:
           type: string
           readOnly: true
+        buyer_notice_ar:
+          type: string
+          readOnly: true
+        buyer_notice_en:
+          type: string
+          readOnly: true
+        max_order_quantity:
+          type: integer
+          readOnly: true
+          nullable: true
       required:
+      - buyer_notice_ar
+      - buyer_notice_en
       - id
+      - max_order_quantity
       - name_ar
       - name_en
       - slug
@@ -19456,6 +21288,17 @@ components:
           type: string
           format: uri
           readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        variants:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
         in_stock:
           type: boolean
           readOnly: true
@@ -19480,11 +21323,30 @@ components:
       - description
       - id
       - image_url
+      - images
       - in_stock
       - low_stock
       - model_name
       - price
       - title
+      - variants
+    StoreStatusEnum:
+      enum:
+      - INACTIVE
+      - ACTIVE
+      - PAUSED
+      type: string
+      description: |-
+        * `INACTIVE` - Not activated
+        * `ACTIVE` - Active
+        * `PAUSED` - Paused by the seller
+    StoreStatusRequest:
+      type: object
+      properties:
+        active:
+          type: boolean
+      required:
+      - active
     Subscription:
       type: object
       properties:
@@ -19804,6 +21666,16 @@ components:
       - saved_candidate_id
       - skills
       - years_of_experience
+    TaxModeEnum:
+      enum:
+      - NONE
+      - INCLUSIVE
+      - EXCLUSIVE
+      type: string
+      description: |-
+        * `NONE` - No tax shown
+        * `INCLUSIVE` - Prices include tax
+        * `EXCLUSIVE` - Tax added at checkout
     TokenPair:
       type: object
       properties:
@@ -19816,6 +21688,64 @@ components:
       required:
       - access
       - refresh
+    TrackingEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TrackingStatusEnum'
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        location:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - location
+      - note
+      - status
+    TrackingEventCreateRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/TrackingStatusEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 300
+        location:
+          type: string
+          default: ''
+          maxLength: 120
+      required:
+      - status
+    TrackingStatusEnum:
+      enum:
+      - PICKED_UP
+      - IN_TRANSIT
+      - OUT_FOR_DELIVERY
+      - DELIVERY_ATTEMPTED
+      - DELAYED
+      - NOTE
+      type: string
+      description: |-
+        * `PICKED_UP` - Picked up by the courier
+        * `IN_TRANSIT` - In transit
+        * `OUT_FOR_DELIVERY` - Out for delivery
+        * `DELIVERY_ATTEMPTED` - Delivery attempted
+        * `DELAYED` - Delayed
+        * `NOTE` - Note
     TransactionTypeEnum:
       enum:
       - SALE
@@ -19831,6 +21761,87 @@ components:
           type: integer
       required:
       - count
+    VariantOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        stock_quantity:
+          type: integer
+          readOnly: true
+          nullable: true
+        stock_reserved:
+          type: integer
+          readOnly: true
+        available:
+          type: integer
+          nullable: true
+          readOnly: true
+        reorder_threshold:
+          type: integer
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+        sort_order:
+          type: integer
+          readOnly: true
+      required:
+      - available
+      - id
+      - is_active
+      - label
+      - price
+      - reorder_threshold
+      - sku
+      - sort_order
+      - stock_quantity
+      - stock_reserved
+    VariantWriteRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 64
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+        stock_quantity:
+          type: integer
+          minimum: 0
+          nullable: true
+        reorder_threshold:
+          type: integer
+          minimum: 0
+          nullable: true
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 999
+          minimum: 0
     VerificationDecisionEnum:
       enum:
       - VERIFIED

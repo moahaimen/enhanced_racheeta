@@ -5,30 +5,31 @@ views resolve `request.user.medical_company`, provider views resolve
 from rest_framework.permissions import BasePermission
 
 from apps.accounts.roles import AccountRole
+from apps.marketplace.models import MedicalCompany, is_store_owner_account, seller_workspace_q
 from apps.providers.models import ProviderProfile
 from apps.providers.types import VerificationStatus
 
 
 class IsMedicalCompanyAccount(BasePermission):
-    """Authenticated account whose primary role is MEDICAL_COMPANY
-    (capability `marketplace.manage_own_products`)."""
+    """An account that may own a store workspace (capability `marketplace.manage_own_products`):
+    a MEDICAL_COMPANY account, or a PROVIDER whose own profile is a pharmacy. A pharmacy keeps its
+    healthcare-provider role; its store is linked to its facility (see seller_workspace_q)."""
 
-    message = "Only medical company accounts can do this."
+    message = "Only business and pharmacy accounts can do this."
 
     def has_permission(self, request, view) -> bool:
-        user = request.user
-        return bool(user and user.is_authenticated and user.role == AccountRole.MEDICAL_COMPANY)
+        return is_store_owner_account(request.user)
 
 
 class HasMedicalCompany(IsMedicalCompanyAccount):
-    """Medical company account that has completed company onboarding."""
+    """Store-owner account that has completed onboarding (its store row exists)."""
 
     message = "Create your company profile first."
 
     def has_permission(self, request, view) -> bool:
         if not super().has_permission(request, view):
             return False
-        return hasattr(request.user, "medical_company")
+        return MedicalCompany.objects.filter(seller_workspace_q(), account=request.user).exists()
 
 
 BROWSE_DENIED = "A verified provider profile is required to browse the marketplace."

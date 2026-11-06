@@ -1,0 +1,65 @@
+.sheet {
+  background: var(--surface-primary);
+  border: var(--border-width, 1px) solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-5);
+  margin-block: var(--space-4);
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-block-end: 2px solid var(--color-primary-500);
+  padding-block-end: var(--space-4);
+}
+.brand {
+  font-weight: 800;
+  color: var(--color-primary-700);
+  margin: 0;
+}
+.title {
+  margin: var(--space-1) 0;
+  font-size: var(--text-h2, 1.5rem);
+}
+.meta p,
+.parties p {
+  margin: 0 0 var(--space-1);
+}
+.parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.parties h2 {
+  font-size: var(--text-body, 1rem);
+  color: var(--color-neutral-600);
+  margin: 0 0 var(--space-2);
+}
+.lines td,
+.lines th {
+  vertical-align: top;
+}
+.totals {
+  justify-self: end;
+  min-width: min(100%, 320px);
+}
+.foot {
+  border-block-start: var(--border-width, 1px) solid var(--border-subtle);
+  padding-block-start: var(--space-3);
+  font-size: 0.875rem;
+}
+.notice {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+@media print {
+  .sheet {
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+}

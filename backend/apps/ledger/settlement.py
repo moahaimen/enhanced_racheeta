@@ -255,9 +255,12 @@ def statement(company_id) -> dict:
     from apps.commerce.types import SettlementState
 
     orders = Order.objects.filter(merchant_id=company_id)
-    accrued = OrderItem.objects.filter(
+    accrued_all = OrderItem.objects.filter(
         order__merchant_id=company_id, order__settlement_state=SettlementState.ACCRUED
     )
+    # Sales figures are merchandise only; delivery fees and seller-declared tax are pass-through
+    # charges the seller receives in full (no commission), reported on their own lines.
+    accrued = accrued_all.filter(kind="MERCHANDISE")
     pending = orders.filter(
         paid_at__isnull=False, settlement_state=SettlementState.NOT_ELIGIBLE
     ).exclude(status="CANCELLED")
@@ -276,9 +279,13 @@ def statement(company_id) -> dict:
         "merchandise_net": _sum(accrued, "merchandise_net"),
         "commission": _sum(accrued, "commission"),
         "refunded_commission": _sum(accrued, "refunded_commission"),
-        "refunded_seller_payable": _sum(accrued, "refunded_seller_payable"),
-        "seller_earnings": _sum(accrued, "seller_payable")
-        - _sum(accrued, "refunded_seller_payable"),
+        "refunded_seller_payable": _sum(accrued_all, "refunded_seller_payable"),
+        "shipping_collected": _sum(accrued_all.filter(kind="SHIPPING"), "seller_payable")
+        - _sum(accrued_all.filter(kind="SHIPPING"), "refunded_seller_payable"),
+        "tax_collected": _sum(accrued_all.filter(kind="TAX"), "seller_payable")
+        - _sum(accrued_all.filter(kind="TAX"), "refunded_seller_payable"),
+        "seller_earnings": _sum(accrued_all, "seller_payable")
+        - _sum(accrued_all, "refunded_seller_payable"),
         "paid_out": _sum(paid_out, "amount"),
         "payable": payable(company_id),
         "receivable": receivable(company_id),

@@ -16,8 +16,8 @@ from django.utils import timezone
 
 from apps.audit import services as audit
 from apps.ledger.posting import current_policy, dinars
-from apps.marketplace.models import Product
-from apps.marketplace.types import NOT_PURCHASABLE_CLASSES, CompanyVerificationStatus
+from apps.marketplace.models import Product, ProductVariant
+from apps.marketplace.types import NOT_PURCHASABLE_CLASSES
 from apps.notifications import services as notifications
 from apps.notifications.types import (
     NotificationCategory,
@@ -75,7 +75,7 @@ def _notify(recipient_id, event, resource_type, resource_id, dedupe, payload):
 
 @transaction.atomic
 def request_quote(
-    provider, *, account, product_id, quantity: int, message: str = ""
+    provider, *, account, product_id, quantity: int, message: str = "", variant_id=None
 ) -> QuoteRequest:
     product = (
         Product.objects.targeted_for(provider)
@@ -85,6 +85,13 @@ def request_quote(
     )
     if product is None:
         raise NotFound("Product not found.")
+    variant = None
+    if variant_id:
+        variant = product.variants.filter(pk=variant_id, is_active=True).first()
+        if variant is None:
+            raise NotFound("This option is not available.")
+    elif product.variants.filter(is_active=True).exists():
+        raise InvalidCart("Choose an option of this product.")
     if not 1 <= quantity <= 10000:
         raise InvalidCart("Quantity must be between 1 and 10000.")
     if QuoteRequest.objects.filter(
@@ -98,6 +105,7 @@ def request_quote(
                 requested_by=account,
                 company=product.company,
                 product=product,
+                variant=variant,
                 quantity=quantity,
                 message=message.strip()[:1000],
             )
@@ -242,13 +250,11 @@ def order_from_quote(
     store.check_buyer(account)
     product = (
         Product.objects.select_for_update(of=("self",))
-        .select_related("company", "company__account", "category")
+        .select_related("company", "company__account", "company__facility", "category")
         .get(pk=quote.product_id)
     )
     company = product.company
-    if company.verification_status != CompanyVerificationStatus.VERIFIED or not (
-        company.account.is_active
-    ):
+    if not company.can_sell:
         raise NotAllowed("The seller cannot sell right now.")
     if (
         not product.is_active
@@ -260,9 +266,16 @@ def order_from_quote(
         raise InvalidCart("Only quotations in Iraqi dinars can be ordered.")
     if company.account_id == account.pk:
         raise NotAllowed("A business cannot buy from itself.")
-    left = store.inventory.available(product)
+    variant = None
+    if quote.variant_id:
+        variant = ProductVariant.objects.select_for_update(of=("self",)).get(pk=quote.variant_id)
+        if not variant.is_active:
+            raise NotAllowed("This option can no longer be ordered.")
+        variant.product = product
+    stock_unit = variant if variant is not None else product
+    left = store.inventory.available(stock_unit)
     if left is not None and left < quote.quantity:
-        raise CommerceError(f"Not enough stock for “{product.title}”.", "out_of_stock")
+        raise CommerceError(f"Not enough stock for “{stock_unit.title}”.", "out_of_stock")
     policy = current_policy()
     unit = dinars(quote.quoted_unit_price)
     line = PricedLine(
@@ -272,8 +285,10 @@ def order_from_quote(
         line_total=dinars(unit * quote.quantity),
         commission_rate=policy.rate_percent,
         channel="B2B",
+        variant=variant,
     )
     priced = PricedCheckout(orders=[PricedOrder(company=company, lines=[line])])
+    store.add_charges(priced, getattr(delivery["governorate"], "pk", delivery["governorate"]))
     checkout, created = store.persist(
         account,
         priced,

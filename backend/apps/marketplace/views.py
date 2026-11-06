@@ -52,6 +52,11 @@ STATUS_FOR_CODE = {
     "category_unavailable": status.HTTP_409_CONFLICT,
     "invalid_product": status.HTTP_400_BAD_REQUEST,
     "not_found": status.HTTP_404_NOT_FOUND,
+    "not_allowed": status.HTTP_403_FORBIDDEN,
+    "documents_missing": status.HTTP_409_CONFLICT,
+    "invalid_file": status.HTTP_400_BAD_REQUEST,
+    "no_delivery": status.HTTP_400_BAD_REQUEST,
+    "invalid": status.HTTP_400_BAD_REQUEST,
 }
 
 
@@ -105,6 +110,8 @@ class MyCompanyView(APIView):
         summary="Create my company profile (onboarding)",
     )
     def post(self, request):
+        if request.user.role != "MEDICAL_COMPANY":  # a pharmacy opens its store from its profile
+            raise PermissionDenied("A pharmacy opens its store with marketplace/pharmacy-store.")
         serializer = CompanyWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -207,7 +214,7 @@ def _own_products(request, capability: str = "company.products.view"):
     return (
         Product.objects.filter(company=_acting_company(request, capability))
         .select_related("company")
-        .prefetch_related(_category_with_publishability())
+        .prefetch_related(_category_with_publishability(), "variants", "images")
     )
 
 
@@ -321,7 +328,7 @@ def _targeted(request):
     return (
         Product.objects.targeted_for(provider)
         .select_related("company", "company__governorate", "company__city")
-        .prefetch_related(_category_with_publishability())
+        .prefetch_related(_category_with_publishability(), "variants", "images")
     )
 
 

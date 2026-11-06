@@ -273,6 +273,7 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
         registered_ids = {(label, pk) for label, pks in registered.items() for pk in pks}
         allowed = set(registered_ids)
         pending: dict = {}
+        files: list = []
         for label, pks in registered.items():
             model = apps.get_model(label)
             found = list(model._base_manager.using(using).filter(pk__in=pks))
@@ -328,6 +329,7 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                         if (conversation._meta.label, str(conversation.pk)) not in registered_ids:
                             plan.internal[conversation._meta.label] += 1
                 _check_layer(collector, allowed, registered_ids, plan)
+                files += _private_files(collector)
                 deleted, _per_model = collector.delete()
                 plan.deleted += deleted
                 pending[model] = []
@@ -348,4 +350,26 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
             _restore_ledger_triggers(using)
         if dry_run:
             transaction.set_rollback(True)
+        else:
+            # Uploaded demo files (documents, photos) go only once the rows are really gone.
+            transaction.on_commit(lambda: _delete_files(files), using=using)
     return plan
+
+
+PRIVATE_FILE_MODELS = {"marketplace.SellerDocument", "marketplace.ProductImage"}
+
+
+def _private_files(collector: Collector) -> list:
+    out = []
+    for model, instances in collector.data.items():
+        if model._meta.label in PRIVATE_FILE_MODELS:
+            out += [(i.file.storage, i.file.name) for i in instances if i.file]
+    return out
+
+
+def _delete_files(files) -> None:
+    for storage, name in files:
+        try:
+            storage.delete(name)
+        except OSError:  # already gone: nothing to clean
+            pass

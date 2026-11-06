@@ -10,7 +10,7 @@ from apps.accounts.roles import AccountRole
 from apps.audit import services as audit
 from apps.jobs.models import EmployerMembership, JobSeekerProfile
 from apps.jobs.types import MemberStatus as EmployerMemberStatus
-from apps.marketplace.models import MedicalCompany
+from apps.marketplace.models import MedicalCompany, seller_workspace_q
 from apps.marketplace.types import RETAIL_BUSINESS_TYPES
 from apps.providers.models import ProviderProfile
 from apps.providers.types import FACILITY_TYPES, PRACTITIONER_TYPES
@@ -111,14 +111,19 @@ def build_workspaces(account) -> list[dict]:
                     title=profile.display_name,
                     path="/dashboard",
                     verification_status=profile.verification_status,
-                    modules=list(FACILITY_OWNER_MODULES),
+                    # A pharmacy can open (or run) its store without leaving this identity.
+                    modules=list(FACILITY_OWNER_MODULES)
+                    + (["store"] if profile.provider_type == "PHARMACY" else []),
                 )
             )
-    company = MedicalCompany.objects.filter(account=account).first()
-    if company and account.role == AccountRole.MEDICAL_COMPANY:
+    # A business account's company, or a pharmacy's store (linked to its own facility: the
+    # pharmacy keeps its provider workspace above AND gets this store workspace).
+    company = MedicalCompany.objects.filter(seller_workspace_q(), account=account).first()
+    if company:
         modules = ["profile", "products", "advertising", "quotes", "staff", "recruitment"]
         if company.business_type in RETAIL_BUSINESS_TYPES:
             modules.insert(2, "store_orders")
+        modules += ["documents", "store_settings", "reports"]
         out.append(
             _descriptor(
                 id=f"company:{company.pk}",

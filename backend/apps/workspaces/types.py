@@ -81,6 +81,11 @@ CAPABILITIES: dict[str, frozenset[str]] = {
     "company.offers.manage": frozenset({_O, _M}),  # seller-funded coupons and offers
     "company.finance.view": frozenset({_O, _FI}),  # statement, payouts, commission
     "company.campaigns.view": frozenset({_O, _M}),
+    # store activation, tax and delivery settings; verification documents (licences)
+    "company.store.manage": frozenset({_O, _M}),
+    "company.documents.manage": frozenset({_O, _M}),
+    # accounting reports (CSV) of the business's own sales
+    "company.reports.view": frozenset({_O, _M, _FI}),
     # both
     "members.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
     "members.manage": frozenset({OrgRole.OWNER}),

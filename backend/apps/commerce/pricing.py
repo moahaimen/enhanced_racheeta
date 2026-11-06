@@ -47,6 +47,13 @@ class PricedLine:
     platform_discount: Decimal = ZERO
     commission_rate: Decimal = ZERO
     channel: str = "B2C"
+    variant: object = None
+    tax: Decimal = ZERO  # EXCLUSIVE seller-declared tax on this line (a TAX order line)
+    tax_included: Decimal = ZERO  # INCLUSIVE: the part of the price that is tax (display only)
+
+    @property
+    def stock_unit(self):
+        return self.variant if self.variant is not None else self.product
 
     @property
     def seller_discount(self) -> Decimal:
@@ -74,9 +81,22 @@ class PricedOrder:
     company: object
     lines: list[PricedLine] = field(default_factory=list)
     seller_coupon: Coupon | None = None
+    # Pass-through charges (set by checkout.add_charges; no commission on them).
+    shipping_fee: Decimal = ZERO
+    shipping_days: tuple = (None, None)
+    shipping_known: bool = False
 
     def total(self, attr: str) -> Decimal:
         return sum((getattr(line, attr) for line in self.lines), ZERO)
+
+    @property
+    def tax_total(self) -> Decimal:
+        return self.total("tax")
+
+    @property
+    def grand_total(self) -> Decimal:
+        """What the buyer pays for this seller order: merchandise + delivery + added tax."""
+        return self.total("buyer_paid") + self.shipping_fee + self.tax_total
 
     @property
     def channel(self) -> str:
@@ -90,6 +110,9 @@ class PricedCheckout:
 
     def total(self, attr: str) -> Decimal:
         return sum((o.total(attr) for o in self.orders), ZERO)
+
+    def sum_of(self, attr: str) -> Decimal:
+        return sum((getattr(o, attr) for o in self.orders), ZERO)
 
 
 def allocate(total: Decimal, weights: list[Decimal]) -> list[Decimal]:

@@ -53,6 +53,8 @@ export interface RequestOptions {
   /** Attach the access token (default true). */
   auth?: boolean
   signal?: AbortSignal
+  /** 'blob' returns the raw file (documents, CSV exports) instead of parsed JSON. */
+  responseType?: 'json' | 'blob'
   /** Internal: prevents infinite refresh loops. */
   _retried?: boolean
 }
@@ -105,9 +107,11 @@ export async function refreshSession(): Promise<boolean> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, signal, _retried = false } = options
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const { method = 'GET', body, auth = true, signal, responseType = 'json', _retried = false } = options
+  const headers: Record<string, string> = { Accept: responseType === 'blob' ? '*/*' : 'application/json' }
+  // A FormData body (file upload) sets its own multipart boundary.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   // Backend validation messages come back in the UI language.
   if (i18next.language) headers['Accept-Language'] = i18next.language
   const access = auth ? tokenStore.getAccess() : null
@@ -118,7 +122,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       signal,
     })
   } catch (error) {
@@ -131,6 +135,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (ok) return apiRequest<T>(path, { ...options, _retried: true })
   }
 
+  if (responseType === 'blob' && response.ok) return (await response.blob()) as T
   const data = await parseBody(response)
   if (!response.ok) {
     if (isErrorBody(data)) {

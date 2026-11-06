@@ -8,7 +8,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from apps.accounts.roles import AccountRole
-from apps.marketplace.models import MedicalCompany
+from apps.marketplace.models import MedicalCompany, seller_workspace_q
 from apps.providers.models import ProviderProfile
 from apps.providers.types import FACILITY_TYPES
 
@@ -54,9 +54,7 @@ def company_role(account, company_id) -> str | None:
     if company_id is None or not (account and account.is_authenticated and account.is_active):
         return None
     company = (
-        MedicalCompany.objects.filter(
-            pk=company_id, account__is_active=True, account__role=AccountRole.MEDICAL_COMPANY
-        )
+        MedicalCompany.objects.filter(seller_workspace_q(), pk=company_id, account__is_active=True)
         .only("pk", "account_id")
         .first()
     )
