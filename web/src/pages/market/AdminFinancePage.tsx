@@ -222,18 +222,20 @@ function SettlementsTab() {
             rows.length === 0 ? <p className="text-caption">{t('market.finance.nothingOwed')}</p> : (
               <div className="table-scroll">
                 <table className="data-table" data-testid="payables-table">
-                  <thead><tr><th scope="col">{t('market.finance.seller')}</th><th scope="col" className="num">{t('market.finance.owed')}</th><th scope="col" /></tr></thead>
+                  <thead><tr><th scope="col">{t('market.finance.seller')}</th><th scope="col" className="num">{t('market.finance.owed')}</th><th scope="col" className="num">{t('market.finance.sellerOwes')}</th><th scope="col" /></tr></thead>
                   <tbody>
                     {rows.map((row) => (
                       <tr key={row.company.id}>
                         <td>{pickScript(row.company.name, i18n.language)}</td>
                         <td className="num ltr"><strong>{money(row.payable)}</strong></td>
+                        <td className="num ltr">{Number(row.receivable) > 0 ? <Badge tone="warning">{money(row.receivable)}</Badge> : '—'}</td>
                         <td>
                           {Number(row.payable) > 0 ? (
                             <ApiActionButton size="sm" variant="secondary" action={() => commerce.prepareSettlement(row.company.id)} onSuccess={done} onError={fail}>
                               {row.draft_settlement ? t('market.finance.refreshPayout') : t('market.finance.preparePayout')}
                             </ApiActionButton>
                           ) : null}
+                          {Number(row.receivable) > 0 ? <RecoveryForm companyId={row.company.id} owed={row.receivable} onDone={done} onError={fail} /> : null}
                         </td>
                       </tr>
                     ))}
@@ -403,5 +405,21 @@ function PolicyTab() {
         </SectionCard>
       )}
     </AsyncPage>
+  )
+}
+
+/** Finance records that a seller paid back (simulated) what it owes after a refund. */
+function RecoveryForm({ companyId, owed, onDone, onError }: { companyId: string; owed: string; onDone: () => void; onError: (e: unknown) => void }) {
+  const { t } = useTranslation()
+  const [amount, setAmount] = useState(String(Math.round(Number(owed))))
+  const [note, setNote] = useState('')
+  return (
+    <div className="cluster" style={{ alignItems: 'flex-end' }} data-testid="recovery-form">
+      <TextField label={t('market.finance.recoverAmount')} type="number" min={1} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <TextField label={t('market.finance.transferReference')} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
+      <ApiActionButton size="sm" variant="secondary" disabled={!note.trim() || !(Number(amount) > 0)} action={() => commerce.recordRecovery(companyId, amount, note.trim())} onSuccess={onDone} onError={onError}>
+        {t('market.finance.recordRecovery')}
+      </ApiActionButton>
+    </div>
   )
 }

@@ -123,7 +123,7 @@ describe('marketplace', () => {
     const statement: MerchantStatement = {
       currency: 'IQD', commission_rate: '20.00', gross_sales: '100000', seller_discounts: '10000', merchandise_net: '90000',
       commission: '18000', refunded_commission: '0', refunded_seller_payable: '0', seller_earnings: '72000', paid_out: '0',
-      payable: '72000', pending_orders: 0, pending_seller_payable: '0', draft_settlement: null, entries: [], settlements: [],
+      payable: '72000', receivable: '0', recovered: '0', pending_orders: 0, pending_seller_payable: '0', draft_settlement: null, entries: [], settlements: [],
     }
     vi.mocked(commerceApi.getStatement).mockResolvedValue(statement)
     renderApp('/merchant/center?tab=finance')
@@ -131,6 +131,21 @@ describe('marketplace', () => {
     expect(within(cards).getByText(/18[,٬]?000/)).toBeInTheDocument()
     expect(within(cards).getAllByText(/72[,٬]?000/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByTestId('seller-nav')).toBeInTheDocument()
+    expect(within(cards).queryByText(/مستحق لراشيتة عليك|you owe racheeta/i)).toBeNull()
+  })
+
+  it('a refund after payout shows what the seller owes Racheeta, never a negative payable', async () => {
+    signIn({ role: 'MEDICAL_COMPANY' })
+    vi.mocked(commerceApi.getStatement).mockResolvedValue({
+      currency: 'IQD', commission_rate: '20.00', gross_sales: '100000', seller_discounts: '0', merchandise_net: '100000',
+      commission: '20000', refunded_commission: '20000', refunded_seller_payable: '80000', seller_earnings: '0', paid_out: '80000',
+      payable: '0', receivable: '80000', recovered: '0', pending_orders: 0, pending_seller_payable: '0', draft_settlement: null,
+      entries: [], settlements: [],
+    })
+    renderApp('/merchant/center?tab=finance')
+    const cards = await screen.findByTestId('statement-cards')
+    expect(within(cards).getByText(/مستحق لراشيتة عليك|you owe racheeta/i)).toBeInTheDocument()
+    expect(within(cards).queryByText(/−\s*\d|-\d/)).toBeNull()
   })
 
   it('staff without the finance permission see a clear refusal in the finance console', async () => {

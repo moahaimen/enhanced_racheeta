@@ -741,7 +741,8 @@
     "nothing_owed": "Nothing is owed to this seller right now.",
     "invalid_settlement": "This payout cannot be processed.",
     "invalid_promotion": "Please check the coupon or sale details.",
-    "inventory_error": "This stock change is not possible."
+    "inventory_error": "This stock change is not possible.",
+    "idempotency_conflict": "This order request was already sent with different details. Refresh the cart and try again."
   },
   "jobs": {
     "featured": "Featured",
@@ -2400,7 +2401,8 @@
       "PAYMENT": "Payment verified",
       "ACCRUAL": "Sale completed",
       "REFUND": "Refund",
-      "PAYOUT": "Payout"
+      "PAYOUT": "Payout",
+      "RECOVERY": "Recovered from seller"
     },
     "settlementStatus": {
       "DRAFT": "Prepared",
@@ -2439,21 +2441,26 @@
       "CUSTOMER_FUNDS_HELD": "Buyer funds held",
       "SELLER_PAYABLE": "Owed to sellers",
       "COMMISSION_REVENUE": "Commission revenue",
-      "PLATFORM_PROMO_EXPENSE": "Racheeta coupon cost"
+      "PLATFORM_PROMO_EXPENSE": "Racheeta coupon cost",
+      "SELLER_RECEIVABLE": "Owed by sellers",
+      "SELLER_NET": "Sellers, net (owed to − owed by)"
     },
     "checks": {
       "balance": "Balance: {{account}}",
       "entries_balanced": "Every entry balances",
       "no_negative_seller_payable": "No seller is owed a negative amount",
       "every_paid_order_has_payment_entry": "Every paid order has a payment entry",
-      "single_accrual_per_order": "Commission recorded once per order"
+      "single_accrual_per_order": "Commission recorded once per order",
+      "no_negative_seller_receivable": "No seller owes a negative amount",
+      "payable_and_receivable_netted": "No seller is both owed and owing"
     },
     "totals": {
       "orders_paid": "Paid orders",
       "orders_accrued": "Completed orders",
       "refunds": "Refunds",
       "payouts": "Payouts",
-      "entries": "Ledger entries"
+      "entries": "Ledger entries",
+      "recoveries": "Recoveries"
     },
     "finance": {
       "title": "Marketplace finance",
@@ -2521,9 +2528,15 @@
       "policyHint": "Each order keeps the rate and version it was placed with; a new version never changes existing orders.",
       "since": "since",
       "current": "Current",
-      "owed": "Owed"
+      "owed": "Owed",
+      "sellerOwes": "Seller owes",
+      "recoverAmount": "Amount recovered (IQD)",
+      "recordRecovery": "Record recovery (simulated)"
     },
     "commissionReversed": "Commission reversed by refunds",
-    "payableReversed": "Payable reversed by refunds"
+    "payableReversed": "Payable reversed by refunds",
+    "youOwe": "You owe Racheeta",
+    "youOweHint": "A refund came after your payout; it is taken from your next sales first.",
+    "receivableLine": "owed to Racheeta"
   }
 }

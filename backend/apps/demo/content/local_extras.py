@@ -1030,6 +1030,11 @@ QUOTE_ORDERS = [("amal-fridge", "amal-pharmacy", ["accept", "ship", "deliver", "
 # Seller payouts (simulated): ("paid" = prepared and confirmed by finance, "draft" = prepared only)
 SETTLEMENTS = [("aman-consumables", "paid"), ("rehab-mobility", "draft")]
 
+# Refund AFTER the seller was paid out (audit 2026-11-06): the seller's payable stays at zero and
+# the refunded seller part becomes a receivable (what the seller owes Racheeta).
+# checkout tag, seller company key whose order of that checkout is refunded through a dispute
+POST_PAYOUT_REFUNDS = [("ali-multi-vendor", "aman-consumables")]
+
 # code, funding, company key (seller coupons), kind, value, max discount, min subtotal,
 # days from now it started (negative = future), days it lasts, max uses
 COUPONS = [

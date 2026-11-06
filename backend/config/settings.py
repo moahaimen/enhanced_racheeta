@@ -289,6 +289,9 @@ SPECTACULAR_SETTINGS = {
         "PublicationStatusEnum": "apps.real_estate.types.PublicationStatus.choices",
         "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
         "ProviderMembershipStatusEnum": "apps.providers.types.MembershipStatus.choices",
+        # One shared name per choice set: providers, employers and companies use the same
+        # verification vocabulary (two names for one set made drf-spectacular fail validation
+        # and published provider/employer fields as "CompanyVerification…").
         "VerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
         "VerificationDecisionEnum": "apps.jobs.serializers.VERIFICATION_DECISION_CHOICES",
         "JobStatusEnum": "apps.jobs.types.JobStatus.choices",
@@ -298,8 +301,6 @@ SPECTACULAR_SETTINGS = {
         "MemberStatusEnum": "apps.jobs.types.MemberStatus.choices",
         "RecruitmentStatusEnum": "apps.jobs.types.RecruitmentStatus.choices",
         "DegreeEnum": "apps.jobs.types.Degree.choices",
-        "CompanyVerificationStatusEnum": "apps.marketplace.types.CompanyVerificationStatus.choices",
-        "CompanyVerificationDecisionEnum": "apps.marketplace.types.VERIFICATION_DECISION_CHOICES",
         "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
         "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
         "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",

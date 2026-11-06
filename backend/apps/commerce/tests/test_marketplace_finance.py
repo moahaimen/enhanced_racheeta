@@ -522,7 +522,7 @@ def test_another_seller_cannot_touch_my_orders_returns_or_stock(
             {"delta": -5, "reason": "x"},
             format="json",
         ).status_code
-        == 400
+        == 404  # another seller's product does not exist for this caller
     )
     assert rival.get(f"{MERCHANT}/finance?company={store.pk}").status_code == 403
     hundred_k.refresh_from_db()

@@ -124,7 +124,8 @@ export interface Settlement {
 
 export interface StatementEntry {
   reference: string
-  kind: 'PAYMENT' | 'ACCRUAL' | 'REFUND' | 'PAYOUT'
+  kind: 'PAYMENT' | 'ACCRUAL' | 'REFUND' | 'PAYOUT' | 'RECOVERY'
+  account: 'SELLER_PAYABLE' | 'SELLER_RECEIVABLE'
   order_number: string
   memo: string
   debit: string
@@ -144,6 +145,9 @@ export interface MerchantStatement {
   seller_earnings: string
   paid_out: string
   payable: string
+  /** What the seller owes Racheeta (a refund after its payout, not yet offset). */
+  receivable: string
+  recovered: string
   pending_orders: number
   pending_seller_payable: string
   draft_settlement: { id: string; amount: string } | null
@@ -180,6 +184,7 @@ export interface LedgerEntry {
 export interface SellerPayable {
   company: { id: string; name: string }
   payable: string
+  receivable: string
   draft_settlement: { id: string; amount: string } | null
 }
 
@@ -199,3 +204,12 @@ export type PaginatedStockMovements = Paginated<StockMovement>
 export type PaginatedReturns = Paginated<ReturnRequest>
 export type PaginatedDisputes = Paginated<Dispute>
 export type PaginatedAdminOrders = Paginated<Order>
+
+export interface SellerRecovery {
+  id: string
+  company: { id: string; name: string }
+  currency: string
+  amount: string
+  reference_note: string
+  created_at: string
+}

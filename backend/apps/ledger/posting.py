@@ -16,7 +16,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 
 from .models import LedgerEntry, LedgerLine, MarketplaceCommissionPolicy
-from .types import SUPPORTED_CURRENCY, Account
+from .types import SELLER_ACCOUNTS, SUPPORTED_CURRENCY
 
 ZERO = Decimal("0")
 DINAR = Decimal("1")
@@ -80,8 +80,8 @@ def post(
             raise LedgerError("Negative ledger amount.")
         if line.debit != dinars(line.debit) or line.credit != dinars(line.credit):
             raise LedgerError("Ledger amounts must be whole dinars.")
-        if (line.account == Account.SELLER_PAYABLE) != (line.company_id is not None):
-            raise LedgerError("Seller payable lines (and only they) carry a seller.")
+        if (line.account in SELLER_ACCOUNTS) != (line.company_id is not None):
+            raise LedgerError("Seller payable/receivable lines (and only they) carry a seller.")
         if line.debit:
             merged[(line.account, line.company_id, "debit")] += line.debit
         if line.credit:
@@ -142,3 +142,8 @@ def unbalanced_entries() -> list[str]:
         .values_list("reference", flat=True)
     )
     return list(rows)
+
+
+def debit_balance(account: str, *, company_id=None) -> Decimal:
+    """Debit-minus-credit balance (positive = asset, e.g. what a seller owes Racheeta)."""
+    return -balance(account, company_id=company_id)

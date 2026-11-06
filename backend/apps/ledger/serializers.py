@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import LedgerEntry, LedgerLine, MarketplaceCommissionPolicy, SettlementBatch
+from .models import (
+    LedgerEntry,
+    LedgerLine,
+    MarketplaceCommissionPolicy,
+    SellerRecovery,
+    SettlementBatch,
+)
 
 MONEY = {"max_digits": 16, "decimal_places": 2}
 
@@ -83,7 +89,26 @@ class SettlementConfirmSerializer(serializers.Serializer):
 class SellerPayableSerializer(serializers.Serializer):
     company = serializers.DictField()
     payable = serializers.DecimalField(**MONEY)
+    receivable = serializers.DecimalField(**MONEY)
     draft_settlement = serializers.DictField(allow_null=True)
+
+
+class RecoveryCreateSerializer(serializers.Serializer):
+    company = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=16, decimal_places=0, min_value=1)
+    reference_note = serializers.CharField(max_length=200)
+
+
+class RecoverySerializer(serializers.ModelSerializer):
+    company = serializers.SerializerMethodField()
+
+    def get_company(self, obj) -> dict:
+        return {"id": str(obj.company_id), "name": obj.company.name}
+
+    class Meta:
+        model = SellerRecovery
+        fields = ("id", "company", "currency", "amount", "reference_note", "created_at")
+        read_only_fields = fields
 
 
 class CheckSerializer(serializers.Serializer):
@@ -104,6 +129,7 @@ class ReconciliationSerializer(serializers.Serializer):
 class StatementEntrySerializer(serializers.Serializer):
     reference = serializers.CharField()
     kind = serializers.CharField()
+    account = serializers.CharField()
     order_number = serializers.CharField()
     memo = serializers.CharField()
     debit = serializers.DecimalField(**MONEY)
@@ -123,6 +149,8 @@ class StatementSerializer(serializers.Serializer):
     seller_earnings = serializers.DecimalField(**MONEY)
     paid_out = serializers.DecimalField(**MONEY)
     payable = serializers.DecimalField(**MONEY)
+    receivable = serializers.DecimalField(**MONEY)
+    recovered = serializers.DecimalField(**MONEY)
     pending_orders = serializers.IntegerField()
     pending_seller_payable = serializers.DecimalField(**MONEY)
     draft_settlement = serializers.DictField(allow_null=True)

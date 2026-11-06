@@ -40,6 +40,43 @@ class CheckoutError(CommerceError):
     code = "invalid_cart"
 
 
+def request_fingerprint(*, items, coupons, delivery: dict, payment_method: str, quote=None) -> str:
+    """Canonical SHA-256 of what the buyer asked for (order of lines/coupons does not matter)."""
+    import hashlib
+    import json
+
+    def ref(value):
+        return str(getattr(value, "pk", value)) if value not in (None, "") else ""
+
+    canonical = {
+        "items": sorted([str(k), int(v)] for k, v in _wanted(items).items()) if items else [],
+        "coupons": sorted({(c or "").strip().upper() for c in coupons or [] if (c or "").strip()}),
+        "payment_method": payment_method,
+        "delivery": {
+            "governorate": ref(delivery.get("governorate")),
+            "city": ref(delivery.get("city")),
+            "address": (delivery.get("address") or "").strip(),
+            "phone": (delivery.get("phone") or "").strip(),
+            "note": (delivery.get("note") or "").strip(),
+            "latitude": ref(delivery.get("latitude")),
+            "longitude": ref(delivery.get("longitude")),
+        },
+        "quote": ref(quote),
+    }
+    blob = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()
+
+
+def replay(existing: Checkout, fingerprint: str) -> tuple[Checkout, bool]:
+    """Same key again: the same request returns the first checkout; another request is refused."""
+    if existing.request_hash and existing.request_hash != fingerprint:
+        raise CheckoutError(
+            "This request key was already used for a different order. Start a new checkout.",
+            "idempotency_conflict",
+        )
+    return existing, False
+
+
 def _number(prefix: str) -> str:
     return f"{prefix}-{timezone.localdate():%y%m%d}-{secrets.token_hex(3).upper()}"
 
@@ -75,9 +112,11 @@ def purchase_channel(product: Product, buyer) -> str:
         return "B2C"
     if category.compliance_class == ComplianceClass.QUOTE_ONLY:
         raise CheckoutError(f"“{product.title}” is sold by quotation only.", "quote_only")
-    if product.sale_channel in PROFESSIONAL_CHANNELS and category.compliance_class in (
-        ComplianceClass.B2B_VERIFIED_ONLY,
-        ComplianceClass.B2C_ALLOWED,
+    # Direct professional purchase needs an EXPLICIT B2B classification. B2C_ALLOWED is not
+    # enough: legacy consumer categories (marketplace 0004) were only ever quote-able for B2B.
+    if (
+        product.sale_channel in PROFESSIONAL_CHANNELS
+        and category.compliance_class == ComplianceClass.B2B_VERIFIED_ONLY
     ):
         provider = current_verified_provider(buyer)
         if (
@@ -88,6 +127,8 @@ def purchase_channel(product: Product, buyer) -> str:
         raise CheckoutError(
             f"“{product.title}” is for verified healthcare professionals only.", "professional_only"
         )
+    if product.sale_channel in PROFESSIONAL_CHANNELS:
+        raise CheckoutError(f"“{product.title}” is sold by quotation only.", "quote_only")
     raise CheckoutError(f"“{product.title}” is not available.")
 
 
@@ -176,20 +217,32 @@ def place(
     payment_method: str,
     idempotency_key: str,
 ) -> tuple[Checkout, bool]:
-    """Returns (checkout, created). A repeated key returns the first checkout unchanged."""
+    """Returns (checkout, created). A repeated key with the SAME request returns the first checkout
+    unchanged; a repeated key with a different request is refused (idempotency_conflict)."""
     if payment_method not in PaymentMethod.values:
         raise CheckoutError("Choose cash on delivery or manual transfer.")
     key = (idempotency_key or "").strip()[:64]
     if not key:
         raise CheckoutError("Missing idempotency key.")
+    fingerprint = request_fingerprint(
+        items=items, coupons=coupons, delivery=delivery, payment_method=payment_method
+    )
     existing = Checkout.objects.filter(buyer=buyer, idempotency_key=key).first()
     if existing is not None:
-        return existing, False
+        return replay(existing, fingerprint)
     priced, policy = _priced(buyer, items, coupons, lock=True)
-    return persist(buyer, priced, policy, delivery=delivery, payment_method=payment_method, key=key)
+    return persist(
+        buyer,
+        priced,
+        policy,
+        delivery=delivery,
+        payment_method=payment_method,
+        key=key,
+        fingerprint=fingerprint,
+    )
 
 
-def persist(buyer, priced, policy, *, delivery, payment_method, key, quote=None):
+def persist(buyer, priced, policy, *, delivery, payment_method, key, fingerprint, quote=None):
     """Write the checkout, its per-seller orders, line snapshots, reservations and coupon uses.
     Callers hold row locks on every product and coupon involved."""
     try:
@@ -198,6 +251,7 @@ def persist(buyer, priced, policy, *, delivery, payment_method, key, quote=None)
                 number=_number("CHK"),
                 buyer=buyer,
                 idempotency_key=key,
+                request_hash=fingerprint,
                 currency=CURRENCY,
                 list_total=priced.total("line_total"),
                 seller_discount_total=priced.total("seller_discount"),
@@ -205,7 +259,7 @@ def persist(buyer, priced, policy, *, delivery, payment_method, key, quote=None)
                 total=priced.total("buyer_paid"),
             )
     except IntegrityError:  # the same key raced in on another connection
-        return Checkout.objects.get(buyer=buyer, idempotency_key=key), False
+        return replay(Checkout.objects.get(buyer=buyer, idempotency_key=key), fingerprint)
     now = timezone.now()
     for priced_order in priced.orders:
         order = Order.objects.create(

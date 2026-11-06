@@ -402,6 +402,7 @@ function FinanceTab({ company }: { company?: string }) {
             <StatCard label={t('market.earnings')} value={money(s.seller_earnings)} />
             <StatCard label={t('market.paidOut')} value={money(s.paid_out)} />
             <StatCard label={t('market.owedNow')} value={money(s.payable)} hint={s.draft_settlement ? t('market.payoutPrepared', { amount: money(s.draft_settlement.amount) }) : undefined} />
+            {Number(s.receivable) > 0 ? <StatCard label={t('market.youOwe')} value={money(s.receivable)} hint={t('market.youOweHint')} /> : null}
             <StatCard label={t('market.pending')} value={money(s.pending_seller_payable)} hint={t('market.pendingOrders', { count: s.pending_orders })} />
           </div>
           <SectionCard headingLevel={2} title={t('market.payouts')}>
@@ -422,9 +423,9 @@ function FinanceTab({ company }: { company?: string }) {
                 <thead><tr><th scope="col">{t('market.when')}</th><th scope="col">{t('market.entry')}</th><th scope="col">{t('market.order')}</th><th scope="col" className="num">{t('market.owedMore')}</th><th scope="col" className="num">{t('market.owedLess')}</th></tr></thead>
                 <tbody>
                   {s.entries.map((e) => (
-                    <tr key={`${e.reference}-${e.debit}-${e.credit}`}>
+                    <tr key={`${e.reference}-${e.account}-${e.debit}-${e.credit}`}>
                       <td>{new Date(e.created_at).toLocaleString(i18n.language)}</td>
-                      <td>{t(`market.entryKind.${e.kind}`)}</td>
+                      <td>{t(`market.entryKind.${e.kind}`)}{e.account === 'SELLER_RECEIVABLE' ? <> · <Badge tone="warning">{t('market.receivableLine')}</Badge></> : null}</td>
                       <td className="ltr">{e.order_number || '—'}</td>
                       <td className="num ltr">{Number(e.credit) ? money(e.credit) : ''}</td>
                       <td className="num ltr">{Number(e.debit) ? money(e.debit) : ''}</td>

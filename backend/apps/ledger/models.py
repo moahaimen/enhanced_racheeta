@@ -81,7 +81,7 @@ class LedgerEntry(_Immutable, BaseModel):
 class LedgerLine(_Immutable, BaseModel):
     entry = models.ForeignKey(LedgerEntry, on_delete=models.PROTECT, related_name="lines")
     account = models.CharField(max_length=24, choices=Account.choices)
-    # The seller dimension (only SELLER_PAYABLE lines carry it; enforced by a constraint).
+    # The seller dimension (only seller payable/receivable lines carry it; a DB constraint).
     company = models.ForeignKey(
         "marketplace.MedicalCompany",
         on_delete=models.PROTECT,
@@ -101,8 +101,13 @@ class LedgerLine(_Immutable, BaseModel):
                 name="ledger_line_one_side_positive",
             ),
             models.CheckConstraint(
-                condition=(Q(account="SELLER_PAYABLE", company__isnull=False))
-                | (~Q(account="SELLER_PAYABLE") & Q(company__isnull=True)),
+                condition=(
+                    Q(account__in=["SELLER_PAYABLE", "SELLER_RECEIVABLE"], company__isnull=False)
+                )
+                | (
+                    ~Q(account__in=["SELLER_PAYABLE", "SELLER_RECEIVABLE"])
+                    & Q(company__isnull=True)
+                ),
                 name="ledger_line_seller_dimension",
             ),
         ]
@@ -144,3 +149,28 @@ class SettlementBatch(BaseModel):
                 name="ledger_one_draft_settlement_per_seller",
             ),
         ]
+
+
+class SellerRecovery(BaseModel):
+    """Finance recorded that a seller paid back (simulated) what it owed after a refund that came
+    after its payout. Posts ONE RECOVERY entry: Dr PLATFORM_CASH, Cr SELLER_RECEIVABLE."""
+
+    company = models.ForeignKey(
+        "marketplace.MedicalCompany", on_delete=models.PROTECT, related_name="recoveries"
+    )
+    currency = models.CharField(max_length=3)
+    amount = models.DecimalField(max_digits=16, decimal_places=2)
+    reference_note = models.CharField(max_length=200)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
+    )
+
+    class Meta:
+        db_table = "ledger_recovery"
+        ordering = ["-created_at", "id"]
+        constraints = [
+            models.CheckConstraint(condition=Q(amount__gt=0), name="ledger_recovery_amount_gt0"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.company_id} {self.amount}"

@@ -557,6 +557,28 @@ class LocalExtras:
             else:
                 raise ValueError(f"unknown demo step {step}")
 
+    def _post_payout_refunds(self, checkouts) -> None:
+        fin = self._finance_actor()
+        if fin is None:
+            return
+        for tag, ckey in content.POST_PAYOUT_REFUNDS:
+            result = checkouts.get(tag)
+            company = self._company(ckey)
+            if result is None or company is None:
+                continue
+            order = result.orders.filter(merchant=company).first()
+
+            def make():
+                dispute = lifecycle.open_dispute(
+                    order.pk, buyer=order.buyer, reason="لم يصل الجهاز سليمًا (توضيحي) | Damaged"
+                )
+                return lifecycle.resolve_dispute(
+                    dispute.pk, actor=fin, refund=True, note="استرداد بعد التسوية (توضيحي)"
+                )
+
+            if order is not None:
+                self.registry.ensure(f"post-payout-refund:{tag}:{ckey}", make)
+
     def _settlements(self) -> None:
         fin = self._finance_actor()
         if fin is None:
@@ -586,6 +608,7 @@ class LocalExtras:
             "phone": "07700000000",
             "note": "طلب توضيحي | Demo order",
         }
+        checkouts: dict[str, Checkout] = {}
         for tag, buyer_key, lines, codes, method, steps in content.MARKET_SCENARIOS:
             buyer = self.s.accounts.get(buyer_key) or self._get(f"account:{buyer_key}")
 
@@ -602,7 +625,7 @@ class LocalExtras:
                     self._run_steps(order, buyer, steps)
                 return Checkout.objects.get(pk=result.pk)
 
-            self.registry.ensure(f"checkout:{tag}", make)
+            checkouts[tag], _ = self.registry.ensure(f"checkout:{tag}", make)
         quotes: dict[str, QuoteRequest] = {}
         for tag, provider_key, pkey, qty, outcome, price in content.QUOTES:
             provider = self._provider(provider_key)
@@ -650,6 +673,7 @@ class LocalExtras:
             if quote is not None and quote.status in ("ACCEPTED", "ORDERED"):
                 self.registry.ensure(f"checkout:quote:{tag}", make)
         self._settlements()
+        self._post_payout_refunds(checkouts)
         admin = self.admin or self._get("account:local-admin")
         for tag, listing_index, types, days, outcome in content.PROMOTIONS:
             listing = self._get(f"listing:{listing_index}")

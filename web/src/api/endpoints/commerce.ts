@@ -18,6 +18,7 @@ import type {
   ProductSale,
   Reconciliation,
   SellerPayable,
+  SellerRecovery,
   Settlement,
 } from '../commerce.types'
 import type { CheckoutRequest, Order, ReturnRequest } from '../workspaces.types'
@@ -107,3 +108,5 @@ export const cancelSettlement = (id: string) => post<Settlement>(`/api/v1/admin/
 export const listPolicies = (signal?: AbortSignal) => apiRequest<CommissionPolicy[]>('/api/v1/admin/ledger/policy', { signal })
 export const getSellerStatement = (company: string, signal?: AbortSignal) =>
   apiRequest<MerchantStatement>(`/api/v1/admin/ledger/statements/${enc(company)}`, { signal })
+export const recordRecovery = (company: string, amount: string, reference_note: string) =>
+  post<SellerRecovery>('/api/v1/admin/ledger/recoveries', { company, amount, reference_note })

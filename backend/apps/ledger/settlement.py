@@ -4,7 +4,13 @@
 * `confirm(batch)` — an authorized Racheeta finance operator records that the (simulated) transfer
   happened: posts ONE PAYOUT entry (Dr SELLER_PAYABLE, Cr PLATFORM_CASH) and marks it PAID;
   a payout can never exceed what is owed at that moment;
+* a refund AFTER the seller was paid out never makes the payable negative: the part that is no
+  longer held for the seller becomes SELLER_RECEIVABLE (the seller owes Racheeta). It is offset
+  first against the seller's next completed sales, or `record_recovery()` (finance, simulated);
 * `reconciliation()` re-derives every ledger balance from the order snapshots and compares.
+
+Lock order (no deadlocks): order rows first, then the seller (MedicalCompany) row, then batches.
+Every code path that reads a seller's payable/receivable to decide an amount holds the seller row.
 """
 
 from __future__ import annotations
@@ -12,13 +18,13 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 
 from apps.audit import services as audit
 
 from . import posting
-from .models import LedgerEntry, LedgerLine, SettlementBatch
+from .models import LedgerEntry, LedgerLine, SellerRecovery, SettlementBatch
 from .posting import LedgerError, Line
 from .types import SUPPORTED_CURRENCY, Account, EntryKind, SettlementStatus
 
@@ -43,6 +49,41 @@ def require_finance(actor) -> None:
 
 def payable(company_id) -> Decimal:
     return posting.balance(Account.SELLER_PAYABLE, company_id=company_id)
+
+
+def receivable(company_id) -> Decimal:
+    """What the seller owes Racheeta (refunds after payout not yet offset or recovered)."""
+    return posting.debit_balance(Account.SELLER_RECEIVABLE, company_id=company_id)
+
+
+def lock_seller(company_id):
+    """Serialize every decision about one seller's balances (refund, accrual, payout, recovery)."""
+    from apps.marketplace.models import MedicalCompany
+
+    return MedicalCompany.objects.select_for_update().get(pk=company_id)
+
+
+def seller_credit_lines(company_id, amount: Decimal) -> list[Line]:
+    """Crediting a seller (sale completed): first settle what it owes, then add to its payable.
+    The caller holds `lock_seller(company_id)`."""
+    owed = max(receivable(company_id), ZERO)
+    offset = min(owed, amount)
+    return [
+        Line(Account.SELLER_RECEIVABLE, credit=offset, company_id=company_id),
+        Line(Account.SELLER_PAYABLE, credit=amount - offset, company_id=company_id),
+    ]
+
+
+def seller_debit_lines(company_id, amount: Decimal) -> list[Line]:
+    """Debiting a seller (refund after completion): take it from what is still held for the
+    seller; whatever was already paid out becomes a receivable. The payable never goes negative.
+    The caller holds `lock_seller(company_id)`."""
+    held = max(payable(company_id), ZERO)
+    from_payable = min(held, amount)
+    return [
+        Line(Account.SELLER_PAYABLE, debit=from_payable, company_id=company_id),
+        Line(Account.SELLER_RECEIVABLE, debit=amount - from_payable, company_id=company_id),
+    ]
 
 
 def _notify_seller(batch: SettlementBatch) -> None:
@@ -118,9 +159,7 @@ def confirm(batch_id, *, actor, reference_note: str) -> SettlementBatch:
     if not note:
         raise SettlementError("Record the (simulated) transfer reference.", "invalid")
     # Lock the seller so a concurrent refund cannot reduce the payable under us.
-    from apps.marketplace.models import MedicalCompany
-
-    MedicalCompany.objects.select_for_update().get(pk=batch.company_id)
+    lock_seller(batch.company_id)
     if batch.amount > payable(batch.company_id):
         raise SettlementError(
             "The amount owed changed (refund?) — prepare the settlement again.", "stale"
@@ -163,6 +202,46 @@ def cancel(batch_id, *, actor) -> SettlementBatch:
     return batch
 
 
+@transaction.atomic
+def record_recovery(company_id, *, actor, amount, reference_note: str) -> SellerRecovery:
+    """Finance records that the seller paid back (simulated) part or all of what it owes."""
+    require_finance(actor)
+    company = lock_seller(company_id)
+    amount = Decimal(amount)
+    if amount <= 0 or amount != posting.dinars(amount):
+        raise SettlementError("Enter a whole-dinar amount above zero.", "invalid")
+    owed = receivable(company.pk)
+    if amount > owed:
+        raise SettlementError("That is more than the seller owes.", "invalid")
+    note = (reference_note or "").strip()
+    if not note:
+        raise SettlementError("Record the (simulated) transfer reference.", "invalid")
+    recovery = SellerRecovery.objects.create(
+        company=company,
+        currency=SUPPORTED_CURRENCY,
+        amount=amount,
+        reference_note=note[:200],
+        recorded_by=actor,
+    )
+    posting.post(
+        f"recovery:{recovery.pk}",
+        kind=EntryKind.RECOVERY,
+        actor=actor,
+        memo=f"Simulated recovery from {company.name} ({note})",
+        lines=[
+            Line(Account.PLATFORM_CASH, debit=amount),
+            Line(Account.SELLER_RECEIVABLE, credit=amount, company_id=company.pk),
+        ],
+    )
+    audit.record(
+        actor=actor,
+        action="ledger.recovery.recorded",
+        target=recovery,
+        summary=f"{company.name}: {amount} {SUPPORTED_CURRENCY}",
+    )
+    return recovery
+
+
 # ---- reporting ----------------------------------------------------------------------------------
 
 
@@ -184,7 +263,9 @@ def statement(company_id) -> dict:
     ).exclude(status="CANCELLED")
     paid_out = SettlementBatch.objects.filter(company_id=company_id, status=SettlementStatus.PAID)
     lines = (
-        LedgerLine.objects.filter(account=Account.SELLER_PAYABLE, company_id=company_id)
+        LedgerLine.objects.filter(
+            account__in=[Account.SELLER_PAYABLE, Account.SELLER_RECEIVABLE], company_id=company_id
+        )
         .select_related("entry", "entry__order")
         .order_by("-entry__created_at", "id")[:200]
     )
@@ -200,6 +281,8 @@ def statement(company_id) -> dict:
         - _sum(accrued, "refunded_seller_payable"),
         "paid_out": _sum(paid_out, "amount"),
         "payable": payable(company_id),
+        "receivable": receivable(company_id),
+        "recovered": _sum(SellerRecovery.objects.filter(company_id=company_id), "amount"),
         "pending_orders": pending.count(),
         "pending_seller_payable": _sum(pending, "seller_payable_total"),
         "draft_settlement": SettlementBatch.objects.filter(
@@ -211,6 +294,7 @@ def statement(company_id) -> dict:
             {
                 "reference": line.entry.reference,
                 "kind": line.entry.kind,
+                "account": line.account,
                 "order_number": line.entry.order.number if line.entry.order else "",
                 "memo": line.entry.memo,
                 "debit": line.debit,
@@ -236,26 +320,32 @@ def reconciliation() -> dict:
     held_orders = paid_orders.filter(settlement_state=SettlementState.NOT_ELIGIBLE)
     payouts = SettlementBatch.objects.filter(status=SettlementStatus.PAID)
 
+    recoveries = SellerRecovery.objects.all()
+
     expected = {
         Account.PLATFORM_CASH: _sum(paid_orders, "total")
         - _sum(Refund.objects.all(), "amount")
-        - _sum(payouts, "amount"),
+        - _sum(payouts, "amount")
+        + _sum(recoveries, "amount"),
         Account.CUSTOMER_FUNDS_HELD: _sum(held_orders, "total")
         - _sum(held_orders, "refunded_total"),
         Account.COMMISSION_REVENUE: _sum(accrued, "commission")
         - _sum(accrued, "refunded_commission"),
-        Account.SELLER_PAYABLE: _sum(accrued, "seller_payable")
-        - _sum(accrued, "refunded_seller_payable")
-        - _sum(payouts, "amount"),
         Account.PLATFORM_PROMO_EXPENSE: _sum(accrued, "platform_discount")
         - _sum(accrued, "refunded_platform_discount"),
+        # The seller's NET position: what Racheeta owes sellers minus what sellers owe Racheeta.
+        "SELLER_NET": _sum(accrued, "seller_payable")
+        - _sum(accrued, "refunded_seller_payable")
+        - _sum(payouts, "amount")
+        + _sum(recoveries, "amount"),
     }
     actual = {
         Account.PLATFORM_CASH: _debit_balance(Account.PLATFORM_CASH),
         Account.CUSTOMER_FUNDS_HELD: posting.balance(Account.CUSTOMER_FUNDS_HELD),
         Account.COMMISSION_REVENUE: posting.balance(Account.COMMISSION_REVENUE),
-        Account.SELLER_PAYABLE: posting.balance(Account.SELLER_PAYABLE),
         Account.PLATFORM_PROMO_EXPENSE: _debit_balance(Account.PLATFORM_PROMO_EXPENSE),
+        "SELLER_NET": posting.balance(Account.SELLER_PAYABLE)
+        - _debit_balance(Account.SELLER_RECEIVABLE),
     }
     checks = [
         {
@@ -270,21 +360,30 @@ def reconciliation() -> dict:
     checks.append(
         {"name": "entries_balanced", "expected": 0, "actual": len(unbalanced), "ok": not unbalanced}
     )
-    negative = list(
-        LedgerLine.objects.filter(account=Account.SELLER_PAYABLE)
+    per_seller = {
+        row["company_id"]: row
+        for row in LedgerLine.objects.filter(
+            account__in=[Account.SELLER_PAYABLE, Account.SELLER_RECEIVABLE]
+        )
         .values("company_id")
-        .annotate(b=Sum(F("credit") - F("debit")))
-        .filter(b__lt=0)
-        .values_list("company_id", flat=True)
-    )
-    checks.append(
-        {
-            "name": "no_negative_seller_payable",
-            "expected": 0,
-            "actual": len(negative),
-            "ok": not negative,
-        }
-    )
+        .annotate(
+            payable=Sum(F("credit") - F("debit"), filter=Q(account=Account.SELLER_PAYABLE)),
+            receivable=Sum(F("debit") - F("credit"), filter=Q(account=Account.SELLER_RECEIVABLE)),
+        )
+    }
+    negative_payable = [k for k, r in per_seller.items() if (r["payable"] or ZERO) < 0]
+    negative_receivable = [k for k, r in per_seller.items() if (r["receivable"] or ZERO) < 0]
+    both = [
+        k
+        for k, r in per_seller.items()
+        if (r["payable"] or ZERO) > 0 and (r["receivable"] or ZERO) > 0
+    ]
+    for name, offenders in (
+        ("no_negative_seller_payable", negative_payable),
+        ("no_negative_seller_receivable", negative_receivable),
+        ("payable_and_receivable_netted", both),
+    ):
+        checks.append({"name": name, "expected": 0, "actual": len(offenders), "ok": not offenders})
     with_payment = LedgerEntry.objects.filter(kind=EntryKind.PAYMENT).values("order_id")
     missing_payment = paid_orders.exclude(total=0).exclude(pk__in=with_payment).count()
     checks.append(
@@ -314,7 +413,14 @@ def reconciliation() -> dict:
         "currency": SUPPORTED_CURRENCY,
         "ok": all(c["ok"] for c in checks),
         "checks": checks,
-        "balances": {k: v for k, v in actual.items()},
+        "balances": {
+            Account.PLATFORM_CASH: actual[Account.PLATFORM_CASH],
+            Account.CUSTOMER_FUNDS_HELD: actual[Account.CUSTOMER_FUNDS_HELD],
+            Account.COMMISSION_REVENUE: actual[Account.COMMISSION_REVENUE],
+            Account.SELLER_PAYABLE: posting.balance(Account.SELLER_PAYABLE),
+            Account.SELLER_RECEIVABLE: _debit_balance(Account.SELLER_RECEIVABLE),
+            Account.PLATFORM_PROMO_EXPENSE: actual[Account.PLATFORM_PROMO_EXPENSE],
+        },
         "totals": {
             "orders_paid": paid_orders.count(),
             "orders_accrued": Order.objects.filter(
@@ -322,6 +428,7 @@ def reconciliation() -> dict:
             ).count(),
             "refunds": Refund.objects.count(),
             "payouts": payouts.count(),
+            "recoveries": recoveries.count(),
             "entries": LedgerEntry.objects.count(),
         },
     }

@@ -165,7 +165,7 @@ def adjust(product_id, *, company_id, delta: int, reason: str, actor) -> Product
         .first()
     )
     if product is None:
-        raise InventoryError("Product not found.")
+        raise InventoryError("Product not found.", "not_found")
     on_hand = (product.stock_quantity or 0) + delta
     if on_hand < product.stock_reserved:
         raise InventoryError("Stock cannot drop below the units reserved for open orders.")
@@ -192,7 +192,7 @@ def set_threshold(product_id, *, company_id, threshold) -> Product:
         .first()
     )
     if product is None:
-        raise InventoryError("Product not found.")
+        raise InventoryError("Product not found.", "not_found")
     if threshold is not None and (not isinstance(threshold, int) or threshold < 0):
         raise InventoryError("The alert level is a whole number of units.")
     product.reorder_threshold = threshold

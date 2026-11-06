@@ -76,6 +76,7 @@ STATUS_FOR_CODE = {
     "invalid_transition": status.HTTP_409_CONFLICT,
     "already_exists": status.HTTP_409_CONFLICT,
     "stale": status.HTTP_409_CONFLICT,
+    "idempotency_conflict": status.HTTP_409_CONFLICT,
 }
 
 

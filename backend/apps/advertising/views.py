@@ -146,6 +146,7 @@ class CampaignListView(generics.GenericAPIView):
         return _own_campaigns(self.request).order_by("-created_at", "id")
 
     @extend_schema(
+        operation_id="advertising_company_campaigns_list",
         summary="My campaigns (paginated, newest first)",
         parameters=[
             OpenApiParameter("page", int, description="Page number (20 per page)."),

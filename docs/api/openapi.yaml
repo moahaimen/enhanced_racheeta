@@ -841,7 +841,8 @@ paths:
   /api/v1/admin/ledger/payables:
     get:
       operationId: admin_ledger_payables_list
-      summary: What Racheeta owes each seller right now
+      summary: What Racheeta owes each seller, and what each seller owes Racheeta,
+        right now
       tags:
       - finance
       security:
@@ -902,6 +903,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reconciliation'
+          description: ''
+  /api/v1/admin/ledger/recoveries:
+    get:
+      operationId: admin_ledger_recoveries_list
+      description: Recoveries from sellers (refunds after payout that the seller paid
+        back; simulated).
+      summary: Amounts recovered from sellers (simulated)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRecoveryList'
+          description: ''
+    post:
+      operationId: admin_ledger_recoveries_create
+      description: Recoveries from sellers (refunds after payout that the seller paid
+        back; simulated).
+      summary: Record that a seller paid back what it owes (simulated; never more
+        than owed)
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecoveryCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recovery'
           description: ''
   /api/v1/admin/ledger/settlements:
     get:
@@ -1609,7 +1678,7 @@ paths:
           description: ''
   /api/v1/advertising/company/campaigns:
     get:
-      operationId: advertising_company_campaigns_retrieve
+      operationId: advertising_company_campaigns_list
       summary: My campaigns (paginated, newest first)
       parameters:
       - in: query
@@ -1664,7 +1733,7 @@ paths:
           description: ''
   /api/v1/advertising/company/campaigns/{id}:
     get:
-      operationId: advertising_company_campaigns_retrieve_2
+      operationId: advertising_company_campaigns_retrieve
       summary: One of my campaigns
       parameters:
       - in: path
@@ -4247,7 +4316,7 @@ paths:
           description: ''
   /api/v1/marketplace/company/products:
     get:
-      operationId: marketplace_company_products_retrieve
+      operationId: marketplace_company_products_list
       summary: My products (paginated, newest first)
       tags:
       - marketplace-company
@@ -4285,7 +4354,7 @@ paths:
           description: ''
   /api/v1/marketplace/company/products/{id}:
     get:
-      operationId: marketplace_company_products_retrieve_2
+      operationId: marketplace_company_products_retrieve
       summary: One of my products
       parameters:
       - in: path
@@ -6510,7 +6579,7 @@ paths:
           description: ''
   /api/v1/real-estate/owner/listings:
     get:
-      operationId: real_estate_owner_listings_retrieve
+      operationId: real_estate_owner_listings_list
       summary: My listings (paginated, newest first)
       parameters:
       - in: query
@@ -6562,7 +6631,7 @@ paths:
           description: ''
   /api/v1/real-estate/owner/listings/{id}:
     get:
-      operationId: real_estate_owner_listings_retrieve_2
+      operationId: real_estate_owner_listings_retrieve
       summary: One of my listings
       parameters:
       - in: path
@@ -9579,7 +9648,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -9704,7 +9773,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -9804,43 +9873,17 @@ components:
       - phone
       - public_email
       - website
-    CompanyVerificationDecisionEnum:
-      enum:
-      - VERIFIED
-      - REJECTED
-      - SUSPENDED
-      - UNVERIFIED
-      type: string
-      description: |-
-        * `VERIFIED` - Verified
-        * `REJECTED` - Rejected
-        * `SUSPENDED` - Suspended
-        * `UNVERIFIED` - Unverified
     CompanyVerificationDecisionRequest:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/CompanyVerificationDecisionEnum'
+          $ref: '#/components/schemas/VerificationDecisionEnum'
         note:
           type: string
           default: ''
           maxLength: 2000
       required:
       - status
-    CompanyVerificationStatusEnum:
-      enum:
-      - UNVERIFIED
-      - PENDING
-      - VERIFIED
-      - REJECTED
-      - SUSPENDED
-      type: string
-      description: |-
-        * `UNVERIFIED` - Unverified
-        * `PENDING` - Pending review
-        * `VERIFIED` - Verified
-        * `REJECTED` - Rejected
-        * `SUSPENDED` - Suspended
     CompanyWorkspaceSummary:
       type: object
       properties:
@@ -10553,7 +10596,7 @@ components:
         name:
           type: string
         verification_status:
-          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          $ref: '#/components/schemas/VerificationStatusEnum'
         recruitment_status:
           type: string
         can_recruit:
@@ -10621,7 +10664,7 @@ components:
         provider_type:
           $ref: '#/components/schemas/ProviderTypeEnum'
         verification_status:
-          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          $ref: '#/components/schemas/VerificationStatusEnum'
         is_visible:
           type: boolean
       required:
@@ -11140,7 +11183,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -11274,7 +11317,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -11369,7 +11412,7 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/CompanyVerificationDecisionEnum'
+          $ref: '#/components/schemas/VerificationDecisionEnum'
         note:
           type: string
           default: ''
@@ -12826,6 +12869,7 @@ components:
       - PLATFORM_CASH
       - CUSTOMER_FUNDS_HELD
       - SELLER_PAYABLE
+      - SELLER_RECEIVABLE
       - COMMISSION_REVENUE
       - PLATFORM_PROMO_EXPENSE
       type: string
@@ -12833,6 +12877,7 @@ components:
         * `PLATFORM_CASH` - Platform cash (simulated)
         * `CUSTOMER_FUNDS_HELD` - Customer funds held
         * `SELLER_PAYABLE` - Seller payable
+        * `SELLER_RECEIVABLE` - Seller receivable (refund after payout)
         * `COMMISSION_REVENUE` - Commission revenue
         * `PLATFORM_PROMO_EXPENSE` - Platform promotion expense
     LedgerEntry:
@@ -12882,12 +12927,14 @@ components:
       - ACCRUAL
       - REFUND
       - PAYOUT
+      - RECOVERY
       type: string
       description: |-
         * `PAYMENT` - Payment verified (simulated)
         * `ACCRUAL` - Sale completed: commission and seller payable accrued
         * `REFUND` - Refund (compensating)
         * `PAYOUT` - Seller payout (simulated)
+        * `RECOVERY` - Recovered from a seller (simulated)
     LedgerLine:
       type: object
       properties:
@@ -13012,7 +13059,7 @@ components:
       type: object
       properties:
         verification_status:
-          $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          $ref: '#/components/schemas/VerificationStatusEnum'
         can_publish:
           type: boolean
         products:
@@ -14792,6 +14839,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Quote'
+    PaginatedRecoveryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recovery'
     PaginatedReservationPatientList:
       type: object
       required:
@@ -16961,7 +17031,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
         verification_note:
           type: string
@@ -17145,7 +17215,7 @@ components:
           readOnly: true
         verification_status:
           allOf:
-          - $ref: '#/components/schemas/CompanyVerificationStatusEnum'
+          - $ref: '#/components/schemas/VerificationStatusEnum'
           readOnly: true
       required:
       - display_name
@@ -17738,6 +17808,57 @@ components:
       - currency
       - ok
       - totals
+    Recovery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        company:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        reference_note:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - company
+      - created_at
+      - currency
+      - id
+      - reference_note
+    RecoveryCreateRequest:
+      type: object
+      properties:
+        company:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,0})?$
+        reference_note:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - amount
+      - company
+      - reference_note
     RecruiterDashboard:
       type: object
       properties:
@@ -18726,6 +18847,10 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        receivable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
         draft_settlement:
           type: object
           additionalProperties: {}
@@ -18734,6 +18859,7 @@ components:
       - company
       - draft_settlement
       - payable
+      - receivable
     SellerSummary:
       type: object
       description: 'The public face of a seller: never contact data or account identity.'
@@ -19095,6 +19221,14 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        receivable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        recovered:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
         pending_orders:
           type: integer
         pending_seller_payable:
@@ -19125,6 +19259,8 @@ components:
       - payable
       - pending_orders
       - pending_seller_payable
+      - receivable
+      - recovered
       - refunded_commission
       - refunded_seller_payable
       - seller_discounts
@@ -19136,6 +19272,8 @@ components:
         reference:
           type: string
         kind:
+          type: string
+        account:
           type: string
         order_number:
           type: string
@@ -19153,6 +19291,7 @@ components:
           type: string
           format: date-time
       required:
+      - account
       - created_at
       - credit
       - debit
@@ -19692,17 +19831,43 @@ components:
           type: integer
       required:
       - count
+    VerificationDecisionEnum:
+      enum:
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      - UNVERIFIED
+      type: string
+      description: |-
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
+        * `UNVERIFIED` - Unverified
     VerificationDecisionRequest:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/CompanyVerificationDecisionEnum'
+          $ref: '#/components/schemas/VerificationDecisionEnum'
         note:
           type: string
           default: ''
           maxLength: 2000
       required:
       - status
+    VerificationStatusEnum:
+      enum:
+      - UNVERIFIED
+      - PENDING
+      - VERIFIED
+      - REJECTED
+      - SUSPENDED
+      type: string
+      description: |-
+        * `UNVERIFIED` - Unverified
+        * `PENDING` - Pending review
+        * `VERIFIED` - Verified
+        * `REJECTED` - Rejected
+        * `SUSPENDED` - Suspended
     VerifyPaymentRequest:
       type: object
       properties:

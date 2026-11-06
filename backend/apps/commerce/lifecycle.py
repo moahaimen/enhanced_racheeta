@@ -18,7 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.audit import services as audit
-from apps.ledger import posting
+from apps.ledger import posting, settlement
 from apps.ledger.posting import Line, dinars
 from apps.ledger.types import Account, EntryKind
 from apps.notifications.types import NotificationEventType
@@ -243,6 +243,7 @@ def complete(order_id, *, actor) -> Order:
         for key, value in _remaining(item).items():
             totals[key] += value
     if totals["seller"] + totals["commission"] > 0:
+        settlement.lock_seller(order.merchant_id)  # serialize with refunds, payouts, recoveries
         posting.post(
             f"order:{order.pk}:accrual",
             kind=EntryKind.ACCRUAL,
@@ -252,7 +253,7 @@ def complete(order_id, *, actor) -> Order:
             lines=[
                 Line(Account.CUSTOMER_FUNDS_HELD, debit=totals["buyer_paid"]),
                 Line(Account.PLATFORM_PROMO_EXPENSE, debit=totals["platform"]),
-                Line(Account.SELLER_PAYABLE, credit=totals["seller"], company_id=order.merchant_id),
+                *settlement.seller_credit_lines(order.merchant_id, totals["seller"]),
                 Line(Account.COMMISSION_REVENUE, credit=totals["commission"]),
             ],
         )
@@ -320,8 +321,11 @@ def _refund(order: Order, quantities: dict, *, actor, reason: str, return_reques
         executed_by=actor,
     )
     if order.settlement_state == SettlementState.ACCRUED:
+        # After payout the seller part can no longer come out of the payable alone: the rest
+        # becomes a receivable (the seller owes Racheeta). The payable never goes negative.
+        settlement.lock_seller(order.merchant_id)
         lines = [
-            Line(Account.SELLER_PAYABLE, debit=totals["seller"], company_id=order.merchant_id),
+            *settlement.seller_debit_lines(order.merchant_id, totals["seller"]),
             Line(Account.COMMISSION_REVENUE, debit=totals["commission"]),
             Line(Account.PLATFORM_PROMO_EXPENSE, credit=totals["platform"]),
             Line(Account.PLATFORM_CASH, credit=totals["buyer_paid"]),

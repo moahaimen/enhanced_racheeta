@@ -223,9 +223,12 @@ def order_from_quote(
     key = (idempotency_key or "").strip()[:64]
     if not key:
         raise InvalidCart("Missing idempotency key.")
+    fingerprint = store.request_fingerprint(
+        items=[], coupons=[], delivery=delivery, payment_method=payment_method, quote=quote_id
+    )
     existing = Checkout.objects.filter(buyer=account, idempotency_key=key).first()
     if existing is not None:
-        return existing, False
+        return store.replay(existing, fingerprint)
     quote = _locked_quote(quote_id, requester=provider)
     if quote.status == QuoteStatus.ORDERED:
         raise InvalidTransition("This quotation has already been ordered.")
@@ -278,6 +281,7 @@ def order_from_quote(
         delivery=delivery,
         payment_method=payment_method,
         key=key,
+        fingerprint=fingerprint,
         quote=quote,
     )
     previous = quote.status

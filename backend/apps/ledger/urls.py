@@ -18,6 +18,7 @@ urlpatterns = [
         name="ledger-statement",
     ),
     path("admin/ledger/settlements", views.SettlementListView.as_view(), name="settlements"),
+    path("admin/ledger/recoveries", views.RecoveryListView.as_view(), name="ledger-recoveries"),
     path(
         "admin/ledger/settlements/prepare",
         views.SettlementPrepareView.as_view(),

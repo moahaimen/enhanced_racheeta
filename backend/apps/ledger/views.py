@@ -1,6 +1,9 @@
 """Finance API (Racheeta staff with the finance permission) and the seller's own statement."""
 
-from django.db.models import F, Sum
+from decimal import Decimal
+
+from django.db.models import F, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -11,12 +14,20 @@ from apps.commerce.views import COMPANY_PARAM, ERRORS, FINANCE, _merchant_compan
 from apps.marketplace.models import MedicalCompany
 
 from . import settlement
-from .models import LedgerEntry, LedgerLine, MarketplaceCommissionPolicy, SettlementBatch
+from .models import (
+    LedgerEntry,
+    LedgerLine,
+    MarketplaceCommissionPolicy,
+    SellerRecovery,
+    SettlementBatch,
+)
 from .posting import current_policy
 from .serializers import (
     LedgerEntrySerializer,
     PolicySerializer,
     ReconciliationSerializer,
+    RecoveryCreateSerializer,
+    RecoverySerializer,
     SellerPayableSerializer,
     SettlementConfirmSerializer,
     SettlementPrepareSerializer,
@@ -85,15 +96,26 @@ class SellerPayableListView(APIView):
 
     @extend_schema(
         tags=["finance"],
-        summary="What Racheeta owes each seller right now",
+        summary="What Racheeta owes each seller, and what each seller owes Racheeta, right now",
         responses=SellerPayableSerializer(many=True),
     )
     def get(self, request):
         rows = (
-            LedgerLine.objects.filter(account=Account.SELLER_PAYABLE)
+            LedgerLine.objects.filter(
+                account__in=[Account.SELLER_PAYABLE, Account.SELLER_RECEIVABLE]
+            )
             .values("company_id")
-            .annotate(payable=Sum(F("credit") - F("debit")))
-            .order_by("-payable")
+            .annotate(
+                payable=Coalesce(
+                    Sum(F("credit") - F("debit"), filter=Q(account=Account.SELLER_PAYABLE)),
+                    Value(Decimal("0")),
+                ),
+                receivable=Coalesce(
+                    Sum(F("debit") - F("credit"), filter=Q(account=Account.SELLER_RECEIVABLE)),
+                    Value(Decimal("0")),
+                ),
+            )
+            .order_by("-payable", "-receivable")
         )
         names = dict(
             MedicalCompany.objects.filter(pk__in=[r["company_id"] for r in rows]).values_list(
@@ -110,6 +132,7 @@ class SellerPayableListView(APIView):
             {
                 "company": {"id": str(r["company_id"]), "name": names.get(r["company_id"], "")},
                 "payable": r["payable"],
+                "receivable": r["receivable"],
                 "draft_settlement": drafts.get(r["company_id"]),
             }
             for r in rows
@@ -201,3 +224,38 @@ class PolicyListView(generics.ListAPIView):
     @extend_schema(tags=["finance"], summary="Commission policy versions (current first)")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class RecoveryListView(generics.ListAPIView):
+    """Recoveries from sellers (refunds after payout that the seller paid back; simulated)."""
+
+    permission_classes = FINANCE
+    serializer_class = RecoverySerializer
+
+    def get_queryset(self):
+        return SellerRecovery.objects.select_related("company")
+
+    @extend_schema(tags=["finance"], summary="Amounts recovered from sellers (simulated)")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=["finance"],
+        summary="Record that a seller paid back what it owes (simulated; never more than owed)",
+        request=RecoveryCreateSerializer,
+        responses={201: RecoverySerializer},
+    )
+    def post(self, request):
+        serializer = RecoveryCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            recovery = settlement.record_recovery(
+                data["company"],
+                actor=request.user,
+                amount=data["amount"],
+                reference_note=data["reference_note"],
+            )
+        except ERRORS as exc:
+            raise_api(exc)
+        return Response(RecoverySerializer(recovery).data, status=status.HTTP_201_CREATED)

@@ -26,8 +26,10 @@ A line can be bought only when all of these hold at the moment of checkout (`com
 5. The route is one of:
    - **B2C**: the product is in the public store (`B2C_ALLOWED`, a retail business type, a
      consumer channel).
-   - **B2B**: a professional channel in a `B2B_VERIFIED_ONLY` or `B2C_ALLOWED` category, where the
-     buyer's provider profile is verified and THE targeting rule shows it the product.
+   - **B2B**: a professional channel in a `B2B_VERIFIED_ONLY` category (an explicit
+     classification: `B2C_ALLOWED` does not grant direct B2B purchase), where the buyer's provider
+     profile is verified and THE targeting rule shows it the product. A professional-channel
+     product in any other category is sold by quotation only.
    - `QUOTE_ONLY` products are bought only through an accepted quotation.
 
 Regulated products are never advertised either (`advertising.services._advertisable`).
@@ -91,14 +93,27 @@ Double entry. Every entry balances and has a unique reference (idempotency).
 | Payment verified (`order:<id>:payment`) | PLATFORM_CASH | CUSTOMER_FUNDS_HELD |
 | Completed (`order:<id>:accrual`) | CUSTOMER_FUNDS_HELD (buyer paid) + PLATFORM_PROMO_EXPENSE (Racheeta coupon) | SELLER_PAYABLE[seller] + COMMISSION_REVENUE |
 | Refund before completion | CUSTOMER_FUNDS_HELD | PLATFORM_CASH |
-| Refund after completion (proportional) | SELLER_PAYABLE[seller] + COMMISSION_REVENUE | PLATFORM_PROMO_EXPENSE + PLATFORM_CASH |
+| Refund after completion (proportional) | SELLER_PAYABLE[seller] (up to what is still held) + SELLER_RECEIVABLE[seller] (the rest) + COMMISSION_REVENUE | PLATFORM_PROMO_EXPENSE + PLATFORM_CASH |
+| Completed while the seller owes (offset) | as above, but the seller part credits SELLER_RECEIVABLE first, then SELLER_PAYABLE | |
 | Payout (`settlement:<id>:payout`) | SELLER_PAYABLE[seller] | PLATFORM_CASH |
+| Recovery (`recovery:<id>`, finance, simulated) | PLATFORM_CASH | SELLER_RECEIVABLE[seller] |
 
 Rules:
 
-- A PostgreSQL trigger refuses UPDATE and DELETE on ledger rows. Corrections are new entries.
-- The only bypass is the guarded demo cleaner, which sets the transaction-local flag
-  `racheeta.ledger_purge`.
+- **Refund after payout**: the seller payable never goes negative. The part of a refund that is no
+  longer held for the seller becomes SELLER_RECEIVABLE (the seller owes Racheeta).
+  - It is netted first against the seller's next completed sales.
+  - Finance can also record a simulated recovery (`POST admin/ledger/recoveries`, never more than
+    owed).
+  - Payouts are only ever of a positive payable.
+- **Locks**: every decision about one seller's balances (accrual, refund, payout, recovery) holds
+  that seller's row lock. The lock order is order rows → seller row → payout batch, so no deadlocks.
+- **Database protection**: triggers refuse UPDATE, DELETE and TRUNCATE (of a non-empty table) on
+  `ledger_entry`, `ledger_line`, `ledger_recovery` and `ledger_commission_policy`.
+  - There is no session-level bypass. The old `racheeta.ledger_purge` setting was removed in
+    `ledger 0004`, because any session could set it.
+  - An UPDATE that changes nothing is allowed. For a policy, only its timestamps may be re-saved.
+  - Corrections are always new entries.
 - Refund amounts use cumulative rounding, so returning units one at a time adds up exactly to
   returning them all at once.
 - `settlement.reconciliation()` re-derives all five balances from the order, refund and payout
@@ -109,6 +124,34 @@ Rules:
   refund after preparation makes the draft stale.
 - **Finance operator**: a staff account WITH the permission `ledger.change_settlementbatch`. Staff
   without it are refused.
+
+## Database roles (production requirement)
+
+PostgreSQL lets a superuser or the table owner disable triggers. The ledger is therefore only as
+safe as the role the application connects with. Production must:
+
+1. Run migrations with an owner role.
+2. Run the application with a separate runtime role that is not a superuser, does not own the
+   tables, and holds only SELECT and INSERT on the append-only ledger tables (UPDATE as well on
+   `ledger_settlement`). The statements: `manage.py ledger_db_audit --grant-sql <role>`.
+3. Run `manage.py ledger_db_audit --strict` against the runtime connection before go-live. It
+   exits non-zero if the role is a superuser or owner, holds UPDATE, DELETE, TRUNCATE or TRIGGER on
+   an append-only table, a trigger is missing or disabled, or the trigger function has a bypass.
+
+Verified on 2026-11-06 on a throwaway database, as a restricted login role:
+- `--strict` passes;
+- a purge flag + DELETE gives "permission denied";
+- DISABLE TRIGGER gives "must be owner";
+- TRUNCATE gives "permission denied".
+
+Locally the developer role owns everything, so the command reports that, on purpose.
+
+**Demo cleanup**: `scripts/local_demo.sh clear` still removes the demo ledger rows.
+- It works only when the registry owns ledger rows and `local_guard` accepts the database again.
+- It uses `ALTER TABLE … DISABLE TRIGGER` (owner-only) inside its single transaction, and the
+  triggers come back before the commit; a rollback or dry run also restores them.
+- Ownership of rows created in walkthroughs is proven transitively: every reference chain must end
+  in registered demo rows. Accounts are never inferred, so a real user's row is always refused.
 
 ## Seller roles (`workspaces/types.py`)
 
@@ -131,6 +174,8 @@ The specialist roles exist only for businesses, never for facilities.
 - `POST checkouts` (with `idempotency_key`)
 - `GET orders`
 - `POST orders/<id>/cancel | confirm-delivery | returns | disputes`
+- A reused `idempotency_key` replays the first checkout only for the SAME request (lines in any
+  order). A different request is refused with 409 `idempotency_conflict`.
 - `POST quotes/<id>/order`
 
 **Seller** (`?company=` for staff)
@@ -146,7 +191,7 @@ The specialist roles exist only for businesses, never for facilities.
 - `admin/commerce/returns/<id>/refund`
 - `admin/commerce/disputes/<id>/resolve`
 - `admin/commerce/coupons`
-- `admin/ledger/{reconciliation, entries, payables, settlements, settlements/prepare, settlements/<id>/confirm|cancel, policy, statements/<company>}`
+- `admin/ledger/{reconciliation, entries, payables, settlements, settlements/prepare, settlements/<id>/confirm|cancel, recoveries, policy, statements/<company>}`
 
 The contract is in `docs/api/openapi.yaml`.
 
@@ -159,6 +204,18 @@ The contract is in `docs/api/openapi.yaml`.
 | `ledger 0001`, `0002` | Ledger tables, immutability trigger, policy v1 = 20.00% from 2026-01-01 |
 | `workspaces 0002` | Seller roles |
 | `notifications 0005` | New event types |
+| `ledger 0003` | SELLER_RECEIVABLE account, RECOVERY entries, `ledger_recovery` table |
+| `ledger 0004` | Strict immutability: no session bypass, TRUNCATE triggers, recovery and policy tables protected |
+| `marketplace 0005` | Legacy tightening: inactive legacy consumer categories, or ones containing a restricted product → RESTRICTED_PENDING_REVIEW |
+| `commerce 0004` | `Checkout.request_hash` (idempotency-key reuse with a different request → 409) |
+
+To roll back the audit migrations only:
+- `migrate ledger 0002`;
+- `migrate marketplace 0004`;
+- `migrate commerce 0003`.
+
+This was verified on 2026-11-06 on a throwaway database. The 0002 trigger function, with its
+bypass, comes back, so do this only for a local rollback.
 
 To roll back on the local demo database:
 1. `scripts/local_demo.sh clear` (removes the demo ledger rows inside the guarded transaction).

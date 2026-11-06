@@ -47,6 +47,9 @@ CONTAINER_LABELS = frozenset({"chat.Conversation"})
 ACCOUNT_OWNED = (
     ("token_blacklist.OutstandingToken", "user"),  # refresh-token bookkeeping of a demo login
     ("audit.AuditEvent", "actor"),  # audit entries written while acting as a demo account
+    # ledger entries a demo finance operator posted that reference no order or payout (e.g. a
+    # recovery): without this they would stay behind as entries whose lines were removed
+    ("ledger.LedgerEntry", "posted_by"),
 )
 MAX_PASSES = 60
 
@@ -60,6 +63,7 @@ class Plan:
     registered: Counter = field(default_factory=Counter)  # label -> registered rows found
     internal: Counter = field(default_factory=Counter)  # label -> unregistered demo-internal rows
     links: Counter = field(default_factory=Counter)  # auto-created many-to-many link rows
+    counted: set = field(default_factory=set)  # internal rows already counted (count once)
     stale_registry_rows: int = 0
     deleted: int = 0
     dry_run: bool = False
@@ -72,8 +76,15 @@ def _registered() -> dict[str, set[str]]:
     return by_label
 
 
-def _is_internal(instance, allowed: set[tuple[str, str]]) -> bool:
-    """True if every reference of `instance` to a non-reference model is to an allowed row."""
+MAX_PROOF_DEPTH = 6
+# Principals are demo-owned only when REGISTERED; they are never adopted by inference.
+NEVER_INFERRED = frozenset({"accounts.Account"})
+
+
+def _proof(instance, allowed, depth, path) -> tuple[bool, bool]:
+    """(clean, anchored): clean = no reference leads outside demo/reference data; anchored = at
+    least one reference reaches a registered/allowed demo row (directly or through owned rows)."""
+    anchored = False
     for fld in instance._meta.concrete_fields:
         if not (fld.is_relation and (fld.many_to_one or fld.one_to_one)):
             continue
@@ -81,10 +92,37 @@ def _is_internal(instance, allowed: set[tuple[str, str]]) -> bool:
         if value is None:
             continue
         label = fld.related_model._meta.label
-        if label in REFERENCE_LABELS or label in CONTAINER_LABELS or (label, str(value)) in allowed:
+        if label in REFERENCE_LABELS or label in CONTAINER_LABELS:
             continue
-        return False
-    return True
+        ident = (label, str(value))
+        if ident in allowed:
+            anchored = True
+            continue
+        if ident in path:
+            continue  # a cycle adds no new outside reference
+        if label in NEVER_INFERRED or depth >= MAX_PROOF_DEPTH:
+            return False, anchored
+        target = fld.related_model._base_manager.filter(pk=value).first()
+        if target is None:
+            return False, anchored
+        clean, target_anchored = _proof(target, allowed, depth + 1, path | {ident})
+        if not (clean and target_anchored):
+            return False, anchored
+        anchored = True
+    return True, anchored
+
+
+def _is_internal(instance, allowed: set[tuple[str, str]]) -> bool:
+    """True if every reference of `instance` to a non-reference model leads to allowed rows.
+
+    The proof is transitive: a reference to a row that is not (yet) allowed is accepted when THAT
+    row is itself demo-owned by the same rule AND anchored in registered demo data (bounded depth,
+    cycle-safe, never inferring an account). So a row a demo account created in a walkthrough
+    (an order → its checkout → the demo buyer) is provably demo-owned, while anything that reaches
+    a non-demo row — a real user, a real booking — is refused."""
+    ident = (instance._meta.label, str(instance.pk))
+    clean, _ = _proof(instance, allowed, 0, {ident})
+    return clean
 
 
 def _describe(instance) -> str:
@@ -134,7 +172,9 @@ def _check_layer(collector: Collector, allowed, registered_ids, plan: Plan) -> N
         elif ident in registered_ids:
             continue
         elif _is_internal(victim, allowed):
-            plan.internal[label] += 1
+            if ident not in plan.counted:
+                plan.counted.add(ident)
+                plan.internal[label] += 1
         else:
             offenders.append(victim)
     for lists in collector.field_updates.values():
@@ -150,43 +190,86 @@ def _check_layer(collector: Collector, allowed, registered_ids, plan: Plan) -> N
         )
 
 
-def _adopt_blockers(blockers, pending, allowed, plan: Plan) -> bool:
-    """Rows that PROTECT demo rows must themselves be demo-internal; queue them for deletion."""
+def _adopt_blockers(blockers, pending, allowed, plan: Plan, unproven: dict) -> bool:
+    """Rows that PROTECT demo rows must themselves be demo-internal; queue them for deletion.
+
+    A blocker whose references are not ALL proven yet (e.g. a ledger line whose entry is itself
+    only reachable through a demo order created in a walkthrough) is not refused immediately:
+    it is kept in `unproven` and retried after other rows were adopted. Only when a whole pass
+    makes no progress is the clear refused, naming those rows — nothing foreign is ever deleted.
+    """
     candidates = allowed | {(b._meta.label, str(b.pk)) for b in blockers}
-    offenders = [b for b in blockers if not _is_internal(b, candidates)]
-    if offenders:
-        raise ClearRefused(
-            "a row that is not demo data references demo data: "
-            + ", ".join(sorted({_describe(o) for o in offenders})[:10])
-        )
     grew = False
     for blocker in blockers:
+        ident = (blocker._meta.label, str(blocker.pk))
+        if not _is_internal(blocker, candidates):
+            unproven[ident] = blocker
+            continue
+        unproven.pop(ident, None)
         bucket = pending.setdefault(blocker._meta.model, [])
         if any(b.pk == blocker.pk for b in bucket):
             continue
         bucket.append(blocker)
-        allowed.add((blocker._meta.label, str(blocker.pk)))
-        plan.internal[blocker._meta.label] += 1
+        allowed.add(ident)
+        if ident not in plan.counted:
+            plan.counted.add(ident)
+            plan.internal[blocker._meta.label] += 1
         grew = True
     return grew
 
 
-def _allow_ledger_purge(using: str) -> None:
-    """The marketplace ledger is append-only (a database trigger refuses UPDATE/DELETE). Demo
-    ledger rows may only go together with their demo orders, inside THIS transaction: the flag is
-    transaction-local (`set_config(..., true)`) and ends with it."""
-    connection = connections[using]
-    if connection.vendor == "postgresql":
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT set_config('racheeta.ledger_purge', 'on', true)")
+LEDGER_LABELS = frozenset({"ledger.LedgerEntry", "ledger.LedgerLine", "ledger.SellerRecovery"})
+LEDGER_TRIGGERS = (
+    ("ledger_entry", "ledger_entry_immutable"),
+    ("ledger_line", "ledger_line_immutable"),
+    ("ledger_recovery", "ledger_recovery_immutable"),
+)
+
+
+def _allow_ledger_cleanup(registered: dict, using: str) -> bool:
+    """The marketplace ledger is append-only: database triggers refuse UPDATE, DELETE and
+    TRUNCATE, with NO session-level bypass. Demo ledger rows may only go together with their
+    demo orders, on the disposable LOCAL demo database, inside THIS transaction:
+
+    * only when the registry actually owns ledger rows (nothing else ever touches the triggers);
+    * only after `local_guard` accepted the database again (marker, local host, demo name, opt-in);
+    * by `ALTER TABLE ... DISABLE TRIGGER`, which PostgreSQL allows only to the table owner — a
+      production runtime role that does not own the tables cannot do this (manage.py
+      ledger_db_audit). ALTER TABLE is transactional: a rollback or a dry run restores the
+      triggers, and `execute` re-enables them before committing.
+    """
+    if not LEDGER_LABELS & set(registered):
+        return False
+    from . import local_guard
+
+    reasons = local_guard.check()
+    if reasons:
+        raise ClearRefused(
+            "demo ledger rows can only be removed on the disposable local demo database: "
+            + "; ".join(reasons)
+        )
+    with connections[using].cursor() as cursor:
+        cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        for table, trigger in LEDGER_TRIGGERS:
+            cursor.execute(f'ALTER TABLE "{table}" DISABLE TRIGGER "{trigger}"')
+    return True
+
+
+def _restore_ledger_triggers(using: str) -> None:
+    with connections[using].cursor() as cursor:
+        # Settle the deferred foreign-key checks of the deletions first: PostgreSQL refuses
+        # ALTER TABLE while trigger events are pending.
+        cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        for table, trigger in LEDGER_TRIGGERS:
+            cursor.execute(f'ALTER TABLE "{table}" ENABLE TRIGGER "{trigger}"')
 
 
 def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
     """Verify and delete in ONE transaction. `dry_run` does everything, then rolls back."""
     plan = Plan(dry_run=dry_run)
     with transaction.atomic(using=using):
-        _allow_ledger_purge(using)
         registered = _registered()
+        ledger_unlocked = _allow_ledger_cleanup(registered, using)
         registered_ids = {(label, pk) for label, pks in registered.items() for pk in pks}
         allowed = set(registered_ids)
         pending: dict = {}
@@ -210,7 +293,9 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                 pending.setdefault(model, []).extend(extra)
                 allowed |= {(label, str(row.pk)) for row in extra}
                 plan.internal[label] += len(extra)
+                plan.counted |= {(label, str(row.pk)) for row in extra}
 
+        unproven: dict = {}
         for _ in range(MAX_PASSES):
             if not pending:
                 break
@@ -232,7 +317,7 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                         getattr(exc, "protected_objects", None)
                         or getattr(exc, "restricted_objects", ())
                     )
-                    if _adopt_blockers(blockers, pending, allowed, plan):
+                    if _adopt_blockers(blockers, pending, allowed, plan, unproven):
                         progressed = True
                     continue  # retry this model once its protectors are gone
                 for conversation in _empty_conversations(collector):
@@ -249,11 +334,18 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                 del pending[model]
                 progressed = True
             if not progressed:
+                if unproven:
+                    raise ClearRefused(
+                        "a row that is not demo data references demo data: "
+                        + ", ".join(sorted(_describe(o) for o in unproven.values())[:10])
+                    )
                 raise ClearRefused("deletion is blocked by rows that cannot be classified")
         else:
             raise ClearRefused("could not reach a stable deletion order")
 
         DemoRecord.objects.all().delete()
+        if ledger_unlocked:
+            _restore_ledger_triggers(using)
         if dry_run:
             transaction.set_rollback(True)
     return plan

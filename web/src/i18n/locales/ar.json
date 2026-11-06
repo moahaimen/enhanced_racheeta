@@ -750,7 +750,8 @@
     "nothing_owed": "لا توجد مستحقات لهذا البائع حاليًا.",
     "invalid_settlement": "لا يمكن معالجة هذه الدفعة.",
     "invalid_promotion": "يرجى مراجعة بيانات القسيمة أو التخفيض.",
-    "inventory_error": "لا يمكن إجراء تعديل المخزون هذا."
+    "inventory_error": "لا يمكن إجراء تعديل المخزون هذا.",
+    "idempotency_conflict": "أُرسل هذا الطلب سابقًا بتفاصيل مختلفة. حدّث السلة وحاول مجددًا."
   },
   "jobs": {
     "featured": "مميّزة",
@@ -2484,7 +2485,8 @@
       "PAYMENT": "تحقق من دفع",
       "ACCRUAL": "اكتمال بيع",
       "REFUND": "استرداد",
-      "PAYOUT": "تسوية"
+      "PAYOUT": "تسوية",
+      "RECOVERY": "مسترد من البائع"
     },
     "settlementStatus": {
       "DRAFT": "قيد التجهيز",
@@ -2523,21 +2525,26 @@
       "CUSTOMER_FUNDS_HELD": "أموال المشترين المحتجزة",
       "SELLER_PAYABLE": "المستحق للبائعين",
       "COMMISSION_REVENUE": "إيراد العمولة",
-      "PLATFORM_PROMO_EXPENSE": "كلفة قسائم راشيتة"
+      "PLATFORM_PROMO_EXPENSE": "كلفة قسائم راشيتة",
+      "SELLER_RECEIVABLE": "مستحق على البائعين",
+      "SELLER_NET": "صافي البائعين (لهم − عليهم)"
     },
     "checks": {
       "balance": "الرصيد: {{account}}",
       "entries_balanced": "كل قيد متوازن",
       "no_negative_seller_payable": "لا يوجد مستحق سالب لأي بائع",
       "every_paid_order_has_payment_entry": "لكل طلب مدفوع قيد دفع",
-      "single_accrual_per_order": "العمولة مسجلة مرة واحدة لكل طلب"
+      "single_accrual_per_order": "العمولة مسجلة مرة واحدة لكل طلب",
+      "no_negative_seller_receivable": "لا يوجد مستحق سالب على أي بائع",
+      "payable_and_receivable_netted": "لا يوجد بائع له وعليه في آن واحد"
     },
     "totals": {
       "orders_paid": "طلبات مدفوعة",
       "orders_accrued": "طلبات مكتملة",
       "refunds": "استردادات",
       "payouts": "تسويات",
-      "entries": "قيود"
+      "entries": "قيود",
+      "recoveries": "مبالغ مستردة من البائعين"
     },
     "finance": {
       "title": "مالية السوق",
@@ -2605,9 +2612,15 @@
       "policyHint": "يحتفظ كل طلب بالنسبة والإصدار اللذين وُضع بهما؛ الإصدار الجديد لا يغيّر الطلبات السابقة.",
       "since": "منذ",
       "current": "الحالية",
-      "owed": "المستحق"
+      "owed": "المستحق",
+      "sellerOwes": "على البائع",
+      "recoverAmount": "المبلغ المسترد (د.ع)",
+      "recordRecovery": "تسجيل الاسترداد (محاكاة)"
     },
     "commissionReversed": "عمولة أُعيدت بسبب الاسترداد",
-    "payableReversed": "مستحق أُعيد بسبب الاسترداد"
+    "payableReversed": "مستحق أُعيد بسبب الاسترداد",
+    "youOwe": "مستحق لراشيتة عليك",
+    "youOweHint": "جاء استرداد بعد تسوية دفعتك؛ يُخصم أولًا من مبيعاتك القادمة.",
+    "receivableLine": "مستحق لراشيتة"
   }
 }

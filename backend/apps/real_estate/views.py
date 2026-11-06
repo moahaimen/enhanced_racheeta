@@ -188,6 +188,7 @@ class MyListingListView(generics.GenericAPIView):
         return _own_listings(self.request).order_by("-created_at", "id")
 
     @extend_schema(
+        operation_id="real_estate_owner_listings_list",
         summary="My listings (paginated, newest first)",
         parameters=[
             OpenApiParameter("page", int, description="Page number (20 per page)."),

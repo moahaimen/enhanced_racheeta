@@ -224,6 +224,7 @@ class MyProductListView(generics.GenericAPIView):
         return _own_products(self.request).order_by("-created_at", "id")
 
     @extend_schema(
+        operation_id="marketplace_company_products_list",
         summary="My products (paginated, newest first)",
         responses={200: PaginatedProductOwnerSerializer},
     )

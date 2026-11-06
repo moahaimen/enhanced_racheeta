@@ -35,6 +35,9 @@ class Checkout(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="checkouts"
     )
     idempotency_key = models.CharField(max_length=64)
+    # SHA-256 of the canonical request (items, coupons, delivery, payment, quote). A reused key with
+    # a DIFFERENT request is refused instead of silently returning the first checkout.
+    request_hash = models.CharField(max_length=64, blank=True, default="")
     currency = models.CharField(max_length=3, default="IQD")
     list_total = models.DecimalField(**MONEY)
     seller_discount_total = models.DecimalField(**MONEY)
