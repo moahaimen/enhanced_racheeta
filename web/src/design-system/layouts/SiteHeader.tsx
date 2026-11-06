@@ -361,7 +361,7 @@ export function SiteHeader() {
               <>
                 <MessagesLink compact />
                 <NotificationsLink compact />
-                <AccountMenu name={account?.full_name ?? ''} role={account ? t(`roles.${account.role}`) : ''}>
+                <AccountMenu name={account?.full_name ?? ''} role={account ? (account.account_type ? t(`accountTypes.${account.account_type}`) : t(`roles.${account.role}`)) : ''}>
                   <div className={styles.accountLinks}>{accountLinks}</div>
                   <div className={styles.accountFoot}>{logoutButton}</div>
                 </AccountMenu>

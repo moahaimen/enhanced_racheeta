@@ -32,6 +32,11 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
 - Disposable local demo database with a guard and a full seed lifecycle.
 - See `docs/LOCAL_WORKSPACE_DEMO.md` and `docs/LOCAL_DEMO_TEST_MATRIX.md`.
 - Not deployed; no remote change.
+- **Platform completion (2026-11-07):** `docs/PLATFORM_COMPLETION_MATRIX.md`. It covers new
+  onboarding types (dentist, midwife, employer, job seeker), jobs for every profession with scoped
+  non-healthcare employers, a sponsored-targeting matrix, property inquiries, the dashboard composer
+  split, and **online booking switched OFF by default** (`RESERVATIONS_ENABLED`, reversible; see
+  `docs/RESERVATIONS.md`). Local demo GO; production NO-GO. The mobile app was not changed.
 
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 

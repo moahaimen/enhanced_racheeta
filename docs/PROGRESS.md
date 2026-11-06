@@ -124,3 +124,16 @@ Implementation complete on `feat/phase4-reservations`; acceptance review pending
   and orders; B2B quotes; ad preferences and bounded outreach; property promotions; expanded
   professions; guarded local demo seed. Live API matrix 198/198 PASS across every user type.
   `docs/LOCAL_WORKSPACE_DEMO.md`.
+
+## Platform completion — local branch `feat/local-racheeta-multiworkspace` (2026-11-07)
+
+- **Scope:** phases A–G of the local platform-completion run, from baseline `0ecc7b1` to the
+  commits listed in `docs/PLATFORM_COMPLETION_MATRIX.md`.
+- **Tests:** backend 2,323 passed and 1 skipped (baseline 2,242); web 583 (baseline 563); tsc,
+  ruff and build clean; oxlint at the same 6 warnings; OpenAPI 0/0.
+- **Demo database:** seed → seed → clear → seed; reconciliation 11/11.
+- **Browser:** 362/362 checks with the real login form in Arabic and English at 390, 768 and
+  1440 px.
+- **Booking:** off by default and reversible with `RESERVATIONS_ENABLED`.
+- **Remote:** LOCAL ONLY. Nothing pushed or deployed.
+

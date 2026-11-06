@@ -104,7 +104,7 @@ export function WorkspaceSidebar() {
         </span>
         <div>
           <strong>{account.full_name}</strong>
-          <span>{t(`roles.${account.role}`)}</span>
+          <span>{account.account_type ? t(`accountTypes.${account.account_type}`) : t(`roles.${account.role}`)}</span>
         </div>
       </div>
       <nav className={styles.nav} aria-label={t('nav.account')}>
