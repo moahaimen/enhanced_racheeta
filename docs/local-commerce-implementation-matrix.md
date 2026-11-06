@@ -160,7 +160,7 @@ warnings; migrations `marketplace 0006` and `commerce 0005` roll back and re-app
 database; demo seed → seed (2,333 rows each) → clear (all uploaded demo files deleted, 0 disabled
 ledger triggers) → seed.
 
-New tests: `apps/commerce/tests/test_sellers_products_orders.py` (28 functions, 41 cases) and
+New tests: `apps/commerce/tests/test_sellers_products_orders.py` (28 functions, 41 cases), `test_acceptance_review.py` (13 functions, 15 cases) and
 `web/src/pages/market/SellerFeatures.test.tsx` (9). Existing tests were not weakened. Three exact
 expectations were extended with new fields: the dashboard counts dict, the reviewed public-API list
 (product photos), and the writable product fields (`sku`). One existing test
@@ -208,3 +208,121 @@ After the walkthrough, reconciliation passed all 11 checks.
   tax advice.
 - Delivery fees are not refunded on a return (a stated policy). A cancellation or dispute refund
   returns them.
+
+## Final local acceptance review (2026-11-06)
+
+Each code finding was first reproduced by a probe test against `40a6e0b`, then fixed and pinned by
+`backend/apps/commerce/tests/test_acceptance_review.py`. UI findings came from a real browser run:
+the login form, the phone menu, the seller navigation, forms and buttons, in Arabic RTL at 390 px,
+plus an Arabic desktop sweep at 1440 px (`local-demo/acceptance.mjs`, git-ignored).
+
+### Findings and fixes
+
+| # | Severity | Finding | Fix | Evidence |
+|---|---|---|---|---|
+| R1 | High | A **grandfathered ACTIVE store with no approved licence** could sell (store, B2B catalogue, checkout). | `MedicalCompany.documents_complete` is part of `selling_q`. `marketplace 0007` computes it from real documents, so legacy stores without approved licences stop selling. | `test_a_grandfathered_store_without_approved_documents_cannot_sell`, `test_the_migration_marks_existing_stores_without_documents_as_incomplete` |
+| R2 | High | **Revoking an approved licence** did not stop the store selling. | Every upload, withdrawal and review recomputes the flag; a category's required documents are re-checked at checkout. | `test_revoking_an_approved_licence_stops_the_sale_at_once`, `test_a_category_licence_is_rechecked_at_sale_time` |
+| R3 | Medium | **Photos of professional-only products were public** to anonymous visitors. | A photo has the same audience as its product (store: anyone; B2B: targeted verified providers; otherwise the team and staff). | `test_professional_product_photos_follow_the_catalogue_targeting` |
+| R4 | Low | Checkout errors **named a professional-only product** to a buyer who may not see it. | Errors use a neutral name unless the buyer can see the product; the error codes are unchanged. | `test_b2b_details_prices_and_ads_stay_with_targeted_professionals` |
+| R5 | Medium | **Photo metadata (EXIF incl. GPS, XMP, PNG text, WebP EXIF) was published.** | Stripped byte-for-byte before storage; no re-encoding, no new dependency. | `test_photo_metadata_is_removed_before_storage` (JPEG, PNG, WebP) |
+| R6 | High (UI) | **Inventory for products with options was broken**: rows were keyed by product, so all option rows opened together, and the adjustment sent no option (the server refused it). | Rows keyed per option; the option and SKU are shown; adjustment, alert level and history are per option. | W: `inventory keeps one row per option and adjusts the stock of THAT option` |
+| R7 | Medium (UI) | **On phones, sellers had no link to the seller center or store orders, a pharmacy had no link to its store, and finance staff had no link to the finance console.** The sidebar is hidden below 1000 px. | Phone menu: seller center, store orders, pharmacy store, finance console. | W: two SiteHeader tests |
+| R8 | Medium (UI) | **No navigation to the public store** (it was reachable only from the cart page). | Phone menu link, and a store icon next to the cart on desktop. The desktop public bar stays at its tested five links. | W: SiteHeader tests; acceptance run |
+| R9 | Low (UI) | An existing option could not be edited (only added or hidden). | Inline edit of name, SKU and price; stock still goes through adjustments. | W: `a seller edits an existing option…`; acceptance run edits a price |
+| R10 | Low (UI) | The seller report's commission note was English inside the Arabic UI. | Translated client-side. | acceptance screenshots |
+| R12 | Medium | An **expired licence still counted as approved** (the expiry date was stored, never used). | Expired documents no longer count (activation, checkout category check, `documents_complete`); `manage.py refresh_seller_documents` recomputes the flag and must run daily in production. | `test_an_expired_licence_stops_the_store_after_the_daily_refresh`, `test_a_category_licence_is_rechecked_at_sale_time` |
+| R11 | Medium (demo) | A **TAX line protected its parent line**, so the demo clear refused after any order with seller-declared tax. | `commerce 0006`: a tax line cascades with its merchandise line (history stays protected by the ledger). | clear after the walkthrough removed 2,982 rows, files included |
+
+### Checks that passed without changes
+
+- **20% commission with every component** (item 5). The test case is 2 × 50,000, a 10% seller
+  sale, a 5,000 seller coupon, a 10,000 Racheeta coupon, 5,000 delivery and 10% EXCLUSIVE tax:
+  - base 85,000 → commission 17,000;
+  - the buyer pays 88,500;
+  - the seller is owed 81,500.
+
+  Then a partial return (41,750 back, commission −8,500), a payout, and a dispute refund after the
+  payout: a receivable of 43,250 and the commission fully reversed. INCLUSIVE tax changes only the
+  invoice. Reconciliation passes after every step.
+- **Restocking** (item 6): a dispute refund never restocks. Approving a return does not restock;
+  "items received" restocks once and the refund does not again. A cancellation releases the
+  reservation.
+- **Advertising, preferences, channels** (item 8):
+  - order notifications to sellers carry no buyer phone, address or e-mail;
+  - opting out of marketing creates no MARKETING notification while transactional ones still
+    arrive;
+  - ads follow `targeted_for` and `selling_q`;
+  - the advertiser API exposes no recipient identities or counts;
+  - nothing is sent by e-mail or push (in-app only, existing tests).
+- **Uploads** (item 7): authorization per business (owner/manager, administrators), active or
+  disguised content refused, path and header-injection names neutralized
+  (`test_upload_names_and_download_headers_cannot_be_abused`). Production requirements are
+  documented in `docs/MARKETPLACE_COMMERCE.md` §Uploads.
+
+### Real UI acceptance run (Arabic RTL, 390 px phone + 1440 px desktop)
+
+`local-demo/acceptance.mjs` signed in through the real login form for every account. Navigation
+used the phone menu and the seller navigation links. Forms and buttons were driven in Arabic.
+Result: **112 of 112 steps passed**. 152 screenshots
+(`local-demo/screenshots-acceptance/ar/{390,1440}/`) were each checked for horizontal overflow
+(≤ 1 px) and `dir="rtl"`; all passed. Evidence: `local-demo/acceptance-evidence.json`.
+
+| Account | Seller type | Created + published product | SKU + option, option price edited | Stock adjusted (option) | 10% sale | Order: accept → ship (courier) → tracking | Report + CSV | Statement | Desktop: 10 seller tabs |
+|---|---|---|---|---|---|---|---|---|---|
+| `company-rehab-mobility` | Assistive device store | PASS | PASS (16,000 → 17,000) | PASS (5 → 7) | PASS | PASS + return approved, items received | PASS | PASS | PASS |
+| `company-sharq-devices` | Equipment supplier | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `company-aman-consumables` | Medical supplies office | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `amal-pharmacy` (provider account) | Pharmacy | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `company-dijla-pharma` | Pharmaceutical company | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `company-ibn-sina-scientific` | Scientific office | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `company-kurdistan-medicines` | Pharma distributor | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+| `company-hayat-medical` | Medical company | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+
+**Buyers, through the UI.**
+- `patient-sara`: login form → phone menu → store search → product page (options M and 10 cm) →
+  cart priced by the server (176,500 IQD with delivery and tax) → cash on delivery →
+  CHK-261106-69043A (4 orders). She then confirmed receipt, returned the Rehab item and reported a
+  problem on the Sharq order.
+- `dr-ahmed-jabouri`: login form → phone menu → professional catalogue → "Order directly" on 4 B2B
+  products (options box of 50 and M) → delivery details → simulated transfer → 78,000 IQD,
+  CHK-261106-8E3D45. He then confirmed receipt.
+
+**Finance, through the UI** (`local-finance`): verified 8/8 payments, completed 8/8 orders,
+refunded the received return and resolved the dispute with a refund.
+
+**Database evidence** for all 8 orders:
+- the commission is exactly 20% of merchandise; delivery and tax are excluded;
+- Rehab: return refund 90,000, delivery kept, **one RESTOCK, created at "items received"**;
+- Sharq: dispute refund 46,500, **no restock**;
+- every order has PAYMENT and ACCRUAL entries (plus REFUND where refunded), and an invoice and a
+  receipt (plus a credit note where refunded);
+- reconciliation: all checks pass.
+
+### Missing workflows (honest)
+
+- Sellers cannot answer a dispute, and there is no buyer–seller dispute thread: Racheeta finance
+  decides alone.
+- Refunds are finance-only, by design; a seller cannot start one.
+- Product photos cannot be reordered or captioned after upload. Bundles do not exist.
+- Notifications are in-app only: no e-mail or SMS.
+- Invoices print from the browser: there is no server PDF or legal e-invoice numbering.
+- No courier integration: tracking is entered by hand.
+- No expiry reminder for licences: the daily refresh stops sales, but nobody is warned beforehand.
+- Seller payouts and payments are simulated; there is no payment partner.
+- On desktop the store is an icon next to the cart: the public bar is deliberately capped at five
+  links.
+
+### Verdict
+
+- **Local demonstration: GO.** All four priorities work end to end for every seller type, through
+  the real UI, in Arabic on a phone and on desktop. The 20% commission, the receivable, the
+  immutable ledger and reconciliation hold. All payments are simulated.
+- **Production: NO-GO.** Blocking items:
+  - licensed payment partner and real settlement;
+  - legal and regulatory review of seller licensing, of products and of tax;
+  - non-owner database runtime role (`ledger_db_audit --strict`);
+  - private object storage with malware scanning;
+  - a daily `refresh_seller_documents` job;
+  - an e-invoice and PDF decision;
+  - an independent security review and penetration test;
+  - load and backup testing.

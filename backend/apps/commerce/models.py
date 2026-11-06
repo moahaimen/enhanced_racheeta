@@ -178,8 +178,10 @@ class OrderItem(BaseModel):
         blank=True,
     )
     # A TAX line belongs to the merchandise line it was computed on (refunded in step with it).
+    # CASCADE: a tax line goes with its merchandise line (order lines are only ever deleted with
+    # their order, by the guarded demo cleanup; history is protected by the immutable ledger).
     parent_item = models.ForeignKey(
-        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="charges"
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="charges"
     )
     sku_snapshot = models.CharField(max_length=64, blank=True, default="")
     variant_label_snapshot = models.CharField(max_length=80, blank=True, default="")

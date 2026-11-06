@@ -667,6 +667,9 @@ class DemoSeeder:
                     address="",
                     verification_status="VERIFIED",
                     verification_note="Demo data: verified for presentation.",
+                    # Fictional demo business presented as licensed; the local demo also seeds
+                    # (fictional) approved documents for it (local_seed.phase_sellers).
+                    documents_complete=True,
                     verified_at=self.now,
                     verification_changed_at=self.now,
                 ),

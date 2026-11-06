@@ -6,6 +6,9 @@ Rules (docs/MARKETPLACE_COMMERCE.md §Uploads):
   refused (they can carry scripts);
 * PDFs carrying active content (JavaScript, launch actions, embedded files, XFA) are refused;
 * photos must have readable dimensions within bounds (a header that does not parse is refused);
+* photos are stored WITHOUT identifying metadata: JPEG APP1 (EXIF incl. GPS, XMP), APP3–APP13,
+  APP15 and comments; PNG text/time/EXIF chunks; WebP EXIF/XMP chunks are removed byte-for-byte
+  (no re-encoding; colour profiles are kept);
 * size limits; the stored name is random (`<uuid>.<ext>`); the original name is kept for display
   only, stripped of paths and control characters;
 * files live under PRIVATE_MEDIA_ROOT and are streamed only by permission-checked views with
@@ -168,11 +171,80 @@ def check_document(upload) -> CheckedFile:
     return _checked(data, content_type, getattr(upload, "name", ""), width=width, height=height)
 
 
+JPEG_DROP = {0xE1, *range(0xE3, 0xEE), 0xEF, 0xFE}  # EXIF/XMP, APP3..APP13, APP15, COM
+PNG_DROP = {b"tEXt", b"zTXt", b"iTXt", b"eXIf", b"tIME"}
+WEBP_DROP = {b"EXIF", b"XMP "}
+
+
+def _strip_jpeg(data: bytes) -> bytes:
+    out, i = bytearray(data[:2]), 2
+    while i + 4 <= len(data):
+        if data[i] != 0xFF:
+            raise UploadRejected("This JPEG file is damaged.")
+        marker = data[i + 1]
+        if marker == 0xDA:  # start of scan: the compressed image follows, keep the rest as is
+            out += data[i:]
+            return bytes(out)
+        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            out += data[i : i + 2]
+            i += 2
+            continue
+        length = struct.unpack(">H", data[i + 2 : i + 4])[0]
+        if length < 2:
+            raise UploadRejected("This JPEG file is damaged.")
+        if marker not in JPEG_DROP:
+            out += data[i : i + 2 + length]
+        i += 2 + length
+    raise UploadRejected("This JPEG file is damaged.")
+
+
+def _strip_png(data: bytes) -> bytes:
+    out, i = bytearray(data[:8]), 8
+    while i + 12 <= len(data):
+        length = struct.unpack(">I", data[i : i + 4])[0]
+        kind = data[i + 4 : i + 8]
+        end = i + 12 + length
+        if end > len(data):
+            raise UploadRejected("This PNG file is damaged.")
+        if kind not in PNG_DROP:
+            out += data[i:end]
+        i = end
+        if kind == b"IEND":
+            return bytes(out)
+    raise UploadRejected("This PNG file is damaged.")
+
+
+def _strip_webp(data: bytes) -> bytes:
+    body, i = bytearray(b"WEBP"), 12
+    while i + 8 <= len(data):
+        kind = data[i : i + 4]
+        size = struct.unpack("<I", data[i + 4 : i + 8])[0]
+        end = i + 8 + size + (size & 1)
+        if i + 8 + size > len(data):
+            raise UploadRejected("This WebP file is damaged.")
+        chunk = bytearray(data[i:end])
+        if kind == b"VP8X":
+            chunk[8] &= ~0x0C & 0xFF  # clear the EXIF (0x08) and XMP (0x04) flags
+        if kind not in WEBP_DROP:
+            body += chunk
+        i = end
+    return b"RIFF" + struct.pack("<I", len(body)) + bytes(body)
+
+
+def strip_metadata(content_type: str, data: bytes) -> bytes:
+    if content_type == "image/jpeg":
+        return _strip_jpeg(data)
+    if content_type == "image/png":
+        return _strip_png(data)
+    return _strip_webp(data)
+
+
 def check_image(upload) -> CheckedFile:
     data = _read(upload, IMAGE_MAX_BYTES)
     content_type = sniff(data[:16])
     if content_type not in ("image/jpeg", "image/png", "image/webp"):
         raise UploadRejected("Upload a JPEG, PNG or WebP photo.")
+    data = strip_metadata(content_type, data)
     width, height = _dimensions(content_type, data)
     if not (
         IMAGE_MIN_SIDE <= width <= IMAGE_MAX_SIDE and IMAGE_MIN_SIDE <= height <= IMAGE_MAX_SIDE

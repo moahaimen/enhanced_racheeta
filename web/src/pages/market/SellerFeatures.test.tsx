@@ -245,4 +245,48 @@ describe('seller onboarding', () => {
     await waitFor(() => expect(marketplaceApi.decideSellerDocument).toHaveBeenCalledWith('d-1', true))
     expect(screen.getByRole('button', { name: /^تحقق$|^verify$/i })).toBeInTheDocument()
   })
+
+  it('inventory keeps one row per option and adjusts the stock of THAT option', async () => {
+    signIn({ role: 'MEDICAL_COMPANY' })
+    const row = (variant: string, label: string, on: number) => ({
+      id: 'p-1', variant_id: variant, variant_label: label, sku: `SKU-${label}`, title: 'Sleeve', image_url: '',
+      is_active: true, price: '24000', on_hand: on, reserved: 0, available: on, reorder_threshold: null, low: false,
+    })
+    vi.mocked(commerceApi.listInventory).mockResolvedValue([row('v-s', 'S', 6), row('v-l', 'L', 4)])
+    vi.mocked(commerceApi.listMovements).mockResolvedValue(page([]))
+    vi.mocked(commerceApi.adjustStock).mockResolvedValue(row('v-l', 'L', 7))
+    renderApp('/merchant/center?tab=inventory')
+    const rows = await screen.findAllByTestId('inventory-row')
+    expect(rows).toHaveLength(2)
+    expect(screen.getAllByTestId('inventory-variant').map((e) => e.textContent)).toEqual([' · S', ' · L'])
+    await userEvent.click(within(rows[1]!).getByRole('button'))
+    expect(screen.getAllByTestId('adjust-form')).toHaveLength(1) // only the L row opened
+    const form = screen.getByTestId('adjust-form')
+    const [delta, reason] = within(form).getAllByRole('textbox').length === 2 ? within(form).getAllByRole('textbox') : [within(form).getByRole('spinbutton'), within(form).getByRole('textbox')]
+    await userEvent.type(delta!, '3')
+    await userEvent.type(reason!, 'Delivery received')
+    await userEvent.click(within(form).getByRole('button'))
+    await waitFor(() => expect(commerceApi.adjustStock).toHaveBeenCalledWith('p-1', 3, 'Delivery received', undefined, 'v-l'))
+  })
+
+  it('a seller edits an existing option (name, SKU, price) from the catalog', async () => {
+    signIn({ role: 'MEDICAL_COMPANY' })
+    const variant = { id: 'v-1', sku: 'SLV-L', label: 'L', price: null, stock_quantity: 4, stock_reserved: 0, available: 4, reorder_threshold: null, is_active: true, sort_order: 0 }
+    vi.mocked(marketplaceApi.listCompanyProducts).mockResolvedValue(page([{
+      id: 'p-1', title: 'Sleeve', description: '', brand: '', model_name: '', price: '24000', currency: 'IQD',
+      category: { id: 'c', slug: 'c', name_ar: 'ف', name_en: 'C', parent_id: null, sort_order: 0, can_publish: true },
+      is_active: true, sku: 'SLV', images: [], variants: [variant], created_at: '', updated_at: '',
+    }]) as never)
+    vi.mocked(marketplaceApi.updateVariant).mockResolvedValue({ ...variant, label: 'Large', price: '26000' })
+    renderApp('/merchant/center?tab=catalog')
+    await userEvent.click(await screen.findByRole('button', { name: /إدارة|manage/i }))
+    await userEvent.click(within(screen.getByTestId('variant-table')).getByRole('button', { name: /تعديل|edit/i }))
+    const form = screen.getByTestId('variant-edit-form')
+    const [label, , price] = within(form).getAllByRole('textbox')
+    await userEvent.clear(label!)
+    await userEvent.type(label!, 'Large')
+    await userEvent.type(price!, '26000')
+    await userEvent.click(within(form).getByRole('button', { name: /حفظ|save/i }))
+    await waitFor(() => expect(marketplaceApi.updateVariant).toHaveBeenCalledWith('v-1', { label: 'Large', sku: 'SLV-L', price: '26000' }, undefined))
+  })
 })

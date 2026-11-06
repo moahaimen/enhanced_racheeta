@@ -381,6 +381,7 @@ class LocalExtras:
                     stock_quantity=stock,
                 ),
             )
+        self._documents()  # before campaigns and orders: selling needs approved licences
         self._campaigns()
         self._promotions()
 
@@ -719,7 +720,6 @@ class LocalExtras:
         """Pharmacy store, a MEDICAL_COMPANY seller, documents, delivery fees, declared tax,
         products with options and uploaded photos. Runs AFTER the order scenarios, so the
         documented scenario amounts (100,000 -> 20,000 -> 80,000 ...) are unchanged."""
-        from django.core.files.uploadedfile import SimpleUploadedFile
 
         self._guard()
         admin = self.admin or self._get("account:local-admin")
@@ -751,6 +751,30 @@ class LocalExtras:
                 ),
             )
             self.s.companies[key] = company
+        self._documents()
+        # New sellers: request verification, Racheeta verifies, the owner activates the store.
+        for key in [f"store:{k}" for k, *_ in content.PHARMACY_STORES] + [
+            k for k, *_ in content.NEW_SELLERS
+        ]:
+            company = MedicalCompany.objects.get(pk=self._seller(key).pk)
+            if company.verification_status == "UNVERIFIED":
+                marketplace_services.request_verification(company)
+                marketplace_services.set_verification(
+                    company, "VERIFIED", admin=admin, note="توضيحي | Demo verification"
+                )
+            if company.store_status != StoreStatus.ACTIVE:
+                sellers.set_store_status(company.pk, actor=company.account, active=True)
+        self._delivery_and_tax()
+        self._seller_products()
+
+    def _documents(self) -> None:
+        """Fictional licence documents: every verified seller has its required documents
+        approved (it may sell); two sellers show the review queue (pending) and a rejection.
+        Runs before the order scenarios (selling needs approved documents) and again after the
+        new sellers exist (idempotent)."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        admin = self.admin or self._get("account:local-admin")
         # Documents: every verified seller has its required documents approved; two sellers show
         # the review queue (pending) and a rejection.
         demo_companies = DemoRecord.objects.filter(model_label="marketplace.MedicalCompany")
@@ -787,20 +811,6 @@ class LocalExtras:
                         if state == "APPROVED"
                         else "صورة غير واضحة (توضيحي) | Unreadable scan (demo)",
                     )
-        # New sellers: request verification, Racheeta verifies, the owner activates the store.
-        for key in [f"store:{k}" for k, *_ in content.PHARMACY_STORES] + [
-            k for k, *_ in content.NEW_SELLERS
-        ]:
-            company = MedicalCompany.objects.get(pk=self._seller(key).pk)
-            if company.verification_status == "UNVERIFIED":
-                marketplace_services.request_verification(company)
-                marketplace_services.set_verification(
-                    company, "VERIFIED", admin=admin, note="توضيحي | Demo verification"
-                )
-            if company.store_status != StoreStatus.ACTIVE:
-                sellers.set_store_status(company.pk, actor=company.account, active=True)
-        self._delivery_and_tax()
-        self._seller_products()
 
     def _delivery_and_tax(self) -> None:
         for key, (default, free_over, rates) in content.SHIPPING.items():

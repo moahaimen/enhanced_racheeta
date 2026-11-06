@@ -158,6 +158,16 @@ def set_store_status(company_id, *, actor, active: bool) -> MedicalCompany:
 # ---- documents ------------------------------------------------------------------------------
 
 
+def refresh_documents_complete(company_id) -> bool:
+    """Recompute MedicalCompany.documents_complete on the locked row (part of selling_q)."""
+    company = MedicalCompany.objects.select_for_update().get(pk=company_id)
+    complete = not company.missing_documents()
+    if company.documents_complete != complete:
+        company.documents_complete = complete
+        company.save(update_fields=["documents_complete", "updated_at"])
+    return complete
+
+
 @transaction.atomic
 def upload_document(company_id, *, actor, kind: str, upload, reference_number="", expires_on=None):
     if kind not in SellerDocumentKind.values:
@@ -180,6 +190,7 @@ def upload_document(company_id, *, actor, kind: str, upload, reference_number=""
         expires_on=expires_on,
         uploaded_by=actor,
     )
+    refresh_documents_complete(company.pk)
     audit.record(
         actor=actor,
         action="marketplace.document.uploaded",
@@ -202,14 +213,17 @@ def withdraw_document(document_id, *, company_id, actor) -> None:
     if doc.status == DocumentStatus.APPROVED:
         raise SellerError("An approved document cannot be removed; upload a newer one instead.")
     audit.record(actor=actor, action="marketplace.document.withdrawn", target=doc, summary=doc.kind)
+    company_id = doc.company_id
     doc.file.delete(save=False)
     doc.delete()
+    refresh_documents_complete(company_id)
 
 
 @transaction.atomic
 def review_document(document_id, *, admin, approve: bool, note: str = "") -> SellerDocument:
-    """Racheeta administrator decision. Rejecting a document of an ACTIVE store whose type needs
-    it pauses nothing automatically; the administrator suspends the business if needed."""
+    """Racheeta administrator decision. Rejecting (or later revoking) a required document stops
+    the store selling at once (documents_complete becomes False); approving the last missing one
+    lets an ACTIVE store sell again."""
     doc = SellerDocument.objects.select_for_update().filter(pk=document_id).first()
     if doc is None:
         raise ProductNotFound("Document not found.")
@@ -220,6 +234,7 @@ def review_document(document_id, *, admin, approve: bool, note: str = "") -> Sel
     doc.review_note = note[:300]
     doc.reviewed_by, doc.reviewed_at = admin, timezone.now()
     doc.save(update_fields=["status", "review_note", "reviewed_by", "reviewed_at", "updated_at"])
+    refresh_documents_complete(doc.company_id)
     audit.record(
         actor=admin,
         action="marketplace.document.reviewed",
@@ -527,26 +542,26 @@ def remove_image(company_id, image_id, *, actor) -> None:
 
 
 def image_visible_to(image: ProductImage, account) -> bool:
-    """Photos of a product someone may see: anyone for a product on sale (store or targeted
-    catalogue, which already passed the publication gates), the business's own team otherwise."""
+    """The same audience as the product itself:
+    * a public-store product: anyone;
+    * a professional (B2B) product: only a verified provider it is targeted at
+      (ProductQuerySet.targeted_for — the catalogue's own rule);
+    * otherwise (unpublished, hidden): the business's own team and Racheeta staff."""
     from apps.workspaces import access
 
+    from .permissions import current_verified_provider
+
     product = image.product
-    if (
-        product.is_active
-        and Product.objects.filter(pk=product.pk).filter(_public_product_q()).exists()
-    ):
+    if Product.objects.consumer_store().filter(pk=product.pk).exists():
         return True
     if account is None or not account.is_authenticated:
         return False
+    provider = current_verified_provider(account)
+    if (
+        provider is not None
+        and Product.objects.targeted_for(provider).filter(pk=product.pk).exists()
+    ):
+        return True
     if account.is_staff:
         return True
     return access.can_company(account, product.company_id, "company.products.view")
-
-
-def _public_product_q():
-    from django.db.models import Q
-
-    from .models import consumer_store_filter, selling_q
-
-    return consumer_store_filter() | (Q(is_active=True) & selling_q("company__"))

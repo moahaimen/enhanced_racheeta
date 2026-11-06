@@ -93,30 +93,54 @@ def check_buyer(buyer) -> None:
         raise CheckoutError("Verify your e-mail address before ordering.", "not_allowed")
 
 
+def _visible_name(product: Product, buyer) -> str:
+    """The product's title only if this buyer may see the product (public store, or targeted at
+    the buyer's verified provider profile); otherwise a neutral name, so an error never reveals
+    a professional-only or hidden product's details."""
+    if Product.objects.consumer_store().filter(pk=product.pk).exists():
+        return f"“{product.title}”"
+    provider = current_verified_provider(buyer)
+    if (
+        provider is not None
+        and Product.objects.targeted_for(provider).filter(pk=product.pk).exists()
+    ):
+        return f"“{product.title}”"
+    return "This product"
+
+
 def purchase_channel(product: Product, buyer) -> str:
     """'B2C' or 'B2B' when this buyer may buy this product now; raises otherwise (fail closed)."""
     company = product.company
     category = product.category
+    name = _visible_name(product, buyer)
     if not product.is_active or not category.is_active:
-        raise CheckoutError(f"“{product.title}” is not available.")
+        raise CheckoutError(f"{name} is not available.")
     if not company.can_sell:  # verified, active seller account, store ACTIVE (selling_q)
-        raise CheckoutError(
-            f"The seller of “{product.title}” cannot sell right now.", "not_allowed"
-        )
+        raise CheckoutError(f"The seller of {name} cannot sell right now.", "not_allowed")
     if category.allowed_business_types and company.business_type not in (
         category.allowed_business_types
     ):
-        raise CheckoutError(f"“{product.title}” is not available.", "not_allowed")
+        raise CheckoutError(f"{name} is not available.", "not_allowed")
+    if category.required_documents:
+        # Category licences (e.g. device registration) are re-checked at sale time, not only at
+        # publication: a revoked document stops the sale at once.
+        approved = set(
+            company.documents.filter(status="APPROVED")
+            .exclude(expires_on__lte=timezone.localdate())  # an expired licence no longer counts
+            .values_list("kind", flat=True)
+        )
+        if any(kind not in approved for kind in category.required_documents):
+            raise CheckoutError(f"{name} is not available.", "not_allowed")
     if product.is_restricted or category.compliance_class in NOT_PURCHASABLE_CLASSES:
         raise CheckoutError(
-            f"“{product.title}” is a regulated item and cannot be bought online.", "not_purchasable"
+            f"{name} is a regulated item and cannot be bought online.", "not_purchasable"
         )
     if company.account_id == buyer.pk:
         raise CheckoutError("A business cannot buy from itself.", "not_allowed")
     if Product.objects.consumer_store().filter(pk=product.pk).exists():
         return "B2C"
     if category.compliance_class == ComplianceClass.QUOTE_ONLY:
-        raise CheckoutError(f"“{product.title}” is sold by quotation only.", "quote_only")
+        raise CheckoutError(f"{name} is sold by quotation only.", "quote_only")
     # Direct professional purchase needs an EXPLICIT B2B classification. B2C_ALLOWED is not
     # enough: legacy consumer categories (marketplace 0004) were only ever quote-able for B2B.
     if (
@@ -130,11 +154,11 @@ def purchase_channel(product: Product, buyer) -> str:
         ):
             return "B2B"
         raise CheckoutError(
-            f"“{product.title}” is for verified healthcare professionals only.", "professional_only"
+            f"{name} is for verified healthcare professionals only.", "professional_only"
         )
     if product.sale_channel in PROFESSIONAL_CHANNELS:
-        raise CheckoutError(f"“{product.title}” is sold by quotation only.", "quote_only")
-    raise CheckoutError(f"“{product.title}” is not available.")
+        raise CheckoutError(f"{name} is sold by quotation only.", "quote_only")
+    raise CheckoutError(f"{name} is not available.")
 
 
 def _wanted(items: list[dict]) -> dict:

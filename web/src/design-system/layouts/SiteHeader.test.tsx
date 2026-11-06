@@ -166,4 +166,28 @@ describe('SiteHeader mobile panel', () => {
     }
     expect(within(panel).getByRole('button', { name: /log ?out|sign out/i })).toBeInTheDocument()
   })
+
+  it('gives sellers their seller tools and buyers the store on a phone (the sidebar is hidden there)', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    await user.click(await screen.findByRole('button', { name: /open menu/i }))
+    const links = hrefs(document.getElementById('mobile-nav')!)
+    for (const href of ['/merchant/orders', '/merchant/center?tab=setup', '/store']) expect(links).toContain(href)
+  })
+
+  it('a pharmacy (provider account) reaches its store and seller center; a doctor does not', async () => {
+    const user = userEvent.setup()
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER', account_type: 'PHARMACY' }))
+    const { unmount } = renderApp('/')
+    await user.click(await screen.findByRole('button', { name: /open menu/i }))
+    const pharmacy = hrefs(document.getElementById('mobile-nav')!)
+    expect(pharmacy).toEqual(expect.arrayContaining(['/company', '/merchant/center?tab=setup', '/provider/profile']))
+    unmount()
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER', account_type: 'DOCTOR' }))
+    renderApp('/')
+    await user.click(await screen.findByRole('button', { name: /open menu/i }))
+    const doctor = hrefs(document.getElementById('mobile-nav')!)
+    expect(doctor).not.toContain('/merchant/center?tab=setup')
+    expect(doctor).not.toContain('/company')
+  })
 })

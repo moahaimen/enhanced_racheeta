@@ -2725,6 +2725,8 @@
     "approve": "Approve",
     "rejectReason": "Why (required to reject)",
     "rejectedNote": "Verification refused by Racheeta.",
-    "suspendedNote": "Suspended by Racheeta."
+    "suspendedNote": "Suspended by Racheeta.",
+    "commissionNote": "Commission is 20% of merchandise after seller discounts; delivery fees and seller-declared tax carry no commission.",
+    "editOption": "Edit"
   }
 }

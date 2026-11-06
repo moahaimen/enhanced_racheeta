@@ -304,6 +304,7 @@ function ProductManager({ product, company, onDone, onError }: { product: Compan
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoKey, setPhotoKey] = useState(0)
   const variants: OwnerVariant[] = product.variants ?? []
+  const [editing, setEditing] = useState<string | null>(null)
   const addVariant = async (event: FormEvent) => {
     event.preventDefault()
     try {
@@ -349,9 +350,15 @@ function ProductManager({ product, company, onDone, onError }: { product: Compan
                     <td className="num ltr">{v.stock_quantity ?? '—'}</td>
                     <td className="num ltr">{v.available ?? '—'}</td>
                     <td>
-                      <ApiActionButton size="sm" variant="ghost" action={() => mp.updateVariant(v.id, { is_active: !v.is_active }, company)} onSuccess={onDone} onError={onError}>
-                        {v.is_active ? t('sellerSetup.hideOption') : t('sellerSetup.showOption')}
-                      </ApiActionButton>
+                      <span className="cluster">
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(editing === v.id ? null : v.id)} aria-expanded={editing === v.id}>
+                          {t('sellerSetup.editOption')}
+                        </Button>
+                        <ApiActionButton size="sm" variant="ghost" action={() => mp.updateVariant(v.id, { is_active: !v.is_active }, company)} onSuccess={onDone} onError={onError}>
+                          {v.is_active ? t('sellerSetup.hideOption') : t('sellerSetup.showOption')}
+                        </ApiActionButton>
+                      </span>
+                      {editing === v.id ? <VariantEditForm variant={v} company={company} onDone={() => { setEditing(null); onDone() }} onError={onError} /> : null}
                     </td>
                   </tr>
                 ))}
@@ -403,6 +410,24 @@ function ProductManager({ product, company, onDone, onError }: { product: Compan
           </ApiActionButton>
         </div>
       </section>
+    </div>
+  )
+}
+
+/** Edit an option's name, SKU and price (stock changes go through a stock adjustment). */
+function VariantEditForm({ variant, company, onDone, onError }: { variant: OwnerVariant; company?: string; onDone: () => void; onError: (e: unknown) => void }) {
+  const { t } = useTranslation()
+  const [label, setLabel] = useState(variant.label)
+  const [sku, setSku] = useState(variant.sku)
+  const [price, setPrice] = useState(variant.price ? String(Math.round(Number(variant.price))) : '')
+  return (
+    <div className="cluster" style={{ alignItems: 'flex-end' }} data-testid="variant-edit-form">
+      <TextField label={t('sellerSetup.option')} maxLength={80} value={label} onChange={(e) => setLabel(e.target.value)} />
+      <TextField label="SKU" maxLength={64} value={sku} onChange={(e) => setSku(e.target.value)} />
+      <TextField label={t('market.price')} optional inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))} hint={t('sellerSetup.priceHint')} />
+      <ApiActionButton size="sm" disabled={!label.trim() || !sku.trim()} action={() => mp.updateVariant(variant.id, { label: label.trim(), sku: sku.trim(), price: price || null }, company)} onSuccess={onDone} onError={onError}>
+        {t('common.save')}
+      </ApiActionButton>
     </div>
   )
 }
@@ -600,7 +625,7 @@ export function ReportsTab({ company }: { company?: string }) {
       <AsyncPage load={(signal) => commerce.getSalesReport(range, company, signal)} deps={[range.from, range.to, company]}>
         {(r) => (
           <>
-            <Alert kind="info">{r.commission_note}</Alert>
+            <Alert kind="info">{t('sellerSetup.commissionNote')}</Alert>
             <div data-testid="report-cards" style={{ display: 'grid', gap: 'var(--space-3)', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
               <StatCard label={t('sellerSetup.orders')} value={String(r.totals.orders)} />
               <StatCard label={t('market.commissionBase')} value={money(r.totals.merchandise_net)} />

@@ -149,10 +149,10 @@ function InventoryTab({ company }: { company?: string }) {
               <tbody>
                 {rows.map((row) => (
                   <InventoryLine
-                    key={row.id}
+                    key={unitKey(row)}
                     row={row}
-                    open={open === row.id}
-                    onToggle={() => setOpen(open === row.id ? null : row.id)}
+                    open={open === unitKey(row)}
+                    onToggle={() => setOpen(open === unitKey(row) ? null : unitKey(row))}
                     company={company}
                     onSaved={() => { clear(); reload() }}
                     onError={fail}
@@ -167,6 +167,11 @@ function InventoryTab({ company }: { company?: string }) {
       </AsyncPage>
     </>
   )
+}
+
+/** One stock unit: a product without options, or one option (variant) of a product. */
+function unitKey(row: InventoryRow): string {
+  return row.variant_id ? `${row.id}:${row.variant_id}` : row.id
 }
 
 function InventoryLine({ row, open, onToggle, company, onSaved, onError, title, price }: {
@@ -188,7 +193,7 @@ function InventoryLine({ row, open, onToggle, company, onSaved, onError, title, 
   const adjust = async (event: FormEvent) => {
     event.preventDefault()
     try {
-      await commerce.adjustStock(row.id, Number(delta), reason.trim(), company)
+      await commerce.adjustStock(row.id, Number(delta), reason.trim(), company, row.variant_id)
       setDelta('')
       setReason('')
       onSaved()
@@ -201,6 +206,8 @@ function InventoryLine({ row, open, onToggle, company, onSaved, onError, title, 
       <tr data-testid="inventory-row">
         <td>
           <span className="cluster"><ProductImage src={row.image_url} alt="" size="sm" /> {title}</span>
+          {row.variant_label ? <span className="text-caption" data-testid="inventory-variant"> · {row.variant_label}</span> : null}
+          {row.sku ? <div className="text-caption ltr">{row.sku}</div> : null}
           {row.low ? <Badge tone="warning">{t('market.lowStock')}</Badge> : null} {!row.is_active ? <Badge tone="neutral">{t('market.inactive')}</Badge> : null}
         </td>
         <td className="num ltr">{price}</td>
@@ -223,7 +230,7 @@ function InventoryLine({ row, open, onToggle, company, onSaved, onError, title, 
               </form>
               <div className="cluster" style={{ alignItems: 'flex-end' }}>
                 <TextField label={t('market.alertLevel')} type="number" min={0} inputMode="numeric" value={level} onChange={(e) => setLevel(e.target.value)} />
-                <ApiActionButton size="sm" variant="secondary" action={() => commerce.setReorderLevel(row.id, level === '' ? null : Number(level), company)} onSuccess={onSaved} onError={onError}>
+                <ApiActionButton size="sm" variant="secondary" action={() => commerce.setReorderLevel(row.id, level === '' ? null : Number(level), company, row.variant_id)} onSuccess={onSaved} onError={onError}>
                   {t('market.saveAlert')}
                 </ApiActionButton>
               </div>
@@ -240,7 +247,7 @@ function InventoryLine({ row, open, onToggle, company, onSaved, onError, title, 
                     </tr>
                   </thead>
                   <tbody>
-                    {movements.data.results.map((m) => (
+                    {movements.data.results.filter((m) => (m.variant_id ?? null) === (row.variant_id ?? null)).map((m) => (
                       <tr key={m.id}>
                         <td>{new Date(m.created_at).toLocaleString(i18n.language)}</td>
                         <td>{t(`market.movementKind.${m.kind}`)} {m.order_number ? <span className="ltr text-caption">{m.order_number}</span> : null}</td>

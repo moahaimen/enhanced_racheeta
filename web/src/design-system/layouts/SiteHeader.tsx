@@ -275,15 +275,40 @@ export function SiteHeader() {
           </NavLink>
         </>
       ) : null}
+      {account?.role === 'PROVIDER' && account.account_type === 'PHARMACY' ? (
+        <NavLink to="/company" end className={styles.link}>
+          <Icon name="pill" size={18} />
+          {t('nav.pharmacyStore')}
+        </NavLink>
+      ) : null}
+      {account?.role === 'MEDICAL_COMPANY' || (account?.role === 'PROVIDER' && account.account_type === 'PHARMACY') ? (
+        <>
+          {/* On phones the workspace sidebar is hidden: the seller tools must be reachable here. */}
+          <NavLink to="/merchant/orders" className={styles.link}>
+            <Icon name="box" size={18} />
+            {t('nav.merchantOrders')}
+          </NavLink>
+          <NavLink to="/merchant/center?tab=setup" className={styles.link}>
+            <Icon name="clipboard" size={18} />
+            {t('nav.sellerCenter')}
+          </NavLink>
+        </>
+      ) : null}
       <NavLink to="/employer" className={styles.link}>
         <Icon name="hospital" size={18} />
         {t('nav.employer')}
       </NavLink>
       {account?.is_staff ? (
-        <NavLink to="/admin-console" className={styles.link}>
-          <Icon name="shieldCheck" size={18} />
-          {t('nav.adminConsole')}
-        </NavLink>
+        <>
+          <NavLink to="/admin-console" className={styles.link}>
+            <Icon name="shieldCheck" size={18} />
+            {t('nav.adminConsole')}
+          </NavLink>
+          <NavLink to="/admin-finance" className={styles.link}>
+            <Icon name="calculator" size={18} />
+            {t('nav.adminFinance')}
+          </NavLink>
+        </>
       ) : null}
       <NavLink to="/profile" className={styles.link}>
         <Icon name="user" size={18} />
@@ -324,6 +349,11 @@ export function SiteHeader() {
           </nav>
           <span className={styles.spacer} />
           <div className={styles.actions}>
+            {/* Desktop keeps five public links; the store sits with the cart in the actions. */}
+            <NavLink to="/store" className={styles.iconLink} data-testid="header-store">
+              <Icon name="tag" size={20} />
+              <span className="visually-hidden">{t('nav.store')}</span>
+            </NavLink>
             <CartLink compact />
             {authenticated ? (
               <>
@@ -352,6 +382,11 @@ export function SiteHeader() {
           <nav id="mobile-nav" className={styles.mobilePanel} aria-label={t('nav.main')}>
             {publicLinks}
             {accountLinks}
+            {/* The public bar stays at five links on desktop; on phones the store is listed here. */}
+            <NavLink to="/store" className={styles.link} data-testid="mobile-nav-store">
+              <Icon name="cart" size={18} />
+              {t('nav.store')}
+            </NavLink>
             <CartLink />
             {authenticated ? <MessagesLink /> : null}
             {authenticated ? <NotificationsLink /> : null}

@@ -100,8 +100,12 @@ def publishing_q(prefix: str = "") -> Q:
 
 
 def selling_q(prefix: str = "") -> Q:
-    """Publishing AND the seller's store is ACTIVE: its products are offered and can be bought."""
-    return publishing_q(prefix) & Q(**{f"{prefix}store_status": StoreStatus.ACTIVE})
+    """Publishing AND the seller's store is ACTIVE AND every required licence document is
+    approved: its products are offered and can be bought. A grandfathered ACTIVE store without
+    approved documents does not sell (fail closed)."""
+    return publishing_q(prefix) & Q(
+        **{f"{prefix}store_status": StoreStatus.ACTIVE, f"{prefix}documents_complete": True}
+    )
 
 
 class MedicalCompanyQuerySet(models.QuerySet):
@@ -157,6 +161,10 @@ class MedicalCompany(BaseModel):
         max_length=10, choices=StoreStatus.choices, default=StoreStatus.ACTIVE
     )
     store_status_changed_at = models.DateTimeField(null=True, blank=True)
+    # Every document REQUIRED_DOCUMENTS lists for this business type is APPROVED. Kept current by
+    # sellers.refresh_documents_complete() on every upload, withdrawal and review; computed for
+    # existing rows by marketplace 0007 (no documents -> False: legacy stores stop selling).
+    documents_complete = models.BooleanField(default=False)
     # --- seller-declared tax treatment (Racheeta does not decide tax obligations) --------------
     tax_mode = models.CharField(max_length=10, choices=TaxMode.choices, default=TaxMode.NONE)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -224,16 +232,22 @@ class MedicalCompany(BaseModel):
 
     @property
     def can_sell(self) -> bool:
-        """selling_q() for one loaded company: publishing and the store is ACTIVE."""
-        return self.can_publish and self.store_status == StoreStatus.ACTIVE
+        """selling_q() for one loaded company: publishing, store ACTIVE, documents complete."""
+        return (
+            self.can_publish and self.store_status == StoreStatus.ACTIVE and self.documents_complete
+        )
 
     def missing_documents(self) -> list[str]:
         """Required document kinds with no APPROVED document (store activation needs none)."""
+        from django.utils import timezone
+
         from .types import REQUIRED_DOCUMENTS
 
         approved = set(
-            self.documents.filter(status=DocumentStatus.APPROVED).values_list("kind", flat=True)
-        )
+            self.documents.filter(status=DocumentStatus.APPROVED)
+            .filter(Q(expires_on__isnull=True) | Q(expires_on__gt=timezone.localdate()))
+            .values_list("kind", flat=True)
+        )  # an expired licence no longer counts
         return [k for k in REQUIRED_DOCUMENTS.get(self.business_type, ()) if k not in approved]
 
 

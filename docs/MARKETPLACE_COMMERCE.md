@@ -189,6 +189,14 @@ Stores that existed before activation was introduced keep selling: the migration
 ACTIVE, and the demo seeds their documents as approved. Only onboarding creates INACTIVE stores.
 A (re)verification of an ACTIVE store whose required documents are not all approved puts it back
 to INACTIVE, so a legacy store can never start selling again without approved licences.
+`MedicalCompany.documents_complete` (every required document APPROVED) is part of `selling_q`.
+- It is kept current by every upload, withdrawal and review.
+- `marketplace 0007` computes it for existing rows. A store from before documents existed has
+  none, so it stops selling until its licences are approved.
+- Rejecting a previously approved licence stops the sale at once.
+- An expired document no longer counts. Run `manage.py refresh_seller_documents` daily, because
+  expiry happens with time, not with an event.
+- A category's `required_documents` are also re-checked at checkout, not only at publication.
 
 ## Uploads (`marketplace/uploads.py`)
 
@@ -207,7 +215,31 @@ to INACTIVE, so a legacy store can never start selling again without approved li
 - Photos are public only for a product on sale; otherwise they are visible to the business's team
   and staff. An unknown or hidden photo is a 404 either way.
 - An approved document cannot be withdrawn (the history is kept).
-- Production must use private object storage with the same rules (local filesystem here).
+- Photos are stored without identifying metadata: JPEG EXIF (including GPS), XMP, APP3–APP13,
+  APP15 and comments; PNG text, time and EXIF chunks; WebP EXIF/XMP chunks and their VP8X flags.
+  This is done byte-for-byte, with no re-encoding and no new dependency; colour profiles are kept.
+  PDF documents keep their own metadata (author, producer). They are only ever shown to the
+  business's owner/managers and Racheeta reviewers.
+- A photo has the same audience as its product:
+  - a public-store product: anyone;
+  - a professional product: only the verified providers it is targeted at;
+  - otherwise: the business's team and Racheeta staff.
+
+**Production requirements for uploads (not built; no paid service needed to start):**
+1. Private object storage (an S3-compatible bucket with no public ACL). Files are streamed through
+   these permission-checked views or short-lived signed URLs, never a public bucket URL.
+   Encryption at rest and versioned backups.
+2. Malware scanning before a document becomes reviewable. For example, an open-source ClamAV
+   worker; quarantine on detection and never serve unscanned files.
+3. Keep: the type sniffing, the active-PDF refusal, size limits, random names, sanitized display
+   names, nosniff and a sandboxed CSP. Optionally render documents to images for reviewers
+   instead of opening the seller's PDF.
+4. Per-seller quotas (count and bytes), rate limits on uploads, and audit retention of who
+   uploaded and who reviewed.
+5. A retention policy for rejected or superseded licences (legal advice needed). Delete files
+   when their rows are deleted (the demo cleaner already does).
+6. Re-encode photos server-side (an image library) if the stripping above is not enough for the
+   formats accepted in production.
 
 ## Products: SKUs, variants, category rules
 
@@ -351,6 +383,8 @@ The contract is in `docs/api/openapi.yaml`.
 | `marketplace 0005` | Legacy tightening: inactive legacy consumer categories, or ones containing a restricted product → RESTRICTED_PENDING_REVIEW |
 | `commerce 0004` | `Checkout.request_hash` (idempotency-key reuse with a different request → 409) |
 | `marketplace 0006` | Pharmacy store link, store status (existing rows ACTIVE), seller-declared tax, delivery defaults, category rules, product SKU, `ProductVariant`, `ProductImage`, `SellerDocument`, `ShippingRate` |
+| `marketplace 0007` | `documents_complete` (fail closed: existing stores without approved documents stop selling) |
+| `commerce 0006` | A TAX line cascades with its merchandise line (needed by the demo cleanup) |
 | `commerce 0005` | Order item kind (MERCHANDISE / SHIPPING / TAX), variant and SKU snapshots, order delivery and tax snapshots, variant-aware stock movements and quotes, `TrackingEvent`, `Invoice` |
 
 To roll back the seller and product slice: run `migrate commerce 0004`, then
