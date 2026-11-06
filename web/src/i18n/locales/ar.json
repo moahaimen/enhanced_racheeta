@@ -103,7 +103,9 @@
     "sellerFinance": "كشف حساب البائع",
     "adminFinance": "مالية السوق",
     "pharmacyStore": "متجر صيدليتي",
-    "reservationHistory": "سجل الحجوزات"
+    "reservationHistory": "سجل الحجوزات",
+    "propertyInquiries": "استفسارات العقارات",
+    "myPropertyInquiries": "استفساراتي العقارية"
   },
   "home": {
     "heroEyebrow": "منصة طبية عراقية",
@@ -765,7 +767,10 @@
     "no_delivery": "هذا البائع لا يوصل إلى المحافظة المختارة.",
     "documents_missing": "بعض المستندات المطلوبة لم تُقبل بعد.",
     "invalid_file": "رُفض هذا الملف.",
-    "service_disabled": "الحجز الإلكتروني متوقف في رشيتة."
+    "service_disabled": "الحجز الإلكتروني متوقف في رشيتة.",
+    "duplicate_inquiry": "لديك استفسار مفتوح عن هذا الإعلان.",
+    "inquiry_limit_reached": "بلغت حدّ الاستفسارات اليومي. حاول غداً.",
+    "own_listing": "لا يمكنك الاستفسار عن إعلانك."
   },
   "jobs": {
     "featured": "مميّزة",
@@ -1523,7 +1528,8 @@
       "expired": "منتهية",
       "expiredHint": "منشورة وانتهى تاريخها",
       "sale": "للبيع",
-      "rent": "للإيجار"
+      "rent": "للإيجار",
+      "openInquiries": "استفسارات مفتوحة"
     },
     "newListing": "إعلان جديد",
     "editListing": "تعديل الإعلان",
@@ -1585,7 +1591,8 @@
     "invalidPrice": "أدخل سعرًا صفرًا أو أكثر.",
     "invalidArea": "أدخل مساحة أكبر من صفر.",
     "coordinatePair": "أدخل خط العرض وخط الطول معًا أو اتركهما فارغين.",
-    "open": "فتح مساحة العمل"
+    "open": "فتح مساحة العمل",
+    "inquiries": "الاستفسارات"
   },
   "campaignStatus": {
     "DRAFT": "مسودة",
@@ -2175,7 +2182,8 @@
       "setup_provider": "خطوات التوثيق",
       "store_finance": "المبيعات وعمولة 20٪",
       "setup_employer": "إعداد التوظيف",
-      "setup_job_seeker": "ابدأ البحث عن عمل"
+      "setup_job_seeker": "ابدأ البحث عن عمل",
+      "inquiries": "استفسارات العقارات"
     },
     "stats": {
       "verification": "التوثيق",
@@ -2275,7 +2283,9 @@
       "owed_to_you": "المستحق لك",
       "paid_out": "المدفوع لك (محاكاة)",
       "awaiting_completion": "طلبات مدفوعة بانتظار الإكمال",
-      "order_completed": "مكتمل"
+      "order_completed": "مكتمل",
+      "inquiries_open": "مفتوحة",
+      "inquiries_answered": "تم الرد"
     },
     "actions": {
       "store": "تسوّق الأجهزة المساعدة",
@@ -2302,7 +2312,8 @@
       "my_applications": "طلباتي",
       "admin_console": "لوحة الإدارة",
       "promotions_review": "مراجعة الترويج",
-      "complete_setup": "أكمل الإعداد"
+      "complete_setup": "أكمل الإعداد",
+      "inquiries": "الاستفسارات"
     },
     "greeting": "مرحباً، {{name}}",
     "switchWorkspace": "مساحة العمل",
@@ -2852,5 +2863,44 @@
     "suspendedNote": "علّقته رشيتة.",
     "commissionNote": "العمولة 20% من قيمة المنتجات بعد خصومات المتجر؛ لا عمولة على رسوم التوصيل ولا على الضريبة التي يصرّح بها البائع.",
     "editOption": "تعديل"
+  },
+  "inquiries": {
+    "title": "اسأل المالك",
+    "intro": "يصل سؤالك إلى المالك داخل رشيتة، وسنعلمك عند الرد.",
+    "message": "سؤالك",
+    "messageHint": "10 أحرف على الأقل. لا تكتب بيانات دفع.",
+    "shareContact": "شارك رقم هاتفي وبريدي الإلكتروني مع المالك",
+    "send": "إرسال الاستفسار",
+    "sending": "جارٍ الإرسال…",
+    "sent": "تم إرسال الاستفسار. تابعه من «استفساراتي العقارية».",
+    "loginToAsk": "سجّل الدخول لتسأل المالك",
+    "myTitle": "استفساراتي العقارية",
+    "myIntro": "الأسئلة التي أرسلتها إلى مالكي العقارات وردودهم.",
+    "empty": "لم ترسل أي استفسار بعد.",
+    "browse": "تصفّح العقارات",
+    "ownerTitle": "استفسارات العقارات",
+    "ownerIntro": "أسئلة المهتمين بإعلاناتك. ردّ على كل استفسار أو أغلقه.",
+    "ownerEmpty": "لا توجد استفسارات بعد.",
+    "from": "من",
+    "contactShared": "بيانات التواصل مُشارَكة",
+    "contactPrivate": "لم يشارك السائل بيانات التواصل؛ ردّ هنا.",
+    "yourMessage": "الرسالة",
+    "response": "رد المالك",
+    "yourAnswer": "ردّك",
+    "answer": "إرسال الرد",
+    "answerAgain": "تحديث الرد",
+    "close": "إغلاق الاستفسار",
+    "withdraw": "سحب",
+    "listingGone": "هذا الإعلان لم يعد منشوراً.",
+    "openListing": "فتح الإعلان",
+    "allStatuses": "كل الحالات",
+    "statusFilter": "الحالة",
+    "status": {
+      "OPEN": "مفتوح",
+      "ANSWERED": "تم الرد",
+      "CLOSED": "مغلق",
+      "WITHDRAWN": "مسحوب"
+    },
+    "sentOn": "أُرسل {{date}}"
   }
 }

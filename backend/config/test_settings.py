@@ -38,6 +38,7 @@ REST_FRAMEWORK = {  # noqa: F405
         "chat_messages": "10000/min",
         "push_devices": "10000/min",
         "user_writes": "10000/min",
+        "real_estate_inquiries": "10000/min",
     },
 }
 # No collectstatic in tests: serve admin/DRF assets straight from app finders.

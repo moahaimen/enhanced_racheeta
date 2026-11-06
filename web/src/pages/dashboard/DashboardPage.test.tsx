@@ -269,6 +269,9 @@ describe('Dashboard hub', () => {
       listings_expired: 1,
       listings_sale: 3,
       listings_rent: 5,
+      inquiries_open: 0,
+      inquiries_answered: 0,
+      inquiries_total: 0,
     })
     renderApp('/dashboard/summary')
     const dashboard = await screen.findByTestId('dashboard-owner')

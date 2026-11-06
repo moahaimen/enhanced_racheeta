@@ -703,7 +703,42 @@ def _property(account) -> list:
             ],
             link="/real-estate/owner",
         ),
+        _inquiries_module(seller),
     ]
+
+
+def _inquiries_module(seller) -> dict:
+    """Real counts and the newest live inquiries about this seller's listings (Phase E)."""
+    from apps.real_estate.inquiries import owner_counts
+    from apps.real_estate.models import ListingInquiry
+    from apps.real_estate.types import LIVE_INQUIRY_STATUSES
+
+    counts = owner_counts(seller)
+    live = (
+        ListingInquiry.objects.filter(listing__seller=seller, status__in=LIVE_INQUIRY_STATUSES)
+        .select_related("inquirer")
+        .order_by("-created_at")[:LIST_LIMIT]
+    )
+    return _module(
+        "inquiries",
+        stats=[
+            _stat("inquiries_open", counts["inquiries_open"]),
+            _stat("inquiries_answered", counts["inquiries_answered"]),
+            _stat("total", counts["inquiries_total"]),
+        ],
+        items=[
+            _item(
+                i.pk,
+                i.listing_title_snapshot,
+                i.inquirer.full_name,
+                i.status,
+                "inquiries.status",
+                "/real-estate/owner/inquiries",
+            )
+            for i in live
+        ],
+        link="/real-estate/owner/inquiries",
+    )
 
 
 def _employer(account, employer_id) -> list:
@@ -1050,7 +1085,7 @@ def _actions(ws: dict, account) -> list[dict]:
             out.append(("quote_requests", f"/merchant/quotes{q}"))
         out.append(("team", ws["team_path"]))
     elif kind == "property":
-        out = [("listings", "/real-estate/owner")]
+        out = [("listings", "/real-estate/owner"), ("inquiries", "/real-estate/owner/inquiries")]
     elif kind == "employer":
         out = [
             ("employer", "/employer"),

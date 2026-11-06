@@ -211,6 +211,21 @@ def _promotion(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
     )
 
 
+def _inquiry(lang: str, payload: dict[str, Any], *, received: bool) -> tuple[str, str]:
+    """Never echoes the message or any contact detail: only the listing title."""
+    listing = _pick(_text(payload, "listing_title"), lang)
+    if lang == "ar":
+        if received:
+            return (
+                "استفسار جديد عن عقارك",
+                f"وصلك استفسار عن «{listing}». ردّ عليه من مساحة العقارات.",
+            )
+        return "تم الرد على استفسارك", f"ردّ المالك على استفسارك عن «{listing}»."
+    if received:
+        return "New inquiry about your property", f'You received an inquiry about "{listing}".'
+    return "Your inquiry was answered", f'The owner answered your inquiry about "{listing}".'
+
+
 def _stock_low(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
     product = _pick(_text(payload, "product_title"), lang)
     left = _text(payload, "quantity")
@@ -258,6 +273,10 @@ def render(event_type: str, payload: Any, language: str | None) -> tuple[str, st
             return _stock_low(lang, data)
         if event_type == NotificationEventType.SETTLEMENT_PAID:
             return _settlement_paid(lang, data)
+        if event_type == NotificationEventType.INQUIRY_RECEIVED:
+            return _inquiry(lang, data, received=True)
+        if event_type == NotificationEventType.INQUIRY_ANSWERED:
+            return _inquiry(lang, data, received=False)
     except Exception:  # noqa: BLE001 — presentation must never break a read
         logger.exception("notification presentation failed for %s", event_type)
     return FALLBACK[lang]

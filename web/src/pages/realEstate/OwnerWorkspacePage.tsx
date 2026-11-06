@@ -28,6 +28,7 @@ import {
   ErrorState,
   FormActions,
   Icon,
+  LinkButton,
   LoadingState,
   LocationPicker,
   PageHeader,
@@ -124,7 +125,14 @@ function Workspace({ seller, governorates, reload }: { seller: RealEstateSeller;
         eyebrow={<><Icon name="home" size={16} />{t('modules.realEstate')}</>}
         title={seller.display_name}
         description={t('realEstateOwner.intro')}
-        actions={<Badge tone="outline">{t(`sellerTypes.${seller.seller_type}`)}</Badge>}
+        actions={
+          <div className="cluster">
+            <Badge tone="outline">{t(`sellerTypes.${seller.seller_type}`)}</Badge>
+            <LinkButton to="/real-estate/owner/inquiries" variant="secondary" size="sm" leading={<Icon name="mail" size={16} />}>
+              {t('realEstateOwner.inquiries')}
+            </LinkButton>
+          </div>
+        }
       />
       <PageStack>
         <SectionCard title={t('realEstateOwner.dashboard')} headingLevel={2}>
@@ -141,6 +149,7 @@ function Workspace({ seller, governorates, reload }: { seller: RealEstateSeller;
               <StatCard label={t('realEstateOwner.stats.expired')} value={<span data-testid="stat-expired">{dashboard.data.listings_expired}</span>} hint={t('realEstateOwner.stats.expiredHint')} />
               <StatCard label={t('realEstateOwner.stats.sale')} value={<span data-testid="stat-sale">{dashboard.data.listings_sale}</span>} />
               <StatCard label={t('realEstateOwner.stats.rent')} value={<span data-testid="stat-rent">{dashboard.data.listings_rent}</span>} />
+              <StatCard label={t('realEstateOwner.stats.openInquiries')} value={<span data-testid="stat-inquiries-open">{dashboard.data.inquiries_open}</span>} />
             </div>
           ) : null}
         </SectionCard>

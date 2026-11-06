@@ -364,6 +364,9 @@ class OwnerDashboardSerializer(serializers.Serializer):
     listings_expired = serializers.IntegerField()
     listings_sale = serializers.IntegerField()
     listings_rent = serializers.IntegerField()
+    inquiries_open = serializers.IntegerField()
+    inquiries_answered = serializers.IntegerField()
+    inquiries_total = serializers.IntegerField()
 
 
 class PaginatedPropertyListingOwnerSerializer(serializers.Serializer):

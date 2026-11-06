@@ -226,6 +226,7 @@ REST_FRAMEWORK = {
         "chat_messages": "120/hour",
         "push_devices": "60/hour",
         "user_writes": "600/hour",
+        "real_estate_inquiries": "20/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -282,6 +283,7 @@ SPECTACULAR_SETTINGS = {
         "QuoteStatusEnum": "apps.commerce.types.QuoteStatus.choices",
         "OrgRoleEnum": "apps.workspaces.types.OrgRole.choices",
         "PromotionStatusEnum": "apps.real_estate.types.PromotionStatus.choices",
+        "InquiryStatusEnum": "apps.real_estate.types.InquiryStatus.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
         "PushPlatformEnum": "apps.notifications.types.PushPlatform.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",

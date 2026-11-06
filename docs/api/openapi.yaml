@@ -7053,6 +7053,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/CheckoutResult'
           description: ''
+  /api/v1/real-estate/inquiries/mine:
+    get:
+      operationId: real_estate_inquiries_mine_list
+      summary: My property inquiries (newest first)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ANSWERED
+          - CLOSED
+          - OPEN
+          - WITHDRAWN
+      tags:
+      - real-estate-inquiries
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInquirySeekerList'
+          description: ''
+  /api/v1/real-estate/inquiries/mine/{id}/withdraw:
+    post:
+      operationId: real_estate_inquiries_mine_withdraw_create
+      summary: Withdraw my inquiry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-inquiries
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InquirySeeker'
+          description: ''
   /api/v1/real-estate/listings:
     get:
       operationId: real_estate_listings_list
@@ -7207,6 +7278,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/PropertyListingPublic'
           description: ''
+  /api/v1/real-estate/listings/{id}/inquiries:
+    post:
+      operationId: real_estate_listings_inquiries_create
+      description: Only sending an inquiry spends the inquiry quota; reads use the
+        project defaults.
+      summary: Send an inquiry about a public listing (signed-in accounts; throttled)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-inquiries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InquiryCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InquirySeeker'
+          description: ''
   /api/v1/real-estate/owner:
     get:
       operationId: real_estate_owner_retrieve
@@ -7281,6 +7385,113 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OwnerDashboard'
+          description: ''
+  /api/v1/real-estate/owner/inquiries:
+    get:
+      operationId: real_estate_owner_inquiries_list
+      summary: Inquiries about my listings (newest first)
+      parameters:
+      - in: query
+        name: listing
+        schema:
+          type: string
+        description: Listing UUID
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ANSWERED
+          - CLOSED
+          - OPEN
+          - WITHDRAWN
+      tags:
+      - real-estate-inquiries
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInquiryOwnerList'
+          description: ''
+  /api/v1/real-estate/owner/inquiries/{id}/close:
+    post:
+      operationId: real_estate_owner_inquiries_close_create
+      summary: Close an inquiry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-inquiries
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InquiryOwner'
+          description: ''
+  /api/v1/real-estate/owner/inquiries/{id}/respond:
+    post:
+      operationId: real_estate_owner_inquiries_respond_create
+      summary: Answer an inquiry (may be answered again while it is live)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - real-estate-inquiries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryRespondRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InquiryRespondRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InquiryOwner'
           description: ''
   /api/v1/real-estate/owner/listings:
     get:
@@ -12694,6 +12905,170 @@ components:
       description: |-
         * `PRACTITIONER` - Practitioner
         * `FACILITY` - Facility
+    Inquirer:
+      type: object
+      properties:
+        full_name:
+          type: string
+        email:
+          type: string
+        phone_number:
+          type: string
+      required:
+      - email
+      - full_name
+      - phone_number
+    InquiryCreateRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        share_contact:
+          type: boolean
+          default: false
+      required:
+      - message
+    InquiryOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        listing_id:
+          type: string
+          format: uuid
+          readOnly: true
+        listing_title_snapshot:
+          type: string
+          readOnly: true
+        listing_is_public:
+          type: boolean
+          readOnly: true
+        inquirer:
+          allOf:
+          - $ref: '#/components/schemas/Inquirer'
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        share_contact:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InquiryStatusEnum'
+          readOnly: true
+        owner_response:
+          type: string
+          readOnly: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - inquirer
+      - listing_id
+      - listing_is_public
+      - listing_title_snapshot
+      - message
+      - owner_response
+      - responded_at
+      - share_contact
+      - status
+      - status_changed_at
+    InquiryRespondRequest:
+      type: object
+      properties:
+        response:
+          type: string
+          minLength: 2
+          maxLength: 1000
+      required:
+      - response
+    InquirySeeker:
+      type: object
+      description: |-
+        The seeker's own view. `listing_is_public` lets the client link to the listing only while
+        it is still public; the listing itself is never re-exposed here.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        listing_id:
+          type: string
+          format: uuid
+          readOnly: true
+        listing_title_snapshot:
+          type: string
+          readOnly: true
+        listing_is_public:
+          type: boolean
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        share_contact:
+          type: boolean
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InquiryStatusEnum'
+          readOnly: true
+        owner_response:
+          type: string
+          readOnly: true
+        responded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - listing_id
+      - listing_is_public
+      - listing_title_snapshot
+      - message
+      - owner_response
+      - responded_at
+      - share_contact
+      - status
+      - status_changed_at
+    InquiryStatusEnum:
+      enum:
+      - OPEN
+      - ANSWERED
+      - CLOSED
+      - WITHDRAWN
+      type: string
+      description: |-
+        * `OPEN` - Open
+        * `ANSWERED` - Answered
+        * `CLOSED` - Closed
+        * `WITHDRAWN` - Withdrawn
     InterviewCreateRequest:
       type: object
       properties:
@@ -14546,12 +14921,14 @@ components:
       - RESERVATION
       - ORDER
       - QUOTE
+      - INQUIRY
       - MARKETING
       type: string
       description: |-
         * `RESERVATION` - Reservation
         * `ORDER` - Store order
         * `QUOTE` - Quote request
+        * `INQUIRY` - Property inquiry
         * `MARKETING` - Sponsored / promotion
     NotificationEventTypeEnum:
       enum:
@@ -14565,6 +14942,8 @@ components:
       - PROPERTY_PROMOTION
       - STOCK_LOW
       - SETTLEMENT_PAID
+      - INQUIRY_RECEIVED
+      - INQUIRY_ANSWERED
       type: string
       description: |-
         * `RESERVATION_CREATED` - Reservation created
@@ -14577,6 +14956,8 @@ components:
         * `PROPERTY_PROMOTION` - Promoted medical property
         * `STOCK_LOW` - Product stock is low
         * `SETTLEMENT_PAID` - Seller payout recorded (simulated)
+        * `INQUIRY_RECEIVED` - New property inquiry
+        * `INQUIRY_ANSWERED` - Property inquiry answered
     OfferCreateRequest:
       type: object
       properties:
@@ -15204,7 +15585,16 @@ components:
           type: integer
         listings_rent:
           type: integer
+        inquiries_open:
+          type: integer
+        inquiries_answered:
+          type: integer
+        inquiries_total:
+          type: integer
       required:
+      - inquiries_answered
+      - inquiries_open
+      - inquiries_total
       - listings_draft
       - listings_expired
       - listings_published
@@ -15628,6 +16018,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmployerAdmin'
+    PaginatedInquiryOwnerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquiryOwner'
+    PaginatedInquirySeekerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InquirySeeker'
     PaginatedInvitationList:
       type: object
       required:

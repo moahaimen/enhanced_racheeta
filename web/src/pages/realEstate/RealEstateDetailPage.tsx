@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router'
 import { ApiError, realEstate as realEstateApi } from '../../api'
 import { AsyncPage, Badge, Container, Icon, PageHeader, PageStack, SectionCard } from '../../design-system'
 import { useLocalizedName } from '../../i18n/localized'
+import { InquirySection } from './InquirySection'
 import { formatArea, formatListingPrice } from './realEstateFormat'
 import styles from './RealEstate.module.css'
 
@@ -106,6 +107,7 @@ export function RealEstateDetailPage() {
                   </p>
                 ) : null}
               </SectionCard>
+              <InquirySection listingId={listing.id} />
             </PageStack>
           </>
         )}

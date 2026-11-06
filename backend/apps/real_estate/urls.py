@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import promotion_views, views
+from . import inquiry_views, promotion_views, views
 
 urlpatterns = [
     # public catalogue
@@ -13,6 +13,38 @@ urlpatterns = [
         "real-estate/listings/<uuid:pk>",
         views.PublicListingDetailView.as_view(),
         name="real-estate-listing-detail",
+    ),
+    # inquiries: seeker side
+    path(
+        "real-estate/listings/<uuid:pk>/inquiries",
+        inquiry_views.ListingInquiryCreateView.as_view(),
+        name="real-estate-listing-inquiry",
+    ),
+    path(
+        "real-estate/inquiries/mine",
+        inquiry_views.MyInquiryListView.as_view(),
+        name="real-estate-my-inquiries",
+    ),
+    path(
+        "real-estate/inquiries/mine/<uuid:pk>/withdraw",
+        inquiry_views.MyInquiryWithdrawView.as_view(),
+        name="real-estate-my-inquiry-withdraw",
+    ),
+    # inquiries: owner side
+    path(
+        "real-estate/owner/inquiries",
+        inquiry_views.OwnerInquiryListView.as_view(),
+        name="real-estate-owner-inquiries",
+    ),
+    path(
+        "real-estate/owner/inquiries/<uuid:pk>/respond",
+        inquiry_views.OwnerInquiryRespondView.as_view(),
+        name="real-estate-owner-inquiry-respond",
+    ),
+    path(
+        "real-estate/owner/inquiries/<uuid:pk>/close",
+        inquiry_views.OwnerInquiryCloseView.as_view(),
+        name="real-estate-owner-inquiry-close",
     ),
     # seller self-service
     path("real-estate/owner", views.MySellerView.as_view(), name="real-estate-owner"),

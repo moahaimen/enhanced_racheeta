@@ -103,7 +103,9 @@
     "sellerFinance": "Seller statement",
     "adminFinance": "Marketplace finance",
     "pharmacyStore": "My pharmacy store",
-    "reservationHistory": "Reservation history"
+    "reservationHistory": "Reservation history",
+    "propertyInquiries": "Property inquiries",
+    "myPropertyInquiries": "My property inquiries"
   },
   "home": {
     "heroEyebrow": "Iraq's medical platform",
@@ -756,7 +758,10 @@
     "no_delivery": "This seller does not deliver to the chosen governorate.",
     "documents_missing": "Some required documents are not approved yet.",
     "invalid_file": "This file was refused.",
-    "service_disabled": "Online booking is switched off on Racheeta."
+    "service_disabled": "Online booking is switched off on Racheeta.",
+    "duplicate_inquiry": "You already have an open inquiry about this listing.",
+    "inquiry_limit_reached": "You have reached today's inquiry limit. Try again tomorrow.",
+    "own_listing": "You cannot send an inquiry about your own listing."
   },
   "jobs": {
     "featured": "Featured",
@@ -1483,7 +1488,8 @@
       "expired": "Expired",
       "expiredHint": "Published but past the expiration date",
       "sale": "For sale",
-      "rent": "For rent"
+      "rent": "For rent",
+      "openInquiries": "Open inquiries"
     },
     "newListing": "New listing",
     "editListing": "Edit listing",
@@ -1545,7 +1551,8 @@
     "invalidPrice": "Enter a price of zero or more.",
     "invalidArea": "Enter an area greater than zero.",
     "coordinatePair": "Enter latitude and longitude together, or leave both empty.",
-    "open": "Open workspace"
+    "open": "Open workspace",
+    "inquiries": "Inquiries"
   },
   "campaignStatus": {
     "DRAFT": "Draft",
@@ -2107,7 +2114,8 @@
       "setup_provider": "Verification steps",
       "store_finance": "Sales & 20% commission",
       "setup_employer": "Set up hiring",
-      "setup_job_seeker": "Start your job search"
+      "setup_job_seeker": "Start your job search",
+      "inquiries": "Property inquiries"
     },
     "stats": {
       "verification": "Verification",
@@ -2207,7 +2215,9 @@
       "owed_to_you": "Owed to you",
       "paid_out": "Paid out (simulated)",
       "awaiting_completion": "Paid orders awaiting completion",
-      "order_completed": "Completed"
+      "order_completed": "Completed",
+      "inquiries_open": "Open",
+      "inquiries_answered": "Answered"
     },
     "actions": {
       "store": "Shop assistive devices",
@@ -2234,7 +2244,8 @@
       "my_applications": "My applications",
       "admin_console": "Admin console",
       "promotions_review": "Review promotions",
-      "complete_setup": "Complete setup"
+      "complete_setup": "Complete setup",
+      "inquiries": "Inquiries"
     },
     "greeting": "Welcome, {{name}}",
     "switchWorkspace": "Workspace",
@@ -2752,5 +2763,44 @@
     "suspendedNote": "Suspended by Racheeta.",
     "commissionNote": "Commission is 20% of merchandise after seller discounts; delivery fees and seller-declared tax carry no commission.",
     "editOption": "Edit"
+  },
+  "inquiries": {
+    "title": "Ask the owner",
+    "intro": "Your question goes to the owner inside Racheeta. You'll be notified when they answer.",
+    "message": "Your question",
+    "messageHint": "At least 10 characters. Don't include payment details.",
+    "shareContact": "Share my phone number and e-mail with the owner",
+    "send": "Send inquiry",
+    "sending": "Sending…",
+    "sent": "Inquiry sent. Follow it from My property inquiries.",
+    "loginToAsk": "Log in to ask the owner",
+    "myTitle": "My property inquiries",
+    "myIntro": "Questions you sent to property owners and their answers.",
+    "empty": "You have not sent any inquiry yet.",
+    "browse": "Browse properties",
+    "ownerTitle": "Property inquiries",
+    "ownerIntro": "Questions from people interested in your listings. Answer or close each one.",
+    "ownerEmpty": "No inquiries yet.",
+    "from": "From",
+    "contactShared": "Contact shared",
+    "contactPrivate": "The person did not share contact details; answer here.",
+    "yourMessage": "Message",
+    "response": "Owner's answer",
+    "yourAnswer": "Your answer",
+    "answer": "Send answer",
+    "answerAgain": "Update answer",
+    "close": "Close inquiry",
+    "withdraw": "Withdraw",
+    "listingGone": "This listing is no longer public.",
+    "openListing": "Open listing",
+    "allStatuses": "All statuses",
+    "statusFilter": "Status",
+    "status": {
+      "OPEN": "Open",
+      "ANSWERED": "Answered",
+      "CLOSED": "Closed",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "sentOn": "Sent {{date}}"
   }
 }

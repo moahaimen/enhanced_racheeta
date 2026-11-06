@@ -111,6 +111,9 @@ const dashboard: OwnerDashboard = {
   listings_expired: 1,
   listings_sale: 5,
   listings_rent: 2,
+  inquiries_open: 0,
+  inquiries_answered: 0,
+  inquiries_total: 0,
 }
 
 const PUBLISH = /^نشر$|^publish$/i

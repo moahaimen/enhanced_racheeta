@@ -22,6 +22,7 @@ const WORKSPACE_PREFIXES = [
   '/admin-console',
   '/admin-finance',
   '/real-estate/owner',
+  '/real-estate/inquiries',
   '/jobs/profile',
   '/jobs/my-applications',
   '/workspaces',
@@ -68,7 +69,14 @@ export function WorkspaceSidebar() {
       { to: '/merchant/center?tab=setup', icon: 'clipboard', label: t('nav.sellerCenter') },
     )
   }
-  if (role === 'REAL_ESTATE_SELLER') items.push({ to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace') })
+  if (role === 'REAL_ESTATE_SELLER') {
+    items.push(
+      { to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace'), end: true },
+      { to: '/real-estate/owner/inquiries', icon: 'mail', label: t('nav.propertyInquiries') },
+    )
+  }
+  // Anyone signed in can ask about a property; their own inquiries live here.
+  items.push({ to: '/real-estate/inquiries', icon: 'home', label: t('nav.myPropertyInquiries') })
   if (role === 'MEDICAL_COMPANY') {
     items.push(
       { to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true },

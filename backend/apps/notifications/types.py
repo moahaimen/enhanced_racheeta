@@ -5,6 +5,7 @@ class NotificationCategory(models.TextChoices):
     RESERVATION = "RESERVATION", "Reservation"
     ORDER = "ORDER", "Store order"
     QUOTE = "QUOTE", "Quote request"
+    INQUIRY = "INQUIRY", "Property inquiry"  # transactional: never gated by marketing consent
     # Marketing: created only with the recipient's in-app consent for the topic (apps.preferences),
     # bounded per day, deduplicated. Transactional categories above never consult preferences.
     MARKETING = "MARKETING", "Sponsored / promotion"
@@ -22,6 +23,8 @@ class NotificationEventType(models.TextChoices):
     PROPERTY_PROMOTION = "PROPERTY_PROMOTION", "Promoted medical property"
     STOCK_LOW = "STOCK_LOW", "Product stock is low"
     SETTLEMENT_PAID = "SETTLEMENT_PAID", "Seller payout recorded (simulated)"
+    INQUIRY_RECEIVED = "INQUIRY_RECEIVED", "New property inquiry"
+    INQUIRY_ANSWERED = "INQUIRY_ANSWERED", "Property inquiry answered"
 
 
 class NotificationResourceType(models.TextChoices):
@@ -30,6 +33,7 @@ class NotificationResourceType(models.TextChoices):
     QUOTE = "QUOTE", "Quote request"
     PRODUCT = "PRODUCT", "Product"
     LISTING = "LISTING", "Property listing"
+    INQUIRY = "INQUIRY", "Property inquiry"
 
 
 # Only these payload keys are ever stored. Anything else (patient notes, phone,

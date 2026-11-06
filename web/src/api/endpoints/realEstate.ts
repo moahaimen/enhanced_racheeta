@@ -1,8 +1,13 @@
 import { apiRequest } from '../client'
 import type {
   ListingFilters,
+  ListingInquiry,
   ListingWrite,
+  InquiryStatus,
   OwnerDashboard,
+  OwnerInquiry,
+  PaginatedInquiries,
+  PaginatedOwnerInquiries,
   OwnerListing,
   PaginatedListings,
   PaginatedOwnerListings,
@@ -66,4 +71,41 @@ export function setMyListingPublished(id: string, published: boolean): Promise<O
   return apiRequest<OwnerListing>(`${BASE}/owner/listings/${enc(id)}/${published ? 'publish' : 'unpublish'}`, {
     method: 'POST',
   })
+}
+
+// ---- inquiries ----------------------------------------------------------------------------
+
+/** Signed-in accounts only; the backend accepts it only for a publicly visible listing. */
+export function sendInquiry(listingId: string, message: string, shareContact: boolean): Promise<ListingInquiry> {
+  return apiRequest<ListingInquiry>(`${BASE}/listings/${enc(listingId)}/inquiries`, {
+    method: 'POST',
+    body: { message, share_contact: shareContact },
+  })
+}
+
+export function listMyInquiries(page = 1, signal?: AbortSignal): Promise<PaginatedInquiries> {
+  return apiRequest<PaginatedInquiries>(`${BASE}/inquiries/mine?page=${page}`, { signal })
+}
+
+export function withdrawMyInquiry(id: string): Promise<ListingInquiry> {
+  return apiRequest<ListingInquiry>(`${BASE}/inquiries/mine/${enc(id)}/withdraw`, { method: 'POST' })
+}
+
+export function listOwnerInquiries(
+  filters: { status?: InquiryStatus | ''; page?: number } = {},
+  signal?: AbortSignal,
+): Promise<PaginatedOwnerInquiries> {
+  const q = new URLSearchParams()
+  if (filters.status) q.set('status', filters.status)
+  if (filters.page && filters.page > 1) q.set('page', String(filters.page))
+  const text = q.toString()
+  return apiRequest<PaginatedOwnerInquiries>(`${BASE}/owner/inquiries${text ? `?${text}` : ''}`, { signal })
+}
+
+export function respondToInquiry(id: string, response: string): Promise<OwnerInquiry> {
+  return apiRequest<OwnerInquiry>(`${BASE}/owner/inquiries/${enc(id)}/respond`, { method: 'POST', body: { response } })
+}
+
+export function closeInquiry(id: string): Promise<OwnerInquiry> {
+  return apiRequest<OwnerInquiry>(`${BASE}/owner/inquiries/${enc(id)}/close`, { method: 'POST' })
 }

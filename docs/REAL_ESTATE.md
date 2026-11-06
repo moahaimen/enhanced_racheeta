@@ -246,14 +246,43 @@ services.
 - Header links (public; workspace for sellers), footer link and a live home
   card. Every label is available in Arabic and English.
 
+## Inquiries (platform completion, Phase E)
+
+A signed-in account asks the owner about one listing and the owner answers inside Racheeta
+(`apps/real_estate/inquiries.py`, `inquiry_views.py`, model `ListingInquiry`, migration
+`0003_inquiries`).
+
+| Rule | Where |
+|---|---|
+| Only a **publicly visible** listing accepts a new inquiry (same rule as the public detail; otherwise 404) | `create_inquiry`, on the locked listing row |
+| The owner cannot ask about their own listing (`own_listing`, 403) | service |
+| One live (OPEN/ANSWERED) inquiry per asker and listing (`duplicate_inquiry`, 409; DB partial unique constraint for races) | service + constraint |
+| At most 10 new inquiries per asker in 24 h (`inquiry_limit_reached`, 429) and the `real_estate_inquiries` throttle (20/hour, POST only) | service + view |
+| Lifecycle: OPEN → ANSWERED (owner; may answer again) → CLOSED (owner); OPEN/ANSWERED → WITHDRAWN (asker). CLOSED and WITHDRAWN are final (`invalid_transition`) | service |
+| Scope: the asker sees only their own inquiries; the owner only those on their own listings; everyone else gets 404; non-sellers get 403 on the owner inbox | views (from `request.user`) |
+| Privacy: the owner sees the asker's e-mail/phone only when the asker ticked "share contact" | owner serializer |
+| Unpublishing or expiry hides the listing **immediately** (public list/detail and new inquiries); the asker's history keeps the title snapshot and `listing_is_public=false`, never other listing data; the owner can still answer or close | queryset + serializer |
+| Audit: `real_estate.inquiry.created/answered/closed/withdrawn` | `apps.audit` |
+| Notifications (transactional category `INQUIRY`): owner on receipt, asker on each answer; payload is only the listing title and status | `apps.notifications` |
+
+API: `POST /real-estate/listings/{id}/inquiries`, `GET /real-estate/inquiries/mine`,
+`POST /real-estate/inquiries/mine/{id}/withdraw`, `GET /real-estate/owner/inquiries?status=&listing=`,
+`POST /real-estate/owner/inquiries/{id}/respond`, `POST /real-estate/owner/inquiries/{id}/close`.
+The owner dashboard (`/real-estate/owner/dashboard`) and the property workspace add
+`inquiries_open`, `inquiries_answered`, `inquiries_total`.
+
+Web: "Ask the owner" on `/real-estate/:id` (login link when signed out), `/real-estate/inquiries`
+(any signed-in account) and `/real-estate/owner/inquiries` (sellers), reachable from the sidebar,
+the owner workspace header and notifications. Mobile: not changed in this step.
+
 ## Deferred (by design)
 
 - **Images / media uploads** — there is still no production object storage
   (ADR-044/046). No upload, URL or gallery placeholder exists.
 - **Advertising, featured/boosted listings, campaigns, payments** — Phase 8.
   Publication is not billing-gated and never consults `apps.billing`.
-- **Chat, notifications, analytics** — Phase 9+. Contact is the listing's own
-  public contact method.
+- **Chat, analytics** — contact is the listing's own public contact method or an
+  in-platform inquiry (above).
 - **PostGIS / proximity search** — coordinates are stored only; added when
   radius search is genuinely required.
 - Seller verification, listing deletion, map integration.

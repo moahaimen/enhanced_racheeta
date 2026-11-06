@@ -370,6 +370,10 @@ def test_dashboard_counts_are_backend_computed(
         "listings_expired": 1,
         "listings_sale": 2,
         "listings_rent": 2,
+        # Phase E: inquiry counts (backend-computed; covered in test_inquiries.py)
+        "inquiries_open": 0,
+        "inquiries_answered": 0,
+        "inquiries_total": 0,
     }
     assert (
         client_for(seller.account).get(f"{OWNER_LISTINGS}/{expired.pk}").json()["is_expired"]

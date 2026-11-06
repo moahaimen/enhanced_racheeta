@@ -28,6 +28,8 @@ import { AdvertisingWorkspacePage } from '../pages/advertising/AdvertisingWorksp
 import { CompanyWorkspacePage } from '../pages/marketplace/CompanyWorkspacePage'
 import { MarketplacePage } from '../pages/marketplace/MarketplacePage'
 import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
+import { MyInquiriesPage } from '../pages/realEstate/MyInquiriesPage'
+import { OwnerInquiriesPage } from '../pages/realEstate/OwnerInquiriesPage'
 import { OwnerWorkspacePage } from '../pages/realEstate/OwnerWorkspacePage'
 import { RealEstateDetailPage } from '../pages/realEstate/RealEstateDetailPage'
 import { RealEstatePage } from '../pages/realEstate/RealEstatePage'
@@ -111,6 +113,8 @@ export const routes: RouteObject[] = [
             element: <RequireRole roles={['PATIENT']} />,
             children: [{ path: 'reservations', element: <MyReservationsPage /> }],
           },
+          // Any signed-in account can ask a property owner; the list is scoped by the server.
+          { path: 'real-estate/inquiries', element: <MyInquiriesPage /> },
           { path: 'jobs/profile', element: <SeekerProfilePage /> },
           { path: 'jobs/my-applications', element: <MyApplicationsPage /> },
           { path: 'employer', element: <EmployerWorkspacePage /> },
@@ -160,7 +164,10 @@ export const routes: RouteObject[] = [
           },
           {
             element: <RequireRole roles={['REAL_ESTATE_SELLER']} deniedTitleKey="realEstateOwner.notSeller" />,
-            children: [{ path: 'real-estate/owner', element: <OwnerWorkspacePage /> }],
+            children: [
+              { path: 'real-estate/owner', element: <OwnerWorkspacePage /> },
+              { path: 'real-estate/owner/inquiries', element: <OwnerInquiriesPage /> },
+            ],
           },
         ],
       },

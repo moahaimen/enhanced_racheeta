@@ -403,4 +403,7 @@ def dashboard_summary(seller: RealEstateSeller) -> dict:
         listings_rent=Count("pk", filter=Q(transaction_type=TransactionType.RENT)),
     )
     counts["listings_visible"] = rows.publicly_visible(now).count()
+    from .inquiries import owner_counts  # inquiries import this module
+
+    counts.update(owner_counts(seller))
     return counts

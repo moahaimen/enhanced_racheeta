@@ -4,7 +4,7 @@ become a second, uncontrolled path for ownership or publication."""
 
 from django.contrib import admin
 
-from .models import ListingSuitableUse, PropertyListing, RealEstateSeller
+from .models import ListingInquiry, ListingSuitableUse, PropertyListing, RealEstateSeller
 
 
 class _InspectionOnly(admin.ModelAdmin):
@@ -50,3 +50,10 @@ class PropertyListingAdmin(_InspectionOnly):
 class ListingSuitableUseAdmin(_InspectionOnly):
     list_display = ("listing", "use", "created_at")
     list_filter = ("use",)
+
+
+@admin.register(ListingInquiry)
+class ListingInquiryAdmin(_InspectionOnly):
+    list_display = ("listing_title_snapshot", "inquirer", "status", "created_at")
+    list_filter = ("status",)
+    search_fields = ("listing_title_snapshot", "inquirer__email")
