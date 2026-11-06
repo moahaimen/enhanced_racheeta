@@ -22,7 +22,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 from django.apps import apps
-from django.db import transaction
+from django.db import connections, transaction
 from django.db.models import ProtectedError, RestrictedError
 from django.db.models.deletion import Collector
 
@@ -171,10 +171,21 @@ def _adopt_blockers(blockers, pending, allowed, plan: Plan) -> bool:
     return grew
 
 
+def _allow_ledger_purge(using: str) -> None:
+    """The marketplace ledger is append-only (a database trigger refuses UPDATE/DELETE). Demo
+    ledger rows may only go together with their demo orders, inside THIS transaction: the flag is
+    transaction-local (`set_config(..., true)`) and ends with it."""
+    connection = connections[using]
+    if connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('racheeta.ledger_purge', 'on', true)")
+
+
 def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
     """Verify and delete in ONE transaction. `dry_run` does everything, then rolls back."""
     plan = Plan(dry_run=dry_run)
     with transaction.atomic(using=using):
+        _allow_ledger_purge(using)
         registered = _registered()
         registered_ids = {(label, pk) for label, pks in registered.items() for pk in pks}
         allowed = set(registered_ids)

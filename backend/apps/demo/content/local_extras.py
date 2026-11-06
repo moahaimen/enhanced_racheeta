@@ -79,6 +79,13 @@ EXTRA_COMPANIES = [
 # slug, name_ar, name_en, consumer_allowed, audience [(provider_type, specialty slug or None)]
 EXTRA_CATEGORIES = [
     (
+        "demo-controlled-substances",
+        "مواد خاضعة للرقابة (محظورة)",
+        "Controlled substances (prohibited)",
+        False,
+        [],
+    ),
+    (
         "demo-dental-equipment",
         "معدات طب الأسنان",
         "Dental equipment",
@@ -168,6 +175,28 @@ EXTRA_CATEGORIES = [
 
 # key, company key, category slug, title_ar, title_en, price, sale channel, restricted, stock
 EXTRA_PRODUCTS = [
+    (
+        "rehab-chair-100k",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي تأهيل منزلي",
+        "Home rehabilitation chair",
+        "100000",
+        "B2C",
+        False,
+        12,
+    ),
+    (
+        "knee-scooter-100k",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "سكوتر ركبة للمشي",
+        "Knee walker scooter",
+        "100000",
+        "B2C",
+        False,
+        8,
+    ),
     (
         "dental-chair",
         "nakhla-dental-supply",
@@ -885,21 +914,177 @@ PREFERENCES = {
     "th-layla-nuaimi": {"offers_and_news": True},
 }
 
-# tag, patient key, product key, quantity, payment method, steps after placing
-ORDERS = [
-    ("sara-wheelchair", "patient-sara", "wheelchair", 1, "CASH_ON_DELIVERY", []),
-    ("sara-walker", "patient-sara", "walker", 1, "CASH_ON_DELIVERY", ["CONFIRMED"]),
-    ("ali-bp", "patient-ali", "bp-monitor", 1, "MANUAL_TRANSFER", ["CONFIRMED", "paid", "SHIPPED"]),
+# Marketplace lifecycle scenarios (docs/MARKETPLACE_COMMERCE.md §Demo). All money is fictional.
+# tag, buyer key, [(product key, qty)], coupon codes, payment method, steps
+# steps: accept | decline | ship | deliver (buyer) | pay (finance, simulated) | complete (finance)
+#        buyer-cancel | refund-cancelled | return:N (request, approve, receive, refund N of line 1)
+#        return-request:N (left open) | dispute (left open)
+MARKET_SCENARIOS = [
+    ("sara-new", "patient-sara", [("walker", 1)], [], "CASH_ON_DELIVERY", []),
+    ("sara-accepted", "patient-sara", [("crutches", 2)], [], "CASH_ON_DELIVERY", ["accept"]),
     (
-        "fatima-crutches",
-        "patient-fatima",
-        "crutches",
-        2,
-        "CASH_ON_DELIVERY",
-        ["CONFIRMED", "SHIPPED", "DELIVERED"],
+        "ali-paid-shipped",
+        "patient-ali",
+        [("bp-monitor", 1)],
+        [],
+        "MANUAL_TRANSFER",
+        ["accept", "pay", "ship"],
     ),
-    ("omar-oximeter", "patient-omar", "pulse-oximeter", 1, "CASH_ON_DELIVERY", ["buyer-cancel"]),
+    (
+        "fatima-delivered-awaiting-payment",
+        "patient-fatima",
+        [("transport-wheelchair", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver"],
+    ),
+    # 100,000 IQD sale -> 20,000 commission -> 80,000 payable
+    (
+        "hassan-100k",
+        "patient-hassan",
+        [("rehab-chair-100k", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    # 100,000 list, 10% seller sale -> 90,000 -> 18,000 commission -> 72,000 payable
+    (
+        "zainab-90k-offer",
+        "patient-zainab",
+        [("knee-scooter-100k", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    # Racheeta-funded coupon: buyer pays 90,000; commission stays 20,000; seller still gets 80,000
+    (
+        "omar-platform-coupon",
+        "patient-omar",
+        [("rehab-chair-100k", 1)],
+        ["RACHEETA10K"],
+        "MANUAL_TRANSFER",
+        ["accept", "pay", "ship", "deliver", "complete"],
+    ),
+    # One checkout, two sellers (store coupon on the rehab order only)
+    (
+        "ali-multi-vendor",
+        "patient-ali",
+        [("knee-brace", 2), ("pulse-oximeter", 1)],
+        ["REHAB10"],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    (
+        "omar-cancelled",
+        "patient-omar",
+        [("digital-thermometer", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["buyer-cancel"],
+    ),
+    (
+        "fatima-declined",
+        "patient-fatima",
+        [("adjustable-cane", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["decline"],
+    ),
+    (
+        "zainab-paid-cancelled-refunded",
+        "patient-zainab",
+        [("air-mattress", 1)],
+        [],
+        "MANUAL_TRANSFER",
+        ["pay", "buyer-cancel", "refund-cancelled"],
+    ),
+    (
+        "hassan-partial-return",
+        "patient-hassan",
+        [("lumbar-belt", 2)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete", "return:1"],
+    ),
+    (
+        "sara-open-return",
+        "patient-sara",
+        [("first-aid-kit", 2)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "return-request:1"],
+    ),
+    (
+        "ali-open-dispute",
+        "patient-ali",
+        [("nebulizer", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "dispute"],
+    ),
 ]
+
+# Accepted quotation -> order (buyer account key = provider key), then the same lifecycle.
+QUOTE_ORDERS = [("amal-fridge", "amal-pharmacy", ["accept", "ship", "deliver", "pay", "complete"])]
+
+# Seller payouts (simulated): ("paid" = prepared and confirmed by finance, "draft" = prepared only)
+SETTLEMENTS = [("aman-consumables", "paid"), ("rehab-mobility", "draft")]
+
+# code, funding, company key (seller coupons), kind, value, max discount, min subtotal,
+# days from now it started (negative = future), days it lasts, max uses
+COUPONS = [
+    ("REHAB10", "SELLER", "rehab-mobility", "PERCENT", "10", "50000", "0", 1, 90, None),
+    ("AMAN5000", "SELLER", "aman-consumables", "FIXED", "5000", None, "30000", 1, 60, 50),
+    ("RACHEETA10K", "PLATFORM", None, "FIXED", "10000", None, "80000", 1, 90, 200),
+    ("WELCOME-OLD", "PLATFORM", None, "PERCENT", "10", "20000", "0", 120, 30, None),  # expired
+]
+
+# product key, percent off (seller-funded sale), days it lasts
+PRODUCT_OFFERS = [("knee-scooter-100k", "10", 60), ("nebulizer", "15", 30)]
+
+# product key -> low-stock alert level
+REORDER_THRESHOLDS = {
+    "walker": 3,
+    "crutches": 4,
+    "quad-cane": 3,
+    "wrist-splint": 3,
+    "rehab-chair-100k": 4,
+    "knee-scooter-100k": 3,
+    "glucose-strips": 5,
+    "oxygen-concentrator": 2,
+    "patient-lift": 2,
+}
+
+# Compliance class per demo category (fail closed: anything not listed stays pending review).
+COMPLIANCE_CLASSES = {
+    "B2C_ALLOWED": [
+        "demo-mobility-aids",
+        "demo-home-monitoring",
+        "demo-home-care-beds",
+        "demo-respiratory-home",
+        "demo-diabetes-care",
+        "demo-orthopedic-supports",
+        "demo-first-aid",
+    ],
+    "B2B_VERIFIED_ONLY": [
+        "demo-diagnostic-devices",
+        "demo-patient-monitoring",
+        "demo-laboratory-equipment",
+        "demo-hospital-furniture",
+        "demo-imaging-accessories",
+        "demo-rehabilitation",
+        "demo-consumables",
+        "demo-antiseptics",
+        "demo-sterilization",
+        "demo-emergency-equipment",
+        "demo-aesthetic-equipment",
+        "demo-pharmacy-supplies",
+    ],
+    "QUOTE_ONLY": ["demo-dental-equipment"],
+    "RESTRICTED_PENDING_REVIEW": ["demo-generic-medicines", "demo-iv-fluids"],
+    "PROHIBITED": ["demo-controlled-substances"],
+}
+
 
 # tag, requester provider key, product key, quantity, outcome ("REQUESTED"|"QUOTED"|"ACCEPTED")
 QUOTES = [
@@ -935,6 +1120,26 @@ EXTRA_FACILITIES = [
 ]
 EXTRA_FACILITY_OFFERS = [("lamsa-beauty", "عرض جلسة تنظيف", "Facial session offer", "0.2", 20)]
 EXTRA_STAFF = [
+    (
+        "staff-rehab-editor",
+        "محرر منتجات متجر التأهيل | Rehab product editor",
+        [("company", "rehab-mobility", "PRODUCT_EDITOR", True)],
+    ),
+    (
+        "staff-rehab-stock",
+        "أمين مخزن متجر التأهيل | Rehab stock manager",
+        [("company", "rehab-mobility", "STOCK_MANAGER", True)],
+    ),
+    (
+        "staff-rehab-fulfillment",
+        "موظف تجهيز طلبات التأهيل | Rehab fulfillment",
+        [("company", "rehab-mobility", "FULFILLMENT", True)],
+    ),
+    (
+        "staff-rehab-finance",
+        "محاسب متجر التأهيل | Rehab finance (read-only)",
+        [("company", "rehab-mobility", "FINANCE", True)],
+    ),
     (
         "staff-lamsa-reception",
         "موظفة استقبال لمسة | Lamsa reception",

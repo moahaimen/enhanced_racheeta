@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
-import { ApiError, reference, workspaces as api } from '../../api'
-import type { DeliveryDefaults, Governorate, Order, StorePaymentMethod, StoreProduct } from '../../api'
+import { ApiError, commerce, reference, workspaces as api } from '../../api'
+import type { CheckoutResult, DeliveryDefaults, Governorate, StorePaymentMethod, StoreProduct } from '../../api'
 import { useAuth } from '../../auth/useAuth'
 import { cart, useCart, type CartLine } from '../../cart/cart'
 import { nearestGovernorateSlug } from '../../cart/governorates'
@@ -27,6 +27,8 @@ import {
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { pickScript, useLocalizedName } from '../../i18n/localized'
 import { normalizeIraqiPhone } from '../validation'
+import { newIdempotencyKey, useMoney } from '../market/money'
+import { MoneyTable } from '../market/MoneyTable'
 import styles from './cart.module.css'
 import { OrderTracker } from './OrderTracker'
 import { QuantityStepper } from './StoreParts'
@@ -44,7 +46,7 @@ export function CartPage() {
   const { t, i18n } = useTranslation()
   const { account } = useAuth()
   const lines = useCart()
-  const [placed, setPlaced] = useState<Order | null>(null)
+  const [placed, setPlaced] = useState<CheckoutResult | null>(null)
   const ids = lines.map((line) => line.product).sort().join(',')
   const live = useAsyncData(
     async (signal) => {
@@ -72,12 +74,16 @@ export function CartPage() {
       <PageHeader
         eyebrow={<><Icon name="cart" size={16} />{t('nav.store')}</>}
         title={t('nav.myCart')}
-        description={units > 0 ? t('store.cartSummary', { count: units }) : t('store.oneStore')}
+        description={units > 0 ? t('store.cartSummary', { count: units }) : t('market.cartIntro')}
         actions={<LinkButton to="/store" variant="secondary" leading={<Icon name="search" size={16} />}>{t('store.continueShopping')}</LinkButton>}
       />
       {placed ? (
         <Alert kind="success">
-          {t('store.placed', { number: placed.number })} <Link to="/orders">{t('store.myOrders')}</Link>
+          <span data-testid="checkout-placed">
+            {t('market.placed', { number: placed.number, count: placed.orders.length })}{' '}
+            {placed.orders.map((o) => o.number).join(' · ')}{' '}
+          </span>
+          <Link to="/orders">{t('store.myOrders')}</Link>
         </Alert>
       ) : null}
       {lines.length === 0 ? (
@@ -87,10 +93,10 @@ export function CartPage() {
           </EmptyState>
         </div>
       ) : (
-        <div className="stack-lg">
-          {[...byMerchant.entries()].map(([merchantId, group]) => (
-            <div key={merchantId} className={styles.layout}>
-              <section className={styles.panel} aria-label={pickScript(group[0]!.merchantName, i18n.language)}>
+        <div className={styles.layout}>
+          <div className="stack-lg">
+            {[...byMerchant.entries()].map(([merchantId, group]) => (
+              <section key={merchantId} className={styles.panel} aria-label={pickScript(group[0]!.merchantName, i18n.language)}>
                 <h2 className={styles.panelTitle}>
                   <Icon name="building" size={18} /> {t('store.fromStore', { name: pickScript(group[0]!.merchantName, i18n.language) })}
                 </h2>
@@ -100,17 +106,17 @@ export function CartPage() {
                   ))}
                 </ul>
               </section>
-              <MerchantCheckout
-                lines={group}
-                blocked={group.some((l) => ['out', 'gone'].includes(live.data?.[l.product]?.state ?? 'ok'))}
-                signedIn={Boolean(account)}
-                onPlaced={(order) => {
-                  cart.removeMerchant(merchantId)
-                  setPlaced(order)
-                }}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
+          <CheckoutPanel
+            lines={lines}
+            blocked={lines.some((l) => ['out', 'gone'].includes(live.data?.[l.product]?.state ?? 'ok'))}
+            signedIn={Boolean(account)}
+            onPlaced={(result) => {
+              cart.clear()
+              setPlaced(result)
+            }}
+          />
         </div>
       )}
       {account ? <RecentOrders /> : null}
@@ -162,7 +168,11 @@ function CartRow({ line, availability }: { line: CartLine; availability: Availab
   )
 }
 
-function MerchantCheckout({
+/**
+ * ONE checkout for the whole cart: the server splits it into one order per seller, applies sales
+ * and coupons, and returns the exact amounts shown here (nothing is computed in the browser).
+ */
+function CheckoutPanel({
   lines,
   blocked,
   signedIn,
@@ -171,19 +181,88 @@ function MerchantCheckout({
   lines: CartLine[]
   blocked: boolean
   signedIn: boolean
-  onPlaced: (order: Order) => void
+  onPlaced: (result: CheckoutResult) => void
 }) {
   const { t, i18n } = useTranslation()
+  const money = useMoney()
+  const [codes, setCodes] = useState<string[]>([])
+  const [codeInput, setCodeInput] = useState('')
+  const signature = lines.map((l) => `${l.product}:${l.quantity}`).sort().join(',')
+  const preview = useAsyncData(
+    (signal) =>
+      signedIn
+        ? commerce.previewCheckout(lines.map((l) => ({ product: l.product, quantity: l.quantity })), codes, signal)
+        : Promise.resolve(null),
+    [signature, codes.join(','), signedIn],
+  )
   const estimate = lines.reduce((sum, l) => sum + Number(l.price) * l.quantity, 0)
-  const currency = lines[0]!.currency
+  const data = preview.data
+  const addCode = (event: FormEvent) => {
+    event.preventDefault()
+    const code = codeInput.trim().toUpperCase()
+    if (code && !codes.includes(code)) setCodes([...codes, code])
+    setCodeInput('')
+  }
   return (
-    <aside className={styles.panel} aria-label={t('store.checkout')}>
+    <aside className={styles.panel} aria-label={t('store.checkout')} data-testid="checkout-panel">
       <h2 className={styles.panelTitle}>{t('store.orderSummary')}</h2>
-      <div className={styles.summaryRow}>
-        <span>{t('store.total')}</span>
-        <span className={`${styles.summaryTotal} ltr`}>{formatPrice(estimate, currency, i18n.language)}</span>
-      </div>
-      <p className="text-caption">{t('store.serverTotal')}</p>
+      {data ? (
+        <div className="stack-sm" data-testid="checkout-preview">
+          {data.orders.map((order) => (
+            <div key={order.merchant.id} className="stack-xs">
+              <strong className="text-caption">
+                <Icon name="building" size={14} /> {pickScript(order.merchant.name, i18n.language)}
+              </strong>
+              <MoneyTable
+                rows={[
+                  { label: t('market.listTotal'), value: order.list_total },
+                  { label: t('market.sellerDiscount') + (order.seller_coupon ? ` (${order.seller_coupon})` : ''), value: order.seller_discount_total, minus: true, hidden: Number(order.seller_discount_total) === 0 },
+                  { label: t('market.racheetaDiscount'), value: order.platform_discount_total, minus: true, hidden: Number(order.platform_discount_total) === 0 },
+                  { label: t('market.orderTotal'), value: order.total, strong: true },
+                ]}
+              />
+            </div>
+          ))}
+          <div className={styles.summaryRow}>
+            <span>{t('market.toPay', { count: data.orders.length })}</span>
+            <span className={`${styles.summaryTotal} ltr`} data-testid="checkout-total">{money(data.total)}</span>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.summaryRow}>
+          <span>{t('store.total')}</span>
+          <span className={`${styles.summaryTotal} ltr`}>{formatPrice(estimate, lines[0]?.currency ?? 'IQD', i18n.language)}</span>
+        </div>
+      )}
+      {preview.error ? <Alert kind="error">{toErrorMessage(preview.error)}</Alert> : null}
+      {signedIn ? (
+        <form onSubmit={addCode} className="cluster" aria-label={t('market.coupon')}>
+          <TextField
+            label={t('market.coupon')}
+            optional
+            value={codeInput}
+            maxLength={32}
+            onChange={(e) => setCodeInput(e.target.value)}
+            hint={t('market.couponHint')}
+          />
+          <Button type="submit" size="sm" variant="secondary" disabled={!codeInput.trim()}>
+            {t('market.applyCoupon')}
+          </Button>
+        </form>
+      ) : null}
+      {codes.length ? (
+        <div className="cluster" data-testid="applied-coupons">
+          {codes.map((code) => (
+            <Badge key={code} tone="brand">
+              <span className="ltr">{code}</span>{' '}
+              <button type="button" className={styles.remove} aria-label={t('market.removeCoupon', { code })} onClick={() => setCodes(codes.filter((c) => c !== code))}>
+                <Icon name="x" size={12} />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+      <p className="text-caption">{t('market.serverPriced')}</p>
       <p className="text-caption">
         <Icon name="info" size={14} /> {t('store.demoPayment')}
       </p>
@@ -203,7 +282,14 @@ function MerchantCheckout({
           }}
         >
           {({ defaults, governorates }) => (
-            <CheckoutForm lines={lines} blocked={blocked} defaults={defaults} governorates={governorates} onPlaced={onPlaced} />
+            <CheckoutForm
+              lines={lines}
+              coupons={codes}
+              blocked={blocked || Boolean(preview.error)}
+              defaults={defaults}
+              governorates={governorates}
+              onPlaced={onPlaced}
+            />
           )}
         </AsyncPage>
       )}
@@ -215,16 +301,18 @@ type Pin = { latitude: string; longitude: string } | null
 
 function CheckoutForm({
   lines,
+  coupons,
   blocked,
   defaults,
   governorates,
   onPlaced,
 }: {
   lines: CartLine[]
+  coupons: string[]
   blocked: boolean
   defaults: DeliveryDefaults
   governorates: Governorate[]
-  onPlaced: (order: Order) => void
+  onPlaced: (result: CheckoutResult) => void
 }) {
   const { t } = useTranslation()
   const name = useLocalizedName()
@@ -240,6 +328,13 @@ function CheckoutForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // One key per attempt: a retried or double-clicked submit returns the same checkout. A changed
+  // cart starts a new attempt.
+  const attempt = useRef<string | null>(null)
+  const signature = `${lines.map((l) => `${l.product}:${l.quantity}`).join(',')}|${coupons.join(',')}`
+  useEffect(() => {
+    attempt.current = null
+  }, [signature])
 
   const useMyLocation = () => {
     if (!('geolocation' in navigator)) {
@@ -278,7 +373,10 @@ function CheckoutForm({
     setBusy(true)
     setError(null)
     try {
-      const order = await api.placeOrder({
+      attempt.current ??= newIdempotencyKey()
+      const result = await commerce.placeCheckout({
+        idempotency_key: attempt.current,
+        coupons,
         items: lines.map((l) => ({ product: l.product, quantity: l.quantity })),
         payment_method: method,
         governorate,
@@ -287,7 +385,8 @@ function CheckoutForm({
         note: note.trim(),
         ...(pin ? { latitude: pin.latitude, longitude: pin.longitude } : {}),
       })
-      onPlaced(order)
+      attempt.current = null
+      onPlaced(result)
     } catch (e) {
       setError(toErrorMessage(e))
     } finally {

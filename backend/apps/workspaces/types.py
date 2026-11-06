@@ -25,6 +25,11 @@ class OrgRole(models.TextChoices):
     MANAGER = "MANAGER", "Manager"
     STAFF = "STAFF", "Staff"
     VIEWER = "VIEWER", "Viewer"
+    # Seller (business) specialist roles — docs/MARKETPLACE_COMMERCE.md §Seller roles
+    PRODUCT_EDITOR = "PRODUCT_EDITOR", "Product editor"
+    STOCK_MANAGER = "STOCK_MANAGER", "Stock manager"
+    FULFILLMENT = "FULFILLMENT", "Fulfillment"
+    FINANCE = "FINANCE", "Finance (read-only statements)"
 
 
 # Same choice set as employer memberships (one OpenAPI enum, one meaning).
@@ -32,7 +37,28 @@ MemberStatus = JobsMemberStatus
 
 
 # Roles that can be granted through a membership row (OWNER comes from ownership only).
-GRANTABLE_ROLES = (OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER)
+GRANTABLE_ROLES = (
+    OrgRole.MANAGER,
+    OrgRole.STAFF,
+    OrgRole.VIEWER,
+    OrgRole.PRODUCT_EDITOR,
+    OrgRole.STOCK_MANAGER,
+    OrgRole.FULFILLMENT,
+    OrgRole.FINANCE,
+)
+# Specialist roles exist only for businesses (sellers), never for facilities.
+COMPANY_ONLY_ROLES = frozenset(
+    {OrgRole.PRODUCT_EDITOR, OrgRole.STOCK_MANAGER, OrgRole.FULFILLMENT, OrgRole.FINANCE}
+)
+
+_O, _M, _S, _V = OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER
+_PE, _SM, _FU, _FI = (
+    OrgRole.PRODUCT_EDITOR,
+    OrgRole.STOCK_MANAGER,
+    OrgRole.FULFILLMENT,
+    OrgRole.FINANCE,
+)
+_ALL_COMPANY = frozenset({_O, _M, _S, _V, _PE, _SM, _FU, _FI})
 
 # Capability matrix: organization capability -> roles that hold it.
 CAPABILITIES: dict[str, frozenset[str]] = {
@@ -42,20 +68,19 @@ CAPABILITIES: dict[str, frozenset[str]] = {
         {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
     ),
     "facility.reservations.manage": frozenset({OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF}),
-    # business
-    "company.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}),
-    "company.orders.view": frozenset(
-        {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
-    ),
-    "company.orders.manage": frozenset({OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF}),
-    "company.quotes.view": frozenset(
-        {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
-    ),
-    "company.quotes.respond": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
-    "company.products.view": frozenset(
-        {OrgRole.OWNER, OrgRole.MANAGER, OrgRole.STAFF, OrgRole.VIEWER}
-    ),
-    "company.campaigns.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
+    # business (seller)
+    "company.view": _ALL_COMPANY,
+    "company.orders.view": frozenset({_O, _M, _S, _V, _FU, _FI, _SM}),
+    "company.orders.manage": frozenset({_O, _M, _S, _FU}),  # accept, decline, ship
+    "company.returns.manage": frozenset({_O, _M, _FU}),  # approve/reject, mark received
+    "company.quotes.view": frozenset({_O, _M, _S, _V, _FI}),
+    "company.quotes.respond": frozenset({_O, _M}),
+    "company.products.view": _ALL_COMPANY,
+    "company.products.edit": frozenset({_O, _M, _PE}),
+    "company.stock.manage": frozenset({_O, _M, _SM}),
+    "company.offers.manage": frozenset({_O, _M}),  # seller-funded coupons and offers
+    "company.finance.view": frozenset({_O, _FI}),  # statement, payouts, commission
+    "company.campaigns.view": frozenset({_O, _M}),
     # both
     "members.view": frozenset({OrgRole.OWNER, OrgRole.MANAGER}),
     "members.manage": frozenset({OrgRole.OWNER}),

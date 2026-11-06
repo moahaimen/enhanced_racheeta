@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 
-import { workspaces as api } from '../../api'
-import type { Quote, QuoteStatus } from '../../api'
+import { commerce, reference, workspaces as api } from '../../api'
+import type { DeliveryDefaults, Governorate, Quote, QuoteStatus, StorePaymentMethod } from '../../api'
 import {
   Alert,
   ApiActionButton,
@@ -16,13 +16,17 @@ import {
   Icon,
   PageHeader,
   PageStack,
+  PhoneField,
   SectionCard,
+  Select,
   TextField,
   Textarea,
   type BadgeTone,
 } from '../../design-system'
 import { toErrorMessage } from '../../hooks/useAsync'
-import { pickScript } from '../../i18n/localized'
+import { pickScript, useLocalizedName } from '../../i18n/localized'
+import { newIdempotencyKey } from '../market/money'
+import { normalizeIraqiPhone } from '../validation'
 
 const TONE: Record<QuoteStatus, BadgeTone> = {
   REQUESTED: 'warning',
@@ -30,6 +34,8 @@ const TONE: Record<QuoteStatus, BadgeTone> = {
   ACCEPTED: 'success',
   DECLINED: 'neutral',
   WITHDRAWN: 'neutral',
+  ORDERED: 'success',
+  EXPIRED: 'neutral',
 }
 
 function QuoteCard({ quote, merchantView, children }: { quote: Quote; merchantView?: boolean; children?: React.ReactNode }) {
@@ -44,6 +50,9 @@ function QuoteCard({ quote, merchantView, children }: { quote: Quote; merchantVi
     >
       <div className="cluster text-caption">
         <span>{t('store.quantity')}: {quote.quantity}</span>
+        {quote.expires_at && ['QUOTED', 'ACCEPTED'].includes(quote.status) ? (
+          <span>{t('quotes.validUntil', { date: new Date(quote.expires_at).toLocaleDateString(i18n.language) })}</span>
+        ) : null}
         {quote.quoted_unit_price ? (
           <strong className="ltr">
             {t('quotes.unitPrice')}: {Number(quote.quoted_unit_price).toLocaleString(i18n.language)} {quote.quoted_currency}
@@ -91,6 +100,8 @@ export function MyQuotesPage() {
                       {quote.status === 'QUOTED' ? [close('ACCEPTED'), close('DECLINED')] : null}
                       {quote.status === 'REQUESTED' || quote.status === 'QUOTED' ? close('WITHDRAWN') : null}
                     </div>
+                    {quote.status === 'ACCEPTED' ? <QuoteOrder quote={quote} onDone={reload} onError={(m) => setError(m)} /> : null}
+                    {quote.status === 'ORDERED' ? <p className="text-caption"><Icon name="checkCircle" size={14} /> {t('quotes.orderedHint')}</p> : null}
                   </QuoteCard>
                 )
               })
@@ -191,6 +202,78 @@ export function RequestQuoteForm({ productId }: { productId: string }) {
       <Textarea label={t('quotes.message')} optional maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} />
       <FormActions>
         <Button type="submit" loading={busy}>{t('quotes.request')}</Button>
+      </FormActions>
+    </form>
+  )
+}
+
+
+/** Accepted quotation -> one order at the quoted price (same 20% snapshot, ledger and stock rules). */
+function QuoteOrder({ quote, onDone, onError }: { quote: Quote; onDone: () => void; onError: (m: string) => void }) {
+  const { t } = useTranslation()
+  return (
+    <AsyncPage
+      load={async (signal) => {
+        const [defaults, governorates] = await Promise.all([api.getDeliveryDefaults(signal), reference.listGovernorates(undefined, signal)])
+        return { defaults, governorates }
+      }}
+    >
+      {({ defaults, governorates }) => <QuoteOrderForm quote={quote} defaults={defaults} governorates={governorates} onDone={onDone} onError={onError} t={t} />}
+    </AsyncPage>
+  )
+}
+
+function QuoteOrderForm({ quote, defaults, governorates, onDone, onError, t }: {
+  quote: Quote
+  defaults: DeliveryDefaults
+  governorates: Governorate[]
+  onDone: () => void
+  onError: (m: string) => void
+  t: (key: string, options?: Record<string, unknown>) => string
+}) {
+  const name = useLocalizedName()
+  const [governorate, setGovernorate] = useState(defaults.governorate ?? '')
+  const [address, setAddress] = useState(defaults.address)
+  const [phone, setPhone] = useState(defaults.phone)
+  const [method, setMethod] = useState<StorePaymentMethod>('MANUAL_TRANSFER')
+  const [busy, setBusy] = useState(false)
+  const [key] = useState(newIdempotencyKey)
+  const valid = Boolean(governorate) && address.trim().length >= 5 && Boolean(normalizeIraqiPhone(phone, { mobileOnly: true }))
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!valid) return
+    setBusy(true)
+    try {
+      await commerce.orderFromQuote(quote.id, {
+        idempotency_key: key,
+        payment_method: method,
+        governorate,
+        address: address.trim(),
+        phone: normalizeIraqiPhone(phone, { mobileOnly: true })!,
+      })
+      onDone()
+    } catch (e) {
+      onError(toErrorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const total = Number(quote.quoted_unit_price ?? 0) * quote.quantity
+  return (
+    <form onSubmit={submit} className="stack-sm card-block" noValidate data-testid="quote-order-form">
+      <strong>{t('quotes.orderTotal', { total: total.toLocaleString(), currency: quote.quoted_currency })}</strong>
+      <Select label={t('store.governorate')} value={governorate} onChange={(e) => setGovernorate(e.target.value)}>
+        <option value="">{t('store.chooseGovernorate')}</option>
+        {governorates.map((g) => <option key={g.id} value={g.id}>{name(g)}</option>)}
+      </Select>
+      <TextField label={t('store.address')} maxLength={255} value={address} onChange={(e) => setAddress(e.target.value)} />
+      <PhoneField label={t('store.phone')} value={phone} onChange={(e) => setPhone(e.target.value)} hint={t('validation.mobileHint')} />
+      <Select label={t('store.payment')} value={method} onChange={(e) => setMethod(e.target.value as StorePaymentMethod)}>
+        <option value="MANUAL_TRANSFER">{t('store.paymentMethods.MANUAL_TRANSFER')}</option>
+        <option value="CASH_ON_DELIVERY">{t('store.paymentMethods.CASH_ON_DELIVERY')}</option>
+      </Select>
+      <FormActions>
+        <Button type="submit" size="sm" loading={busy} disabled={!valid} leading={<Icon name="cart" size={14} />}>{t('quotes.orderNow')}</Button>
       </FormActions>
     </form>
   )

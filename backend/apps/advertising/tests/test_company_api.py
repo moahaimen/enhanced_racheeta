@@ -422,3 +422,19 @@ def test_audit_events_are_recorded_without_request_bodies(ready, rate, admin_cli
     } <= actions
     updated = AuditEvent.objects.get(action="advertising.campaign.updated")
     assert updated.data == {"fields": ["name"]}  # which fields, never the body
+
+
+@pytest.mark.parametrize("change", ["restricted", "PROHIBITED", "RESTRICTED_PENDING_REVIEW"])
+def test_regulated_products_can_never_be_advertised(ready, rate, change):
+    """Fail closed: a restricted item, or one whose category is not purchasable, is refused."""
+    from apps.marketplace.models import Product, ProductCategory
+
+    company, product = ready
+    if change == "restricted":
+        Product.objects.filter(pk=product.pk).update(is_restricted=True)
+    else:
+        ProductCategory.objects.filter(pk=product.category_id).update(compliance_class=change)
+    resp = client_for(company.account).post(CAMPAIGNS, draft_payload(product), format="json")
+    assert resp.status_code == 400
+    assert _codes(resp)["product"] == ["product_not_advertisable"]
+    assert not AdvertisingCampaign.objects.exists()

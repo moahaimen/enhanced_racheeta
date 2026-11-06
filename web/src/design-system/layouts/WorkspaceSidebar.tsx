@@ -19,6 +19,7 @@ const WORKSPACE_PREFIXES = [
   '/company',
   '/employer',
   '/admin-console',
+  '/admin-finance',
   '/real-estate/owner',
   '/jobs/profile',
   '/jobs/my-applications',
@@ -61,13 +62,17 @@ export function WorkspaceSidebar() {
       { to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true },
       { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') },
       { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
+      { to: '/merchant/center?tab=inventory', icon: 'clipboard', label: t('nav.sellerCenter') },
       { to: '/merchant/quotes', icon: 'mail', label: t('nav.merchantQuotes') },
     )
   }
   items.push({ to: '/employer', icon: 'hospital', label: t('nav.employer') })
   items.push({ to: '/jobs/profile', icon: 'user', label: t('nav.seekerProfile') }, { to: '/jobs/my-applications', icon: 'briefcase', label: t('nav.myApplications') })
   items.push({ to: '/messages', icon: 'mail', label: t('nav.messages') }, { to: '/notifications', icon: 'bell', label: t('nav.notifications') })
-  if (account.is_staff) items.push({ to: '/admin-console', icon: 'shieldCheck', label: t('nav.adminConsole') })
+  if (account.is_staff) {
+    items.push({ to: '/admin-console', icon: 'shieldCheck', label: t('nav.adminConsole') })
+    items.push({ to: '/admin-finance', icon: 'calculator', label: t('nav.adminFinance') })
+  }
   items.push({ to: '/settings/preferences', icon: 'bell', label: t('nav.preferences') })
   items.push({ to: '/profile', icon: 'user', label: t('nav.profile') })
 

@@ -419,6 +419,630 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminSubscription'
           description: ''
+  /api/v1/admin/commerce/coupons:
+    get:
+      operationId: admin_commerce_coupons_list
+      summary: All coupons (Racheeta- and seller-funded)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCouponList'
+          description: ''
+    post:
+      operationId: admin_commerce_coupons_create
+      summary: 'Create a Racheeta coupon (platform-funded: the seller is paid in full)'
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CouponCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/v1/admin/commerce/coupons/{id}/deactivate:
+    post:
+      operationId: admin_commerce_coupons_deactivate_create
+      summary: Stop a Racheeta coupon
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/v1/admin/commerce/disputes:
+    get:
+      operationId: admin_commerce_disputes_list
+      summary: Disputes
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDisputeList'
+          description: ''
+  /api/v1/admin/commerce/disputes/{id}/resolve:
+    post:
+      operationId: admin_commerce_disputes_resolve_create
+      summary: Resolve a dispute (with or without a full refund of what remains)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisputeResolveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DisputeResolveRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/orders:
+    get:
+      operationId: admin_commerce_orders_list
+      summary: All marketplace orders (filterable)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminOrderList'
+          description: ''
+  /api/v1/admin/commerce/orders/{id}:
+    get:
+      operationId: admin_commerce_orders_retrieve
+      summary: One marketplace order
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/orders/{id}/complete:
+    post:
+      operationId: admin_commerce_orders_complete_create
+      summary: 'Complete a paid, delivered order: accrue the 20% commission and the
+        seller payable'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/orders/{id}/confirm-delivery:
+    post:
+      operationId: admin_commerce_orders_confirm_delivery_create
+      summary: Confirm delivery on the buyer's behalf (courier proof)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/orders/{id}/refund-cancelled:
+    post:
+      operationId: admin_commerce_orders_refund_cancelled_create
+      summary: Refund a paid order that was cancelled (simulated)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/orders/{id}/verify-payment:
+    post:
+      operationId: admin_commerce_orders_verify_payment_create
+      summary: Record SIMULATED payment evidence (no real money) — posts the payment
+        entry once
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/commerce/returns:
+    get:
+      operationId: admin_commerce_returns_list
+      summary: Return requests (all sellers)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReturnList'
+          description: ''
+  /api/v1/admin/commerce/returns/{id}/refund:
+    post:
+      operationId: admin_commerce_returns_refund_create
+      summary: Refund a received return (proportional compensating entry)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/admin/ledger/entries:
+    get:
+      operationId: admin_ledger_entries_list
+      summary: Ledger entries (immutable, newest first)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLedgerEntryList'
+          description: ''
+  /api/v1/admin/ledger/payables:
+    get:
+      operationId: admin_ledger_payables_list
+      summary: What Racheeta owes each seller right now
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SellerPayable'
+          description: ''
+  /api/v1/admin/ledger/policy:
+    get:
+      operationId: admin_ledger_policy_list
+      description: Commission policy versions (read-only here; a new version is a
+        reviewed migration).
+      summary: Commission policy versions (current first)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Policy'
+          description: ''
+  /api/v1/admin/ledger/reconciliation:
+    get:
+      operationId: admin_ledger_reconciliation_retrieve
+      summary: 'Ledger reconciliation: balances re-derived from orders, settlements
+        and refunds'
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+          description: ''
+  /api/v1/admin/ledger/settlements:
+    get:
+      operationId: admin_ledger_settlements_list
+      summary: Seller settlements (payout batches)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSettlementList'
+          description: ''
+  /api/v1/admin/ledger/settlements/{id}/cancel:
+    post:
+      operationId: admin_ledger_settlements_cancel_create
+      summary: Cancel a prepared payout
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settlement'
+          description: ''
+  /api/v1/admin/ledger/settlements/{id}/confirm:
+    post:
+      operationId: admin_ledger_settlements_confirm_create
+      summary: Mark a prepared payout PAID (simulated transfer) — posts the payout
+        entry once
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SettlementConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settlement'
+          description: ''
+  /api/v1/admin/ledger/settlements/prepare:
+    post:
+      operationId: admin_ledger_settlements_prepare_create
+      summary: Prepare (preview) a payout of everything owed to one seller
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementPrepareRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SettlementPrepareRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settlement'
+          description: ''
+  /api/v1/admin/ledger/statements/{id}:
+    get:
+      operationId: admin_ledger_statements_retrieve
+      summary: A seller's statement
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statement'
+          description: ''
   /api/v1/admin/marketplace/companies:
     get:
       operationId: admin_marketplace_companies_list
@@ -1610,6 +2234,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatUnreadCount'
+          description: ''
+  /api/v1/checkouts:
+    post:
+      operationId: checkouts_create
+      summary: Place one checkout (one order per seller); prices are computed by the
+        server
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResult'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResult'
+          description: ''
+  /api/v1/checkouts/preview:
+    post:
+      operationId: checkouts_preview_create
+      summary: 'Price a cart on the server: per-seller orders, offers, coupons, totals'
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartPreviewRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CartPreviewRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutPreview'
           description: ''
   /api/v1/dashboards/:
     get:
@@ -3845,6 +4524,376 @@ paths:
               schema:
                 $ref: '#/components/schemas/Preference'
           description: ''
+  /api/v1/merchant/coupons:
+    get:
+      operationId: merchant_coupons_list
+      summary: My store coupons
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCouponList'
+          description: ''
+    post:
+      operationId: merchant_coupons_create
+      summary: 'Create a store coupon (seller-funded: lowers the commission base)'
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CouponCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/v1/merchant/coupons/{id}/deactivate:
+    post:
+      operationId: merchant_coupons_deactivate_create
+      summary: Stop a store coupon
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/v1/merchant/finance:
+    get:
+      operationId: merchant_finance_retrieve
+      summary: 'My merchant statement: sales, 20% commission, refunds, payouts, amount
+        owed'
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statement'
+          description: ''
+  /api/v1/merchant/inventory:
+    get:
+      operationId: merchant_inventory_list
+      summary: 'Stock of my products: on hand, reserved, available, alert level'
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryRow'
+          description: ''
+  /api/v1/merchant/inventory/{id}/adjust:
+    post:
+      operationId: merchant_inventory_adjust_create
+      summary: Adjust on-hand stock (with a reason; never below reserved units)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockAdjustRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryRow'
+          description: ''
+  /api/v1/merchant/inventory/{id}/movements:
+    get:
+      operationId: merchant_inventory_movements_list
+      summary: Stock movement history of a product
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStockMovementList'
+          description: ''
+  /api/v1/merchant/inventory/{id}/threshold:
+    post:
+      operationId: merchant_inventory_threshold_create
+      summary: Set the low-stock alert level of a product
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockThresholdRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockThresholdRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryRow'
+          description: ''
+  /api/v1/merchant/offers:
+    get:
+      operationId: merchant_offers_list
+      summary: My product sales
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductSaleList'
+          description: ''
+    post:
+      operationId: merchant_offers_create
+      summary: Put a product on sale for a period (seller-funded)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductSaleCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductSaleCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSale'
+          description: ''
+  /api/v1/merchant/offers/{id}/deactivate:
+    post:
+      operationId: merchant_offers_deactivate_create
+      summary: End a product sale
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSale'
+          description: ''
   /api/v1/merchant/orders:
     get:
       operationId: merchant_orders_list
@@ -3880,7 +4929,7 @@ paths:
         schema:
           type: string
       tags:
-      - store
+      - seller
       security:
       - jwtAuth: []
       responses:
@@ -3888,7 +4937,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedOrderList'
+                $ref: '#/components/schemas/PaginatedSellerOrderList'
           description: ''
   /api/v1/merchant/orders/{id}:
     get:
@@ -3907,7 +4956,7 @@ paths:
           format: uuid
         required: true
       tags:
-      - store
+      - seller
       security:
       - jwtAuth: []
       responses:
@@ -3915,39 +4964,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
-          description: ''
-  /api/v1/merchant/orders/{id}/payment-received:
-    post:
-      operationId: merchant_orders_payment_received_create
-      summary: Record that a manual transfer was received (nothing is charged)
-      parameters:
-      - in: query
-        name: company
-        schema:
-          type: string
-        description: 'Business id (staff access); default: own'
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - store
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/SellerOrder'
           description: ''
   /api/v1/merchant/orders/{id}/transition:
     post:
       operationId: merchant_orders_transition_create
-      summary: Move an order (confirm, ship, deliver, cancel)
+      summary: Accept, decline or ship an order
       parameters:
       - in: query
         name: company
@@ -3961,7 +4983,7 @@ paths:
           format: uuid
         required: true
       tags:
-      - store
+      - seller
       requestBody:
         content:
           application/json:
@@ -3978,7 +5000,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/SellerOrder'
           description: ''
   /api/v1/merchant/quotes:
     get:
@@ -4087,6 +5109,114 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quote'
+          description: ''
+  /api/v1/merchant/returns:
+    get:
+      operationId: merchant_returns_list
+      summary: Return requests for my business
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - name: ordering
+        required: false
+        in: query
+        description: أي حقل يجب استخدامه عند ترتيب النتائج.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: رقم الصفحة ضمن النتائج المقسمة.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: عدد النتائج التي يجب إرجاعها في كل صفحة.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: مصطلح البحث.
+        schema:
+          type: string
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReturnList'
+          description: ''
+  /api/v1/merchant/returns/{id}/decide:
+    post:
+      operationId: merchant_returns_decide_create
+      summary: Approve or reject a return request
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReturnDecisionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+          description: ''
+  /api/v1/merchant/returns/{id}/received:
+    post:
+      operationId: merchant_returns_received_create
+      summary: Returned items arrived back (restocks them)
+      parameters:
+      - in: query
+        name: company
+        schema:
+          type: string
+        description: 'Business id (staff access); default: own'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - seller
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
           description: ''
   /api/v1/notifications/:
     get:
@@ -4334,29 +5464,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedOrderList'
           description: ''
-    post:
-      operationId: orders_create
-      summary: Place a store order (prices and totals are computed by the server)
-      tags:
-      - store
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CheckoutRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CheckoutRequest'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Order'
-          description: ''
   /api/v1/orders/{id}:
     get:
       operationId: orders_retrieve
@@ -4400,6 +5507,90 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/CancelRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}/confirm-delivery:
+    post:
+      operationId: orders_confirm_delivery_create
+      summary: Confirm I received my order
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}/disputes:
+    post:
+      operationId: orders_disputes_create
+      summary: Open a dispute with Racheeta about this order
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisputeCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DisputeCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+  /api/v1/orders/{id}/returns:
+    post:
+      operationId: orders_returns_create
+      summary: Ask to return items (within the return window)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - store
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReturnCreateRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -5050,6 +6241,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Quote'
+          description: ''
+  /api/v1/quotes/{id}/order:
+    post:
+      operationId: quotes_order_create
+      summary: Turn my accepted quotation into an order at the quoted price
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quotes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteOrderRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResult'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResult'
           description: ''
   /api/v1/real-estate/listings:
     get:
@@ -6906,6 +8134,244 @@ components:
           type: string
           default: ''
           maxLength: 500
+    AdminOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        checkout_number:
+          type: string
+          readOnly: true
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/SalesChannelEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatusEnum'
+          readOnly: true
+        payment_method:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentMethodEnum'
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentStatusEnum'
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        merchant:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        buyer_name:
+          type: string
+          readOnly: true
+        delivery_governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        delivery_city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+          nullable: true
+        delivery_address:
+          type: string
+          readOnly: true
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        contact_phone:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        shipping_reference:
+          type: string
+          readOnly: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SellerOrderItem'
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderTransition'
+          readOnly: true
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Return'
+          readOnly: true
+        disputes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispute'
+          readOnly: true
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
+          readOnly: true
+        return_deadline:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        merchandise_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        commission_policy_version:
+          type: integer
+          readOnly: true
+          nullable: true
+        commission_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_payable_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        settlement_state:
+          allOf:
+          - $ref: '#/components/schemas/SettlementStateEnum'
+          readOnly: true
+        buyer_email:
+          type: string
+          format: email
+          readOnly: true
+        payment_reference:
+          type: string
+          readOnly: true
+        payment_verified_by:
+          type: string
+          readOnly: true
+      required:
+      - buyer_email
+      - buyer_name
+      - channel
+      - checkout_number
+      - commission_policy_version
+      - commission_rate
+      - commission_total
+      - completed_at
+      - contact_phone
+      - created_at
+      - currency
+      - delivered_at
+      - delivery_address
+      - delivery_city
+      - delivery_governorate
+      - delivery_latitude
+      - delivery_longitude
+      - disputes
+      - id
+      - items
+      - list_total
+      - merchandise_net
+      - merchant
+      - note
+      - number
+      - paid_at
+      - payment_method
+      - payment_reference
+      - payment_status
+      - payment_verified_by
+      - platform_discount_total
+      - refunded_total
+      - refunds
+      - return_deadline
+      - returns
+      - seller_discount_total
+      - seller_payable_total
+      - settlement_state
+      - shipped_at
+      - shipping_reference
+      - status
+      - status_changed_at
+      - total
+      - transitions
     AdminPayment:
       type: object
       properties:
@@ -7730,6 +9196,22 @@ components:
       required:
       - product
       - quantity
+    CartPreviewRequestRequest:
+      type: object
+      properties:
+        coupons:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 32
+          maxItems: 4
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
+      required:
+      - items
     ChatAccount:
       type: object
       properties:
@@ -7857,15 +9339,72 @@ components:
           type: integer
       required:
       - count
-    CheckoutRequest:
+    Check:
       type: object
-      description: Only product ids and quantities come from the client; prices and
-        totals never do.
       properties:
-        items:
+        name:
+          type: string
+        expected:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        actual:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        ok:
+          type: boolean
+      required:
+      - actual
+      - expected
+      - name
+      - ok
+    CheckoutPreview:
+      type: object
+      properties:
+        currency:
+          type: string
+        orders:
           type: array
           items:
-            $ref: '#/components/schemas/CartLineRequest'
+            $ref: '#/components/schemas/PreviewOrder'
+        platform_coupon:
+          type: string
+          nullable: true
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - currency
+      - list_total
+      - orders
+      - platform_coupon
+      - platform_discount_total
+      - seller_discount_total
+      - total
+    CheckoutRequest:
+      type: object
+      description: |-
+        Only product ids, quantities and coupon codes come from the client; prices, discounts,
+        fees and totals never do.
+      properties:
         payment_method:
           $ref: '#/components/schemas/StorePaymentMethodEnum'
         governorate:
@@ -7897,12 +9436,80 @@ components:
           format: decimal
           pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
           nullable: true
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 64
+        coupons:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 32
+          maxItems: 4
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLineRequest'
       required:
       - address
       - governorate
+      - idempotency_key
       - items
       - payment_method
       - phone
+    CheckoutResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - currency
+      - id
+      - list_total
+      - number
+      - orders
+      - platform_discount_total
+      - seller_discount_total
+      - total
     City:
       type: object
       properties:
@@ -8334,6 +9941,130 @@ components:
       - id
       - name_ar
       - name_en
+    Coupon:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        funded_by:
+          allOf:
+          - $ref: '#/components/schemas/CouponFundingEnum'
+          readOnly: true
+        company:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/DiscountKindEnum'
+          readOnly: true
+        value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        max_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        min_subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        max_redemptions:
+          type: integer
+          readOnly: true
+          nullable: true
+        redemptions:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - code
+      - company
+      - created_at
+      - ends_at
+      - funded_by
+      - id
+      - is_active
+      - kind
+      - max_discount
+      - max_redemptions
+      - min_subtotal
+      - redemptions
+      - starts_at
+      - value
+    CouponCreateRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        kind:
+          $ref: '#/components/schemas/DiscountKindEnum'
+        value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        max_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          nullable: true
+        min_subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,0})?$
+          default: '0'
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+        max_redemptions:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+          nullable: true
+      required:
+      - code
+      - ends_at
+      - kind
+      - value
+    CouponFundingEnum:
+      enum:
+      - SELLER
+      - PLATFORM
+      type: string
+      description: |-
+        * `SELLER` - Seller-funded (reduces the seller's merchandise value)
+        * `PLATFORM` - Platform-funded (paid by Racheeta)
     Credential:
       type: object
       properties:
@@ -9196,6 +10927,83 @@ components:
           readOnly: true
       required:
       - detail
+    DiscountKindEnum:
+      enum:
+      - PERCENT
+      - FIXED
+      type: string
+      description: |-
+        * `PERCENT` - Percent
+        * `FIXED` - Fixed amount
+    Dispute:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/DisputeStatusEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        resolution_note:
+          type: string
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - order
+      - reason
+      - resolution_note
+      - resolved_at
+      - status
+    DisputeCreateRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+      - reason
+    DisputeResolveRequest:
+      type: object
+      properties:
+        refund:
+          type: boolean
+        note:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - note
+      - refund
+    DisputeStatusEnum:
+      enum:
+      - OPEN
+      - RESOLVED_REFUND
+      - RESOLVED_REJECTED
+      type: string
+      description: |-
+        * `OPEN` - Open
+        * `RESOLVED_REFUND` - Resolved with refund
+        * `RESOLVED_REJECTED` - Resolved without refund
     DoctorDashboard:
       type: object
       properties:
@@ -9873,6 +11681,47 @@ components:
         * `ACCEPTED` - Accepted
         * `DECLINED` - Declined
         * `CANCELLED` - Cancelled
+    InventoryRow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        image_url:
+          type: string
+        is_active:
+          type: boolean
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        on_hand:
+          type: integer
+          nullable: true
+        reserved:
+          type: integer
+        available:
+          type: integer
+          nullable: true
+        reorder_threshold:
+          type: integer
+          nullable: true
+        low:
+          type: boolean
+      required:
+      - available
+      - id
+      - image_url
+      - is_active
+      - low
+      - on_hand
+      - price
+      - reorder_threshold
+      - reserved
+      - title
     Invitation:
       type: object
       properties:
@@ -10972,6 +12821,100 @@ components:
       required:
       - language
       - level
+    LedgerAccountEnum:
+      enum:
+      - PLATFORM_CASH
+      - CUSTOMER_FUNDS_HELD
+      - SELLER_PAYABLE
+      - COMMISSION_REVENUE
+      - PLATFORM_PROMO_EXPENSE
+      type: string
+      description: |-
+        * `PLATFORM_CASH` - Platform cash (simulated)
+        * `CUSTOMER_FUNDS_HELD` - Customer funds held
+        * `SELLER_PAYABLE` - Seller payable
+        * `COMMISSION_REVENUE` - Commission revenue
+        * `PLATFORM_PROMO_EXPENSE` - Platform promotion expense
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/LedgerEntryKindEnum'
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        memo:
+          type: string
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerLine'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - currency
+      - id
+      - kind
+      - lines
+      - memo
+      - order_number
+      - reference
+    LedgerEntryKindEnum:
+      enum:
+      - PAYMENT
+      - ACCRUAL
+      - REFUND
+      - PAYOUT
+      type: string
+      description: |-
+        * `PAYMENT` - Payment verified (simulated)
+        * `ACCRUAL` - Sale completed: commission and seller payable accrued
+        * `REFUND` - Refund (compensating)
+        * `PAYOUT` - Seller payout (simulated)
+    LedgerLine:
+      type: object
+      properties:
+        account:
+          allOf:
+          - $ref: '#/components/schemas/LedgerAccountEnum'
+          readOnly: true
+        company:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        debit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        credit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - account
+      - company
+      - credit
+      - debit
     LevelEnum:
       enum:
       - BASIC
@@ -11160,11 +13103,19 @@ components:
       - MANAGER
       - STAFF
       - VIEWER
+      - PRODUCT_EDITOR
+      - STOCK_MANAGER
+      - FULFILLMENT
+      - FINANCE
       type: string
       description: |-
         * `MANAGER` - Manager
         * `STAFF` - Staff
         * `VIEWER` - Viewer
+        * `PRODUCT_EDITOR` - Product editor
+        * `STOCK_MANAGER` - Stock manager
+        * `FULFILLMENT` - Fulfillment
+        * `FINANCE` - Finance (read-only statements)
     MemberStatusEnum:
       enum:
       - ACTIVE
@@ -11424,6 +13375,8 @@ components:
       - QUOTE_UPDATED
       - SPONSORED_PRODUCT
       - PROPERTY_PROMOTION
+      - STOCK_LOW
+      - SETTLEMENT_PAID
       type: string
       description: |-
         * `RESERVATION_CREATED` - Reservation created
@@ -11434,6 +13387,8 @@ components:
         * `QUOTE_UPDATED` - Quote request updated
         * `SPONSORED_PRODUCT` - Sponsored product in your field
         * `PROPERTY_PROMOTION` - Promoted medical property
+        * `STOCK_LOW` - Product stock is low
+        * `SETTLEMENT_PAID` - Seller payout recorded (simulated)
     OfferCreateRequest:
       type: object
       properties:
@@ -11541,6 +13496,13 @@ components:
         number:
           type: string
           readOnly: true
+        checkout_number:
+          type: string
+          readOnly: true
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/SalesChannelEnum'
+          readOnly: true
         status:
           allOf:
           - $ref: '#/components/schemas/OrderStatusEnum'
@@ -11553,13 +13515,33 @@ components:
           allOf:
           - $ref: '#/components/schemas/StorePaymentStatusEnum'
           readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
         total:
           type: string
           format: decimal
           pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
           readOnly: true
-        currency:
+        refunded_total:
           type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
           readOnly: true
         merchant:
           type: object
@@ -11598,6 +13580,29 @@ components:
         note:
           type: string
           readOnly: true
+        shipping_reference:
+          type: string
+          readOnly: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         items:
           type: array
           items:
@@ -11607,6 +13612,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrderTransition'
+          readOnly: true
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Return'
+          readOnly: true
+        disputes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispute'
+          readOnly: true
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
+          readOnly: true
+        return_deadline:
+          type: string
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -11619,21 +13643,36 @@ components:
           nullable: true
       required:
       - buyer_name
+      - channel
+      - checkout_number
+      - completed_at
       - contact_phone
       - created_at
       - currency
+      - delivered_at
       - delivery_address
       - delivery_city
       - delivery_governorate
       - delivery_latitude
       - delivery_longitude
+      - disputes
       - id
       - items
+      - list_total
       - merchant
       - note
       - number
+      - paid_at
       - payment_method
       - payment_status
+      - platform_discount_total
+      - refunded_total
+      - refunds
+      - return_deadline
+      - returns
+      - seller_discount_total
+      - shipped_at
+      - shipping_reference
       - status
       - status_changed_at
       - total
@@ -11648,6 +13687,9 @@ components:
         product_id:
           type: string
           format: uuid
+          readOnly: true
+        image_url:
+          type: string
           readOnly: true
         title_snapshot:
           type: string
@@ -11665,11 +13707,40 @@ components:
           format: decimal
           pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
           readOnly: true
+        seller_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        buyer_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_quantity:
+          type: integer
+          readOnly: true
+        refunded_buyer_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
       required:
+      - buyer_paid
       - id
+      - image_url
       - line_total
+      - platform_discount
       - product_id
       - quantity
+      - refunded_buyer_paid
+      - refunded_quantity
+      - seller_discount
       - title_snapshot
       - unit_price
     OrderStatusEnum:
@@ -11678,13 +13749,15 @@ components:
       - CONFIRMED
       - SHIPPED
       - DELIVERED
+      - COMPLETED
       - CANCELLED
       type: string
       description: |-
         * `PLACED` - Placed
-        * `CONFIRMED` - Confirmed by the store
+        * `CONFIRMED` - Accepted by the seller
         * `SHIPPED` - Shipped
         * `DELIVERED` - Delivered
+        * `COMPLETED` - Completed
         * `CANCELLED` - Cancelled
     OrderTransition:
       type: object
@@ -11716,19 +13789,21 @@ components:
           type: string
           default: ''
           maxLength: 500
+        shipping_reference:
+          type: string
+          default: ''
+          maxLength: 120
       required:
       - status
     OrderTransitionRequestStatusEnum:
       enum:
       - CONFIRMED
       - SHIPPED
-      - DELIVERED
       - CANCELLED
       type: string
       description: |-
         * `CONFIRMED` - CONFIRMED
         * `SHIPPED` - SHIPPED
-        * `DELIVERED` - DELIVERED
         * `CANCELLED` - CANCELLED
     OrgRoleEnum:
       enum:
@@ -11736,12 +13811,20 @@ components:
       - MANAGER
       - STAFF
       - VIEWER
+      - PRODUCT_EDITOR
+      - STOCK_MANAGER
+      - FULFILLMENT
+      - FINANCE
       type: string
       description: |-
         * `OWNER` - Owner
         * `MANAGER` - Manager
         * `STAFF` - Staff
         * `VIEWER` - Viewer
+        * `PRODUCT_EDITOR` - Product editor
+        * `STOCK_MANAGER` - Stock manager
+        * `FULFILLMENT` - Fulfillment
+        * `FINANCE` - Finance (read-only statements)
     OrganizationTypeEnum:
       enum:
       - HOSPITAL
@@ -11912,6 +13995,29 @@ components:
       - reference
       - status
       - verified_at
+    PaginatedAdminOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrder'
     PaginatedAdminSubscriptionList:
       type: object
       required:
@@ -12138,6 +14244,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CompanyAdmin'
+    PaginatedCouponList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Coupon'
+    PaginatedDisputeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispute'
     PaginatedEmployerAdminList:
       type: object
       required:
@@ -12276,6 +14428,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JobEmployer'
+    PaginatedLedgerEntryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
     PaginatedListingPromotionList:
       type: object
       required:
@@ -12434,6 +14609,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductPublic'
+    PaginatedProductSaleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSale'
     PaginatedPromotedListingList:
       type: object
       required:
@@ -12640,6 +14838,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReservationProvider'
+    PaginatedReturnList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Return'
     PaginatedSavedCandidateList:
       type: object
       required:
@@ -12663,6 +14884,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SavedCandidate'
+    PaginatedSellerOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SellerOrder'
+    PaginatedSettlementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Settlement'
     PaginatedSponsoredCampaignList:
       type: object
       required:
@@ -12686,6 +14953,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SponsoredCampaign'
+    PaginatedStockMovementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovement'
     PaginatedStoreProductList:
       type: object
       required:
@@ -13585,6 +15875,34 @@ components:
       description: |-
         * `BOOLEAN` - Capability on/off
         * `LIMIT` - Numeric limit
+    Policy:
+      type: object
+      properties:
+        version:
+          type: integer
+          readOnly: true
+        rate_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        effective_from:
+          type: string
+          format: date-time
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - effective_from
+      - note
+      - rate_percent
+      - version
     Preference:
       type: object
       properties:
@@ -13610,6 +15928,97 @@ components:
       description: |-
         * `ar` - Arabic
         * `en` - English
+    PreviewLine:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        title:
+          type: string
+        image_url:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        buyer_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        channel:
+          type: string
+      required:
+      - buyer_paid
+      - channel
+      - image_url
+      - line_total
+      - platform_discount
+      - product
+      - quantity
+      - seller_discount
+      - title
+      - unit_price
+    PreviewOrder:
+      type: object
+      properties:
+        merchant:
+          type: object
+          additionalProperties: {}
+        seller_coupon:
+          type: string
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreviewLine'
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - lines
+      - list_total
+      - merchant
+      - platform_discount_total
+      - seller_coupon
+      - seller_discount_total
+      - total
     ProductCategory:
       type: object
       properties:
@@ -13795,6 +16204,66 @@ components:
       - sale_channel
       - title
       - updated_at
+    ProductSale:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        starts_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ends_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - ends_at
+      - id
+      - is_active
+      - percent
+      - product
+      - starts_at
+    ProductSaleCreateRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+      required:
+      - ends_at
+      - percent
+      - product
     ProductWriteRequest:
       type: object
       description: |-
@@ -15051,6 +17520,11 @@ components:
           format: date-time
           readOnly: true
           nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         closed_at:
           type: string
           format: date-time
@@ -15064,6 +17538,7 @@ components:
       - closed_at
       - company
       - created_at
+      - expires_at
       - id
       - message
       - product
@@ -15110,6 +17585,50 @@ components:
       required:
       - ends_on
       - starts_on
+    QuoteOrderRequest:
+      type: object
+      properties:
+        payment_method:
+          $ref: '#/components/schemas/StorePaymentMethodEnum'
+        governorate:
+          type: string
+          format: uuid
+        city:
+          type: string
+          format: uuid
+          nullable: true
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+        latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 64
+      required:
+      - address
+      - governorate
+      - idempotency_key
+      - payment_method
+      - phone
     QuoteRespondRequest:
       type: object
       properties:
@@ -15174,6 +17693,8 @@ components:
       - ACCEPTED
       - DECLINED
       - WITHDRAWN
+      - ORDERED
+      - EXPIRED
       type: string
       description: |-
         * `REQUESTED` - Requested
@@ -15181,6 +17702,8 @@ components:
         * `ACCEPTED` - Accepted
         * `DECLINED` - Declined
         * `WITHDRAWN` - Withdrawn
+        * `ORDERED` - Converted to an order
+        * `EXPIRED` - Expired
     ReasonRequest:
       type: object
       properties:
@@ -15188,6 +17711,33 @@ components:
           type: string
           default: ''
           maxLength: 500
+    Reconciliation:
+      type: object
+      properties:
+        currency:
+          type: string
+        ok:
+          type: boolean
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+        balances:
+          type: object
+          additionalProperties:
+            type: string
+            format: decimal
+            pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        totals:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - balances
+      - checks
+      - currency
+      - ok
+      - totals
     RecruiterDashboard:
       type: object
       properties:
@@ -15255,6 +17805,30 @@ components:
           minLength: 1
       required:
       - refresh
+    Refund:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - reason
     RegisterRequest:
       type: object
       description: Reject, rather than silently ignore, any privilege field a client
@@ -15568,6 +18142,124 @@ components:
       - from_status
       - reason
       - to_status
+    Return:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        order:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ReturnStatusEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        decision_note:
+          type: string
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReturnLine'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - decided_at
+      - decision_note
+      - id
+      - lines
+      - order
+      - reason
+      - status
+      - updated_at
+    ReturnCreateRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReturnRequestLineRequest'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - lines
+      - reason
+    ReturnDecisionRequest:
+      type: object
+      properties:
+        approve:
+          type: boolean
+        note:
+          type: string
+          default: ''
+          maxLength: 300
+      required:
+      - approve
+    ReturnLine:
+      type: object
+      properties:
+        item:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+      required:
+      - item
+      - quantity
+      - title
+    ReturnRequestLineRequest:
+      type: object
+      properties:
+        item:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          maximum: 20
+          minimum: 1
+      required:
+      - item
+      - quantity
+    ReturnStatusEnum:
+      enum:
+      - REQUESTED
+      - APPROVED
+      - REJECTED
+      - RECEIVED
+      - REFUNDED
+      type: string
+      description: |-
+        * `REQUESTED` - Requested by the buyer
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
+        * `RECEIVED` - Items received back
+        * `REFUNDED` - Refunded
     ReviewCreateRequest:
       type: object
       properties:
@@ -15595,6 +18287,14 @@ components:
         * `B2B` - Professionals only (targeted)
         * `B2C` - Public store only
         * `BOTH` - Professionals and public store
+    SalesChannelEnum:
+      enum:
+      - B2C
+      - B2B
+      type: string
+      description: |-
+        * `B2C` - Public store
+        * `B2B` - Verified professional
     SaveCandidateRequest:
       type: object
       properties:
@@ -15642,6 +18342,339 @@ components:
         * `PROVIDER` - Healthcare provider
         * `MEDICAL_COMPANY` - Medical company / supplier
         * `REAL_ESTATE_SELLER` - Medical real-estate owner or agent
+    SellerOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+        checkout_number:
+          type: string
+          readOnly: true
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/SalesChannelEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatusEnum'
+          readOnly: true
+        payment_method:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentMethodEnum'
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/StorePaymentStatusEnum'
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        list_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        merchant:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        buyer_name:
+          type: string
+          readOnly: true
+        delivery_governorate:
+          allOf:
+          - $ref: '#/components/schemas/Governorate'
+          readOnly: true
+        delivery_city:
+          allOf:
+          - $ref: '#/components/schemas/City'
+          readOnly: true
+          nullable: true
+        delivery_address:
+          type: string
+          readOnly: true
+        delivery_latitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        delivery_longitude:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        contact_phone:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        shipping_reference:
+          type: string
+          readOnly: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SellerOrderItem'
+          readOnly: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderTransition'
+          readOnly: true
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Return'
+          readOnly: true
+        disputes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dispute'
+          readOnly: true
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
+          readOnly: true
+        return_deadline:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        merchandise_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        commission_policy_version:
+          type: integer
+          readOnly: true
+          nullable: true
+        commission_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_payable_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        settlement_state:
+          allOf:
+          - $ref: '#/components/schemas/SettlementStateEnum'
+          readOnly: true
+      required:
+      - buyer_name
+      - channel
+      - checkout_number
+      - commission_policy_version
+      - commission_rate
+      - commission_total
+      - completed_at
+      - contact_phone
+      - created_at
+      - currency
+      - delivered_at
+      - delivery_address
+      - delivery_city
+      - delivery_governorate
+      - delivery_latitude
+      - delivery_longitude
+      - disputes
+      - id
+      - items
+      - list_total
+      - merchandise_net
+      - merchant
+      - note
+      - number
+      - paid_at
+      - payment_method
+      - payment_status
+      - platform_discount_total
+      - refunded_total
+      - refunds
+      - return_deadline
+      - returns
+      - seller_discount_total
+      - seller_payable_total
+      - settlement_state
+      - shipped_at
+      - shipping_reference
+      - status
+      - status_changed_at
+      - total
+      - transitions
+    SellerOrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product_id:
+          type: string
+          format: uuid
+          readOnly: true
+        image_url:
+          type: string
+          readOnly: true
+        title_snapshot:
+          type: string
+          readOnly: true
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        platform_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        buyer_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_quantity:
+          type: integer
+          readOnly: true
+        refunded_buyer_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        merchandise_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        seller_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_seller_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        refunded_platform_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - buyer_paid
+      - commission
+      - commission_rate
+      - id
+      - image_url
+      - line_total
+      - merchandise_net
+      - platform_discount
+      - product_id
+      - quantity
+      - refunded_buyer_paid
+      - refunded_commission
+      - refunded_platform_discount
+      - refunded_quantity
+      - refunded_seller_payable
+      - seller_discount
+      - seller_payable
+      - title_snapshot
+      - unit_price
     SellerOwner:
       type: object
       properties:
@@ -15683,6 +18716,24 @@ components:
       - public_email
       - seller_type
       - updated_at
+    SellerPayable:
+      type: object
+      properties:
+        company:
+          type: object
+          additionalProperties: {}
+        payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        draft_settlement:
+          type: object
+          additionalProperties: {}
+          nullable: true
+      required:
+      - company
+      - draft_settlement
+      - payable
     SellerSummary:
       type: object
       description: 'The public face of a seller: never contact data or account identity.'
@@ -15819,6 +18870,89 @@ components:
       required:
       - price
       - title
+    Settlement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        company:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        currency:
+          type: string
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SettlementStatusEnum'
+          readOnly: true
+        reference_note:
+          type: string
+          readOnly: true
+        confirmed_by:
+          type: string
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - company
+      - confirmed_at
+      - confirmed_by
+      - created_at
+      - currency
+      - id
+      - reference_note
+      - status
+    SettlementConfirmRequest:
+      type: object
+      properties:
+        reference_note:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - reference_note
+    SettlementPrepareRequest:
+      type: object
+      properties:
+        company:
+          type: string
+          format: uuid
+      required:
+      - company
+    SettlementStateEnum:
+      enum:
+      - NOT_ELIGIBLE
+      - ACCRUED
+      type: string
+      description: |-
+        * `NOT_ELIGIBLE` - Not eligible yet
+        * `ACCRUED` - Commission and seller payable accrued
+    SettlementStatusEnum:
+      enum:
+      - DRAFT
+      - PAID
+      - CANCELLED
+      type: string
+      description: |-
+        * `DRAFT` - Prepared, awaiting finance confirmation
+        * `PAID` - Marked paid (simulated)
+        * `CANCELLED` - Cancelled
     ShiftTypeEnum:
       enum:
       - DAY
@@ -15916,6 +19050,193 @@ components:
       - product
       - sponsored
       - starts_on
+    Statement:
+      type: object
+      properties:
+        currency:
+          type: string
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        gross_sales:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        seller_discounts:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        merchandise_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        refunded_commission:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        refunded_seller_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        seller_earnings:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        paid_out:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        pending_orders:
+          type: integer
+        pending_seller_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        draft_settlement:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementEntry'
+        settlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Settlement'
+      required:
+      - commission
+      - commission_rate
+      - currency
+      - draft_settlement
+      - entries
+      - gross_sales
+      - merchandise_net
+      - paid_out
+      - payable
+      - pending_orders
+      - pending_seller_payable
+      - refunded_commission
+      - refunded_seller_payable
+      - seller_discounts
+      - seller_earnings
+      - settlements
+    StatementEntry:
+      type: object
+      properties:
+        reference:
+          type: string
+        kind:
+          type: string
+        order_number:
+          type: string
+        memo:
+          type: string
+        debit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        credit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - credit
+      - debit
+      - kind
+      - memo
+      - order_number
+      - reference
+    StockAdjustRequest:
+      type: object
+      properties:
+        delta:
+          type: integer
+          maximum: 100000
+          minimum: -100000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - delta
+      - reason
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/StockMovementKindEnum'
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        on_hand_after:
+          type: integer
+          readOnly: true
+        reserved_after:
+          type: integer
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - kind
+      - on_hand_after
+      - order_number
+      - quantity
+      - reason
+      - reserved_after
+    StockMovementKindEnum:
+      enum:
+      - RESERVE
+      - RELEASE
+      - CONSUME
+      - RESTOCK
+      - ADJUST
+      type: string
+      description: |-
+        * `RESERVE` - Reserved for an order
+        * `RELEASE` - Reservation released
+        * `CONSUME` - Shipped (consumed)
+        * `RESTOCK` - Returned to stock
+        * `ADJUST` - Manual adjustment
+    StockThresholdRequest:
+      type: object
+      properties:
+        threshold:
+          type: integer
+          maximum: 100000
+          minimum: 0
+          nullable: true
+      required:
+      - threshold
     StoreCategory:
       type: object
       description: 'Public store category: names only (no catalogue-governance flags).'
@@ -15945,18 +19266,22 @@ components:
       - MANUAL_TRANSFER
       type: string
       description: |-
-        * `CASH_ON_DELIVERY` - Cash on delivery
-        * `MANUAL_TRANSFER` - Manual transfer (confirmed by the store)
+        * `CASH_ON_DELIVERY` - Cash on delivery (remitted to Racheeta, simulated)
+        * `MANUAL_TRANSFER` - Manual transfer to Racheeta (simulated)
     StorePaymentStatusEnum:
       enum:
       - UNPAID
       - PAID
-      - REFUND_DUE
+      - REFUND_PENDING
+      - PARTIALLY_REFUNDED
+      - REFUNDED
       type: string
       description: |-
         * `UNPAID` - Not paid yet
-        * `PAID` - Payment received (recorded by the store)
-        * `REFUND_DUE` - Refund due
+        * `PAID` - Payment verified by Racheeta finance (simulated)
+        * `REFUND_PENDING` - Refund pending
+        * `PARTIALLY_REFUNDED` - Partially refunded
+        * `REFUNDED` - Refunded
     StoreProduct:
       type: object
       description: |-
@@ -16378,6 +19703,15 @@ components:
           maxLength: 2000
       required:
       - status
+    VerifyPaymentRequest:
+      type: object
+      properties:
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required:
+      - reference
     WorkExperience:
       type: object
       properties:

@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client'
 import * as authApi from '../../api/endpoints/auth'
 import * as referenceApi from '../../api/endpoints/reference'
 import * as workspacesApi from '../../api/endpoints/workspaces'
+import * as commerceApi from '../../api/endpoints/commerce'
 import { tokenStore } from '../../api/tokens'
 import type { Order, StoreProduct } from '../../api'
 import { cart } from '../../cart/cart'
@@ -13,6 +14,7 @@ import { makeAccount, renderApp } from '../../test/renderApp'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/workspaces')
+vi.mock('../../api/endpoints/commerce')
 vi.mock('../../api/endpoints/reference')
 
 const page = <T,>(results: T[]) => ({ count: results.length, next: null, previous: null, results })
@@ -38,6 +40,7 @@ beforeEach(() => {
   cart.clear()
   vi.mocked(workspacesApi.listStoreCategories).mockResolvedValue([])
   vi.mocked(referenceApi.listGovernorates).mockResolvedValue([])
+  vi.mocked(commerceApi.previewCheckout).mockResolvedValue({ currency: 'IQD', orders: [], platform_coupon: null, list_total: '0', seller_discount_total: '0', platform_discount_total: '0', total: '0' })
 })
 
 describe('store, header cart and order status', () => {
@@ -88,7 +91,12 @@ describe('store, header cart and order status', () => {
       { id: 'g-bgd', country: 'iq', slug: 'baghdad', name_ar: 'بغداد', name_en: 'Baghdad' },
       { id: 'g-bsr', country: 'iq', slug: 'basra', name_ar: 'البصرة', name_en: 'Basra' },
     ] as never)
-    vi.mocked(workspacesApi.placeOrder).mockResolvedValue({ id: 'o', number: 'RCH-9' } as Order)
+    vi.mocked(commerceApi.previewCheckout).mockResolvedValue({
+      currency: 'IQD',
+      orders: [{ merchant: { id: 'm', name: 'Store' }, seller_coupon: null, lines: [], list_total: '185000', seller_discount_total: '0', platform_discount_total: '0', total: '185000' }],
+      platform_coupon: null, list_total: '185000', seller_discount_total: '0', platform_discount_total: '0', total: '185000',
+    } as never)
+    vi.mocked(commerceApi.placeCheckout).mockResolvedValue({ id: 'c-1', number: 'CHK-1', orders: [{ id: 'o-1', number: 'RCH-9' }] } as never)
     const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { latitude: 30.5, longitude: 47.8 } } as GeolocationPosition))
     Object.defineProperty(navigator, 'geolocation', { value: { getCurrentPosition }, configurable: true })
     renderApp('/cart')
@@ -99,7 +107,7 @@ describe('store, header cart and order status', () => {
     expect(within(form).getByLabelText(/المحافظة|governorate/i)).toHaveValue('g-bsr') // nearest to the shared position
     expect(within(form).getByTestId('delivery-pin')).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('button', { name: /تأكيد الطلب|place order/i }))
-    await waitFor(() => expect(workspacesApi.placeOrder).toHaveBeenCalledTimes(1))
-    expect(vi.mocked(workspacesApi.placeOrder).mock.calls[0]![0]).toMatchObject({ governorate: 'g-bsr', latitude: '30.500000', longitude: '47.800000', phone: '07701234567' })
+    await waitFor(() => expect(commerceApi.placeCheckout).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(commerceApi.placeCheckout).mock.calls[0]![0]).toMatchObject({ governorate: 'g-bsr', latitude: '30.500000', longitude: '47.800000', phone: '07701234567' })
   })
 })

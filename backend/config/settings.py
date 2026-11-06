@@ -112,6 +112,7 @@ INSTALLED_APPS = [
     "apps.workspaces",
     "apps.preferences",
     "apps.commerce",
+    "apps.ledger",
     "apps.demo",
 ]
 
@@ -303,6 +304,17 @@ SPECTACULAR_SETTINGS = {
         "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
         "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",
         "ReservationStatusEnum": "apps.reservations.types.ReservationStatus.choices",
+        "SalesChannelEnum": "apps.commerce.types.SalesChannel.choices",
+        "SettlementStateEnum": "apps.commerce.types.SettlementState.choices",
+        "DiscountKindEnum": "apps.commerce.types.DiscountKind.choices",
+        "CouponFundingEnum": "apps.commerce.types.CouponFunding.choices",
+        "StockMovementKindEnum": "apps.commerce.types.StockMovementKind.choices",
+        "ReturnStatusEnum": "apps.commerce.types.ReturnStatus.choices",
+        "DisputeStatusEnum": "apps.commerce.types.DisputeStatus.choices",
+        "LedgerAccountEnum": "apps.ledger.types.Account.choices",
+        "LedgerEntryKindEnum": "apps.ledger.types.EntryKind.choices",
+        "SettlementStatusEnum": "apps.ledger.types.SettlementStatus.choices",
+        "ComplianceClassEnum": "apps.marketplace.types.ComplianceClass.choices",
     },
 }
 

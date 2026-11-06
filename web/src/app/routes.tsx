@@ -4,6 +4,8 @@ import { AppLayout } from './AppLayout'
 import { RequireProviderProfile } from './ProviderGate'
 import { PublicOnly, RequireAuth, RequireRole, RequireStaff } from './guards'
 import { AdminConsolePage } from '../pages/admin/AdminConsolePage'
+import { AdminFinancePage } from '../pages/market/AdminFinancePage'
+import { SellerCenterPage } from '../pages/market/SellerCenterPage'
 import { ApplicantsPage } from '../pages/employer/ApplicantsPage'
 import { EmployerWorkspacePage } from '../pages/employer/EmployerWorkspacePage'
 import { JobEditorPage } from '../pages/employer/JobEditorPage'
@@ -101,6 +103,7 @@ export const routes: RouteObject[] = [
           // Merchant pages serve owners AND staff (?company=); the server checks the capability.
           { path: 'merchant/orders', element: <MerchantOrdersPage /> },
           { path: 'merchant/quotes', element: <MerchantQuotesPage /> },
+          { path: 'merchant/center', element: <SellerCenterPage /> },
           {
             element: <RequireRole roles={['PATIENT']} />,
             children: [{ path: 'reservations', element: <MyReservationsPage /> }],
@@ -115,7 +118,11 @@ export const routes: RouteObject[] = [
           { path: 'employer/talent/:id', element: <TalentDetailPage /> },
           {
             element: <RequireStaff />,
-            children: [{ path: 'admin-console', element: <AdminConsolePage /> }],
+            children: [
+              { path: 'admin-console', element: <AdminConsolePage /> },
+              // Marketplace finance: the server additionally requires the finance permission.
+              { path: 'admin-finance', element: <AdminFinancePage /> },
+            ],
           },
           {
             element: <RequireRole roles={['PROVIDER']} />,

@@ -75,3 +75,19 @@ class SaleChannel(models.TextChoices):
 
 CONSUMER_CHANNELS = frozenset({SaleChannel.B2C, SaleChannel.BOTH})
 PROFESSIONAL_CHANNELS = frozenset({SaleChannel.B2B, SaleChannel.BOTH})
+
+
+class ComplianceClass(models.TextChoices):
+    """Server-controlled sale eligibility of a CATEGORY (fail closed: unknown = not purchasable).
+    A seller's own title, category choice or description can never grant more than this."""
+
+    B2C_ALLOWED = "B2C_ALLOWED", "Public store allowed"
+    B2B_VERIFIED_ONLY = "B2B_VERIFIED_ONLY", "Verified professional buyers only"
+    QUOTE_ONLY = "QUOTE_ONLY", "Quotation only"
+    RESTRICTED_PENDING_REVIEW = "RESTRICTED_PENDING_REVIEW", "Restricted - legal review required"
+    PROHIBITED = "PROHIBITED", "Prohibited"
+
+
+NOT_PURCHASABLE_CLASSES = frozenset(
+    {ComplianceClass.RESTRICTED_PENDING_REVIEW, ComplianceClass.PROHIBITED}
+)

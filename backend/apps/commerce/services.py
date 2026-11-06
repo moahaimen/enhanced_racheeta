@@ -1,27 +1,23 @@
-"""Commerce writes: the only place orders and quote requests are created or change state.
+"""B2B quotations: request -> seller quote (valid QUOTE_VALID_DAYS) -> buyer accepts -> order.
 
-Rules (docs/COMMERCE.md):
-* store checkout re-reads every product under row lock with THE public-store rule
-  (`Product.objects.consumer_store()`); restricted/prescription items, B2B-only items, unverified or
-  non-retail businesses and inactive categories can never be bought, whatever the client sends;
-* prices and totals come from the locked rows; client totals are ignored;
-* stock is decremented under the same lock (no oversell under concurrency) and restored when an
-  order is cancelled;
-* quote requests are only possible for a product that THE targeting rule shows to the requesting
-  provider right now (`Product.objects.targeted_for`).
+Store checkout lives in `checkout.py`, the order lifecycle in `lifecycle.py`.
+* a quote can only be requested for a product THE targeting rule shows to the provider now;
+* an accepted, unexpired quote becomes ONE order at the quoted price, with the same commission
+  snapshot, ledger and stock reservation as any other order (`checkout.persist`).
 """
 
 from __future__ import annotations
 
-import secrets
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.accounts.roles import AccountRole
 from apps.audit import services as audit
-from apps.marketplace.models import MedicalCompany, Product
+from apps.ledger.posting import current_policy, dinars
+from apps.marketplace.models import Product
+from apps.marketplace.types import NOT_PURCHASABLE_CLASSES, CompanyVerificationStatus
 from apps.notifications import services as notifications
 from apps.notifications.types import (
     NotificationCategory,
@@ -29,24 +25,13 @@ from apps.notifications.types import (
     NotificationResourceType,
 )
 
-from .models import Order, OrderItem, OrderTransition, QuoteRequest
-from .types import (
-    BUYER_CANCELLABLE,
-    MAX_LINES,
-    MAX_QUANTITY_PER_LINE,
-    MERCHANT_TRANSITIONS,
-    OPEN_QUOTE_STATUSES,
-    OrderStatus,
-    PaymentMethod,
-    PaymentStatus,
-    QuoteStatus,
-)
+from . import checkout as store
+from .errors import CommerceError
+from .models import Checkout, QuoteRequest
+from .pricing import PricedCheckout, PricedLine, PricedOrder
+from .types import OPEN_QUOTE_STATUSES, QUOTE_VALID_DAYS, PaymentMethod, QuoteStatus
 
-BUYER_ROLES = frozenset({AccountRole.PATIENT, AccountRole.PROVIDER, AccountRole.REAL_ESTATE_SELLER})
-
-
-class CommerceError(Exception):
-    code = "commerce_error"
+__all__ = ["CommerceError"]
 
 
 class NotAllowed(CommerceError):
@@ -57,20 +42,12 @@ class InvalidCart(CommerceError):
     code = "invalid_cart"
 
 
-class OutOfStock(CommerceError):
-    code = "out_of_stock"
-
-
 class InvalidTransition(CommerceError):
     code = "invalid_transition"
 
 
 class NotFound(CommerceError):
     code = "not_found"
-
-
-def _number() -> str:
-    return f"RCH-{timezone.localdate():%y%m%d}-{secrets.token_hex(3).upper()}"
 
 
 def _notify(recipient_id, event, resource_type, resource_id, dedupe, payload):
@@ -88,203 +65,9 @@ def _notify(recipient_id, event, resource_type, resource_id, dedupe, payload):
             payload=payload,
             resource_type=resource_type,
             resource_id=resource_id,
-        )
+        ),
+        robust=True,
     )
-
-
-# ---- store orders -------------------------------------------------------------------------------
-
-
-@transaction.atomic
-def place_order(buyer, *, items: list[dict], delivery: dict, payment_method: str) -> Order:
-    if buyer.role not in BUYER_ROLES or not buyer.is_active:
-        raise NotAllowed("This account cannot place store orders.")
-    if not buyer.email_verified_at:
-        raise NotAllowed("Verify your e-mail address before ordering.")
-    if payment_method not in PaymentMethod.values:
-        raise InvalidCart("Choose cash on delivery or manual transfer.")
-    if not items or len(items) > MAX_LINES:
-        raise InvalidCart(f"An order has between 1 and {MAX_LINES} lines.")
-    wanted: dict = {}
-    for line in items:
-        qty = int(line["quantity"])
-        if not 1 <= qty <= MAX_QUANTITY_PER_LINE:
-            raise InvalidCart(f"Quantity must be between 1 and {MAX_QUANTITY_PER_LINE}.")
-        wanted[line["product"]] = wanted.get(line["product"], 0) + qty
-    # Lock in a stable order (by id) so concurrent checkouts never deadlock.
-    products = list(
-        Product.objects.consumer_store()
-        .select_for_update(of=("self",))
-        .filter(pk__in=list(wanted))
-        .order_by("pk")
-    )
-    if len(products) != len(wanted):
-        raise InvalidCart("Some products are not available in the store.")
-    merchants = {p.company_id for p in products}
-    if len(merchants) != 1:
-        raise InvalidCart("One order contains products of one store; split the cart per store.")
-    merchant = MedicalCompany.objects.get(pk=merchants.pop())
-    if merchant.account_id == buyer.pk:
-        raise NotAllowed("A business cannot order from itself.")
-    total = Decimal("0")
-    lines = []
-    for product in products:
-        qty = wanted[product.pk]
-        if product.stock_quantity is None or product.stock_quantity < qty:
-            raise OutOfStock(f"Not enough stock for “{product.title}”.")
-        line_total = (product.price * qty).quantize(Decimal("0.01"))
-        total += line_total
-        lines.append((product, qty, line_total))
-    order = Order.objects.create(
-        number=_number(),
-        buyer=buyer,
-        merchant=merchant,
-        payment_method=payment_method,
-        total=total,
-        currency=products[0].currency,
-        delivery_governorate=delivery["governorate"],
-        delivery_city=delivery.get("city"),
-        delivery_address=delivery["address"].strip(),
-        delivery_latitude=delivery.get("latitude"),
-        delivery_longitude=delivery.get("longitude"),
-        contact_phone=delivery["phone"].strip(),
-        note=delivery.get("note", "").strip(),
-        status_changed_at=timezone.now(),
-    )
-    for product, qty, line_total in lines:
-        OrderItem.objects.create(
-            order=order,
-            product=product,
-            title_snapshot=product.title,
-            unit_price=product.price,
-            quantity=qty,
-            line_total=line_total,
-        )
-        product.stock_quantity -= qty
-        product.save(update_fields=["stock_quantity", "updated_at"])
-    OrderTransition.objects.create(order=order, actor=buyer, to_status=OrderStatus.PLACED)
-    audit.record(
-        actor=buyer,
-        action="commerce.order.placed",
-        target=order,
-        summary=order.number,
-        data={"lines": len(lines), "total": str(total)},
-    )
-    _notify(
-        merchant.account_id,
-        NotificationEventType.ORDER_PLACED,
-        NotificationResourceType.ORDER,
-        order.pk,
-        f"order:{order.pk}:placed",
-        {"order_number": order.number, "status": OrderStatus.PLACED},
-    )
-    return order
-
-
-def _restore_stock(order: Order) -> None:
-    for item in order.items.select_related(None).order_by("product_id"):
-        product = Product.objects.select_for_update(of=("self",)).get(pk=item.product_id)
-        if product.stock_quantity is not None:
-            product.stock_quantity += item.quantity
-            product.save(update_fields=["stock_quantity", "updated_at"])
-
-
-def _transition(order: Order, *, actor, to_status: str, reason: str = "") -> Order:
-    previous = order.status
-    order.status = to_status
-    order.status_changed_at = timezone.now()
-    fields = ["status", "status_changed_at", "updated_at"]
-    if to_status == OrderStatus.CANCELLED:
-        _restore_stock(order)
-        if order.payment_status == PaymentStatus.PAID:
-            order.payment_status = PaymentStatus.REFUND_DUE
-            fields.append("payment_status")
-    if (
-        to_status == OrderStatus.DELIVERED
-        and order.payment_method == PaymentMethod.CASH_ON_DELIVERY
-    ):
-        order.payment_status = (
-            PaymentStatus.PAID
-        )  # cash collected at the door (recorded, not processed)
-        fields.append("payment_status")
-    order.save(update_fields=fields)
-    OrderTransition.objects.create(
-        order=order, actor=actor, from_status=previous, to_status=to_status, reason=reason[:500]
-    )
-    audit.record(
-        actor=actor,
-        action="commerce.order.status_changed",
-        target=order,
-        summary=f"{previous} -> {to_status}",
-        data={"from_status": previous, "to_status": to_status},
-    )
-    recipient = order.buyer_id if actor.pk != order.buyer_id else order.merchant.account_id
-    _notify(
-        recipient,
-        NotificationEventType.ORDER_STATUS_CHANGED,
-        NotificationResourceType.ORDER,
-        order.pk,
-        f"order:{order.pk}:{to_status}",
-        {
-            "order_number": order.number,
-            "merchant_name": order.merchant.name,
-            "previous_status": previous,
-            "status": to_status,
-        },
-    )
-    return order
-
-
-@transaction.atomic
-def cancel_as_buyer(order_id, *, buyer, reason: str = "") -> Order:
-    order = (
-        Order.objects.select_for_update(of=("self",))
-        .select_related("merchant")
-        .filter(pk=order_id, buyer=buyer)
-        .first()
-    )
-    if order is None:
-        raise NotFound("Order not found.")
-    if order.status not in BUYER_CANCELLABLE:
-        raise InvalidTransition("This order can no longer be cancelled.")
-    return _transition(order, actor=buyer, to_status=OrderStatus.CANCELLED, reason=reason)
-
-
-@transaction.atomic
-def transition_as_merchant(
-    order_id, *, company_id, actor, to_status: str, reason: str = ""
-) -> Order:
-    order = (
-        Order.objects.select_for_update(of=("self",))
-        .select_related("merchant")
-        .filter(pk=order_id, merchant_id=company_id)
-        .first()
-    )
-    if order is None:
-        raise NotFound("Order not found.")
-    if to_status not in MERCHANT_TRANSITIONS.get(order.status, frozenset()):
-        raise InvalidTransition(f"An order cannot move from {order.status} to {to_status}.")
-    return _transition(order, actor=actor, to_status=to_status, reason=reason)
-
-
-@transaction.atomic
-def record_payment(order_id, *, company_id, actor) -> Order:
-    """Store staff confirm a manual transfer was received (no money moves through Racheeta)."""
-    order = (
-        Order.objects.select_for_update(of=("self",))
-        .filter(pk=order_id, merchant_id=company_id)
-        .first()
-    )
-    if order is None:
-        raise NotFound("Order not found.")
-    if order.status == OrderStatus.CANCELLED or order.payment_status != PaymentStatus.UNPAID:
-        raise InvalidTransition("Payment cannot be recorded for this order.")
-    order.payment_status = PaymentStatus.PAID
-    order.save(update_fields=["payment_status", "updated_at"])
-    audit.record(
-        actor=actor, action="commerce.order.payment_recorded", target=order, summary=order.number
-    )
-    return order
 
 
 # ---- B2B quote requests -------------------------------------------------------------------------
@@ -384,6 +167,7 @@ def respond_quote(
     quote.quoted_currency = quote.product.currency
     quote.quoted_note = note.strip()[:1000]
     quote.quoted_at = timezone.now()
+    quote.expires_at = quote.quoted_at + timedelta(days=QUOTE_VALID_DAYS)
     quote.save()
     return _quote_changed(
         quote, actor=actor, previous=previous, notify_account_id=quote.requested_by_id
@@ -414,6 +198,8 @@ def close_as_requester(quote_id, *, provider, actor, outcome: str) -> QuoteReque
     }
     if outcome not in allowed or quote.status not in allowed[outcome]:
         raise InvalidTransition(f"A {quote.status} request cannot become {outcome}.")
+    if outcome == QuoteStatus.ACCEPTED and _expired(quote):
+        raise InvalidTransition("This quotation has expired; ask for a new one.")
     previous = quote.status
     quote.status = outcome
     quote.closed_at = timezone.now()
@@ -421,3 +207,84 @@ def close_as_requester(quote_id, *, provider, actor, outcome: str) -> QuoteReque
     return _quote_changed(
         quote, actor=actor, previous=previous, notify_account_id=quote.company.account_id
     )
+
+
+def _expired(quote: QuoteRequest) -> bool:
+    return quote.expires_at is not None and timezone.now() >= quote.expires_at
+
+
+@transaction.atomic
+def order_from_quote(
+    quote_id, *, provider, account, delivery: dict, payment_method: str, idempotency_key: str
+) -> tuple[Checkout, bool]:
+    """Accepted quote -> one order at the quoted unit price. Idempotent per key and per quote."""
+    if payment_method not in PaymentMethod.values:
+        raise InvalidCart("Choose cash on delivery or manual transfer.")
+    key = (idempotency_key or "").strip()[:64]
+    if not key:
+        raise InvalidCart("Missing idempotency key.")
+    existing = Checkout.objects.filter(buyer=account, idempotency_key=key).first()
+    if existing is not None:
+        return existing, False
+    quote = _locked_quote(quote_id, requester=provider)
+    if quote.status == QuoteStatus.ORDERED:
+        raise InvalidTransition("This quotation has already been ordered.")
+    if quote.status != QuoteStatus.ACCEPTED:
+        raise InvalidTransition("Accept the quotation before ordering.")
+    if _expired(quote):
+        quote.status = QuoteStatus.EXPIRED
+        quote.closed_at = timezone.now()
+        quote.save()
+        raise InvalidTransition("This quotation has expired; ask for a new one.")
+    store.check_buyer(account)
+    product = (
+        Product.objects.select_for_update(of=("self",))
+        .select_related("company", "company__account", "category")
+        .get(pk=quote.product_id)
+    )
+    company = product.company
+    if company.verification_status != CompanyVerificationStatus.VERIFIED or not (
+        company.account.is_active
+    ):
+        raise NotAllowed("The seller cannot sell right now.")
+    if (
+        not product.is_active
+        or product.is_restricted
+        or product.category.compliance_class in NOT_PURCHASABLE_CLASSES
+    ):
+        raise NotAllowed("This product can no longer be ordered.")
+    if quote.quoted_unit_price is None or quote.quoted_currency != store.CURRENCY:
+        raise InvalidCart("Only quotations in Iraqi dinars can be ordered.")
+    if company.account_id == account.pk:
+        raise NotAllowed("A business cannot buy from itself.")
+    left = store.inventory.available(product)
+    if left is not None and left < quote.quantity:
+        raise CommerceError(f"Not enough stock for “{product.title}”.", "out_of_stock")
+    policy = current_policy()
+    unit = dinars(quote.quoted_unit_price)
+    line = PricedLine(
+        product=product,
+        quantity=quote.quantity,
+        unit_price=unit,
+        line_total=dinars(unit * quote.quantity),
+        commission_rate=policy.rate_percent,
+        channel="B2B",
+    )
+    priced = PricedCheckout(orders=[PricedOrder(company=company, lines=[line])])
+    checkout, created = store.persist(
+        account,
+        priced,
+        policy,
+        delivery=delivery,
+        payment_method=payment_method,
+        key=key,
+        quote=quote,
+    )
+    previous = quote.status
+    quote.status = QuoteStatus.ORDERED
+    quote.closed_at = timezone.now()
+    quote.save()
+    _quote_changed(
+        quote, actor=account, previous=previous, notify_account_id=quote.company.account_id
+    )
+    return checkout, created

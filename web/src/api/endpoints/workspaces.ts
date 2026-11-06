@@ -1,11 +1,9 @@
 import { apiRequest } from '../client'
 import type {
-  CheckoutRequest,
   DeliveryDefaults,
   ListingPromotion,
   MarketingPreferences,
   Order,
-  OrderStatus,
   OrgMember,
   OrgRole,
   OrgSummary,
@@ -86,10 +84,6 @@ export function getDeliveryDefaults(signal?: AbortSignal): Promise<DeliveryDefau
   return apiRequest<DeliveryDefaults>('/api/v1/orders/delivery-defaults', { signal })
 }
 
-export function placeOrder(payload: CheckoutRequest): Promise<Order> {
-  return apiRequest<Order>('/api/v1/orders', { method: 'POST', body: payload })
-}
-
 export function listMyOrders(page = 1, signal?: AbortSignal): Promise<PaginatedOrders> {
   return apiRequest<PaginatedOrders>(`/api/v1/orders?page=${page}`, { signal })
 }
@@ -105,18 +99,6 @@ export function listMerchantOrders(companyId?: string, page = 1, signal?: AbortS
   )
 }
 
-export function moveMerchantOrder(id: string, status: Exclude<OrderStatus, 'PLACED'>, companyId?: string) {
-  return apiRequest<Order>(`/api/v1/merchant/orders/${enc(id)}/transition${companyQuery(companyId)}`, {
-    method: 'POST',
-    body: { status },
-  })
-}
-
-export function recordOrderPayment(id: string, companyId?: string) {
-  return apiRequest<Order>(`/api/v1/merchant/orders/${enc(id)}/payment-received${companyQuery(companyId)}`, {
-    method: 'POST',
-  })
-}
 
 // ---- B2B quotes ---------------------------------------------------------------------------------
 export function requestQuote(product: string, quantity: number, message = ''): Promise<Quote> {

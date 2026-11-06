@@ -557,6 +557,36 @@ def _company(account, company: MedicalCompany, role: str, team_path: str) -> lis
                 link=f"/merchant/orders{q}",
             )
         )
+    if retail and role_has(role, "company.finance.view"):
+        from apps.ledger import settlement
+        from apps.ledger.models import SettlementBatch
+
+        statement = settlement.statement(company.pk)
+        earned = statement["commission"] - statement["refunded_commission"]
+        modules.append(
+            _module(
+                "store_finance",
+                stats=[
+                    _stat("completed_sales", _money(statement["merchandise_net"], "IQD")),
+                    _stat("racheeta_commission", _money(earned, "IQD")),
+                    _stat("owed_to_you", _money(statement["payable"], "IQD")),
+                    _stat("paid_out", _money(statement["paid_out"], "IQD")),
+                    _stat("awaiting_completion", statement["pending_orders"]),
+                ],
+                items=[
+                    _item(
+                        b.pk,
+                        _money(b.amount, b.currency),
+                        b.reference_note,
+                        b.status,
+                        "market.settlementStatus",
+                        f"/merchant/center?tab=finance{'&' + q[1:] if q else ''}",
+                    )
+                    for b in SettlementBatch.objects.filter(company=company)[:LIST_LIMIT]
+                ],
+                link=f"/merchant/center?tab=finance{'&' + q[1:] if q else ''}",
+            )
+        )
     if role_has(role, "company.quotes.view"):
         quotes = QuoteRequest.objects.filter(company=company)
         counts = status_counts(quotes, "status", QuoteStatus.values)

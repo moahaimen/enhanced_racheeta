@@ -82,3 +82,80 @@
     padding: var(--space-6);
   }
 }
+
+/* Money breakdowns (marketplace): label on the start side, amount on the end side. */
+.money-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+.money-table th,
+.money-table td {
+  padding: 0.3rem 0;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+.money-table th {
+  text-align: start;
+  font-weight: 400;
+  color: var(--text-secondary, #4b5b67);
+}
+.money-table td {
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.money-table tr.money-strong th,
+.money-table tr.money-strong td {
+  font-weight: 700;
+  color: var(--text-primary, #10242f);
+  border-bottom: 0;
+  padding-top: 0.5rem;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+.data-table th,
+.data-table td {
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: start;
+  vertical-align: top;
+}
+.data-table thead th {
+  font-weight: 600;
+  color: var(--text-secondary, #4b5b67);
+  background: var(--surface-secondary);
+}
+.data-table td.num,
+.data-table th.num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.seller-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.seller-nav-link:hover {
+  border-color: var(--border-brand);
+  color: var(--text-brand);
+}
+.seller-nav-link.is-active {
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: var(--color-neutral-0);
+}

@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminAccount
+from apps.workspaces import access
 
 from . import services
 from .models import MedicalCompany, Product, ProductCategory
@@ -181,9 +182,30 @@ def _own_product_response(request, pk, status_code=status.HTTP_200_OK):
     )
 
 
-def _own_products(request):
+class HasCompanyWorkspace(HasMedicalCompany):
+    """The business owner, or (with `?company=<id>`) an ACTIVE staff member; the capability for
+    the action is checked in the view (apps.workspaces.access)."""
+
+    def has_permission(self, request, view) -> bool:
+        if request.query_params.get("company"):
+            return bool(request.user and request.user.is_authenticated)
+        return super().has_permission(request, view)
+
+
+def _acting_company(request, capability: str) -> MedicalCompany:
+    company_id = request.query_params.get("company")
+    if not company_id:
+        return _own_company(request)
+    if not access.can_company(request.user, company_id, capability):
+        raise PermissionDenied("You do not have access to this business workspace.")
+    return MedicalCompany.objects.select_related("governorate", "city", "account").get(
+        pk=company_id
+    )
+
+
+def _own_products(request, capability: str = "company.products.view"):
     return (
-        Product.objects.filter(company__account=request.user)
+        Product.objects.filter(company=_acting_company(request, capability))
         .select_related("company")
         .prefetch_related(_category_with_publishability())
     )
@@ -191,7 +213,7 @@ def _own_products(request):
 
 @extend_schema(tags=["marketplace-company"])
 class MyProductListView(generics.GenericAPIView):
-    permission_classes = [HasMedicalCompany]
+    permission_classes = [HasCompanyWorkspace]
     serializer_class = ProductOwnerSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {"is_active": ["exact"], "category": ["exact"]}
@@ -222,7 +244,7 @@ class MyProductListView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         try:
             product = services.create_product(
-                _own_company(request), dict(serializer.validated_data)
+                _acting_company(request, "company.products.edit"), dict(serializer.validated_data)
             )
         except services.MarketplaceError as exc:
             raise_api(exc)
@@ -231,7 +253,7 @@ class MyProductListView(generics.GenericAPIView):
 
 @extend_schema(tags=["marketplace-company"])
 class MyProductDetailView(APIView):
-    permission_classes = [HasMedicalCompany]
+    permission_classes = [HasCompanyWorkspace]
     serializer_class = ProductOwnerSerializer
     http_method_names = ["get", "patch", "head", "options"]
 
@@ -247,12 +269,14 @@ class MyProductDetailView(APIView):
         summary="Update one of my products (an active product is re-validated)",
     )
     def patch(self, request, pk):
-        product = get_object_or_404(_own_products(request), pk=pk)
+        product = get_object_or_404(_own_products(request, "company.products.edit"), pk=pk)
         serializer = ProductWriteSerializer(product, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         try:
             product = services.update_product(
-                _own_company(request), pk, dict(serializer.validated_data)
+                _acting_company(request, "company.products.edit"),
+                pk,
+                dict(serializer.validated_data),
             )
         except services.MarketplaceError as exc:
             raise_api(exc)
@@ -262,13 +286,15 @@ class MyProductDetailView(APIView):
 def _publication_view(active: bool, summary: str):
     @extend_schema(tags=["marketplace-company"], summary=summary)
     class View(APIView):
-        permission_classes = [HasMedicalCompany]
+        permission_classes = [HasCompanyWorkspace]
         serializer_class = None
 
         @extend_schema(request=None, responses={200: ProductOwnerSerializer})
         def post(self, request, pk):
             try:
-                product = services.update_product(_own_company(request), pk, {}, active=active)
+                product = services.update_product(
+                    _acting_company(request, "company.products.edit"), pk, {}, active=active
+                )
             except services.MarketplaceError as exc:
                 raise_api(exc)
             return _own_product_response(request, product.pk)

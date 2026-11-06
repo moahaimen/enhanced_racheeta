@@ -20,6 +20,8 @@ class NotificationEventType(models.TextChoices):
     QUOTE_UPDATED = "QUOTE_UPDATED", "Quote request updated"
     SPONSORED_PRODUCT = "SPONSORED_PRODUCT", "Sponsored product in your field"
     PROPERTY_PROMOTION = "PROPERTY_PROMOTION", "Promoted medical property"
+    STOCK_LOW = "STOCK_LOW", "Product stock is low"
+    SETTLEMENT_PAID = "SETTLEMENT_PAID", "Seller payout recorded (simulated)"
 
 
 class NotificationResourceType(models.TextChoices):
@@ -45,6 +47,8 @@ SAFE_PAYLOAD_KEYS = (
     "quantity",
     "company_name",
     "listing_title",
+    "amount",
+    "currency",
 )
 
 

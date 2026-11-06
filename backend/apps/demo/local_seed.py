@@ -29,9 +29,13 @@ from apps.advertising.models import (
     CampaignSpecialty,
 )
 from apps.advertising.outreach import notify_campaign_audience
+from apps.commerce import checkout as store_checkout
+from apps.commerce import lifecycle
 from apps.commerce import services as commerce
-from apps.commerce.models import Order, QuoteRequest
+from apps.commerce.models import Checkout, Coupon, Order, ProductOffer, QuoteRequest
 from apps.jobs.models import EmployerMembership, JobSeekerProfile
+from apps.ledger import settlement
+from apps.ledger.models import SettlementBatch
 from apps.marketplace.models import MedicalCompany, Product, ProductAudience, ProductCategory
 from apps.offers.services import create_offer
 from apps.preferences import services as preferences
@@ -72,6 +76,7 @@ class LocalExtras:
         self.registry = seeder.registry
         self.products: dict[str, Product] = {}
         self.admin: Account | None = None
+        self.finance: Account | None = None
 
     # -- helpers ------------------------------------------------------------------------------
     def _guard(self) -> None:
@@ -228,6 +233,36 @@ class LocalExtras:
             )
 
         self.admin, _ = self.registry.ensure("account:local-admin", make)
+        self.finance = self._staff(
+            "local-finance", "مسؤول مالية راشيتة | Racheeta finance", password, finance=True
+        )
+        self._staff(
+            "local-support",
+            "دعم راشيتة (بلا صلاحية مالية) | Racheeta support",
+            password,
+            finance=False,
+        )
+
+    def _staff(self, key: str, full_name: str, password: str, *, finance: bool) -> Account:
+        """A Racheeta staff account that is NOT a superuser. Finance gets exactly one permission
+        (ledger.change_settlementbatch); support gets none, to demonstrate the refusal."""
+        from django.contrib.auth.models import Permission
+
+        def make():
+            account = Account.objects.create_user(
+                common.email(key), password=password, full_name=full_name
+            )
+            Account.objects.filter(pk=account.pk).update(
+                role=AccountRole.ADMIN, is_staff=True, email_verified_at=self.s.now
+            )
+            if finance:
+                account.user_permissions.add(
+                    Permission.objects.get(codename="change_settlementbatch")
+                )
+            return Account.objects.get(pk=account.pk)
+
+        account, _ = self.registry.ensure(f"account:{key}", make)
+        return account
 
     def _account_types(self) -> None:
         """Classify demo accounts (onboarding account type) from their CURRENT profiles."""
@@ -307,6 +342,16 @@ class LocalExtras:
                 return category
 
             categories[slug], _ = self.registry.ensure(f"category:{slug}", make)
+        demo_categories = DemoRecord.objects.filter(
+            model_label="marketplace.ProductCategory"
+        ).values_list("object_pk", flat=True)
+        demo_categories = {str(pk) for pk in demo_categories} | {
+            str(c.pk) for c in categories.values()
+        }  # rows created in this phase are registered only when the phase commits
+        for compliance, slugs in content.COMPLIANCE_CLASSES.items():
+            ProductCategory.objects.filter(pk__in=list(demo_categories), slug__in=slugs).update(
+                compliance_class=compliance
+            )
         for row in content.EXTRA_PRODUCTS:
             key, ckey, cat, t_ar, t_en, price, channel, restricted, stock = row
             category = categories.get(cat) or ProductCategory.objects.get(slug=cat)
@@ -327,6 +372,44 @@ class LocalExtras:
                 ),
             )
         self._campaigns()
+        self._promotions()
+
+    def _promotions(self) -> None:
+        """Low-stock levels, coupons (seller- and Racheeta-funded, one expired), product sales."""
+        for key, level in content.REORDER_THRESHOLDS.items():
+            product = self.products.get(key)
+            if product is not None and product.reorder_threshold is None:
+                Product.objects.filter(pk=product.pk).update(reorder_threshold=level)
+        for row in content.COUPONS:
+            code, funding, ckey, kind, value, cap, minimum, started, days, uses = row
+            starts = self.s.now - timedelta(days=started)
+            self.registry.ensure(
+                f"coupon:{code}",
+                lambda: Coupon.objects.create(
+                    code=code,
+                    funded_by=funding,
+                    company=self._company(ckey) if ckey else None,
+                    kind=kind,
+                    value=Decimal(value),
+                    max_discount=Decimal(cap) if cap else None,
+                    min_subtotal=Decimal(minimum),
+                    starts_at=starts,
+                    ends_at=starts + timedelta(days=days),
+                    max_redemptions=uses,
+                ),
+            )
+        for pkey, percent, days in content.PRODUCT_OFFERS:
+            product = self.products[pkey]
+            self.registry.ensure(
+                f"product-offer:{pkey}",
+                lambda: ProductOffer.objects.create(
+                    company=product.company,
+                    product=product,
+                    percent=Decimal(percent),
+                    starts_at=self.s.now - timedelta(days=1),
+                    ends_at=self.s.now + timedelta(days=days),
+                ),
+            )
 
     def _product_images(self) -> None:
         """Every demo product gets a picture (local demo illustrations on the demo web origin).
@@ -403,42 +486,124 @@ class LocalExtras:
                 # The product's own bounded, consent-gated outreach (current eligibility only).
                 notify_campaign_audience(campaign.pk)
 
+    # -- marketplace lifecycle helpers ---------------------------------------------------------
+    def _finance_actor(self) -> Account | None:
+        return self.finance or self._get("account:local-finance")
+
+    def _run_steps(self, order: Order, buyer: Account, steps) -> None:
+        """Drive one order through the REAL services (same rules, ledger and stock as the API)."""
+        seller = order.merchant.account
+        company = order.merchant_id
+        fin = self._finance_actor()
+        for step in steps:
+            name, _, arg = step.partition(":")
+            if name in ("pay", "complete", "refund-cancelled", "return") and fin is None:
+                self.s.warnings.append(f"finance step {step} skipped: run with --with-admin")
+                return
+            if name == "accept":
+                lifecycle.seller_transition(
+                    order.pk, company_id=company, actor=seller, to_status="CONFIRMED"
+                )
+            elif name == "decline":
+                lifecycle.seller_transition(
+                    order.pk,
+                    company_id=company,
+                    actor=seller,
+                    to_status="CANCELLED",
+                    reason="نفد المخزون (توضيحي)",
+                )
+            elif name == "ship":
+                lifecycle.seller_transition(
+                    order.pk,
+                    company_id=company,
+                    actor=seller,
+                    to_status="SHIPPED",
+                    shipping_reference=f"DEMO-COURIER-{order.number[-6:]}",
+                )
+            elif name == "deliver":
+                lifecycle.confirm_delivery(order.pk, actor=buyer)
+            elif name == "pay":
+                lifecycle.verify_payment(
+                    order.pk, actor=fin, reference=f"SIMULATED-{order.number[-6:]}"
+                )
+            elif name == "complete":
+                lifecycle.complete(order.pk, actor=fin)
+            elif name == "buyer-cancel":
+                lifecycle.buyer_cancel(order.pk, buyer=buyer, reason="غيّرت رأيي (توضيحي)")
+            elif name == "refund-cancelled":
+                lifecycle.refund_cancelled(order.pk, actor=fin)
+            elif name in ("return", "return-request"):
+                item = order.items.order_by("created_at").first()
+                request = lifecycle.request_return(
+                    order.pk,
+                    buyer=buyer,
+                    lines=[{"item": item.pk, "quantity": int(arg)}],
+                    reason="المقاس غير مناسب (توضيحي) | Wrong size (demo)",
+                )
+                if name == "return":
+                    lifecycle.decide_return(
+                        request.pk,
+                        company_id=company,
+                        actor=seller,
+                        approve=True,
+                        note="مقبول (توضيحي)",
+                    )
+                    lifecycle.receive_return(request.pk, company_id=company, actor=seller)
+                    lifecycle.refund_return(request.pk, actor=fin)
+            elif name == "dispute":
+                lifecycle.open_dispute(
+                    order.pk, buyer=buyer, reason="وصل الجهاز لا يعمل (توضيحي) | Device not working"
+                )
+            else:
+                raise ValueError(f"unknown demo step {step}")
+
+    def _settlements(self) -> None:
+        fin = self._finance_actor()
+        if fin is None:
+            return
+        for ckey, outcome in content.SETTLEMENTS:
+            company = self._company(ckey)
+
+            def make():
+                batch = settlement.prepare(company.pk, actor=fin)
+                if outcome == "paid":
+                    batch = settlement.confirm(
+                        batch.pk, actor=fin, reference_note="SIMULATED-PAYOUT (no real money)"
+                    )
+                return SettlementBatch.objects.get(pk=batch.pk)
+
+            if settlement.payable(company.pk) > 0 or self._get(f"settlement:{ckey}"):
+                self.registry.ensure(f"settlement:{ckey}", make)
+
     # -- phase 3: orders, quotes, promotions --------------------------------------------------
     def phase_activity(self) -> None:
         self._guard()
         governorate, city = self.s._place("baghdad", "baghdad")
-        for tag, patient_key, pkey, qty, method, steps in content.ORDERS:
-            buyer = self.s.accounts.get(patient_key) or self._get(f"account:{patient_key}")
-            product = self.products[pkey]
+        delivery = {
+            "governorate": governorate,
+            "city": city,
+            "address": "عنوان توضيحي | Demo address, Karrada",
+            "phone": "07700000000",
+            "note": "طلب توضيحي | Demo order",
+        }
+        for tag, buyer_key, lines, codes, method, steps in content.MARKET_SCENARIOS:
+            buyer = self.s.accounts.get(buyer_key) or self._get(f"account:{buyer_key}")
 
             def make():
-                order = commerce.place_order(
+                result, _ = store_checkout.place(
                     buyer,
-                    items=[{"product": product.pk, "quantity": qty}],
-                    delivery={
-                        "governorate": governorate,
-                        "city": city,
-                        "address": "عنوان توضيحي | Demo address, Karrada",
-                        "phone": "07700000000",
-                        "note": "Demo order",
-                    },
+                    items=[{"product": self.products[k].pk, "quantity": q} for k, q in lines],
+                    coupons=codes,
+                    delivery=delivery,
                     payment_method=method,
+                    idempotency_key=f"demo-{tag}",
                 )
-                merchant = order.merchant
-                for step in steps:
-                    if step == "paid":
-                        commerce.record_payment(
-                            order.pk, company_id=merchant.pk, actor=merchant.account
-                        )
-                    elif step == "buyer-cancel":
-                        commerce.cancel_as_buyer(order.pk, buyer=buyer, reason="Demo cancel")
-                    else:
-                        commerce.transition_as_merchant(
-                            order.pk, company_id=merchant.pk, actor=merchant.account, to_status=step
-                        )
-                return Order.objects.get(pk=order.pk)
+                for order in result.orders.order_by("created_at"):
+                    self._run_steps(order, buyer, steps)
+                return Checkout.objects.get(pk=result.pk)
 
-            self.registry.ensure(f"order:{tag}", make)
+            self.registry.ensure(f"checkout:{tag}", make)
+        quotes: dict[str, QuoteRequest] = {}
         for tag, provider_key, pkey, qty, outcome, price in content.QUOTES:
             provider = self._provider(provider_key)
             product = self.products[pkey]
@@ -465,7 +630,26 @@ class LocalExtras:
                     )
                 return QuoteRequest.objects.get(pk=quote.pk)
 
-            self.registry.ensure(f"quote:{tag}", make)
+            quotes[tag], _ = self.registry.ensure(f"quote:{tag}", make)
+        for tag, provider_key, steps in content.QUOTE_ORDERS:
+            provider = self._provider(provider_key)
+            quote = quotes.get(tag)
+
+            def make():
+                result, _ = commerce.order_from_quote(
+                    quote.pk,
+                    provider=provider,
+                    account=provider.account,
+                    delivery=delivery,
+                    payment_method="MANUAL_TRANSFER",
+                    idempotency_key=f"demo-quote-{tag}",
+                )
+                self._run_steps(result.orders.get(), provider.account, steps)
+                return Checkout.objects.get(pk=result.pk)
+
+            if quote is not None and quote.status in ("ACCEPTED", "ORDERED"):
+                self.registry.ensure(f"checkout:quote:{tag}", make)
+        self._settlements()
         admin = self.admin or self._get("account:local-admin")
         for tag, listing_index, types, days, outcome in content.PROMOTIONS:
             listing = self._get(f"listing:{listing_index}")

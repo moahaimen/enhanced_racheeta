@@ -117,14 +117,26 @@ ORDER_STATUS = {
         "CONFIRMED": "تم تأكيد الطلب",
         "SHIPPED": "تم شحن الطلب",
         "DELIVERED": "تم تسليم الطلب",
+        "COMPLETED": "اكتمل الطلب",
         "CANCELLED": "تم إلغاء الطلب",
+        "PAID": "تم التحقق من الدفع",
+        "REFUND_PENDING": "استرداد قيد المعالجة",
+        "PARTIALLY_REFUNDED": "تم استرداد جزء من المبلغ",
+        "REFUNDED": "تم استرداد المبلغ",
+        "RETURN_REQUESTED": "طلب إرجاع جديد",
     },
     "en": {
         "PLACED": "Order received",
         "CONFIRMED": "Order confirmed",
         "SHIPPED": "Order shipped",
         "DELIVERED": "Order delivered",
+        "COMPLETED": "Order completed",
         "CANCELLED": "Order cancelled",
+        "PAID": "Payment verified",
+        "REFUND_PENDING": "Refund pending",
+        "PARTIALLY_REFUNDED": "Partial refund issued",
+        "REFUNDED": "Refund issued",
+        "RETURN_REQUESTED": "New return request",
     },
 }
 QUOTE_STATUS = {
@@ -199,6 +211,21 @@ def _promotion(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
     )
 
 
+def _stock_low(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
+    product = _pick(_text(payload, "product_title"), lang)
+    left = _text(payload, "quantity")
+    if lang == "ar":
+        return "المخزون منخفض", f"تبقّى {left} من «{product}»."
+    return "Low stock", f'{left} left of "{product}".'
+
+
+def _settlement_paid(lang: str, payload: dict[str, Any]) -> tuple[str, str]:
+    amount = _text(payload, "amount")
+    if lang == "ar":
+        return "تم تسجيل دفعة مستحقاتك", f"{amount} د.ع (محاكاة — لا أموال حقيقية)."
+    return "Payout recorded", f"{amount} IQD (simulated — no real money)."
+
+
 def render(event_type: str, payload: Any, language: str | None) -> tuple[str, str]:
     """Return (title, body) for the event in `language`. Never raises."""
     lang = normalize_language(language)
@@ -227,6 +254,10 @@ def render(event_type: str, payload: Any, language: str | None) -> tuple[str, st
             return _sponsored(lang, data)
         if event_type == NotificationEventType.PROPERTY_PROMOTION:
             return _promotion(lang, data)
+        if event_type == NotificationEventType.STOCK_LOW:
+            return _stock_low(lang, data)
+        if event_type == NotificationEventType.SETTLEMENT_PAID:
+            return _settlement_paid(lang, data)
     except Exception:  # noqa: BLE001 — presentation must never break a read
         logger.exception("notification presentation failed for %s", event_type)
     return FALLBACK[lang]

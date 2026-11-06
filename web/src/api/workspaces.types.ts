@@ -74,27 +74,71 @@ export interface StoreProduct {
   company: { id: string; name: string; business_type?: string }
 }
 
-export type OrderStatus = 'PLACED' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+export type OrderStatus = 'PLACED' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
 export type StorePaymentMethod = 'CASH_ON_DELIVERY' | 'MANUAL_TRANSFER'
-export type StorePaymentStatus = 'UNPAID' | 'PAID' | 'REFUND_DUE'
+export type StorePaymentStatus = 'UNPAID' | 'PAID' | 'REFUND_PENDING' | 'PARTIALLY_REFUNDED' | 'REFUNDED'
 
 export interface OrderItem {
   id: string
   product_id: string
+  image_url: string
   title_snapshot: string
   unit_price: string
   quantity: number
   line_total: string
+  seller_discount: string
+  platform_discount: string
+  buyer_paid: string
+  refunded_quantity: number
+  refunded_buyer_paid: string
+  /** Seller and finance views only. */
+  merchandise_net?: string
+  commission_rate?: string
+  commission?: string
+  seller_payable?: string
+  refunded_commission?: string
+  refunded_seller_payable?: string
+}
+
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'RECEIVED' | 'REFUNDED'
+export type DisputeStatus = 'OPEN' | 'RESOLVED_REFUND' | 'RESOLVED_REJECTED'
+
+export interface ReturnRequest {
+  id: string
+  order: { id: string; number: string }
+  status: ReturnStatus
+  reason: string
+  decision_note: string
+  decided_at: string | null
+  lines: { item: string; title: string; quantity: number }[]
+  created_at: string
+  updated_at: string
+}
+
+export interface Dispute {
+  id: string
+  order: { id: string; number: string }
+  status: DisputeStatus
+  reason: string
+  resolution_note: string
+  resolved_at: string | null
+  created_at: string
 }
 
 export interface Order {
   id: string
   number: string
+  checkout_number: string
+  channel: 'B2C' | 'B2B'
   status: OrderStatus
   payment_method: StorePaymentMethod
   payment_status: StorePaymentStatus
-  total: string
   currency: string
+  list_total: string
+  seller_discount_total: string
+  platform_discount_total: string
+  total: string
+  refunded_total: string
   merchant: { id: string; name: string }
   buyer_name: string
   delivery_governorate: { id: string; name_ar: string; name_en: string }
@@ -104,14 +148,37 @@ export interface Order {
   delivery_longitude?: string | null
   contact_phone: string
   note: string
+  shipping_reference: string
+  paid_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  completed_at: string | null
   items: OrderItem[]
   transitions: { from_status: string; to_status: string; reason: string; created_at: string }[]
+  returns: ReturnRequest[]
+  disputes: Dispute[]
+  refunds: { id: string; amount: string; reason: string; created_at: string }[]
+  return_deadline: string | null
   created_at: string
   status_changed_at: string | null
+  /** Seller and finance views only: the 20% snapshot. */
+  merchandise_net?: string
+  commission_rate?: string
+  commission_policy_version?: number | null
+  commission_total?: string
+  seller_payable_total?: string
+  settlement_state?: 'NOT_ELIGIBLE' | 'ACCRUED'
+  /** Finance view only. */
+  buyer_email?: string
+  payment_reference?: string
+  payment_verified_by?: string
 }
 
 export interface CheckoutRequest {
   items: { product: string; quantity: number }[]
+  coupons?: string[]
+  /** One per press of "Place order": a retried request returns the first checkout. */
+  idempotency_key: string
   payment_method: StorePaymentMethod
   governorate: string
   city?: string | null
@@ -130,7 +197,7 @@ export interface DeliveryDefaults {
   phone: string
 }
 
-export type QuoteStatus = 'REQUESTED' | 'QUOTED' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN'
+export type QuoteStatus = 'REQUESTED' | 'QUOTED' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN' | 'ORDERED' | 'EXPIRED'
 
 export interface Quote {
   id: string
@@ -144,6 +211,7 @@ export interface Quote {
   quoted_currency: string
   quoted_note: string
   quoted_at: string | null
+  expires_at?: string | null
   closed_at: string | null
   created_at: string
 }

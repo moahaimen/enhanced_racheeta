@@ -146,11 +146,11 @@ def test_store_stats_are_real_and_tenant_isolated(
     )
     client = client_for(buyer)
     assert (
-        client.post("/api/v1/orders", checkout([(store_product, 1)]), format="json").status_code
+        client.post("/api/v1/checkouts", checkout([(store_product, 1)]), format="json").status_code
         == 201
     )
     assert (
-        client.post("/api/v1/orders", checkout([(rival_product, 1)]), format="json").status_code
+        client.post("/api/v1/checkouts", checkout([(rival_product, 1)]), format="json").status_code
         == 201
     )
     mine = _module(_dash(store.account), "store_orders")
@@ -254,3 +254,41 @@ def test_unverified_provider_sees_a_checklist_and_no_marketplace_action(provider
     verified = _dash(provider_factory().account)
     assert "setup" not in _keys(verified)
     assert any(a["key"] == "marketplace" for a in verified["actions"])
+
+
+def test_seller_finance_module_shows_real_20_percent_figures_to_owner_and_finance_staff_only(
+    buyer, store, store_product, checkout, account_factory
+):
+    from django.contrib.auth.models import Permission
+
+    from apps.commerce import lifecycle
+
+    placed = client_for(buyer).post(
+        "/api/v1/checkouts", checkout([(store_product, 1)]), format="json"
+    )
+    order_id = placed.json()["orders"][0]["id"]
+    finance = account_factory(role=AccountRole.PATIENT)
+    type(finance).objects.filter(pk=finance.pk).update(role=AccountRole.ADMIN, is_staff=True)
+    finance.user_permissions.add(Permission.objects.get(codename="change_settlementbatch"))
+    finance = type(finance).objects.get(pk=finance.pk)
+    for step in ("CONFIRMED", "SHIPPED"):
+        lifecycle.seller_transition(
+            order_id, company_id=store.pk, actor=store.account, to_status=step
+        )
+    lifecycle.confirm_delivery(order_id, actor=buyer)
+    lifecycle.verify_payment(order_id, actor=finance, reference="SIM")
+    lifecycle.complete(order_id, actor=finance)
+
+    module = _module(_dash(store.account), "store_finance")
+    assert _stat(module, "completed_sales") == "150,000 IQD"
+    assert _stat(module, "racheeta_commission") == "30,000 IQD"
+    assert _stat(module, "owed_to_you") == "120,000 IQD"
+
+    ws = f"company:{store.pk}"
+    for role, sees in (("FINANCE", True), ("FULFILLMENT", False), ("VIEWER", False)):
+        member = account_factory(role=AccountRole.PATIENT)
+        OrganizationMember.objects.create(
+            account=member, company=store, role=role, added_by=store.account
+        )
+        keys = _keys(_dash(member, ws))
+        assert ("store_finance" in keys) is sees, (role, keys)

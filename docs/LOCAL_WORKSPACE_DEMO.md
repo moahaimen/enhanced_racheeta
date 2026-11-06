@@ -321,3 +321,29 @@ tables. The earlier additive migrations of this branch are unchanged:
 
 All of them add columns with defaults, new tables, or choice-list changes. None drops or rewrites
 existing data, so they are backward-compatible with existing rows.
+
+## 10. Multi-vendor marketplace with the 20% commission (simulated money)
+
+Design and rules: `docs/MARKETPLACE_COMMERCE.md`. Feature status: `docs/local-commerce-implementation-matrix.md`.
+
+Demo accounts are listed in `local-demo/DEMO_ACCOUNTS.md`, which is git-ignored and holds no passwords.
+
+The seed (`scripts/local_demo.sh seed`, which includes `--with-admin`) creates the marketplace scenarios:
+- every order state;
+- the exact examples (100,000 → 20,000 / 80,000 and 90,000 → 18,000 / 72,000);
+- a Racheeta-funded coupon, a multi-vendor checkout and a partial return;
+- an open return, an open dispute, a paid-then-cancelled refund and a quote → order;
+- one paid and one draft payout.
+
+Browser walkthrough:
+1. **Buyer**: put two stores' items in the cart, apply a coupon and place the order.
+2. **Seller**: accept and ship.
+3. **Buyer**: confirm receipt.
+4. **Finance** (`local-finance`, /admin-finance): verify the simulated payment and complete the order (the commission is recorded).
+5. **Refund**: the buyer requests a return, the seller approves and receives it, and finance refunds it.
+6. **Payout**: finance prepares the payout and marks it paid. The reconciliation tab then shows every check PASS.
+
+Notes:
+- A staff account without the finance permission (`local-support`) is refused.
+- The ledger is append-only. Only `scripts/local_demo.sh clear` can remove demo ledger rows, inside its guarded transaction.
+

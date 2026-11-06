@@ -28,6 +28,7 @@ from .types import (
     RETAIL_BUSINESS_TYPES,
     BusinessType,
     CompanyVerificationStatus,
+    ComplianceClass,
     SaleChannel,
 )
 
@@ -126,6 +127,12 @@ class ProductCategory(BaseModel):
     # Administrator governance: products in this category MAY be offered in the public store
     # (assistive devices, general supplies). Medicines and restricted equipment never are.
     consumer_allowed = models.BooleanField(default=False)
+    # Purchase eligibility (fail closed). The public store needs B2C_ALLOWED AND consumer_allowed.
+    compliance_class = models.CharField(
+        max_length=28,
+        choices=ComplianceClass.choices,
+        default=ComplianceClass.RESTRICTED_PENDING_REVIEW,
+    )
 
     class Meta:
         db_table = "marketplace_category"
@@ -269,6 +276,7 @@ def consumer_store_filter() -> Q:
         is_restricted=False,
         category__is_active=True,
         category__consumer_allowed=True,
+        category__compliance_class=ComplianceClass.B2C_ALLOWED,
         company__verification_status=CompanyVerificationStatus.VERIFIED,
         company__business_type__in=RETAIL_BUSINESS_TYPES,
         company__account__is_active=True,
@@ -297,6 +305,10 @@ class Product(BaseModel):
     is_restricted = models.BooleanField(default=False)
     # Merchant-owned inventory for store orders; null = not stocked (quote/price on request only).
     stock_quantity = models.PositiveIntegerField(null=True, blank=True)
+    # Units held for placed orders that have not shipped yet (available = on hand - reserved).
+    stock_reserved = models.PositiveIntegerField(default=0)
+    # Low-stock alert threshold on AVAILABLE units (null = no alert).
+    reorder_threshold = models.PositiveIntegerField(null=True, blank=True)
     # Product photo (an https link the business provides; no file uploads exist yet).
     image_url = models.URLField(max_length=500, blank=True, default="")
 
@@ -306,6 +318,11 @@ class Product(BaseModel):
         db_table = "marketplace_product"
         ordering = ["-created_at", "id"]
         constraints = [
+            models.CheckConstraint(
+                condition=(Q(stock_quantity__isnull=True) & Q(stock_reserved=0))
+                | Q(stock_reserved__lte=models.F("stock_quantity")),
+                name="marketplace_product_reserved_le_on_hand",
+            ),
             models.CheckConstraint(
                 condition=Q(price__isnull=True) | Q(price__gte=0),
                 name="marketplace_product_price_non_negative",

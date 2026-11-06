@@ -16,6 +16,7 @@ pytestmark = pytest.mark.django_db
 
 STORE = "/api/v1/store/products"
 ORDERS = "/api/v1/orders"
+CHECKOUTS = "/api/v1/checkouts"
 MERCHANT = "/api/v1/merchant/orders"
 
 
@@ -83,17 +84,19 @@ def test_suspended_store_disappears(api_client, store, store_product):
 # ---- checkout -----------------------------------------------------------------------------------
 
 
-def test_checkout_uses_server_prices_and_decrements_stock(buyer, store_product, checkout):
+def test_checkout_uses_server_prices_and_reserves_stock(buyer, store_product, checkout):
     body = checkout([(store_product, 2)])
     body["items"][0]["unit_price"] = "1.00"  # tampering: ignored
     body["total"] = "1.00"
-    response = client_for(buyer).post(ORDERS, body, format="json")
+    response = client_for(buyer).post(CHECKOUTS, body, format="json")
     assert response.status_code == 201, response.json()
-    data = response.json()
+    data = response.json()["orders"][0]
     assert Decimal(data["total"]) == Decimal("300000.00")
     assert data["status"] == "PLACED" and data["payment_status"] == "UNPAID"
+    assert "commission_total" not in data  # the buyer never sees Racheeta's fee
     store_product.refresh_from_db()
-    assert store_product.stock_quantity == 3
+    # Units are reserved (not yet consumed): on hand stays 5, 2 reserved, 3 available.
+    assert (store_product.stock_quantity, store_product.stock_reserved) == (5, 2)
     assert AuditEvent.objects.filter(action="commerce.order.placed").exists()
 
 
@@ -101,7 +104,7 @@ def test_merchant_is_notified_on_commit(
     buyer, store, store_product, checkout, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True):
-        response = client_for(buyer).post(ORDERS, checkout([(store_product, 1)]), format="json")
+        response = client_for(buyer).post(CHECKOUTS, checkout([(store_product, 1)]), format="json")
     assert response.status_code == 201
     note = Notification.objects.get(recipient=store.account, event_type="ORDER_PLACED")
     assert set(note.payload) <= {"order_number", "status"}
@@ -119,26 +122,42 @@ def test_checkout_rejects_restricted_and_out_of_stock(
         stock_quantity=10,
     )
     client = client_for(buyer)
-    assert client.post(ORDERS, checkout([(restricted, 1)]), format="json").status_code == 400
-    response = client.post(ORDERS, checkout([(store_product, 6)]), format="json")
+    refused = client.post(CHECKOUTS, checkout([(restricted, 1)]), format="json")
+    assert refused.status_code == 403
+    assert refused.json()["error"]["code"] == "not_purchasable"
+    response = client.post(CHECKOUTS, checkout([(store_product, 6)]), format="json")
     assert response.status_code == 409
     store_product.refresh_from_db()
-    assert store_product.stock_quantity == 5
+    assert (store_product.stock_quantity, store_product.stock_reserved) == (5, 0)
 
 
-def test_checkout_rejects_mixed_stores_and_bad_quantities(
+def test_one_checkout_splits_into_one_order_per_seller_and_rejects_bad_quantities(
     buyer, store_product, store_category, company_factory, product_factory, checkout
 ):
-    other = company_factory(business_type=BusinessType.EQUIPMENT_SUPPLIER)
+    other = company_factory(business_type=BusinessType.ASSISTIVE_DEVICE_STORE)
     other_product = product_factory(
-        other, store_category, price=Decimal("10"), sale_channel=SaleChannel.BOTH, stock_quantity=4
+        other,
+        store_category,
+        price=Decimal("10000"),
+        sale_channel=SaleChannel.B2C,
+        stock_quantity=4,
     )
     client = client_for(buyer)
-    mixed = client.post(ORDERS, checkout([(store_product, 1), (other_product, 1)]), format="json")
-    assert mixed.status_code == 400
+    mixed = client.post(
+        CHECKOUTS, checkout([(store_product, 1), (other_product, 2)]), format="json"
+    )
+    assert mixed.status_code == 201, mixed.json()
+    data = mixed.json()
+    assert len(data["orders"]) == 2
+    assert {o["merchant"]["id"] for o in data["orders"]} == {
+        str(store_product.company_id),
+        str(other.pk),
+    }
+    assert Decimal(data["total"]) == Decimal("170000.00")
     for qty in (0, -1, 21):
         assert (
-            client.post(ORDERS, checkout([(store_product, qty)]), format="json").status_code == 400
+            client.post(CHECKOUTS, checkout([(store_product, qty)]), format="json").status_code
+            == 400
         )
 
 
@@ -148,13 +167,13 @@ def test_unverified_email_and_company_accounts_cannot_order(
     unverified = account_factory(role=AccountRole.PATIENT)
     assert (
         client_for(unverified)
-        .post(ORDERS, checkout([(store_product, 1)]), format="json")
+        .post(CHECKOUTS, checkout([(store_product, 1)]), format="json")
         .status_code
         == 403
     )
     assert (
         client_for(store.account)
-        .post(ORDERS, checkout([(store_product, 1)]), format="json")
+        .post(CHECKOUTS, checkout([(store_product, 1)]), format="json")
         .status_code
         == 403
     )
@@ -162,7 +181,7 @@ def test_unverified_email_and_company_accounts_cannot_order(
 
 def test_checkout_never_accepts_card_data(buyer, store_product, checkout):
     body = checkout([(store_product, 1)], payment_method="CARD", card_number="4111111111111111")
-    assert client_for(buyer).post(ORDERS, body, format="json").status_code == 400
+    assert client_for(buyer).post(CHECKOUTS, body, format="json").status_code == 400
     assert not Order.objects.exists()
 
 
@@ -170,9 +189,9 @@ def test_checkout_never_accepts_card_data(buyer, store_product, checkout):
 
 
 def _place(buyer, product, checkout, qty=1):
-    response = client_for(buyer).post(ORDERS, checkout([(product, qty)]), format="json")
+    response = client_for(buyer).post(CHECKOUTS, checkout([(product, qty)]), format="json")
     assert response.status_code == 201, response.json()
-    return response.json()["id"]
+    return response.json()["orders"][0]["id"]
 
 
 def test_buyer_cancel_restores_stock_and_only_before_shipping(
@@ -184,7 +203,7 @@ def test_buyer_cancel_restores_stock_and_only_before_shipping(
     )
     assert response.status_code == 200 and response.json()["status"] == "CANCELLED"
     store_product.refresh_from_db()
-    assert store_product.stock_quantity == 5
+    assert (store_product.stock_quantity, store_product.stock_reserved) == (5, 0)
 
     second = _place(buyer, store_product, checkout)
     merchant = client_for(store.account)
@@ -196,23 +215,38 @@ def test_buyer_cancel_restores_stock_and_only_before_shipping(
             == 200
         )
     assert client_for(buyer).post(f"{ORDERS}/{second}/cancel", {}, format="json").status_code == 409
+    store_product.refresh_from_db()
+    assert (store_product.stock_quantity, store_product.stock_reserved) == (4, 0)  # shipped
 
 
-def test_cod_paid_on_delivery_and_invalid_jumps_refused(buyer, store, store_product, checkout):
+def test_seller_cannot_mark_delivered_or_paid_and_payment_stays_unverified(
+    buyer, store, store_product, checkout
+):
     order_id = _place(buyer, store_product, checkout)
     merchant = client_for(store.account)
+    for forbidden in ("DELIVERED", "COMPLETED"):
+        assert (
+            merchant.post(
+                f"{MERCHANT}/{order_id}/transition", {"status": forbidden}, format="json"
+            ).status_code
+            == 400
+        )
     assert (
         merchant.post(
-            f"{MERCHANT}/{order_id}/transition", {"status": "DELIVERED"}, format="json"
+            f"{MERCHANT}/{order_id}/transition", {"status": "SHIPPED"}, format="json"
         ).status_code
         == 409
-    )
-    for step in ("CONFIRMED", "SHIPPED", "DELIVERED"):
+    )  # must be accepted first
+    gone = merchant.post(f"{MERCHANT}/{order_id}/payment-received", {}, format="json")
+    assert gone.status_code == 404  # sellers never confirm payments: Racheeta finance does
+    for step in ("CONFIRMED", "SHIPPED"):
         response = merchant.post(
             f"{MERCHANT}/{order_id}/transition", {"status": step}, format="json"
         )
         assert response.status_code == 200
-    assert response.json()["payment_status"] == "PAID"
+    delivered = client_for(buyer).post(f"{ORDERS}/{order_id}/confirm-delivery", {}, format="json")
+    assert delivered.status_code == 200 and delivered.json()["status"] == "DELIVERED"
+    assert delivered.json()["payment_status"] == "UNPAID"  # cash is verified by finance, not here
 
 
 def test_other_buyers_and_other_stores_cannot_see_an_order(
@@ -309,7 +343,7 @@ def test_delivery_defaults_come_from_my_last_order_only(
     first = client_for(buyer).get(f"{ORDERS}/delivery-defaults").json()
     assert first == {"governorate": None, "city": None, "address": "", "phone": "07801112233"}
     body = checkout([(store_product, 1)], address="Karrada, street 5", phone="0770 999 8877")
-    assert client_for(buyer).post(ORDERS, body, format="json").status_code == 201
+    assert client_for(buyer).post(CHECKOUTS, body, format="json").status_code == 201
     after = client_for(buyer).get(f"{ORDERS}/delivery-defaults").json()
     assert after["governorate"] == str(baghdad.pk)
     assert after["address"] == "Karrada, street 5" and after["phone"] == "07709998877"
@@ -320,8 +354,8 @@ def test_delivery_defaults_come_from_my_last_order_only(
 def test_delivery_pin_is_optional_but_must_be_a_pair(buyer, store_product, checkout):
     client = client_for(buyer)
     half = checkout([(store_product, 1)], latitude="33.312805")
-    assert client.post(ORDERS, half, format="json").status_code == 400
+    assert client.post(CHECKOUTS, half, format="json").status_code == 400
     pinned = checkout([(store_product, 1)], latitude="33.312805", longitude="44.361488")
-    response = client.post(ORDERS, pinned, format="json")
+    response = client.post(CHECKOUTS, pinned, format="json")
     assert response.status_code == 201
-    assert response.json()["delivery_latitude"] == "33.312805"
+    assert response.json()["orders"][0]["delivery_latitude"] == "33.312805"

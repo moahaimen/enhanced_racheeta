@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as authApi from '../../api/endpoints/auth'
 import * as referenceApi from '../../api/endpoints/reference'
 import * as workspacesApi from '../../api/endpoints/workspaces'
+import * as commerceApi from '../../api/endpoints/commerce'
 import { tokenStore } from '../../api/tokens'
 import type { OrgSummary, StoreProduct, Workspace } from '../../api'
 import { baghdad } from '../../test/providerFixtures'
@@ -14,6 +15,7 @@ import { cart } from '../../cart/cart'
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/reference')
 vi.mock('../../api/endpoints/workspaces')
+vi.mock('../../api/endpoints/commerce')
 
 const page = <T,>(results: T[]) => ({ count: results.length, next: null, previous: null, results })
 
@@ -106,7 +108,12 @@ describe('store and checkout', () => {
     vi.mocked(workspacesApi.listStoreCategories).mockResolvedValue([product.category])
     vi.mocked(workspacesApi.listStoreProducts).mockResolvedValue(page([product]))
     vi.mocked(referenceApi.listGovernorates).mockResolvedValue([baghdad])
-    vi.mocked(workspacesApi.placeOrder).mockResolvedValue({ id: 'o-1', number: 'RCH-1' } as never)
+    vi.mocked(commerceApi.previewCheckout).mockResolvedValue({
+      currency: 'IQD',
+      orders: [{ merchant: { id: 'm', name: 'Store' }, seller_coupon: null, lines: [], list_total: '185000', seller_discount_total: '0', platform_discount_total: '0', total: '185000' }],
+      platform_coupon: null, list_total: '185000', seller_discount_total: '0', platform_discount_total: '0', total: '185000',
+    } as never)
+    vi.mocked(commerceApi.placeCheckout).mockResolvedValue({ id: 'c-1', number: 'CHK-1', orders: [{ id: 'o-1', number: 'RCH-1' }] } as never)
     vi.mocked(workspacesApi.getStoreProduct).mockResolvedValue(product)
     vi.mocked(workspacesApi.listMyOrders).mockResolvedValue(page([]))
     vi.mocked(workspacesApi.getDeliveryDefaults).mockResolvedValue({ governorate: null, city: null, address: '', phone: '' })
@@ -118,11 +125,13 @@ describe('store and checkout', () => {
     await userEvent.type(within(form).getByLabelText(/عنوان التوصيل|delivery address/i), 'Demo street')
     await userEvent.type(within(form).getByLabelText(/رقم التواصل|contact phone/i), '07700000000')
     await userEvent.click(within(form).getByRole('button', { name: /تأكيد الطلب|place order/i }))
-    await waitFor(() => expect(workspacesApi.placeOrder).toHaveBeenCalledTimes(1))
-    const payload = vi.mocked(workspacesApi.placeOrder).mock.calls[0]![0]
+    await waitFor(() => expect(commerceApi.placeCheckout).toHaveBeenCalledTimes(1))
+    const payload = vi.mocked(commerceApi.placeCheckout).mock.calls[0]![0]
     expect(payload.items).toEqual([{ product: 'p-1', quantity: 1 }])
-    expect(JSON.stringify(payload)).not.toMatch(/price|total|card/i)
+    expect(JSON.stringify(payload)).not.toMatch(/price|total|card|commission|merchant/i)
     expect(payload.payment_method).toBe('CASH_ON_DELIVERY')
+    expect(payload.idempotency_key).toMatch(/.{8,}/) // one key per attempt: a double click cannot buy twice
+    expect(payload.coupons).toEqual([])
     expect(await screen.findByText(/RCH-1/)).toBeInTheDocument()
   })
 

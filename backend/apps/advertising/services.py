@@ -30,6 +30,7 @@ from apps.accounts.roles import AccountRole
 from apps.audit import services as audit
 from apps.geography.models import Governorate
 from apps.marketplace.models import MedicalCompany, Product
+from apps.marketplace.types import NOT_PURCHASABLE_CLASSES
 from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
 
@@ -177,9 +178,27 @@ def _require_exposable_product(company: MedicalCompany, product_id) -> Product:
         .filter(pk=product_id, company=company)
         .first()
     )
-    if product is None or not Product.objects.exposable().filter(pk=product.pk).exists():
+    if product is None or not _advertisable().filter(pk=product.pk).exists():
         raise ProductUnavailable("The product is not currently available for advertising.")
     return product
+
+
+def _advertisable():
+    """Exposable AND not regulated: restricted items and categories whose compliance class is
+    not purchasable (pending review / prohibited) are never promoted, paid or not."""
+    return (
+        Product.objects.exposable()
+        .filter(is_restricted=False)
+        .exclude(category__compliance_class__in=NOT_PURCHASABLE_CLASSES)
+    )
+
+
+def _is_promotable(product) -> bool:
+    return not (
+        Product.objects.filter(pk=product.pk)
+        .filter(Q(is_restricted=True) | Q(category__compliance_class__in=NOT_PURCHASABLE_CLASSES))
+        .exists()
+    )
 
 
 def _target_ids(campaign: AdvertisingCampaign) -> dict[str, list]:
@@ -418,6 +437,8 @@ def create_campaign(
         ).exists()
     ):
         raise CampaignProblems({"product": "product_not_found"})
+    if not _is_promotable(product):
+        raise CampaignProblems({"product": "product_not_advertisable"})
     campaign = AdvertisingCampaign(
         company=locked_company,
         product=product,
@@ -465,6 +486,8 @@ def update_campaign(
             pk=getattr(product, "pk", None), company=locked_company
         ).exists():
             raise CampaignProblems({"product": "product_not_found"})
+        if not _is_promotable(product):
+            raise CampaignProblems({"product": "product_not_advertisable"})
         campaign.product = product
     for key in ("name", "starts_on", "ends_on"):
         if key in changes:

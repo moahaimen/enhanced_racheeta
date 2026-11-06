@@ -16,7 +16,7 @@ from apps.providers.models import ProviderProfile
 from apps.providers.types import FACILITY_TYPES, PRACTITIONER_TYPES
 
 from .models import OrganizationMember
-from .types import CAPABILITIES, GRANTABLE_ROLES, MemberStatus, OrgRole
+from .types import CAPABILITIES, COMPANY_ONLY_ROLES, GRANTABLE_ROLES, MemberStatus, OrgRole
 
 PRACTITIONER_MODULES = (
     "profile",
@@ -254,7 +254,9 @@ def build_workspaces(account) -> list[dict]:
 @transaction.atomic
 def add_member(*, actor, org_kind: str, org_id, email: str, role: str) -> OrganizationMember:
     if role not in GRANTABLE_ROLES:
-        raise MembershipError("Choose manager, staff or viewer.")
+        raise MembershipError("Choose a role that can be granted.")
+    if org_kind == "facility" and role in COMPANY_ONLY_ROLES:
+        raise MembershipError("This role exists only for businesses.")
     target = Account.objects.filter(email__iexact=email.strip(), is_active=True).first()
     if target is None:
         raise MembershipError("No active account uses this e-mail address.")
