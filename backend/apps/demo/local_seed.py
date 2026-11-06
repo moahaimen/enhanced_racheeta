@@ -935,3 +935,217 @@ class LocalExtras:
                 alt_text=product.title.split(" | ")[-1],
             ),
         )
+
+    # -- phase 5: platform completion (new account types, business employer, inquiries) -------
+    def phase_platform(self) -> None:
+        """New onboarding types, a verified NON-HEALTHCARE employer with jobs and applicants,
+        typed job seekers, setup-stage accounts and property inquiries in every status."""
+        from apps.billing import services as billing
+        from apps.billing.models import Plan
+        from apps.billing.types import Audience, SubjectType
+        from apps.jobs import services as jobs_services
+        from apps.jobs.models import (
+            JobApplication,
+            JobApplicationTransition,
+            JobPost,
+            JobPostTransition,
+        )
+        from apps.real_estate import inquiries
+        from apps.real_estate.models import ListingInquiry, PropertyListing
+
+        from .content import platform as pc
+
+        self._guard()
+
+        def typed(account: Account, kind: str) -> None:
+            if account.account_type != kind:
+                Account.objects.filter(pk=account.pk).update(account_type=kind)
+                account.refresh_from_db()
+
+        # Practitioners registered as dentist / midwife.
+        for n, (key, name, ptype, spec, kind, gov, city) in enumerate(pc.TYPED_PROVIDERS):
+            profile = self.s._provider(
+                key, ptype, name, common.about("ملف توضيحي.", "Demo profile."), gov, city, "",
+                [spec], [], 420 + n,
+            )  # fmt: skip
+            typed(profile.account, kind)
+
+        # Setup-stage accounts (no organization / résumé yet).
+        for key, name, kind in pc.SETUP_ACCOUNTS:
+            typed(self._person(key, name), kind)
+
+        # Job seekers registered as JOB_SEEKER.
+        governorate, city = self.s._place("baghdad", "baghdad")
+        for key, name, profession, title, degree, years in pc.TYPED_SEEKERS:
+            person = self._person(key, name)
+            typed(person, "JOB_SEEKER")
+            self.registry.ensure(
+                f"seeker:{key}",
+                lambda p=person, pr=profession, t=title, d=degree, y=years: (
+                    JobSeekerProfile.objects.create(
+                        account=p,
+                        professional_title=t,
+                        profession=pr,
+                        degree=d,
+                        institution_name="جامعة بغداد",
+                        graduation_year=self.s.now.year - y - 1,
+                        years_of_experience=y,
+                        professional_summary=f"{t}.\n{common.DEMO_NOTE_AR}",
+                        governorate=governorate,
+                        city=city,
+                        availability="IMMEDIATE",
+                        salary_currency="IQD",
+                        discoverable_by_employers=True,
+                    )
+                ),
+            )
+
+        # The verified non-healthcare employer, its jobs and applicants.
+        spec = pc.BUSINESS_EMPLOYER
+        owner = self._person(spec["owner_key"], spec["owner_name"])
+        typed(owner, "EMPLOYER")
+
+        def make_employer():
+            employer = jobs_services.create_employer(
+                owner,
+                name=spec["name"],
+                organization_type="BUSINESS",
+                description=common.about(spec["description_ar"], spec["description_en"]),
+                governorate=governorate,
+                city=city,
+            )
+            employer.verification_status = "VERIFIED"
+            employer.verification_note = "Demo data: verified non-healthcare employer."
+            employer.verified_at = self.s.now
+            employer.save(
+                update_fields=[
+                    "verification_status",
+                    "verification_note",
+                    "verified_at",
+                    "updated_at",
+                ]
+            )
+            return employer
+
+        employer, _ = self.registry.ensure("employer:rafidain-tech", make_employer)
+        jobs_by_key = {}
+        for n, (suffix, t_ar, t_en, profession, degree, years, s_min, s_max) in enumerate(
+            pc.BUSINESS_JOBS
+        ):
+
+            def make_job(n=n, t=(t_ar, t_en), pr=profession, d=degree, y=years, lo=s_min, hi=s_max):
+                job = JobPost.objects.create(
+                    employer=employer,
+                    created_by=owner,
+                    title=common.bilingual(*t),
+                    profession=pr,
+                    description=f"{t[0]}\n\n{t[1]}\n\n{common.DEMO_NOTE_AR} {common.DEMO_NOTE_EN}",
+                    requirements="خبرة مناسبة. | Relevant experience.",
+                    minimum_degree=d,
+                    minimum_experience_years=y,
+                    governorate=governorate,
+                    city=city,
+                    employment_type="FULL_TIME",
+                    work_mode="HYBRID" if pr == "SOFTWARE_DEVELOPER" else "ON_SITE",
+                    shift_type="DAY",
+                    salary_min=Decimal(lo),
+                    salary_max=Decimal(hi),
+                    salary_currency="IQD",
+                    salary_visible=True,
+                    number_of_openings=1,
+                    status="PUBLISHED",
+                    submitted_at=self.s.now - timedelta(days=3 + n),
+                    published_at=self.s.now - timedelta(days=2 + n),
+                )
+                for frm, to in (("", "DRAFT"), ("DRAFT", "PENDING_ADMIN_REVIEW"),
+                                ("PENDING_ADMIN_REVIEW", "PUBLISHED")):  # fmt: skip
+                    JobPostTransition.objects.create(
+                        job=job, from_status=frm, to_status=to, actor=owner
+                    )
+                return job
+
+            jobs_by_key[suffix], _ = self.registry.ensure(f"job:rafidain-tech:{suffix}", make_job)
+
+        for skey, suffix in pc.BUSINESS_APPLICATIONS:
+            profile = JobSeekerProfile.objects.filter(
+                account=self.s.accounts.get(skey) or self._get(f"account:{skey}")
+            ).first()
+            if profile is None:
+                self.s.warnings.append(f"platform: seeker missing: {skey}")
+                continue
+            job = jobs_by_key[suffix]
+
+            def make_application(job=job, profile=profile):
+                # Direct write like the base seeder: a demo is not charged a seeker plan quota.
+                application = JobApplication.objects.create(
+                    job=job,
+                    job_seeker=profile,
+                    status="SUBMITTED",
+                    cover_text="أرغب بالانضمام إلى فريقكم. | I would like to join your team.",
+                    snapshot=jobs_services.build_snapshot(profile),
+                )
+                JobApplicationTransition.objects.create(
+                    application=application, from_status="", to_status="SUBMITTED",
+                    actor=profile.account,
+                )  # fmt: skip
+                return application
+
+            self.registry.ensure(f"application:rafidain-tech:{skey}", make_application)
+
+        # An active plan so the scoped talent search is demonstrable (local, fictional billing).
+        admin = self.admin or self._get("account:local-admin")
+        if admin is None:
+            self.s.warnings.append("platform: no local admin, business employer has no plan")
+        else:
+            # The billing account is linked by id, not by a foreign key: register it explicitly
+            # so `clear_local_demo` removes it with the subscription.
+            billing_account, _ = self.registry.ensure(
+                "billing-account:rafidain-tech",
+                lambda: billing.get_or_create_billing_account(
+                    SubjectType.ORGANIZATION, employer.pk, Audience.EMPLOYER
+                ),
+            )
+
+            def make_subscription():
+                sub = billing.request_subscription(
+                    billing_account, Plan.objects.get(code="PROFESSIONAL"), requested_by=owner
+                )
+                return billing.activate_subscription(sub, admin=admin, reference="DEMO-LOCAL")
+
+            self.registry.ensure("subscription:rafidain-tech", make_subscription)
+
+        # Property inquiries in every status, through the inquiry services.
+        visible = list(
+            PropertyListing.objects.publicly_visible()
+            .filter(pk__in=self._demo_pks("real_estate.PropertyListing"))
+            .select_related("seller")
+            .order_by("created_at", "id")
+        )
+        if not visible:
+            self.s.warnings.append("platform: no public demo listing for inquiries")
+            return
+        for tag, index, asker_key, share, outcome, message in pc.INQUIRIES:
+            asker = self.s.accounts.get(asker_key) or self._get(f"account:{asker_key}")
+            listing = visible[index % len(visible)]
+            if asker is None:
+                self.s.warnings.append(f"platform: inquiry asker missing: {asker_key}")
+                continue
+
+            def make_inquiry(asker=asker, listing=listing, share=share, outcome=outcome, m=message):
+                inquiry = inquiries.create_inquiry(
+                    asker, listing.pk, message=m, share_contact=share
+                )
+                if outcome in ("answered", "closed"):
+                    inquiries.respond(listing.seller, inquiry.pk, response=pc.INQUIRY_ANSWER)
+                if outcome == "closed":
+                    inquiries.close(listing.seller, inquiry.pk)
+                if outcome == "withdrawn":
+                    inquiries.withdraw(asker, inquiry.pk)
+                return ListingInquiry.objects.get(pk=inquiry.pk)
+
+            self.registry.ensure(f"inquiry:{tag}", make_inquiry)
+
+    def _demo_pks(self, label: str) -> list:
+        return list(
+            DemoRecord.objects.filter(model_label=label).values_list("object_pk", flat=True)
+        )
