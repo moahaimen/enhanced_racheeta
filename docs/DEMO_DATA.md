@@ -142,9 +142,21 @@ primary key, optional idempotency key):
 5. It needs `--yes` (or `--dry-run`), and a real account that merely has a demo-looking e-mail is
    not registered and survives (tested).
 
-Residual: rows that other tools created about demo objects through *generic* (non-foreign-key)
-links and that are not reachable from a demo account — for example a billing account created lazily
-for a demo employer — are left in place rather than guessed at. None is created by the seeder.
+6. **Rows linked by id, not by foreign key** (`cleaner.ID_LINKED`): a billing account names its
+   owner as `subject_type` + `subject_id`, and reading entitlements creates one lazily (an employer
+   page, talent search, a seeker applying). It is deleted only together with an owner that is
+   itself being deleted — a registered or demo-internal `jobs.Employer` (`organization`) or
+   `accounts.Account` (`account`). Its subscriptions, payments, credits and usage then go through
+   the same check as any cascade, so one that a non-demo account requested, activated or recorded
+   makes the clear refuse. Tests: `apps/demo/tests/test_clear_billing.py`.
+
+Residual: an id-linked row whose owner **no longer exists** cannot be proven to be demo data, so it
+is kept and reported (`Kept (not deleted): billing.BillingAccount: N whose owner no longer exists`).
+Before this rule existed each clear left one such billing account per demo employer that had been
+opened. The local demo database still holds 33 of them, all with no subscription, credit or usage:
+2 are provably former demo employers (their ids are registered in the `0ecc7b1` backup), 31 were
+already orphans in that backup and nothing in any table identifies their owner. They are left in
+place. A 34th billing account belongs to a non-demo employer created by a real account; it is kept.
 
 ## 6. Images
 

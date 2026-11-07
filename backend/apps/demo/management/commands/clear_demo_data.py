@@ -45,6 +45,11 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"Registry rows whose object was already gone: {plan.stale_registry_rows}"
             )
+        for label, count in sorted(plan.unowned_kept.items()):
+            self.stdout.write(
+                f"Kept (not deleted): {label}: {count} whose owner no longer exists; "
+                "nothing proves they are demo data"
+            )
         if options["dry_run"]:
             self.stdout.write("clear_demo_data --dry-run: nothing was deleted.")
         else:

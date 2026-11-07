@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 from django.apps import apps
 from django.db import connections, transaction
-from django.db.models import ProtectedError, RestrictedError
+from django.db.models import Exists, OuterRef, ProtectedError, RestrictedError
 from django.db.models.deletion import Collector
 
 from .models import DemoRecord
@@ -53,6 +53,22 @@ ACCOUNT_OWNED = (
 )
 MAX_PASSES = 60
 
+# Rows linked to their owner by id, not by a foreign key, so a cascade never reaches them:
+# (model, owner-type field, owner-id field, {owner type value: owner model}). A billing account
+# is created lazily the first time an employer page or a seeker action reads entitlements, so
+# demo activity leaves one behind for every demo employer and job seeker. It goes only together
+# with an owner that is itself being deleted (registered or provably demo-internal); its
+# subscriptions, payments, credits and usage are then checked like any other cascade, so one that
+# a non-demo account requested, activated or recorded makes the whole clear refuse.
+ID_LINKED = (
+    (
+        "billing.BillingAccount",
+        "subject_type",
+        "subject_id",
+        {"organization": "jobs.Employer", "account": "accounts.Account"},
+    ),
+)
+
 
 class ClearRefused(Exception):
     """Ownership could not be proven; nothing was deleted."""
@@ -65,6 +81,9 @@ class Plan:
     links: Counter = field(default_factory=Counter)  # auto-created many-to-many link rows
     counted: set = field(default_factory=set)  # internal rows already counted (count once)
     stale_registry_rows: int = 0
+    # id-linked rows (e.g. billing accounts) whose owner no longer exists and that no registered
+    # or demo-internal owner proves to be demo data: reported, never deleted
+    unowned_kept: Counter = field(default_factory=Counter)
     deleted: int = 0
     dry_run: bool = False
 
@@ -158,6 +177,58 @@ def _empty_conversations(collector: Collector) -> list:
         if not keeps.exists():
             out.append(conversation)
     return out
+
+
+def _id_linked(owners: dict[str, set[str]], allowed, using: str) -> list:
+    """Id-linked rows (`ID_LINKED`) whose owner is in `owners` ({model label: {pk}}), not yet
+    allowed. The caller allows and queues them; they are never roots on their own."""
+    out = []
+    for label, type_field, id_field, owner_models in ID_LINKED:
+        model = apps.get_model(label)
+        for type_value, owner_label in owner_models.items():
+            pks = owners.get(owner_label)
+            if not pks:
+                continue
+            rows = model._base_manager.using(using).filter(
+                **{type_field: type_value, f"{id_field}__in": list(pks)}
+            )
+            out += [row for row in rows if (label, str(row.pk)) not in allowed]
+    return out
+
+
+def _unowned(using: str) -> Counter:
+    """Id-linked rows whose owner row does not exist (ownership can no longer be proven)."""
+    out: Counter = Counter()
+    for label, type_field, id_field, owner_models in ID_LINKED:
+        model = apps.get_model(label)
+        for type_value, owner_label in owner_models.items():
+            owner = apps.get_model(owner_label)._base_manager.using(using)
+            n = (
+                model._base_manager.using(using)
+                .filter(**{type_field: type_value})
+                .exclude(Exists(owner.filter(pk=OuterRef(id_field))))
+                .count()
+            )
+            if n:
+                out[label] += n
+    return out
+
+
+def _queue_id_linked(rows, pending, allowed, plan: Plan) -> None:
+    for row in rows:
+        ident = (row._meta.label, str(row.pk))
+        allowed.add(ident)
+        pending.setdefault(type(row), []).append(row)
+        if ident not in plan.counted:
+            plan.counted.add(ident)
+            plan.internal[row._meta.label] += 1
+
+
+def _owners(instances) -> dict[str, set[str]]:
+    owners: dict[str, set[str]] = defaultdict(set)
+    for instance in instances:
+        owners[instance._meta.label].add(str(instance.pk))
+    return owners
 
 
 def _check_layer(collector: Collector, allowed, registered_ids, plan: Plan) -> None:
@@ -296,6 +367,11 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                 plan.internal[label] += len(extra)
                 plan.counted |= {(label, str(row.pk)) for row in extra}
 
+        # Id-linked rows of REGISTERED owners are allowed up front: an owner's account may be
+        # deleted in an earlier layer than the owner, and its SET NULL on (say) a subscription
+        # must already see the billing account as demo-owned.
+        _queue_id_linked(_id_linked(registered, allowed, using), pending, allowed, plan)
+
         unproven: dict = {}
         for _ in range(MAX_PASSES):
             if not pending:
@@ -328,6 +404,10 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
                         allowed.add((conversation._meta.label, str(conversation.pk)))
                         if (conversation._meta.label, str(conversation.pk)) not in registered_ids:
                             plan.internal[conversation._meta.label] += 1
+                # ...and those of owners that are only demo-internal, before this layer is checked.
+                _queue_id_linked(
+                    _id_linked(_owners(_victims(collector)), allowed, using), pending, allowed, plan
+                )
                 _check_layer(collector, allowed, registered_ids, plan)
                 files += _private_files(collector)
                 deleted, _per_model = collector.delete()
@@ -345,6 +425,7 @@ def execute(*, dry_run: bool = False, using: str = "default") -> Plan:
         else:
             raise ClearRefused("could not reach a stable deletion order")
 
+        plan.unowned_kept = _unowned(using)
         DemoRecord.objects.all().delete()
         if ledger_unlocked:
             _restore_ledger_triggers(using)
