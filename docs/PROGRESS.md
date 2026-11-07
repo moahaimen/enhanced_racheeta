@@ -137,3 +137,18 @@ Implementation complete on `feat/phase4-reservations`; acceptance review pending
 - **Booking:** off by default and reversible with `RESERVATIONS_ENABLED`.
 - **Remote:** LOCAL ONLY. Nothing pushed or deployed.
 
+## Platform closure — same branch (2026-11-07)
+
+- **Scope:** from `719fbcb` to the closure commits in `docs/PLATFORM_COMPLETION_MATRIX.md`.
+- **Footer:** lists live services (store, provider offers, marketplace by role); no "coming soon".
+- **Demo clean-up:** billing accounts go with their demo owner. 34 unproven or real ones are kept
+  and reported; none was deleted.
+- **Lab campaign:** live and lab-only; opt-outs and suspensions suppress it.
+- **Dashboard audit:** 46 workspace shapes. 3 gaps fixed: B2B quote orders and statement, the
+  finance console action, and asker-side inquiries. 112 dashboard actions opened in the browser.
+- **Professions:** the taxonomy is guarded across server, OpenAPI and web; the procedure is
+  documented.
+- **Tests:** backend 2,368 passed and 1 skipped; web 591; OpenAPI 0/0; reconciliation 11/11 with
+  the 20% commission unchanged.
+- **Browser:** 539/539.
+- **Remote:** LOCAL ONLY. Nothing pushed or deployed.

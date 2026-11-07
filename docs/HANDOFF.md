@@ -37,6 +37,13 @@ Current Git Tip: run `git rev-parse HEAD` (no moving SHA pinned here)
   non-healthcare employers, a sponsored-targeting matrix, property inquiries, the dashboard composer
   split, and **online booking switched OFF by default** (`RESERVATIONS_ENABLED`, reversible; see
   `docs/RESERVATIONS.md`). Local demo GO; production NO-GO. The mobile app was not changed.
+- **Platform closure (2026-11-07):** same matrix. It covers:
+  - the footer now lists live services;
+  - demo clear removes lazily created billing accounts with their demo owner and keeps 34 unproven
+    or real ones;
+  - a live lab-targeted campaign;
+  - the functional dashboard audit, with 3 gaps fixed (`docs/DASHBOARD_AUDIT.md`);
+  - how to add a profession (`docs/JOBS_PROFESSIONS.md`).
 
 ## Phase 12B premium homepage (ADR-064) — branch `feat/phase12b-premium-home-redesign`
 
