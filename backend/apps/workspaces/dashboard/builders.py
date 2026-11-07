@@ -191,12 +191,15 @@ def _company(account, company: MedicalCompany, role: str, team_path: str) -> lis
                     link="/company" if owner else team_path,
                 )
             )
-    if retail and role_has(role, "company.orders.view"):
+    # Orders: consumer-store orders for a retail seller; for a B2B-only seller (scientific office,
+    # pharmaceutical company...) the orders an accepted quote became. Same page, same permission.
+    if role_has(role, "company.orders.view"):
         orders = Order.objects.filter(merchant=company)
         counts = status_counts(orders, "status", OrderStatus.values)
         modules.append(
             _module(
                 "store_orders",
+                variant="" if retail else "b2b",
                 stats=[_stat(f"order_{k.lower()}", v) for k, v in counts["by_status"].items()],
                 items=[
                     _item(
@@ -212,7 +215,7 @@ def _company(account, company: MedicalCompany, role: str, team_path: str) -> lis
                 link=f"/merchant/orders{q}",
             )
         )
-    if retail and role_has(role, "company.finance.view"):
+    if role_has(role, "company.finance.view"):  # the 20% commission applies to every order
         from apps.ledger import settlement
         from apps.ledger.models import SettlementBatch
 

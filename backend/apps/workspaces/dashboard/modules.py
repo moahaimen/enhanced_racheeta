@@ -28,6 +28,37 @@ from ..types import MemberStatus
 from .primitives import LIST_LIMIT, _item, _module, _money, _stat
 
 
+def _my_inquiries_module(account) -> dict | None:
+    """The caller's OWN property inquiries (asker side), only when there are any. Counts and
+    titles come from the inquiry rows; the listing title is the snapshot taken when asking."""
+    from apps.real_estate.models import ListingInquiry
+    from apps.real_estate.types import InquiryStatus
+
+    rows = ListingInquiry.objects.filter(inquirer=account)
+    if not rows.exists():
+        return None
+    return _module(
+        "my_inquiries",
+        stats=[
+            _stat("inquiries_open", rows.filter(status=InquiryStatus.OPEN).count()),
+            _stat("inquiries_answered", rows.filter(status=InquiryStatus.ANSWERED).count()),
+            _stat("total", rows.count()),
+        ],
+        items=[
+            _item(
+                i.pk,
+                i.listing_title_snapshot,
+                "",
+                i.status,
+                "inquiries.status",
+                "/real-estate/inquiries",
+            )
+            for i in rows.order_by("-created_at")[:LIST_LIMIT]
+        ],
+        link="/real-estate/inquiries",
+    )
+
+
 def _notifications(account) -> dict:
     return _module(
         "notifications",

@@ -124,7 +124,11 @@ def test_business_compositions_differ_by_type(
     pharma = company_factory(business_type=BusinessType.PHARMACEUTICAL_COMPANY)
     product_factory(pharma, store_category, is_restricted=True, sale_channel=SaleChannel.B2B)
     pharma_dash = _dash(pharma.account)
-    assert "inventory" not in _keys(pharma_dash) and "store_orders" not in _keys(pharma_dash)
+    # No consumer stock to track, but the orders its accepted quotes became are reachable.
+    assert "inventory" not in _keys(pharma_dash)
+    assert _module(pharma_dash, "store_orders")["variant"] == "b2b"
+    assert {"store_orders", "advertising"} <= {a["key"] for a in pharma_dash["actions"]}
+    assert _module(_dash(store.account), "store_orders")["variant"] == ""  # retail store
     assert _stat(_module(pharma_dash, "catalogue"), "restricted_b2b") == 1
     product_factory(
         store, store_category, price=Decimal("10"), sale_channel=SaleChannel.B2C, stock_quantity=2

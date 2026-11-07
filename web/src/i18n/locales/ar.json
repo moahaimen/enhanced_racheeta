@@ -2186,7 +2186,9 @@
       "store_finance": "المبيعات وعمولة 20٪",
       "setup_employer": "إعداد التوظيف",
       "setup_job_seeker": "ابدأ البحث عن عمل",
-      "inquiries": "استفسارات العقارات"
+      "inquiries": "استفسارات العقارات",
+      "store_orders_b2b": "طلبات من عروض الأسعار المقبولة",
+      "my_inquiries": "استفساراتي عن العقارات"
     },
     "stats": {
       "verification": "التوثيق",
@@ -2316,7 +2318,9 @@
       "admin_console": "لوحة الإدارة",
       "promotions_review": "مراجعة الترويج",
       "complete_setup": "أكمل الإعداد",
-      "inquiries": "الاستفسارات"
+      "inquiries": "الاستفسارات",
+      "marketplace_finance": "مالية السوق",
+      "my_inquiries": "استفساراتي عن العقارات"
     },
     "greeting": "مرحباً، {{name}}",
     "switchWorkspace": "مساحة العمل",

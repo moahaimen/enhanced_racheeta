@@ -2118,7 +2118,9 @@
       "store_finance": "Sales & 20% commission",
       "setup_employer": "Set up hiring",
       "setup_job_seeker": "Start your job search",
-      "inquiries": "Property inquiries"
+      "inquiries": "Property inquiries",
+      "store_orders_b2b": "Orders from accepted quotes",
+      "my_inquiries": "My property inquiries"
     },
     "stats": {
       "verification": "Verification",
@@ -2248,7 +2250,9 @@
       "admin_console": "Admin console",
       "promotions_review": "Review promotions",
       "complete_setup": "Complete setup",
-      "inquiries": "Inquiries"
+      "inquiries": "Inquiries",
+      "marketplace_finance": "Marketplace finance",
+      "my_inquiries": "My property inquiries"
     },
     "greeting": "Welcome, {{name}}",
     "switchWorkspace": "Workspace",

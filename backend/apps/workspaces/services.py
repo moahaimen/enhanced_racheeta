@@ -11,7 +11,6 @@ from apps.audit import services as audit
 from apps.jobs.models import EmployerMembership, JobSeekerProfile
 from apps.jobs.types import MemberStatus as EmployerMemberStatus
 from apps.marketplace.models import MedicalCompany, seller_workspace_q
-from apps.marketplace.types import RETAIL_BUSINESS_TYPES
 from apps.providers.models import ProviderProfile
 from apps.providers.types import FACILITY_TYPES, PRACTITIONER_TYPES
 
@@ -120,9 +119,10 @@ def build_workspaces(account) -> list[dict]:
     # pharmacy keeps its provider workspace above AND gets this store workspace).
     company = MedicalCompany.objects.filter(seller_workspace_q(), account=account).first()
     if company:
-        modules = ["profile", "products", "advertising", "quotes", "staff", "recruitment"]
-        if company.business_type in RETAIL_BUSINESS_TYPES:
-            modules.insert(2, "store_orders")
+        # Every seller has orders: retail store orders, or the orders accepted quotes became.
+        modules = [
+            "profile", "products", "store_orders", "advertising", "quotes", "staff", "recruitment",
+        ]  # fmt: skip
         modules += ["documents", "store_settings", "reports"]
         out.append(
             _descriptor(

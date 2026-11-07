@@ -31,10 +31,11 @@ from django.utils import timezone
 
 from apps.accounts.models import Account
 from apps.core.features import reservations_enabled
+from apps.ledger import settlement
 from apps.marketplace.models import MedicalCompany
-from apps.marketplace.types import RETAIL_BUSINESS_TYPES
 from apps.providers.models import ProviderProfile
 from apps.providers.types import VerificationStatus
+from apps.real_estate.models import ListingInquiry
 
 from .. import services
 from ..types import role_has
@@ -48,7 +49,7 @@ from .builders import (
     _practitioner,
     _property,
 )
-from .modules import _account_settings, _notifications, _setup
+from .modules import _account_settings, _my_inquiries_module, _notifications, _setup
 
 
 def _actions(ws: dict, account) -> list[dict]:
@@ -83,7 +84,7 @@ def _actions(ws: dict, account) -> list[dict]:
         q = "" if role_has(role, "org.owner_tools") else f"?company={ws['org_id']}"
         if role_has(role, "org.owner_tools"):
             out = [("products", "/company"), ("advertising", "/company/advertising")]
-        if ws["subtype"] in RETAIL_BUSINESS_TYPES and role_has(role, "company.orders.view"):
+        if role_has(role, "company.orders.view"):  # retail store orders or accepted quotes
             out.append(("store_orders", f"/merchant/orders{q}"))
         if role_has(role, "company.quotes.view"):
             out.append(("quote_requests", f"/merchant/quotes{q}"))
@@ -107,6 +108,13 @@ def _actions(ws: dict, account) -> list[dict]:
             ("admin_console", "/admin-console"),
             ("promotions_review", "/admin-console?tab=promotions"),
         ]
+        if settlement.is_finance(account):  # the server re-checks the permission on every call
+            out.append(("marketplace_finance", "/admin-finance"))
+    personal = kind in ("patient", "practitioner") or (
+        kind in ("facility", "company") and role_has(role, "org.owner_tools")
+    )
+    if personal and ListingInquiry.objects.filter(inquirer=account).exists():
+        out.append(("my_inquiries", "/real-estate/inquiries"))
     return [{"key": k, "path": p} for k, p in out if p]
 
 
@@ -162,6 +170,10 @@ def compose(account: Account, ws_id: str | None) -> dict | None:
         modules = _job_seeker(account)
     elif kind == "admin":
         modules = _admin()
+    if kind in ("patient", "practitioner") or (
+        kind in ("facility", "company") and role_has(role, "org.owner_tools")
+    ):
+        modules.append(_my_inquiries_module(account))  # None when the account asked nothing
     modules = [m for m in modules if m is not None]
     modules += [_notifications(account), _account_settings()]
     return {
