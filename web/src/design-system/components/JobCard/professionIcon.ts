@@ -1,7 +1,7 @@
 import type { IconName } from '../../icons'
 
 /** One recognisable glyph per profession (healthcare first); unknown values fall back to a briefcase. */
-const PROFESSION_ICON: Record<string, IconName> = {
+export const PROFESSION_ICON: Record<string, IconName> = {
   DOCTOR: 'stethoscope',
   DENTIST: 'tooth',
   PHARMACIST: 'pill',

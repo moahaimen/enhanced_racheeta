@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
+import { PROFESSION_ICON, professionIcon } from '../design-system/components/JobCard/professionIcon'
 import ar from '../i18n/locales/ar.json'
 import en from '../i18n/locales/en.json'
 import { PROFESSION_GROUPS, PROFESSIONS } from './jobs.types'
@@ -32,5 +36,20 @@ describe('profession taxonomy (mirror of apps/jobs/types.py)', () => {
     }
     // and nothing the web labels is unknown to the taxonomy
     expect(Object.keys(en.professions).sort()).toEqual([...PROFESSIONS].sort())
+  })
+
+  it('matches the server vocabulary in docs/api/openapi.yaml (ProfessionEnum)', () => {
+    // The OpenAPI file is generated from apps/jobs/types.py and CI fails when it is stale, so a
+    // profession added on the server without this mirror (or the reverse) fails here.
+    const yaml = readFileSync(resolve(process.cwd(), '../docs/api/openapi.yaml'), 'utf8')
+    const block = yaml.split('\n    ProfessionEnum:\n')[1]!.split('\n      type: string')[0]!
+    const server = [...block.matchAll(/^ {6}- (\w+)$/gm)].map((m) => m[1])
+    expect(server.length).toBeGreaterThan(0)
+    expect([...PROFESSIONS].sort()).toEqual([...server].sort())
+  })
+
+  it('chooses an icon for every profession (the fallback is for unknown values only)', () => {
+    expect(Object.keys(PROFESSION_ICON).sort()).toEqual([...PROFESSIONS].sort())
+    expect(professionIcon('NOT_A_PROFESSION')).toBe('briefcase')
   })
 })

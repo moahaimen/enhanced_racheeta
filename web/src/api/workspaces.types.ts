@@ -1,4 +1,5 @@
 /** Workspaces, store, quotes, preferences and promotions (docs/api/openapi.yaml). */
+import type { Profession, ProfessionGroupKey } from './jobs.types'
 import type { Paginated } from './providers.types'
 import type { PropertyListing } from './realEstate.types'
 
@@ -325,9 +326,10 @@ export interface PromotedListing {
   ends_at: string
 }
 
+/** GET /api/v1/jobs/professions — the server's PROFESSION_GROUPS (mirrored in jobs.types.ts). */
 export interface ProfessionGroup {
-  group: 'HEALTHCARE' | 'HEALTH_BUSINESS' | 'TECHNOLOGY' | 'BUSINESS'
-  professions: string[]
+  group: ProfessionGroupKey
+  professions: Profession[]
 }
 
 export type PaginatedOrders = Paginated<Order>

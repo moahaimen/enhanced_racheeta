@@ -187,3 +187,22 @@ def test_public_job_search_filters_new_professions(api_client, business, job_fac
     job_factory(business, profession="ACCOUNTANT", title="Accountant")
     found = api_client.get("/api/v1/jobs", {"profession": "TEACHER"}).json()["results"]
     assert [j["id"] for j in found] == [str(teacher.id)]
+
+
+def test_the_web_mirror_has_the_same_groups_order_and_members():
+    """web/src/api/jobs.types.ts mirrors PROFESSION_GROUPS for instant, grouped <select>s. Adding
+    a profession here without the mirror (or the reverse) fails this test
+    (docs/JOBS_PROFESSIONS.md: how to add a profession)."""
+    import re
+    from pathlib import Path
+
+    from apps.jobs.types import PROFESSION_GROUPS
+
+    source = (Path(__file__).resolve().parents[4] / "web/src/api/jobs.types.ts").read_text()
+    block = source.split("export const PROFESSION_GROUPS")[1].split("\n]\n")[0]
+    web = [
+        (group, re.findall(r"'(\w+)'", members))
+        for group, members in re.findall(r"\['(\w+)', \[([^\]]*)\]\]", block)
+    ]
+    server = [(group, [str(p) for p in members]) for group, members in PROFESSION_GROUPS.items()]
+    assert web == server
