@@ -8,14 +8,22 @@ import { Container } from './Container'
 import { BrandMark } from './SiteHeader'
 import styles from './SiteFooter.module.css'
 
-const UPCOMING = ['offers', 'marketplace'] as const
-
+/**
+ * The services column only lists live modules, each linked where this visitor can actually use it:
+ * - the store is public;
+ * - offers are published on provider profiles (a provider manages its own);
+ * - the B2B marketplace is for verified providers (buyers) and companies (sellers); everyone else
+ *   sees who it is for instead of a link that would end on a refusal.
+ */
 export function SiteFooter() {
   const { t } = useTranslation()
-  const { status } = useAuth()
+  const { status, account } = useAuth()
   const { reservationsEnabled: bookingOn } = useFeatures()
+  const isProvider = account?.role === 'PROVIDER'
+  const isCompany = account?.role === 'MEDICAL_COMPANY'
+  const marketplaceLink = isProvider ? '/marketplace' : isCompany ? '/company' : null
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-testid="site-footer">
       <Container width="xl">
         <div className={styles.grid}>
           <div>
@@ -59,14 +67,28 @@ export function SiteFooter() {
             </ul>
           </div>
           <div>
-            <h2 className={styles.colTitle}>{t('footer.upcoming')}</h2>
-            <ul className={styles.list}>
-              {UPCOMING.map((key) => (
-                <li key={key} className={styles.upcoming}>
-                  <span>{t(`modules.${key}`)}</span>
-                  <Badge tone="outline">{t('common.soon')}</Badge>
-                </li>
-              ))}
+            <h2 className={styles.colTitle}>{t('footer.services')}</h2>
+            <ul className={styles.list} data-testid="footer-services">
+              <li>
+                <Link to="/store">{t('nav.store')}</Link>
+              </li>
+              <li>
+                {isProvider ? (
+                  <Link to="/provider/offers">{t('footer.manageOffers')}</Link>
+                ) : (
+                  <Link to="/providers">{t('footer.offersOnProfiles')}</Link>
+                )}
+              </li>
+              <li className={marketplaceLink ? undefined : styles.restricted}>
+                {marketplaceLink ? (
+                  <Link to={marketplaceLink}>{t('modules.marketplace')}</Link>
+                ) : (
+                  <>
+                    <span>{t('modules.marketplace')}</span>
+                    <Badge tone="outline">{t('footer.forProfessionals')}</Badge>
+                  </>
+                )}
+              </li>
             </ul>
           </div>
         </div>

@@ -525,7 +525,10 @@
   "footer": {
     "tagline": "Racheeta brings verified medical providers in Iraq together in one place, Arabic-first.",
     "platform": "Platform",
-    "upcoming": "Coming next",
+    "services": "Services",
+    "offersOnProfiles": "Provider offers",
+    "manageOffers": "My offers",
+    "forProfessionals": "Verified professionals",
     "rights": "© {{year}} Racheeta. All rights reserved."
   },
   "auth": {
