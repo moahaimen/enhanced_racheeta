@@ -788,6 +788,18 @@ CAMPAIGNS = [
         [],
     ),
     ("rehab-live", "rehab-mobility", "wheelchair", "ACTIVE", "VERIFIED", -1, 25, ["THERAPIST"], []),
+    # Lab equipment reaches laboratories AND hospitals by category; the campaign narrows to labs.
+    (
+        "lab-live",
+        "rafidain-labtech",
+        "hematology-analyzer",
+        "ACTIVE",
+        "VERIFIED",
+        -1,
+        30,
+        ["LABORATORY"],
+        [],
+    ),
     ("expired", "nakhla-dental-supply", "dental-scaler", "ACTIVE", "VERIFIED", -40, 10, [], []),
     ("rejected", "ibn-sina-scientific", "dispensing-trays", "REJECTED", "REJECTED", 2, 10, [], []),
     ("pending", "aman-consumables", "bp-monitor", "PENDING_PAYMENT", "PENDING", 3, 14, [], []),
