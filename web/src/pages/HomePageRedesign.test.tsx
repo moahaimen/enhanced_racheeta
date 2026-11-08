@@ -69,7 +69,7 @@ describe('premium homepage — search', () => {
   it('routes a doctor search to the providers list as kind=PRACTITIONER with the typed name and governorate', async () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
-    const form = await screen.findByRole('form', { name: /ابحث في رشيتة/ })
+    const form = await screen.findByRole('form', { name: /ابحث في راجيتة/ })
     await waitFor(() => expect(within(form).getByRole('option', { name: /بغداد/ })).toBeInTheDocument())
     await user.selectOptions(within(form).getByRole('combobox'), 'g-baghdad')
     await user.type(within(form).getByRole('searchbox'), 'كريم')
@@ -89,7 +89,7 @@ describe('premium homepage — search', () => {
     ] as const) {
       const user = userEvent.setup()
       const { router, unmount } = renderApp('/')
-      const form = await screen.findByRole('form', { name: /ابحث في رشيتة/ })
+      const form = await screen.findByRole('form', { name: /ابحث في راجيتة/ })
       await user.click(within(form).getByRole('radio', { name: tab }))
       await user.type(within(form).getByRole('searchbox'), 'نص')
       await user.click(within(form).getByRole('button', { name: /^بحث$/ }))
@@ -104,7 +104,7 @@ describe('premium homepage — search', () => {
   it('searches with no text and no governorate without inventing parameters', async () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
-    const form = await screen.findByRole('form', { name: /ابحث في رشيتة/ })
+    const form = await screen.findByRole('form', { name: /ابحث في راجيتة/ })
     await user.click(within(form).getByRole('radio', { name: /^الوظائف$/ }))
     await user.click(within(form).getByRole('button', { name: /^بحث$/ }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/jobs'))

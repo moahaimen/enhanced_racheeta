@@ -131,7 +131,7 @@ describe('marketplace', () => {
     expect(within(cards).getByText(/18[,٬]?000/)).toBeInTheDocument()
     expect(within(cards).getAllByText(/72[,٬]?000/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByTestId('seller-nav')).toBeInTheDocument()
-    expect(within(cards).queryByText(/مستحق لراشيتة عليك|you owe racheeta/i)).toBeNull()
+    expect(within(cards).queryByText(/مستحق لراجيتة عليك|you owe racheeta/i)).toBeNull()
   })
 
   it('a refund after payout shows what the seller owes Racheeta, never a negative payable', async () => {
@@ -144,7 +144,7 @@ describe('marketplace', () => {
     })
     renderApp('/merchant/center?tab=finance')
     const cards = await screen.findByTestId('statement-cards')
-    expect(within(cards).getByText(/مستحق لراشيتة عليك|you owe racheeta/i)).toBeInTheDocument()
+    expect(within(cards).getByText(/مستحق لراجيتة عليك|you owe racheeta/i)).toBeInTheDocument()
     expect(within(cards).queryByText(/−\s*\d|-\d/)).toBeNull()
   })
 

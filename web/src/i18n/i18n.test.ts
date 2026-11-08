@@ -9,7 +9,7 @@ describe('i18n direction', () => {
     expect(i18n.language).toBe('ar')
     expect(document.documentElement.getAttribute('dir')).toBe('rtl')
     expect(document.documentElement.getAttribute('lang')).toBe('ar')
-    expect(i18n.t('app.name')).toBe('رشيتة')
+    expect(i18n.t('app.name')).toBe('راجيتة')
   })
 
   it('switches to English and LTR, and persists the choice', async () => {

@@ -26,7 +26,7 @@ export function BrandMark({ className = '' }: { className?: string }) {
       {/* Bilingual wordmark: the brand is written in both scripts whatever the UI language. */}
       <span className={styles.wordmark} aria-hidden="true">
         <span className={styles.wordLatin}>Racheeta</span>
-        <span className={styles.wordArabic}>رشيتة</span>
+        <span className={styles.wordArabic}>راجيتة</span>
       </span>
     </NavLink>
   )

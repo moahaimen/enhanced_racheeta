@@ -68,7 +68,7 @@ def test_request_email_uses_account_language(api_client, account_factory):
     assert "Reset your Racheeta password" in mail.outbox[0].subject
     ar = account_factory(preferred_language="ar")
     api_client.post(REQUEST, {"email": ar.email})
-    assert "رشيتة" in mail.outbox[1].subject
+    assert "راجيتة" in mail.outbox[1].subject
 
 
 def test_email_body_never_contains_password_or_hash(api_client, account):

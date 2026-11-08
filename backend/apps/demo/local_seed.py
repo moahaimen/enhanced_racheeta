@@ -244,11 +244,11 @@ class LocalExtras:
 
         self.admin, _ = self.registry.ensure("account:local-admin", make)
         self.finance = self._staff(
-            "local-finance", "مسؤول مالية راشيتة | Racheeta finance", password, finance=True
+            "local-finance", "مسؤول مالية راجيتة | Racheeta finance", password, finance=True
         )
         self._staff(
             "local-support",
-            "دعم راشيتة (بلا صلاحية مالية) | Racheeta support",
+            "دعم راجيتة (بلا صلاحية مالية) | Racheeta support",
             password,
             finance=False,
         )
