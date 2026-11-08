@@ -58,7 +58,9 @@ fi
 
 scripts/smoke_http.sh "http://127.0.0.1:$PORT"
 
-if docker logs "$NAME" 2>&1 | grep -qF "$SECRET_KEY"; then
+# Logs into a variable first: under pipefail an early-exiting grep could turn a leak into "ok".
+container_logs="$(docker logs "$NAME" 2>&1)"
+if grep -qF "$SECRET_KEY" <<<"$container_logs"; then
   echo "  FAIL  SECRET_KEY appears in container logs"; exit 1
 else
   echo "  ok    SECRET_KEY not present in container logs"
@@ -94,7 +96,9 @@ server_uid="$(docker exec "$NAME" stat -c %u /proc/1)"
 owner="$(docker exec "$NAME" stat -c %u /data/private_media)"
 [ "$owner" = "1000" ] && echo "  ok    volume mode: private media folder belongs to app" \
   || { echo "  FAIL  volume mode: private media folder owned by uid $owner"; exit 1; }
-docker logs "$NAME" 2>&1 | grep -q "dropping root privileges to user app" \
+# Read the logs first: `docker logs | grep -q` can fail under pipefail (grep exits early, SIGPIPE).
+volume_logs="$(docker logs "$NAME" 2>&1)"
+grep -q "dropping root privileges to user app" <<<"$volume_logs" \
   && echo "  ok    volume mode: start.sh dropped root before check/migrate" \
   || { echo "  FAIL  volume mode: no privilege drop logged"; exit 1; }
 echo "CONTAINER SMOKE PASSED"
