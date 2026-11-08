@@ -87,7 +87,7 @@ def test_seed_creates_every_major_entity_type(seeded):
         == 9
     )
     assert MedicalCompany.objects.count() == 13
-    assert Product.objects.count() == 49
+    assert Product.objects.count() == 49 + 30  # B2B catalogue + the public store (store.py)
     assert JobPost.objects.filter(status="PUBLISHED").count() >= 15
     assert Employer.objects.count() == 10
     assert PropertyListing.objects.count() == 19
@@ -239,3 +239,30 @@ def test_a_rerun_adds_missing_portraits_but_never_replaces_a_set_image(seeded):
     assert not practitioners.filter(image_url="").exists()
     custom.refresh_from_db()
     assert custom.image_url == "https://images.example.test/own-photo.webp"
+
+
+def test_the_staging_seed_fills_the_public_store(db, api_client, settings):
+    """The store and the home page's "latest in the store" are not empty on staging: three
+    fictional retail sellers, consumer categories and in-stock products with demo pictures, all
+    through the real public-store rule. No order, payment or ledger row is created."""
+    from apps.commerce.models import Order
+    from apps.demo.content import store
+    from apps.ledger.models import LedgerEntry
+
+    seed()
+    listed = api_client.get("/api/v1/store/products", {"sort": "newest", "page_size": 100})
+    assert listed.status_code == 200
+    assert listed.json()["count"] == len(store.STORE_PRODUCTS) >= 20
+    rows = listed.json()["results"]
+    origin = settings.RACHEETA["FRONTEND_URL"]
+    assert all(r["image_url"].startswith(f"{origin}/demo/products/") for r in rows)
+    in_stock = [r for r in rows if r["in_stock"]]
+    assert len(in_stock) >= 20 and len(in_stock) < len(rows)  # a few show "out of stock"
+    sellers = {r["company"]["name"] for r in rows}
+    assert len(sellers) == len(store.STORE_SELLERS)
+    categories = api_client.get("/api/v1/store/categories").json()
+    assert {c["slug"] for c in categories} == {row[0] for _n, row in store.STORE_CATEGORIES}
+    assert Order.objects.count() == 0 and LedgerEntry.objects.count() == 0
+    seed()  # idempotent: nothing is created twice
+    again = api_client.get("/api/v1/store/products", {"page_size": 100}).json()["count"]
+    assert again == len(store.STORE_PRODUCTS)

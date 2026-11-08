@@ -107,6 +107,7 @@ class DemoSeeder:
             ("accounts, providers and facilities", self.phase_providers),
             ("availability, reservations, reviews, offers, chat", self.phase_care),
             ("marketplace", self.phase_marketplace),
+            ("public store", self.phase_store),
             ("jobs and recruitment", self.phase_jobs),
             ("real estate", self.phase_real_estate),
         ]
@@ -697,6 +698,90 @@ class DemoSeeder:
                     is_active=True,
                 ),
             )
+
+    def phase_store(self) -> None:
+        """The public store (content/store.py): three fictional retail sellers, consumer
+        categories and in-stock products with demo pictures, so the store and the home page's
+        "latest in the store" are not empty. Staging-safe: no orders, payments or ledger rows.
+
+        Demo shortcut (like `documents_complete` in phase_marketplace): these fictional sellers
+        are presented as licensed, so their store is set ACTIVE here instead of through document
+        uploads and a staff review. Real sellers always go through `sellers.set_store_status`.
+        Registry keys match the local demo's (`category:<slug>`, `product:local:<key>`), so the
+        local seed finds these rows and never creates them twice."""
+        from django.conf import settings
+
+        from apps.marketplace.types import ComplianceClass, StoreStatus
+
+        from .content import store
+
+        for key, business in store.STORE_SELLERS.items():
+            company = self.companies.get(key)
+            if company is None:
+                continue
+            MedicalCompany.objects.filter(pk=company.pk).exclude(
+                business_type=business, store_status=StoreStatus.ACTIVE
+            ).update(
+                business_type=business,
+                store_status=StoreStatus.ACTIVE,
+                store_status_changed_at=self.now,
+            )
+        categories = {}
+        for n, (slug, name_ar, name_en, _consumer, audience) in store.STORE_CATEGORIES:
+            existing = ProductCategory.objects.filter(slug=slug).first()
+            registered = DemoRecord.objects.filter(
+                model_label="marketplace.ProductCategory",
+                object_pk=str(getattr(existing, "pk", "")),
+            ).exists()
+            if existing is not None and not registered:
+                categories[slug] = existing  # a real category with this slug: reuse, never own
+                continue
+
+            def make(slug=slug, name_ar=name_ar, name_en=name_en, n=n, audience=audience):
+                category = ProductCategory.objects.create(
+                    slug=slug,
+                    name_ar=name_ar,
+                    name_en=name_en,
+                    sort_order=950 + n,
+                    is_active=True,
+                    consumer_allowed=True,
+                    compliance_class=ComplianceClass.B2C_ALLOWED,
+                )
+                for ptype, spec in audience:
+                    ProductAudience.objects.create(
+                        category=category,
+                        provider_type=ptype,
+                        specialty=self._spec.get(spec) if spec else None,
+                    )
+                return category
+
+            categories[slug], _ = self.registry.ensure(f"category:{slug}", make)
+        origin = settings.RACHEETA["FRONTEND_URL"]
+        for row in store.STORE_PRODUCTS:
+            key, ckey, cat, t_ar, t_en, price, channel, _restricted, stock = row
+            company, category = self.companies.get(ckey), categories.get(cat)
+            if company is None or category is None:
+                continue
+            title = common.bilingual(t_ar, t_en)
+            picture = store.product_image_name(title, cat)
+
+            def make_product(company=company, category=category, title=title, price=price,
+                             channel=channel, stock=stock, picture=picture):  # fmt: skip
+                return Product.objects.create(
+                    company=company,
+                    category=category,
+                    title=title,
+                    description=f"{common.DEMO_NOTE_AR} {common.DEMO_NOTE_EN}",
+                    price=Decimal(price),
+                    currency="IQD",
+                    is_active=True,
+                    sale_channel=channel,
+                    is_restricted=False,
+                    stock_quantity=stock,
+                    image_url=f"{origin}/demo/products/{picture}.svg",
+                )
+
+            self.registry.ensure(f"product:local:{key}", make_product)
 
     # -- jobs ---------------------------------------------------------------------------------
     def _employer(self, row, n):
