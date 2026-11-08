@@ -325,7 +325,7 @@ describe('Company advertising workspace', () => {
       const form = await screen.findByTestId('campaign-form')
       await user.type(within(form).getByLabelText(/تاريخ البدء|start date/i), '2030-01-01')
       await user.type(within(form).getByLabelText(/تاريخ الانتهاء|end date/i), '2030-01-10')
-      expect(await screen.findByTestId('pricing-unavailable')).toHaveTextContent(/لم تُحدِّد رشيتة أسعار|has not been configured/i)
+      expect(await screen.findByTestId('pricing-unavailable')).toHaveTextContent(/لم تُحدِّد راجيتة أسعار|has not been configured/i)
       expect(screen.queryByTestId('quote-total')).toBeNull()
       expect(screen.queryByTestId('quote-rate')).toBeNull()
     })
@@ -501,7 +501,7 @@ describe('Company advertising workspace', () => {
       const user = userEvent.setup()
       const row = (await screen.findAllByTestId('campaign'))[0]!
       await user.click(within(row).getByRole('button', { name: SUBMIT }))
-      expect(await screen.findByRole('alert')).toHaveTextContent(/لم تُحدِّد رشيتة أسعار|has not been configured/i)
+      expect(await screen.findByRole('alert')).toHaveTextContent(/لم تُحدِّد راجيتة أسعار|has not been configured/i)
       vi.mocked(advertisingApi.submitCampaign).mockRejectedValue(
         new ApiError(400, 'validation_error', 'Validation failed.', { ends_on: ['x'], governorates: ['y'] }, { ends_on: ['end_in_past'], governorates: ['governorate_inactive'] }),
       )

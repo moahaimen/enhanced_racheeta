@@ -231,7 +231,7 @@ action). Products/companies cards follow the B2B rule: providers → `/marketpla
 categories on the same page (never a dead end).
 
 **Header**: white, compact, heart-pulse mark in teal with the bilingual wordmark (Racheeta /
-رشيتة), five public links (teal active pill), language switch, login + teal "create account";
+راجيتة), five public links (teal active pill), language switch, login + teal "create account";
 signed-in accounts keep the Workspace menu and inbox icons.
 
 **Inner pages** keep their structure: white cards over `#E9EEF2`, teal headings/buttons/active tabs.

@@ -101,7 +101,7 @@ export function PrintableDocument({ doc }: { doc: InvoiceDocument }) {
     <article className={styles.sheet} data-testid="printable-document" aria-label={t(`market.documentKind.${doc.kind}`)}>
       <header className={styles.head}>
         <div>
-          <p className={styles.brand}>Racheeta · رشيتة</p>
+          <p className={styles.brand}>Racheeta · راجيتة</p>
           <h1 className={styles.title}>{t(`market.documentKind.${doc.kind}`)}</h1>
           <p className="ltr">{doc.number}</p>
         </div>
