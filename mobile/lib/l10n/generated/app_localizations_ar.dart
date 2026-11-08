@@ -1133,6 +1133,69 @@ class AppLocalizationsAr extends AppLocalizations {
   String get professionOther => 'أخرى';
 
   @override
+  String get professionPharmacyTechnician => 'فني صيدلة';
+
+  @override
+  String get professionOptometrist => 'أخصائي بصريات';
+
+  @override
+  String get professionSpeechTherapist => 'أخصائي نطق';
+
+  @override
+  String get professionBiomedicalEngineer => 'مهندس طبي حيوي';
+
+  @override
+  String get professionMedicalRepresentative => 'مندوب علمي';
+
+  @override
+  String get professionHealthAdministrator => 'إداري صحي';
+
+  @override
+  String get professionSoftwareDeveloper => 'مطوّر برمجيات';
+
+  @override
+  String get professionItSupport => 'دعم تقني';
+
+  @override
+  String get professionNetworkEngineer => 'مهندس شبكات';
+
+  @override
+  String get professionCybersecurity => 'أمن معلومات';
+
+  @override
+  String get professionDataAnalyst => 'محلل بيانات';
+
+  @override
+  String get professionAccountant => 'محاسب / مالية';
+
+  @override
+  String get professionMarketing => 'تسويق';
+
+  @override
+  String get professionSales => 'مبيعات';
+
+  @override
+  String get professionHumanResources => 'موارد بشرية';
+
+  @override
+  String get professionEngineer => 'مهندس (صيانة ومرافق)';
+
+  @override
+  String get professionCustomerService => 'خدمة العملاء';
+
+  @override
+  String get professionManager => 'الإدارة / مدير مشاريع';
+
+  @override
+  String get professionOperations => 'العمليات / اللوجستيات';
+
+  @override
+  String get professionTeacher => 'معلّم / مدرّب';
+
+  @override
+  String get professionOtherProfession => 'مهنة أخرى';
+
+  @override
   String get employmentFullTime => 'دوام كامل';
 
   @override

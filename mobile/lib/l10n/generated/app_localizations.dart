@@ -2264,6 +2264,132 @@ abstract class AppLocalizations {
   /// **'Other'**
   String get professionOther;
 
+  /// No description provided for @professionPharmacyTechnician.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharmacy technician'**
+  String get professionPharmacyTechnician;
+
+  /// No description provided for @professionOptometrist.
+  ///
+  /// In en, this message translates to:
+  /// **'Optometrist'**
+  String get professionOptometrist;
+
+  /// No description provided for @professionSpeechTherapist.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech therapist'**
+  String get professionSpeechTherapist;
+
+  /// No description provided for @professionBiomedicalEngineer.
+  ///
+  /// In en, this message translates to:
+  /// **'Biomedical engineer'**
+  String get professionBiomedicalEngineer;
+
+  /// No description provided for @professionMedicalRepresentative.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical representative'**
+  String get professionMedicalRepresentative;
+
+  /// No description provided for @professionHealthAdministrator.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthcare administrator'**
+  String get professionHealthAdministrator;
+
+  /// No description provided for @professionSoftwareDeveloper.
+  ///
+  /// In en, this message translates to:
+  /// **'Software developer'**
+  String get professionSoftwareDeveloper;
+
+  /// No description provided for @professionItSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'IT support'**
+  String get professionItSupport;
+
+  /// No description provided for @professionNetworkEngineer.
+  ///
+  /// In en, this message translates to:
+  /// **'Network engineer'**
+  String get professionNetworkEngineer;
+
+  /// No description provided for @professionCybersecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Cybersecurity specialist'**
+  String get professionCybersecurity;
+
+  /// No description provided for @professionDataAnalyst.
+  ///
+  /// In en, this message translates to:
+  /// **'Data analyst'**
+  String get professionDataAnalyst;
+
+  /// No description provided for @professionAccountant.
+  ///
+  /// In en, this message translates to:
+  /// **'Accountant / finance'**
+  String get professionAccountant;
+
+  /// No description provided for @professionMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get professionMarketing;
+
+  /// No description provided for @professionSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get professionSales;
+
+  /// No description provided for @professionHumanResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Human resources'**
+  String get professionHumanResources;
+
+  /// No description provided for @professionEngineer.
+  ///
+  /// In en, this message translates to:
+  /// **'Engineer (facilities / maintenance)'**
+  String get professionEngineer;
+
+  /// No description provided for @professionCustomerService.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer service'**
+  String get professionCustomerService;
+
+  /// No description provided for @professionManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Management / project manager'**
+  String get professionManager;
+
+  /// No description provided for @professionOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Operations / logistics'**
+  String get professionOperations;
+
+  /// No description provided for @professionTeacher.
+  ///
+  /// In en, this message translates to:
+  /// **'Teacher / trainer'**
+  String get professionTeacher;
+
+  /// No description provided for @professionOtherProfession.
+  ///
+  /// In en, this message translates to:
+  /// **'Other profession'**
+  String get professionOtherProfession;
+
   /// No description provided for @employmentFullTime.
   ///
   /// In en, this message translates to:

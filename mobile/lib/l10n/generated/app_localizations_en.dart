@@ -1148,6 +1148,69 @@ class AppLocalizationsEn extends AppLocalizations {
   String get professionOther => 'Other';
 
   @override
+  String get professionPharmacyTechnician => 'Pharmacy technician';
+
+  @override
+  String get professionOptometrist => 'Optometrist';
+
+  @override
+  String get professionSpeechTherapist => 'Speech therapist';
+
+  @override
+  String get professionBiomedicalEngineer => 'Biomedical engineer';
+
+  @override
+  String get professionMedicalRepresentative => 'Medical representative';
+
+  @override
+  String get professionHealthAdministrator => 'Healthcare administrator';
+
+  @override
+  String get professionSoftwareDeveloper => 'Software developer';
+
+  @override
+  String get professionItSupport => 'IT support';
+
+  @override
+  String get professionNetworkEngineer => 'Network engineer';
+
+  @override
+  String get professionCybersecurity => 'Cybersecurity specialist';
+
+  @override
+  String get professionDataAnalyst => 'Data analyst';
+
+  @override
+  String get professionAccountant => 'Accountant / finance';
+
+  @override
+  String get professionMarketing => 'Marketing';
+
+  @override
+  String get professionSales => 'Sales';
+
+  @override
+  String get professionHumanResources => 'Human resources';
+
+  @override
+  String get professionEngineer => 'Engineer (facilities / maintenance)';
+
+  @override
+  String get professionCustomerService => 'Customer service';
+
+  @override
+  String get professionManager => 'Management / project manager';
+
+  @override
+  String get professionOperations => 'Operations / logistics';
+
+  @override
+  String get professionTeacher => 'Teacher / trainer';
+
+  @override
+  String get professionOtherProfession => 'Other profession';
+
+  @override
   String get employmentFullTime => 'Full time';
 
   @override
