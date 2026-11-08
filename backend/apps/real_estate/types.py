@@ -56,3 +56,32 @@ EMAIL_METHODS = frozenset({ContactMethod.EMAIL, ContactMethod.BOTH})
 
 # Fixed display order of suitable uses (stable API output).
 SUITABLE_USE_ORDER = {use.value: index for index, use in enumerate(SuitableUse)}
+
+
+class PromotionStatus(models.TextChoices):
+    REQUESTED = "REQUESTED", "Awaiting review"
+    ACTIVE = "ACTIVE", "Active"
+    REJECTED = "REJECTED", "Rejected"
+    ENDED = "ENDED", "Ended"
+
+
+OPEN_PROMOTION_STATUSES = (PromotionStatus.REQUESTED, PromotionStatus.ACTIVE)
+MAX_PROMOTION_DAYS = 60
+
+
+class InquiryStatus(models.TextChoices):
+    """A property seeker's question about one listing (Phase E).
+
+    OPEN → ANSWERED (owner replies; may reply again) → CLOSED (owner) ;
+    OPEN/ANSWERED → WITHDRAWN (the seeker). CLOSED and WITHDRAWN are final."""
+
+    OPEN = "OPEN", "Open"
+    ANSWERED = "ANSWERED", "Answered"
+    CLOSED = "CLOSED", "Closed"
+    WITHDRAWN = "WITHDRAWN", "Withdrawn"
+
+
+LIVE_INQUIRY_STATUSES = (InquiryStatus.OPEN, InquiryStatus.ANSWERED)
+# Abuse limits (also throttled per request): live inquiries per seeker in 24 hours.
+MAX_INQUIRIES_PER_DAY = 10
+INQUIRY_MESSAGE_MAX = 1000

@@ -202,8 +202,8 @@ describe('Unread count refresh policy', () => {
     await userEvent.click(await screen.findByRole('button', { name: /^log in$|^دخول$/i }))
     // the header's bell (signed-in pages also show the workspace sidebar entry)
     await within(screen.getAllByRole('banner')[0]!).findByRole('link', { name: /notifications/i })
-    // Account B's own loads (sign-in lands on /login, then redirects to /profile).
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    // Account B's own loads (sign-in lands on /login, then redirects to /dashboard).
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
     await waitFor(() =>
       expect(vi.mocked(notificationsApi.getUnreadCount).mock.calls.length).toBeGreaterThanOrEqual(2),
     )

@@ -8,6 +8,7 @@ import * as reservationsApi from '../../api/endpoints/reservations'
 import * as reviewsApi from '../../api/endpoints/reviews'
 import * as offersApi from '../../api/endpoints/offers'
 import { tokenStore } from '../../api/tokens'
+import { setBookingEnabled } from '../../test/features'
 import { makePublic } from '../../test/providerFixtures'
 import { deferred, renderApp } from '../../test/renderApp'
 
@@ -136,5 +137,20 @@ describe('ProviderDetailPage', () => {
       renderApp('/providers/p-1')
       expect((await screen.findAllByRole('alert')).length).toBeGreaterThan(0)
     })
+  })
+
+  it('shows no booking section and asks for no availability while online booking is off', async () => {
+    setBookingEnabled(false)
+    vi.mocked(providersApi.getProvider).mockResolvedValue(makePublic())
+    renderApp('/providers/p-1')
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /احجز موعداً|book an appointment/i })).toBeNull()
+    expect(reservationsApi.listAvailability).not.toHaveBeenCalled()
+  })
+
+  it('shows the booking section while online booking is on', async () => {
+    vi.mocked(providersApi.getProvider).mockResolvedValue(makePublic())
+    renderApp('/providers/p-1')
+    expect(await screen.findByRole('heading', { name: /احجز موعداً|book an appointment/i })).toBeInTheDocument()
   })
 })

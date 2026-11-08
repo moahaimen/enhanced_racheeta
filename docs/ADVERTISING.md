@@ -142,6 +142,41 @@ identity; changing role, account state, verification, type, specialty or governo
 or any company/product/category/audience state, hides the ad on the next request.
 Queries are bounded (Exists/Subquery; target checks are not per row).
 
+### Targeting matrix (platform completion, Phase D)
+
+`apps/advertising/tests/test_targeting_matrix.py` proves through the real API
+(`GET /advertising/marketplace`) and the model rule that each profession receives exactly
+the sponsored products of its own field, and nothing else:
+
+| Viewer | Dental | Cardiology | Pharmacy stock | Lab supplies | Rehab equipment |
+|---|---|---|---|---|---|
+| Dentist (doctor + dentistry) | ✓ | – | – | – | – |
+| Cardiologist | – | ✓ | – | – | – |
+| Pharmacy | – | – | ✓ | – | – |
+| Laboratory | – | – | – | ✓ | – |
+| Therapist (rehabilitation) | – | – | – | – | ✓ |
+| Unverified or suspended provider | – | – | – | – | – |
+| Patient / anonymous | 403 / 401 (no B2B price, photo or campaign) | | | | |
+
+Also covered: expired and future windows, unpaid campaigns, a suspended seller (all of its
+campaigns stop), and regulated products (restricted items, PROHIBITED categories) that can
+never be submitted. Every row is served with `sponsored: true`, which the web renders as the
+«إعلان ممول» / "Sponsored" badge. Consent: marketing outreach and property promotions reach only
+opted-in accounts and opting out hides them at once; transactional notifications (orders,
+reservations, inquiries) ignore marketing preferences (`apps/preferences/tests`,
+`apps/real_estate/tests/test_promotions.py`).
+
+### Laboratory campaign (demo and tests)
+
+The local demo has a live, paid lab campaign (`local_extras.CAMPAIGNS` "lab-live"): Rafidain
+LabTech's automated hematology analyzer. Its category reaches laboratories **and** hospitals; the
+campaign narrows it to laboratories. `apps/advertising/tests/test_laboratory_campaign.py` proves:
+the laboratory sees it and is notified once (deduplicated); the hospital, medical center, dentist,
+cardiologist, pharmacy, therapist, nurse and beauty center do not. Removing the narrowing would
+let the hospital see it, so the advertiser can only narrow, never widen. Turning off
+`show_sponsored_products` hides it at once. Turning off `offers_and_news` stops the alert but not
+the feed. A suspended or deactivated lab, a suspended seller or a cancelled campaign suppresses it.
+
 ## API (`/api/v1/`)
 
 | Method | Path | Who | Notes |

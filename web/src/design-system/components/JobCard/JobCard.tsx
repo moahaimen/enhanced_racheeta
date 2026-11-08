@@ -10,6 +10,7 @@ import { Card } from '../Card/Card'
 import { Skeleton } from '../States/States'
 import { formatSalary } from './formatSalary'
 import styles from './JobCard.module.css'
+import { professionIcon } from './professionIcon'
 
 
 /** Signature job card. Only real API fields; no views/applicant counts/ratings. */
@@ -22,7 +23,12 @@ export function JobCard({ job }: { job: JobCardData }) {
   return (
     <Card as="article" interactive className={`${styles.card} ${job.is_featured ? styles.featured : ''}`.trim()}>
       <div className={styles.head}>
-        <Avatar src={null} name={text(job.employer.name)} size="md" fallback={<Icon name="building" size={22} />} />
+        <Avatar
+          src={null}
+          name={text(job.employer.name)}
+          size="md"
+          fallback={<Icon name={professionIcon(job.profession)} size={22} />}
+        />
         <div className={styles.identity}>
           <h3 className={styles.title}>
             <Link to={`/jobs/${job.id}`}>{text(job.title)}</Link>

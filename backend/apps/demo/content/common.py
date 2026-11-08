@@ -11,7 +11,8 @@ def email(key: str) -> str:
 
 
 def phone(n: int) -> str:
-    return f"0700 000 {n:04d}"
+    """A well-formed Iraqi mobile number (national form), unique per n. Fictional."""
+    return f"0770{n:07d}"
 
 
 def bilingual(ar: str, en: str) -> str:

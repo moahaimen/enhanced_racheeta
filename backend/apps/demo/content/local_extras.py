@@ -1,0 +1,1427 @@
+"""LOCAL-ONLY demo extras (docs/DEMO_DATA.md §Local workspace demo). Seeded only by
+`seed_local_demo` on the guarded disposable database — never by the staging seed.
+
+Every person, business, product and price is FICTIONAL. Product descriptions make no medical
+claims. Payments are demo records only: nothing is charged and no card data exists anywhere.
+"""
+
+# Business classification of the base demo companies (key -> BusinessType).
+COMPANY_BUSINESS_TYPES = {
+    "dijla-pharma": "PHARMACEUTICAL_COMPANY",
+    "rafidain-pharma": "PHARMACEUTICAL_COMPANY",
+    "babylon-medicines": "PHARMACEUTICAL_COMPANY",
+    "nineveh-pharma": "PHARMACEUTICAL_COMPANY",
+    "gulf-pharma": "PHARMACEUTICAL_COMPANY",
+    "kurdistan-medicines": "PHARMA_DISTRIBUTOR",
+    "sharq-devices": "EQUIPMENT_SUPPLIER",
+    "iraq-monitor": "EQUIPMENT_SUPPLIER",
+    "rafidain-labtech": "EQUIPMENT_SUPPLIER",
+    "modern-furniture": "EQUIPMENT_SUPPLIER",
+    "roya-imaging": "EQUIPMENT_SUPPLIER",
+    "rehab-mobility": "ASSISTIVE_DEVICE_STORE",
+    "aman-consumables": "MEDICAL_SUPPLIES_OFFICE",
+}
+
+# key, name_ar, name_en, business type, verification status, account active, governorate, city
+EXTRA_COMPANIES = [
+    (
+        "nakhla-dental-supply",
+        "مكتب النخلة لمستلزمات الأسنان",
+        "Nakhla Dental Supply Office",
+        "MEDICAL_SUPPLIES_OFFICE",
+        "VERIFIED",
+        True,
+        "baghdad",
+        "baghdad",
+    ),
+    (
+        "ibn-sina-scientific",
+        "المكتب العلمي ابن سينا",
+        "Ibn Sina Scientific Office",
+        "SCIENTIFIC_OFFICE",
+        "VERIFIED",
+        True,
+        "baghdad",
+        "baghdad",
+    ),
+    (
+        "furat-trading-suspended",
+        "شركة الفرات التجارية (معلّقة)",
+        "Furat Trading Co. (suspended)",
+        "EQUIPMENT_SUPPLIER",
+        "VERIFIED",
+        False,  # suspended account: its campaigns and products must disappear
+        "babil",
+        None,
+    ),
+    (
+        "noor-rejected-supplies",
+        "مستلزمات النور (مرفوضة)",
+        "Noor Supplies (verification rejected)",
+        "MEDICAL_SUPPLIES_OFFICE",
+        "REJECTED",
+        True,
+        "basra",
+        None,
+    ),
+    (
+        "tigris-pending-supplies",
+        "مستلزمات دجلة (قيد التحقق)",
+        "Tigris Supplies (pending verification)",
+        "MEDICAL_SUPPLIES_OFFICE",
+        "PENDING",
+        True,
+        "baghdad",
+        "baghdad",
+    ),
+]
+
+# slug, name_ar, name_en, consumer_allowed, audience [(provider_type, specialty slug or None)]
+EXTRA_CATEGORIES = [
+    (
+        "demo-controlled-substances",
+        "مواد خاضعة للرقابة (محظورة)",
+        "Controlled substances (prohibited)",
+        False,
+        [],
+    ),
+    (
+        "demo-dental-equipment",
+        "معدات طب الأسنان",
+        "Dental equipment",
+        False,
+        [("DOCTOR", "dentistry"), ("MEDICAL_CENTER", "dentistry")],
+    ),
+    (
+        "demo-pharmacy-supplies",
+        "مستلزمات الصيدليات",
+        "Pharmacy supplies",
+        False,
+        [("PHARMACY", None)],
+    ),
+    (
+        "demo-aesthetic-equipment",
+        "معدات مراكز التجميل",
+        "Aesthetic clinic equipment",
+        False,
+        [("BEAUTY_CENTER", None)],
+    ),
+    (
+        "demo-mobility-aids",
+        "وسائل المساعدة على الحركة",
+        "Mobility aids",
+        True,
+        [("THERAPIST", None), ("HOSPITAL", None), ("MEDICAL_CENTER", None)],
+    ),
+    (
+        "demo-home-monitoring",
+        "أجهزة القياس المنزلية",
+        "Home monitoring devices",
+        True,
+        [("DOCTOR", None), ("NURSE", None)],
+    ),
+    # More consumer-allowed home devices (public store) — fictional catalogue for testing.
+    (
+        "demo-home-care-beds",
+        "أسرّة وفرشات العناية المنزلية",
+        "Home-care beds & mattresses",
+        True,
+        [("HOSPITAL", None), ("MEDICAL_CENTER", None), ("NURSE", None)],
+    ),
+    (
+        "demo-respiratory-home",
+        "أجهزة التنفس المنزلية",
+        "Home respiratory devices",
+        True,
+        [("DOCTOR", None), ("NURSE", None), ("HOSPITAL", None)],
+    ),
+    (
+        "demo-diabetes-care",
+        "مستلزمات مرضى السكري",
+        "Diabetes care",
+        True,
+        [("DOCTOR", None), ("NURSE", None), ("PHARMACY", None)],
+    ),
+    (
+        "demo-orthopedic-supports",
+        "الدعامات والجبائر",
+        "Orthopedic supports",
+        True,
+        [("THERAPIST", None), ("HOSPITAL", None), ("MEDICAL_CENTER", None)],
+    ),
+    (
+        "demo-first-aid",
+        "الإسعافات الأولية",
+        "First aid",
+        True,
+        [("NURSE", None), ("PHARMACY", None), ("DOCTOR", None)],
+    ),
+    # Professional-only equipment (B2B marketplace).
+    (
+        "demo-sterilization",
+        "أجهزة التعقيم",
+        "Sterilization equipment",
+        False,
+        [("HOSPITAL", None), ("MEDICAL_CENTER", None), ("LABORATORY", None)],
+    ),
+    (
+        "demo-emergency-equipment",
+        "معدات الطوارئ",
+        "Emergency equipment",
+        False,
+        [("HOSPITAL", None), ("MEDICAL_CENTER", None)],
+    ),
+]
+
+# key, company key, category slug, title_ar, title_en, price, sale channel, restricted, stock
+EXTRA_PRODUCTS = [
+    (
+        "rehab-chair-100k",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي تأهيل منزلي",
+        "Home rehabilitation chair",
+        "100000",
+        "B2C",
+        False,
+        12,
+    ),
+    (
+        "knee-scooter-100k",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "سكوتر ركبة للمشي",
+        "Knee walker scooter",
+        "100000",
+        "B2C",
+        False,
+        8,
+    ),
+    (
+        "dental-chair",
+        "nakhla-dental-supply",
+        "demo-dental-equipment",
+        "كرسي أسنان كهربائي",
+        "Electric dental chair",
+        "9500000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "dental-scaler",
+        "nakhla-dental-supply",
+        "demo-dental-equipment",
+        "جهاز تنظيف الجير بالموجات",
+        "Ultrasonic scaler",
+        "750000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "pharmacy-fridge",
+        "ibn-sina-scientific",
+        "demo-pharmacy-supplies",
+        "ثلاجة أدوية للصيدليات",
+        "Pharmacy medicine refrigerator",
+        "2400000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "dispensing-trays",
+        "ibn-sina-scientific",
+        "demo-pharmacy-supplies",
+        "صواني صرف الأدوية",
+        "Dispensing trays (set)",
+        "45000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "restricted-antibiotic",
+        "dijla-pharma",
+        "demo-generic-medicines",
+        "مضاد حيوي بوصفة طبية (توضيحي)",
+        "Prescription antibiotic (demo, restricted)",
+        "12000",
+        "B2B",
+        True,
+        None,
+    ),
+    (
+        "wheelchair",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي متحرك قابل للطي",
+        "Folding wheelchair",
+        "185000",
+        "BOTH",
+        False,
+        6,
+    ),
+    (
+        "walker",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "مشاية بعجلات",
+        "Wheeled walker",
+        "65000",
+        "B2C",
+        False,
+        10,
+    ),
+    (
+        "crutches",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "عكازات ألمنيوم (زوج)",
+        "Aluminium crutches (pair)",
+        "30000",
+        "B2C",
+        False,
+        15,
+    ),
+    (
+        "shower-chair",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي استحمام",
+        "Shower chair",
+        "40000",
+        "B2C",
+        False,
+        0,
+    ),
+    (
+        "bp-monitor",
+        "aman-consumables",
+        "demo-home-monitoring",
+        "جهاز ضغط منزلي",
+        "Home blood-pressure monitor",
+        "55000",
+        "BOTH",
+        False,
+        12,
+    ),
+    (
+        "pulse-oximeter",
+        "aman-consumables",
+        "demo-home-monitoring",
+        "مقياس الأكسجين",
+        "Fingertip pulse oximeter",
+        "25000",
+        "B2C",
+        False,
+        20,
+    ),
+    (
+        "suspended-monitor",
+        "furat-trading-suspended",
+        "demo-home-monitoring",
+        "شاشة مراقبة",
+        "Patient monitor",
+        "900000",
+        "BOTH",
+        False,
+        4,
+    ),
+    (
+        "pending-gloves",
+        "tigris-pending-supplies",
+        "demo-home-monitoring",
+        "قفازات فحص",
+        "Examination gloves",
+        "8000",
+        "B2C",
+        False,
+        100,
+    ),
+    (
+        "quad-cane",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "عصا رباعية القاعدة",
+        "Quad-base walking cane",
+        "28000",
+        "B2C",
+        False,
+        2,
+    ),
+    (
+        "skin-analyzer",
+        "sharq-devices",
+        "demo-aesthetic-equipment",
+        "جهاز تحليل البشرة",
+        "Skin analysis device",
+        "3200000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "rejected-gauze",
+        "noor-rejected-supplies",
+        "demo-home-monitoring",
+        "شاش طبي",
+        "Medical gauze pack",
+        "3000",
+        "B2C",
+        False,
+        50,
+    ),
+    # ---- public store (B2C / BOTH), fictional items with varied stock ------------------------
+    (
+        "electric-wheelchair",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي متحرك كهربائي",
+        "Electric wheelchair",
+        "1450000",
+        "BOTH",
+        False,
+        3,
+    ),
+    (
+        "transport-wheelchair",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "كرسي نقل خفيف الوزن",
+        "Lightweight transport wheelchair",
+        "210000",
+        "B2C",
+        False,
+        8,
+    ),
+    (
+        "rollator-seat",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "مشاية بمقعد وفرامل",
+        "Rollator with seat and brakes",
+        "120000",
+        "B2C",
+        False,
+        0,
+    ),
+    (
+        "adjustable-cane",
+        "rehab-mobility",
+        "demo-mobility-aids",
+        "عصا قابلة لتعديل الطول",
+        "Height-adjustable cane",
+        "18000",
+        "B2C",
+        False,
+        25,
+    ),
+    (
+        "knee-brace",
+        "rehab-mobility",
+        "demo-orthopedic-supports",
+        "دعامة ركبة مفصلية",
+        "Hinged knee brace",
+        "22000",
+        "B2C",
+        False,
+        14,
+    ),
+    (
+        "lumbar-belt",
+        "rehab-mobility",
+        "demo-orthopedic-supports",
+        "حزام دعم أسفل الظهر",
+        "Lumbar support belt",
+        "35000",
+        "B2C",
+        False,
+        9,
+    ),
+    (
+        "wrist-splint",
+        "rehab-mobility",
+        "demo-orthopedic-supports",
+        "جبيرة معصم",
+        "Wrist splint",
+        "15000",
+        "B2C",
+        False,
+        2,
+    ),
+    (
+        "cervical-collar",
+        "rehab-mobility",
+        "demo-orthopedic-supports",
+        "طوق رقبة طبي",
+        "Soft cervical collar",
+        "12000",
+        "B2C",
+        False,
+        11,
+    ),
+    (
+        "digital-thermometer",
+        "aman-consumables",
+        "demo-home-monitoring",
+        "محرار رقمي",
+        "Digital thermometer",
+        "9000",
+        "B2C",
+        False,
+        40,
+    ),
+    (
+        "glucometer-kit",
+        "aman-consumables",
+        "demo-diabetes-care",
+        "جهاز قياس السكر مع ملحقاته",
+        "Blood-glucose meter kit",
+        "32000",
+        "BOTH",
+        False,
+        18,
+    ),
+    (
+        "glucose-strips",
+        "aman-consumables",
+        "demo-diabetes-care",
+        "شرائط فحص السكر (50 شريط)",
+        "Glucose test strips (50)",
+        "19000",
+        "B2C",
+        False,
+        4,
+    ),
+    (
+        "nebulizer",
+        "aman-consumables",
+        "demo-respiratory-home",
+        "جهاز بخار (نيبولايزر)",
+        "Compressor nebulizer",
+        "48000",
+        "BOTH",
+        False,
+        7,
+    ),
+    (
+        "oxygen-concentrator",
+        "aman-consumables",
+        "demo-respiratory-home",
+        "مكثف أوكسجين منزلي 5 لتر",
+        "Home oxygen concentrator 5 L",
+        "1250000",
+        "BOTH",
+        False,
+        2,
+    ),
+    (
+        "first-aid-kit",
+        "aman-consumables",
+        "demo-first-aid",
+        "حقيبة إسعافات أولية",
+        "Family first-aid kit",
+        "25000",
+        "B2C",
+        False,
+        30,
+    ),
+    (
+        "elastic-bandages",
+        "aman-consumables",
+        "demo-first-aid",
+        "مجموعة أربطة مطاطية",
+        "Elastic bandage set",
+        "6000",
+        "B2C",
+        False,
+        0,
+    ),
+    (
+        "compression-stockings",
+        "aman-consumables",
+        "demo-orthopedic-supports",
+        "جوارب ضغط طبية",
+        "Medical compression stockings",
+        "27000",
+        "B2C",
+        False,
+        6,
+    ),
+    (
+        "home-care-bed",
+        "sharq-devices",
+        "demo-home-care-beds",
+        "سرير عناية منزلية كهربائي",
+        "Electric home-care bed",
+        "950000",
+        "BOTH",
+        False,
+        4,
+    ),
+    (
+        "air-mattress",
+        "sharq-devices",
+        "demo-home-care-beds",
+        "فرشة هوائية ضد التقرحات",
+        "Anti-pressure-sore air mattress",
+        "140000",
+        "B2C",
+        False,
+        5,
+    ),
+    (
+        "patient-lift",
+        "sharq-devices",
+        "demo-home-care-beds",
+        "رافعة مرضى منزلية",
+        "Home patient lift",
+        "780000",
+        "BOTH",
+        False,
+        1,
+    ),
+    (
+        "bedside-commode",
+        "sharq-devices",
+        "demo-home-care-beds",
+        "كرسي حمام بجانب السرير",
+        "Bedside commode chair",
+        "85000",
+        "B2C",
+        False,
+        6,
+    ),
+    (
+        "digital-scale",
+        "sharq-devices",
+        "demo-home-monitoring",
+        "ميزان رقمي",
+        "Digital body scale",
+        "30000",
+        "B2C",
+        False,
+        15,
+    ),
+    # ---- professional B2B marketplace (targeted, never in the public store) -----------------
+    (
+        "patient-monitor-6p",
+        "iraq-monitor",
+        "demo-patient-monitoring",
+        "شاشة مراقبة 6 مؤشرات",
+        "6-parameter patient monitor",
+        "4200000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "ecg-12-lead",
+        "iraq-monitor",
+        "demo-diagnostic-devices",
+        "جهاز تخطيط قلب 12 قناة",
+        "12-lead ECG machine",
+        "3100000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "aed",
+        "iraq-monitor",
+        "demo-emergency-equipment",
+        "جهاز صدمات كهربائية آلي",
+        "Automated external defibrillator",
+        "2600000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "infusion-pump",
+        "iraq-monitor",
+        "demo-patient-monitoring",
+        "مضخة تسريب وريدي",
+        "Volumetric infusion pump",
+        "1350000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "autoclave-22l",
+        "sharq-devices",
+        "demo-sterilization",
+        "جهاز تعقيم بالبخار 22 لتر",
+        "Steam autoclave 22 L",
+        "3800000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "suction-machine",
+        "sharq-devices",
+        "demo-emergency-equipment",
+        "جهاز شفط طبي",
+        "Medical suction machine",
+        "420000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "exam-lamp",
+        "sharq-devices",
+        "demo-diagnostic-devices",
+        "مصباح فحص LED",
+        "LED examination lamp",
+        "650000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "centrifuge",
+        "rafidain-labtech",
+        "demo-laboratory-equipment",
+        "جهاز طرد مركزي",
+        "Laboratory centrifuge",
+        "1100000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "microscope",
+        "rafidain-labtech",
+        "demo-laboratory-equipment",
+        "مجهر ثنائي العدسة",
+        "Binocular microscope",
+        "1700000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "hematology-analyzer",
+        "rafidain-labtech",
+        "demo-laboratory-equipment",
+        "محلل دم آلي",
+        "Automated hematology analyzer",
+        "9800000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "dental-xray-sensor",
+        "nakhla-dental-supply",
+        "demo-dental-equipment",
+        "حساس أشعة أسنان رقمي",
+        "Digital dental X-ray sensor",
+        "2900000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "dental-compressor",
+        "nakhla-dental-supply",
+        "demo-dental-equipment",
+        "ضاغط هواء صامت للأسنان",
+        "Silent dental compressor",
+        "1600000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "icu-bed",
+        "modern-furniture",
+        "demo-hospital-furniture",
+        "سرير عناية مركزة",
+        "ICU bed",
+        "3500000",
+        "B2B",
+        False,
+        None,
+    ),
+    (
+        "exam-couch",
+        "modern-furniture",
+        "demo-hospital-furniture",
+        "سرير فحص",
+        "Examination couch",
+        "380000",
+        "B2B",
+        False,
+        None,
+    ),
+]
+
+# key, company key, product key, status, payment status, start offset days, length days,
+# target provider types, target specialty slugs
+CAMPAIGNS = [
+    (
+        "dental-live",
+        "nakhla-dental-supply",
+        "dental-chair",
+        "ACTIVE",
+        "VERIFIED",
+        -3,
+        30,
+        [],
+        ["dentistry"],
+    ),
+    (
+        "pharmacy-live",
+        "ibn-sina-scientific",
+        "pharmacy-fridge",
+        "ACTIVE",
+        "VERIFIED",
+        -2,
+        20,
+        ["PHARMACY"],
+        [],
+    ),
+    ("rehab-live", "rehab-mobility", "wheelchair", "ACTIVE", "VERIFIED", -1, 25, ["THERAPIST"], []),
+    # Lab equipment reaches laboratories AND hospitals by category; the campaign narrows to labs.
+    (
+        "lab-live",
+        "rafidain-labtech",
+        "hematology-analyzer",
+        "ACTIVE",
+        "VERIFIED",
+        -1,
+        30,
+        ["LABORATORY"],
+        [],
+    ),
+    ("expired", "nakhla-dental-supply", "dental-scaler", "ACTIVE", "VERIFIED", -40, 10, [], []),
+    ("rejected", "ibn-sina-scientific", "dispensing-trays", "REJECTED", "REJECTED", 2, 10, [], []),
+    ("pending", "aman-consumables", "bp-monitor", "PENDING_PAYMENT", "PENDING", 3, 14, [], []),
+    (
+        "suspended",
+        "furat-trading-suspended",
+        "suspended-monitor",
+        "ACTIVE",
+        "VERIFIED",
+        -1,
+        20,
+        [],
+        [],
+    ),
+    (
+        "beauty-live",
+        "sharq-devices",
+        "skin-analyzer",
+        "ACTIVE",
+        "VERIFIED",
+        -1,
+        20,
+        ["BEAUTY_CENTER"],
+        [],
+    ),
+]
+
+# key, full name, account type, contrast flag ("pending" | "suspended" | "inactive" | "unverified")
+CONTRAST_PROVIDERS = [
+    (
+        "dr-pending-samer",
+        "د. سامر الحلي | Dr. Samer Al-Hilli (pending)",
+        "DOCTOR",
+        "dentistry",
+        "PENDING",
+    ),
+    (
+        "dr-suspended-kamal",
+        "د. كمال الربيعي | Dr. Kamal Al-Rubaie (suspended)",
+        "DOCTOR",
+        "general-medicine",
+        "SUSPENDED",
+    ),
+]
+
+# key, full name, flag
+CONTRAST_PATIENTS = [
+    ("patient-suspended", "مريض معلّق | Suspended patient", "inactive"),
+    ("patient-unverified", "مريض غير مؤكد البريد | Unverified-email patient", "unverified"),
+]
+
+# Staff (personal accounts) and their organization roles:
+# key, full name, [(org kind, org key, role, active)]
+STAFF = [
+    (
+        "staff-nakheel-manager",
+        "مديرة مركز النخيل | Nakheel center manager",
+        [("facility", "nakheel-dental", "MANAGER", True)],
+    ),
+    (
+        "staff-dijla-reception",
+        "موظف استقبال دجلة | Dijla reception",
+        [("facility", "dijla-hospital", "STAFF", True)],
+    ),
+    (
+        "staff-dijla-viewer",
+        "مراجع دجلة (قراءة فقط) | Dijla viewer",
+        [("facility", "dijla-hospital", "VIEWER", True)],
+    ),
+    (
+        "staff-rehab-store",
+        "مدير متجر التأهيل | Rehab store manager",
+        [("company", "rehab-mobility", "MANAGER", True)],
+    ),
+    (
+        "staff-multi-org",
+        "موظف متعدد الجهات | Multi-org staff",
+        [
+            ("facility", "fayhaa-center", "STAFF", True),
+            ("company", "rehab-mobility", "VIEWER", True),
+        ],
+    ),
+    ("staff-ended", "موظف سابق | Former staff", [("facility", "dijla-hospital", "STAFF", False)]),
+]
+
+# key, full name, employer key (EmployerMembership RECRUITER)
+RECRUITERS = [("recruiter-dijla", "مسؤولة توظيف دجلة | Dijla recruiter", "dijla-hospital")]
+
+# key, name, profession, title, degree, years
+EXTRA_SEEKERS = [
+    (
+        "seeker-it-mustafa",
+        "مصطفى الكعبي | Mustafa Al-Kaabi",
+        "SOFTWARE_DEVELOPER",
+        "مطور برمجيات أنظمة صحية",
+        "BACHELOR",
+        3,
+    ),
+    (
+        "seeker-cyber-zahra",
+        "زهراء الموسوي | Zahraa Al-Mousawi",
+        "CYBERSECURITY",
+        "أخصائية أمن معلومات",
+        "MASTER",
+        5,
+    ),
+    (
+        "seeker-accountant-haidar",
+        "حيدر الشمري | Haidar Al-Shammari",
+        "ACCOUNTANT",
+        "محاسب مؤسسات صحية",
+        "BACHELOR",
+        7,
+    ),
+]
+
+# account key -> preference changes (anything not listed keeps the defaults)
+PREFERENCES = {
+    "dr-dalia-tamimi": {"offers_and_news": True, "real_estate_promotions": True},
+    "dr-mustafa-saffar": {"show_sponsored_products": False},
+    "dr-karim-saadi": {"real_estate_promotions": False, "offers_and_news": False},
+    "amal-pharmacy": {"real_estate_promotions": True, "offers_and_news": True},
+    "nakheel-dental": {"real_estate_promotions": True, "offers_and_news": True},
+    "th-layla-nuaimi": {"offers_and_news": True},
+}
+
+# Marketplace lifecycle scenarios (docs/MARKETPLACE_COMMERCE.md §Demo). All money is fictional.
+# tag, buyer key, [(product key, qty)], coupon codes, payment method, steps
+# steps: accept | decline | ship | deliver (buyer) | pay (finance, simulated) | complete (finance)
+#        buyer-cancel | refund-cancelled | return:N (request, approve, receive, refund N of line 1)
+#        return-request:N (left open) | dispute (left open)
+MARKET_SCENARIOS = [
+    ("sara-new", "patient-sara", [("walker", 1)], [], "CASH_ON_DELIVERY", []),
+    ("sara-accepted", "patient-sara", [("crutches", 2)], [], "CASH_ON_DELIVERY", ["accept"]),
+    (
+        "ali-paid-shipped",
+        "patient-ali",
+        [("bp-monitor", 1)],
+        [],
+        "MANUAL_TRANSFER",
+        ["accept", "pay", "ship"],
+    ),
+    (
+        "fatima-delivered-awaiting-payment",
+        "patient-fatima",
+        [("transport-wheelchair", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver"],
+    ),
+    # 100,000 IQD sale -> 20,000 commission -> 80,000 payable
+    (
+        "hassan-100k",
+        "patient-hassan",
+        [("rehab-chair-100k", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    # 100,000 list, 10% seller sale -> 90,000 -> 18,000 commission -> 72,000 payable
+    (
+        "zainab-90k-offer",
+        "patient-zainab",
+        [("knee-scooter-100k", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    # Racheeta-funded coupon: buyer pays 90,000; commission stays 20,000; seller still gets 80,000
+    (
+        "omar-platform-coupon",
+        "patient-omar",
+        [("rehab-chair-100k", 1)],
+        ["RACHEETA10K"],
+        "MANUAL_TRANSFER",
+        ["accept", "pay", "ship", "deliver", "complete"],
+    ),
+    # One checkout, two sellers (store coupon on the rehab order only)
+    (
+        "ali-multi-vendor",
+        "patient-ali",
+        [("knee-brace", 2), ("pulse-oximeter", 1)],
+        ["REHAB10"],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete"],
+    ),
+    (
+        "omar-cancelled",
+        "patient-omar",
+        [("digital-thermometer", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["buyer-cancel"],
+    ),
+    (
+        "fatima-declined",
+        "patient-fatima",
+        [("adjustable-cane", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["decline"],
+    ),
+    (
+        "zainab-paid-cancelled-refunded",
+        "patient-zainab",
+        [("air-mattress", 1)],
+        [],
+        "MANUAL_TRANSFER",
+        ["pay", "buyer-cancel", "refund-cancelled"],
+    ),
+    (
+        "hassan-partial-return",
+        "patient-hassan",
+        [("lumbar-belt", 2)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "complete", "return:1"],
+    ),
+    (
+        "sara-open-return",
+        "patient-sara",
+        [("first-aid-kit", 2)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "return-request:1"],
+    ),
+    (
+        "ali-open-dispute",
+        "patient-ali",
+        [("nebulizer", 1)],
+        [],
+        "CASH_ON_DELIVERY",
+        ["accept", "ship", "deliver", "pay", "dispute"],
+    ),
+]
+
+# Accepted quotation -> order (buyer account key = provider key), then the same lifecycle.
+QUOTE_ORDERS = [("amal-fridge", "amal-pharmacy", ["accept", "ship", "deliver", "pay", "complete"])]
+
+# Seller payouts (simulated): ("paid" = prepared and confirmed by finance, "draft" = prepared only)
+SETTLEMENTS = [("aman-consumables", "paid"), ("rehab-mobility", "draft")]
+
+# Refund AFTER the seller was paid out (audit 2026-11-06): the seller's payable stays at zero and
+# the refunded seller part becomes a receivable (what the seller owes Racheeta).
+# checkout tag, seller company key whose order of that checkout is refunded through a dispute
+POST_PAYOUT_REFUNDS = [("ali-multi-vendor", "aman-consumables")]
+
+# code, funding, company key (seller coupons), kind, value, max discount, min subtotal,
+# days from now it started (negative = future), days it lasts, max uses
+COUPONS = [
+    ("REHAB10", "SELLER", "rehab-mobility", "PERCENT", "10", "50000", "0", 1, 90, None),
+    ("AMAN5000", "SELLER", "aman-consumables", "FIXED", "5000", None, "30000", 1, 60, 50),
+    ("RACHEETA10K", "PLATFORM", None, "FIXED", "10000", None, "80000", 1, 90, 200),
+    ("WELCOME-OLD", "PLATFORM", None, "PERCENT", "10", "20000", "0", 120, 30, None),  # expired
+]
+
+# product key, percent off (seller-funded sale), days it lasts
+PRODUCT_OFFERS = [("knee-scooter-100k", "10", 60), ("nebulizer", "15", 30)]
+
+# product key -> low-stock alert level
+REORDER_THRESHOLDS = {
+    "walker": 3,
+    "crutches": 4,
+    "quad-cane": 3,
+    "wrist-splint": 3,
+    "rehab-chair-100k": 4,
+    "knee-scooter-100k": 3,
+    "glucose-strips": 5,
+    "oxygen-concentrator": 2,
+    "patient-lift": 2,
+}
+
+# Compliance class per demo category (fail closed: anything not listed stays pending review).
+COMPLIANCE_CLASSES = {
+    "B2C_ALLOWED": [
+        "demo-mobility-aids",
+        "demo-home-monitoring",
+        "demo-home-care-beds",
+        "demo-respiratory-home",
+        "demo-diabetes-care",
+        "demo-orthopedic-supports",
+        "demo-first-aid",
+    ],
+    "B2B_VERIFIED_ONLY": [
+        "demo-diagnostic-devices",
+        "demo-patient-monitoring",
+        "demo-laboratory-equipment",
+        "demo-hospital-furniture",
+        "demo-imaging-accessories",
+        "demo-rehabilitation",
+        "demo-consumables",
+        "demo-antiseptics",
+        "demo-sterilization",
+        "demo-emergency-equipment",
+        "demo-aesthetic-equipment",
+        "demo-pharmacy-supplies",
+    ],
+    "QUOTE_ONLY": ["demo-dental-equipment"],
+    "RESTRICTED_PENDING_REVIEW": ["demo-generic-medicines", "demo-iv-fluids"],
+    "PROHIBITED": ["demo-controlled-substances"],
+}
+
+
+# tag, requester provider key, product key, quantity, outcome ("REQUESTED"|"QUOTED"|"ACCEPTED")
+QUOTES = [
+    ("dalia-chair", "dr-dalia-tamimi", "dental-chair", 1, "QUOTED", "9200000"),
+    ("nakheel-scaler", "nakheel-dental", "dental-scaler", 3, "REQUESTED", None),
+    ("amal-fridge", "amal-pharmacy", "pharmacy-fridge", 1, "ACCEPTED", "2300000"),
+]
+
+# tag, listing index (base estate.LISTINGS), target provider types, days, outcome
+PROMOTIONS = [
+    ("clinic-floor", 0, ["PHARMACY", "MEDICAL_CENTER", "DOCTOR"], 21, "ACTIVE"),
+    ("pharmacy-shop", 1, ["PHARMACY"], 14, "REQUESTED"),
+    ("old-villa", 2, [], 7, "REJECTED"),
+]
+
+
+# A beauty center (facility) with its own services, offer, staff and preferences.
+# key, ptype, name_ar, name_en, gov, city, services [(ar, en, price, minutes)]
+EXTRA_FACILITIES = [
+    (
+        "lamsa-beauty",
+        "BEAUTY_CENTER",
+        "مركز لمسة للتجميل",
+        "Lamsa Beauty Center",
+        "baghdad",
+        "baghdad",
+        [
+            ("جلسة تنظيف بشرة", "Facial cleansing session", "45000", 60),
+            ("استشارة عناية بالبشرة", "Skin-care consultation", "25000", 30),
+            ("جلسة ترطيب", "Hydration session", "35000", 45),
+        ],
+    ),
+]
+EXTRA_FACILITY_OFFERS = [("lamsa-beauty", "عرض جلسة تنظيف", "Facial session offer", "0.2", 20)]
+EXTRA_STAFF = [
+    (
+        "staff-rehab-editor",
+        "محرر منتجات متجر التأهيل | Rehab product editor",
+        [("company", "rehab-mobility", "PRODUCT_EDITOR", True)],
+    ),
+    (
+        "staff-rehab-stock",
+        "أمين مخزن متجر التأهيل | Rehab stock manager",
+        [("company", "rehab-mobility", "STOCK_MANAGER", True)],
+    ),
+    (
+        "staff-rehab-fulfillment",
+        "موظف تجهيز طلبات التأهيل | Rehab fulfillment",
+        [("company", "rehab-mobility", "FULFILLMENT", True)],
+    ),
+    (
+        "staff-rehab-finance",
+        "محاسب متجر التأهيل | Rehab finance (read-only)",
+        [("company", "rehab-mobility", "FINANCE", True)],
+    ),
+    (
+        "staff-lamsa-reception",
+        "موظفة استقبال لمسة | Lamsa reception",
+        [("facility", "lamsa-beauty", "STAFF", True)],
+    ),
+]
+EXTRA_PREFERENCES = {"lamsa-beauty": {"offers_and_news": True, "real_estate_promotions": False}}
+
+
+# Product picture for the local demo: first keyword found in the English title wins, then the
+# category, then a generic box. Files live in web/public/demo/products/<name>.svg (illustrations).
+PRODUCT_IMAGE_KEYWORDS = [
+    ("electric wheelchair", "electric-wheelchair"),
+    ("wheelchair", "wheelchair"),
+    ("rollator", "walker"),
+    ("walker", "walker"),
+    ("walking frame", "walker"),
+    ("crutch", "crutches"),
+    ("cane", "cane"),
+    ("shower chair", "commode"),
+    ("commode", "commode"),
+    ("blood-pressure", "bp-monitor"),
+    ("oximeter", "oximeter"),
+    ("thermometer", "thermometer"),
+    ("scale", "scale"),
+    ("glucose", "glucometer"),
+    ("nebulizer", "nebulizer"),
+    ("oxygen", "oxygen"),
+    ("first-aid", "first-aid"),
+    ("gauze", "bandage"),
+    ("bandage", "bandage"),
+    ("stocking", "stockings"),
+    ("collar", "collar"),
+    ("brace", "brace"),
+    ("belt", "brace"),
+    ("splint", "brace"),
+    ("mattress", "mattress"),
+    ("patient lift", "lift"),
+    ("couch", "bed"),
+    ("bed", "bed"),
+    ("dental chair", "dental-chair"),
+    ("compressor", "dental-chair"),
+    ("scaler", "tooth"),
+    ("dental", "tooth"),
+    ("chlorhexidine", "bottle"),
+    ("refrigerator", "fridge"),
+    ("tray", "tray"),
+    ("ecg", "ecg"),
+    ("defibrillator", "aed"),
+    ("infusion", "iv"),
+    ("syringe pump", "iv"),
+    ("monitor", "monitor"),
+    ("autoclave", "autoclave"),
+    ("sterilizer", "autoclave"),
+    ("suction", "nebulizer"),
+    ("light", "lamp"),
+    ("lamp", "lamp"),
+    ("microscope", "microscope"),
+    ("centrifuge", "centrifuge"),
+    ("analyzer", "analyzer"),
+    ("water bath", "water-bath"),
+    ("stethoscope", "stethoscope"),
+    ("ultrasound", "ultrasound"),
+    ("radiography", "xray"),
+    ("x-ray", "xray"),
+    ("apron", "apron"),
+    ("gel", "bottle"),
+    ("electrotherapy", "tens"),
+    ("exercise ball", "ball"),
+    ("glove", "gloves"),
+    ("mask", "mask"),
+    ("syringe", "syringe"),
+    ("skin", "magnifier"),
+    ("sanitiser", "bottle"),
+    ("disinfectant", "bottle"),
+    ("iodine", "bottle"),
+    ("solution", "iv"),
+    ("infusion", "iv"),
+    ("water for injection", "iv"),
+    ("tablet", "pills"),
+    ("capsule", "pills"),
+    ("drops", "bottle"),
+    ("salts", "pills"),
+]
+CATEGORY_IMAGE = {
+    "demo-generic-medicines": "pills",
+    "demo-iv-fluids": "iv",
+    "demo-antiseptics": "bottle",
+    "demo-consumables": "gloves",
+    "demo-diagnostic-devices": "stethoscope",
+    "demo-patient-monitoring": "monitor",
+    "demo-laboratory-equipment": "microscope",
+    "demo-hospital-furniture": "bed",
+    "demo-imaging-accessories": "xray",
+    "demo-rehabilitation": "walker",
+    "demo-mobility-aids": "wheelchair",
+    "demo-home-monitoring": "bp-monitor",
+    "demo-dental-equipment": "tooth",
+    "demo-pharmacy-supplies": "tray",
+    "demo-aesthetic-equipment": "magnifier",
+    "demo-home-care-beds": "bed",
+    "demo-respiratory-home": "nebulizer",
+    "demo-diabetes-care": "glucometer",
+    "demo-orthopedic-supports": "brace",
+    "demo-first-aid": "first-aid",
+    "demo-sterilization": "autoclave",
+    "demo-emergency-equipment": "aed",
+}
+
+
+def product_image_name(title: str, category_slug: str) -> str:
+    english = title.split(" | ")[-1].lower()
+    for keyword, name in PRODUCT_IMAGE_KEYWORDS:
+        if keyword in english:
+            return name
+    return CATEGORY_IMAGE.get(category_slug, "box")
+
+
+# ---- seller workspaces for EVERY seller category (fictional) ----------------------------------
+# One account per seller category, ready for a purchase-and-refund walkthrough:
+#   ASSISTIVE_DEVICE_STORE rehab-mobility · EQUIPMENT_SUPPLIER sharq-devices ·
+#   MEDICAL_SUPPLIES_OFFICE aman-consumables · PHARMACY amal-pharmacy (its store) ·
+#   PHARMACEUTICAL_COMPANY dijla-pharma · SCIENTIFIC_OFFICE ibn-sina-scientific ·
+#   PHARMA_DISTRIBUTOR kurdistan-medicines · MEDICAL_COMPANY hayat-medical (new).
+# A pharmacy keeps its provider account; its store is linked to its pharmacy profile.
+PHARMACY_STORES = [("amal-pharmacy", "متجر صيدلية الأمل", "Al-Amal Pharmacy Store")]
+
+# key, name_ar, name_en, business type, governorate
+NEW_SELLERS = [
+    (
+        "hayat-medical",
+        "شركة الحياة الطبية",
+        "Al-Hayat Medical Company",
+        "MEDICAL_COMPANY",
+        "baghdad",
+    ),
+]
+
+# Category with its own compliance rules (pharmacies only, at most 3 per order, buyer notice).
+PHARMACY_CATEGORY = (
+    "demo-pharmacy-care",
+    "عناية صيدلانية (بدون وصفة)",
+    "Pharmacy care (no prescription)",
+)
+PHARMACY_CATEGORY_NOTICE = (
+    "منتج عناية بدون وصفة. اقرأ التعليمات؛ استشر الصيدلاني عند الحاجة. (توضيحي)",
+    "Non-prescription care item. Read the instructions; ask the pharmacist if unsure. (demo)",
+)
+
+# Seller documents: verified sellers get every required document APPROVED; these get a state.
+DOCUMENT_STATES = {
+    "tigris-pending-supplies": "PENDING",  # shows in Racheeta's review queue
+    "noor-rejected-supplies": "REJECTED",
+}
+
+# company key -> delivery: (default fee or None, free over or None, [(governorate, fee, min, max)])
+SHIPPING = {
+    "rehab-mobility": ("12000", "500000", [("baghdad", "5000", 1, 2), ("basra", "10000", 2, 4)]),
+    "aman-consumables": ("8000", None, [("baghdad", "3000", 1, 2)]),
+    "sharq-devices": ("25000", None, [("baghdad", "15000", 1, 3)]),
+    "store:amal-pharmacy": (None, "50000", [("baghdad", "2000", 0, 1)]),
+    "hayat-medical": ("10000", None, []),
+    "dijla-pharma": ("7000", None, []),
+}
+
+# company key -> (mode, rate, label, registration no.). Fictional and seller-declared.
+TAX = {
+    "sharq-devices": ("EXCLUSIVE", "5", "ضريبة مبيعات توضيحية | Demo sales tax", "DEMO-TAX-0001"),
+    "aman-consumables": ("INCLUSIVE", "5", "ضريبة توضيحية مشمولة | Demo tax included", ""),
+}
+
+# key, company key, category slug, title_ar, title_en, price, channel, stock (None = variants),
+# variants [(label, sku, price or None, stock)], photo colours
+SELLER_PRODUCTS = [
+    (
+        "amal-bandage",
+        "store:amal-pharmacy",
+        "demo-pharmacy-care",
+        "رباط ضاغط مرن",
+        "Elastic compression bandage",
+        "4000",
+        "B2C",
+        None,
+        [("5 سم | 5 cm", "AML-BND-5", None, 30), ("10 سم | 10 cm", "AML-BND-10", "6000", 20)],
+        ((25, 120, 110), (235, 245, 240)),
+    ),
+    (
+        "amal-first-aid",
+        "store:amal-pharmacy",
+        "demo-first-aid",
+        "حقيبة إسعافات أولية للسفر",
+        "Travel first-aid kit",
+        "18000",
+        "B2C",
+        20,
+        [],
+        ((200, 60, 60), (250, 240, 240)),
+    ),
+    (
+        "aman-compression-sleeve",
+        "aman-consumables",
+        "demo-orthopedic-supports",
+        "كم ضاغط للذراع",
+        "Arm compression sleeve",
+        "24000",
+        "B2C",
+        None,
+        [("S", "AMN-SLV-S", None, 6), ("M", "AMN-SLV-M", None, 10), ("L", "AMN-SLV-L", "26000", 4)],
+        ((60, 90, 170), (230, 236, 250)),
+    ),
+    (
+        "dijla-chlorhexidine",
+        "dijla-pharma",
+        "demo-antiseptics",
+        "مسحات كلورهيكسيدين 2%",
+        "Chlorhexidine 2% skin-prep swabs",
+        "18000",
+        "B2B",
+        None,
+        [
+            ("علبة 50 | Box of 50", "DJL-CHX-50", None, 40),
+            ("علبة 200 | Box of 200", "DJL-CHX-200", "60000", 15),
+        ],
+        ((90, 60, 150), (240, 236, 250)),
+    ),
+    (
+        "ibnsina-control-solution",
+        "ibn-sina-scientific",
+        "demo-consumables",
+        "محلول ضبط لأجهزة السكر (مختبري)",
+        "Glucose meter control solution (lab)",
+        "22000",
+        "B2B",
+        30,
+        [],
+        ((20, 110, 160), (230, 245, 250)),
+    ),
+    (
+        "kurdistan-gauze",
+        "kurdistan-medicines",
+        "demo-consumables",
+        "شاش معقم 10×10 (100 قطعة)",
+        "Sterile gauze swabs 10×10 (pack of 100)",
+        "9000",
+        "B2B",
+        60,
+        [],
+        ((120, 120, 120), (245, 245, 245)),
+    ),
+    (
+        "hayat-gloves",
+        "hayat-medical",
+        "demo-consumables",
+        "قفازات فحص نتريل (100)",
+        "Nitrile examination gloves (100)",
+        "12000",
+        "B2B",
+        None,
+        [("S", "HYT-GLV-S", None, 25), ("M", "HYT-GLV-M", None, 25), ("L", "HYT-GLV-L", None, 25)],
+        ((30, 140, 90), (232, 248, 238)),
+    ),
+]
+
+# Photos for existing demo products (product key -> colours).
+EXTRA_PHOTOS = {
+    "walker": ((40, 120, 140), (235, 245, 248)),
+    "digital-scale": ((70, 70, 90), (240, 240, 245)),
+}

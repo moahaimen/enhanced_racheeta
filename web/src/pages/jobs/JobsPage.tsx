@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 
-import { DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, PROFESSIONS, reference, SHIFT_TYPES, WORK_MODES } from '../../api'
+import { DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, reference, SHIFT_TYPES, WORK_MODES } from '../../api'
 import type { City, Governorate, Specialty } from '../../api'
 import { useAuth } from '../../auth/useAuth'
 import { AsyncPage, Button, Checkbox, Container, EmptyState, Icon, JobCard, JobCardSkeleton, LinkButton, PageStack, Pagination, SearchField, Select, Spinner } from '../../design-system'
@@ -12,6 +12,7 @@ import { JOB_FILTER_KEYS, readJobFilters, writeJobFilters } from './filters'
 import { FilterDisclosure } from '../FilterDisclosure'
 import dir from '../directory.module.css'
 import styles from './JobsPage.module.css'
+import { ProfessionOptions } from './ProfessionOptions'
 
 const PAGE_SIZE = 12
 
@@ -171,11 +172,7 @@ function FilterBar({
       <FilterDisclosure label={t('providers.filters')} className={styles.filters}>
         <Select label={t('jobsPage.filters.profession')} value={filters.profession ?? ''} onChange={(e) => onChange({ profession: e.target.value })}>
           <option value="">{t('common.all')}</option>
-          {PROFESSIONS.map((p) => (
-            <option key={p} value={p}>
-              {t(`professions.${p}`)}
-            </option>
-          ))}
+          <ProfessionOptions />
         </Select>
         <Select label={t('jobsPage.filters.specialty')} value={filters.specialty ?? ''} onChange={(e) => onChange({ specialty: e.target.value })}>
           <option value="">{t('common.all')}</option>

@@ -32,6 +32,10 @@ STATUS_FOR_CODE = {
     "seller_not_eligible": status.HTTP_403_FORBIDDEN,
     "not_found": status.HTTP_404_NOT_FOUND,
     "invalid_transition": status.HTTP_400_BAD_REQUEST,
+    # inquiries (apps.real_estate.inquiries)
+    "duplicate_inquiry": status.HTTP_409_CONFLICT,
+    "inquiry_limit_reached": status.HTTP_429_TOO_MANY_REQUESTS,
+    "own_listing": status.HTTP_403_FORBIDDEN,
 }
 
 
@@ -188,6 +192,7 @@ class MyListingListView(generics.GenericAPIView):
         return _own_listings(self.request).order_by("-created_at", "id")
 
     @extend_schema(
+        operation_id="real_estate_owner_listings_list",
         summary="My listings (paginated, newest first)",
         parameters=[
             OpenApiParameter("page", int, description="Page number (20 per page)."),

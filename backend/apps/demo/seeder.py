@@ -66,6 +66,7 @@ from apps.reservations.types import ReservationStatus
 from apps.reviews import services as review_services
 from apps.specialties.models import Specialty
 
+from . import local_seed
 from .content import common, estate, jobs, market, people, providers
 from .models import DemoRecord
 from .registry import Registry
@@ -109,6 +110,15 @@ class DemoSeeder:
             ("jobs and recruitment", self.phase_jobs),
             ("real estate", self.phase_real_estate),
         ]
+        if local_seed.enabled():  # only `seed_local_demo` sets this, after its local guard
+            extras = local_seed.LocalExtras(self)
+            phases += [
+                ("local: people, staff, preferences", extras.phase_people),
+                ("local: business types, store, campaigns", extras.phase_commerce),
+                ("local: orders, quotes, promotions", extras.phase_activity),
+                ("local: seller workspaces, documents, delivery", extras.phase_sellers),
+                ("local: new account types, business employer, inquiries", extras.phase_platform),
+            ]
         with self.registry:
             for title, phase in phases:
                 self.log(f"  {title} ...")
@@ -359,7 +369,7 @@ class DemoSeeder:
                     self.registry.ensure(
                         key,
                         lambda s=starts_at: reservation_services.create_availability_slot(
-                            profile, service_id=service.pk, starts_at=s
+                            profile, service_id=service.pk, starts_at=s, enforce_switch=False
                         ),
                     )
                     made += 1
@@ -385,6 +395,7 @@ class DemoSeeder:
                 patient=patient,
                 slot_id=slot.pk,
                 patient_note=people.PATIENT_NOTES[index % len(people.PATIENT_NOTES)],
+                enforce_switch=False,  # demo history exists whatever the booking switch says
             )
             if action == "confirm":
                 reservation_services.transition_as_provider(
@@ -392,6 +403,7 @@ class DemoSeeder:
                     provider=profile,
                     actor=profile.account,
                     target_status=ReservationStatus.CONFIRMED,
+                    enforce_switch=False,
                 )
             elif action == "cancel":
                 reservation_services.cancel_as_patient(
@@ -658,6 +670,9 @@ class DemoSeeder:
                     address="",
                     verification_status="VERIFIED",
                     verification_note="Demo data: verified for presentation.",
+                    # Fictional demo business presented as licensed; the local demo also seeds
+                    # (fictional) approved documents for it (local_seed.phase_sellers).
+                    documents_complete=True,
                     verified_at=self.now,
                     verification_changed_at=self.now,
                 ),

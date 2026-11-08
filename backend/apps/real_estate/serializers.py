@@ -4,6 +4,7 @@ from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.core.phone import IraqiPhoneField
 from apps.geography.models import City, Governorate
 from apps.geography.serializers import CitySerializer, GovernorateSerializer
 
@@ -121,6 +122,8 @@ class SellerOwnerSerializer(serializers.ModelSerializer):
 
 
 class SellerWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerializer):
+    phone = IraqiPhoneField(required=False, allow_blank=True)
+
     forbidden = CLIENT_FORBIDDEN_SELLER_FIELDS
 
     class Meta:
@@ -254,6 +257,8 @@ class PropertyListingWriteSerializer(_ForbidFieldsMixin, serializers.ModelSerial
     be incomplete: only the identity of the ad (title, types, governorate) is
     required; completeness is the publication gate's job."""
 
+    contact_phone = IraqiPhoneField(required=False, allow_blank=True)
+
     forbidden = CLIENT_FORBIDDEN_LISTING_FIELDS
     governorate = serializers.PrimaryKeyRelatedField(
         queryset=Governorate.objects.filter(is_active=True)
@@ -359,6 +364,9 @@ class OwnerDashboardSerializer(serializers.Serializer):
     listings_expired = serializers.IntegerField()
     listings_sale = serializers.IntegerField()
     listings_rent = serializers.IntegerField()
+    inquiries_open = serializers.IntegerField()
+    inquiries_answered = serializers.IntegerField()
+    inquiries_total = serializers.IntegerField()
 
 
 class PaginatedPropertyListingOwnerSerializer(serializers.Serializer):
@@ -366,3 +374,46 @@ class PaginatedPropertyListingOwnerSerializer(serializers.Serializer):
     next = serializers.URLField(allow_null=True)
     previous = serializers.URLField(allow_null=True)
     results = PropertyListingOwnerSerializer(many=True)
+
+
+class PromotionListingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+
+
+class ListingPromotionSerializer(serializers.Serializer):
+    """Seller/admin view of a promotion. Never lists who saw or was notified."""
+
+    id = serializers.UUIDField(read_only=True)
+    listing = PromotionListingSerializer(read_only=True)
+    target_provider_types = serializers.ListField(child=serializers.CharField(), read_only=True)
+    days = serializers.IntegerField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    starts_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    ends_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    reject_reason = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+
+class PromotionRequestSerializer(serializers.Serializer):
+    listing = serializers.UUIDField()
+    target_provider_types = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, default=list, max_length=9
+    )
+    days = serializers.IntegerField(min_value=1, max_value=60, default=14)
+
+
+class PromotionRejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=300)
+
+
+class PromotedListingSerializer(serializers.Serializer):
+    """A promoted listing in a provider's feed. Always labelled sponsored by the client."""
+
+    promotion_id = serializers.UUIDField(source="pk")
+    sponsored = serializers.SerializerMethodField()
+    listing = PropertyListingPublicSerializer()
+    ends_at = serializers.DateTimeField()
+
+    def get_sponsored(self, obj) -> bool:
+        return True

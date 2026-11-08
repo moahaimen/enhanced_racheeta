@@ -22,6 +22,7 @@ import {
   TextField,
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
+import { useFeatures } from '../../hooks/useFeatures'
 import styles from './ReservationsPage.module.css'
 
 const PAGE_SIZE = 20
@@ -34,6 +35,8 @@ function statusTone(status: ReservationStatus) {
 
 export function ProviderReservationsPage() {
   const { t } = useTranslation()
+  // Booking switched off: no new appointment times; received reservations stay as history.
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const [params, setParams] = useSearchParams()
   const availabilityPage = Math.max(1, Number(params.get('availabilityPage') ?? '1') || 1)
   const reservationsPage = Math.max(1, Number(params.get('reservationsPage') ?? '1') || 1)
@@ -58,16 +61,22 @@ export function ProviderReservationsPage() {
     <Container width="xl">
       <PageHeader
         eyebrow={<><Icon name="calendar" size={16} />{t('nav.providerReservations')}</>}
-        title={t('providerReservations.title')}
-        description={t('providerReservations.intro')}
+        title={bookingOn ? t('providerReservations.title') : t('providerReservations.historyTitle')}
+        description={bookingOn ? t('providerReservations.intro') : undefined}
       />
       <PageStack>
-        <AvailabilityBlock
-          services={services}
-          slots={slots}
-          page={availabilityPage}
-          onPageChange={(next) => goToPage('availabilityPage', next)}
-        />
+        {bookingOn ? (
+          <AvailabilityBlock
+            services={services}
+            slots={slots}
+            page={availabilityPage}
+            onPageChange={(next) => goToPage('availabilityPage', next)}
+          />
+        ) : (
+          <Alert kind="info" testId="booking-off-notice">
+            {t('providerReservations.sunsetNotice')}
+          </Alert>
+        )}
         <ReceivedReservationsBlock
           reservations={reservations}
           page={reservationsPage}
@@ -244,6 +253,7 @@ function ProviderReservationRow({ reservation, reload }: { reservation: Reservat
   const [error, setError] = useState<string | null>(null)
   const transition = (status: ReservationStatus) => () =>
     reservationsApi.transitionProviderReservation(reservation.id, status)
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const hasStarted = new Date(reservation.starts_at).getTime() <= Date.now()
 
   return (
@@ -275,7 +285,7 @@ function ProviderReservationRow({ reservation, reload }: { reservation: Reservat
         </ApiActionButton>
         {reservation.status === 'PENDING' ? (
           <>
-            {!hasStarted ? (
+            {!hasStarted && bookingOn ? (
               <TransitionButton label={t('common.accept')} action={transition('CONFIRMED')} reload={reload} setError={setError} />
             ) : null}
             <TransitionButton label={t('common.reject')} action={transition('REJECTED')} reload={reload} setError={setError} variant="ghost" />

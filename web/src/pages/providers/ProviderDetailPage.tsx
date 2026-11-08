@@ -30,6 +30,7 @@ import {
   SectionCard,
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
+import { useFeatures } from '../../hooks/useFeatures'
 import { useLocalizedName } from '../../i18n/localized'
 import styles from './ProviderDetailPage.module.css'
 
@@ -58,6 +59,7 @@ export function ProviderDetailPage() {
 }
 
 function ProviderDetail({ provider }: { provider: ProviderPublic }) {
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const { t, i18n } = useTranslation()
   const name = useLocalizedName()
   const hasContact = provider.phone || provider.public_email || provider.website || provider.address || provider.latitude
@@ -133,7 +135,7 @@ function ProviderDetail({ provider }: { provider: ProviderPublic }) {
           </SectionCard>
 
           <PublicOffersSection providerId={provider.id} />
-          <BookingSection provider={provider} />
+          {bookingOn ? <BookingSection provider={provider} /> : null}
           <PublicReviewsSection providerId={provider.id} />
         </PageStack>
 

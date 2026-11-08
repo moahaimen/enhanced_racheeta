@@ -9,6 +9,8 @@ import * as reviewsApi from '../../api/endpoints/reviews'
 import { tokenStore } from '../../api/tokens'
 import type { AvailabilitySlot, ReservationPatient, ReservationProvider, ServiceOffering } from '../../api'
 import { makeAccount, renderApp } from '../../test/renderApp'
+import { setBookingEnabled } from '../../test/features'
+import { makeOwner } from '../../test/providerFixtures'
 
 vi.mock('../../api/endpoints/auth')
 vi.mock('../../api/endpoints/providers')
@@ -107,6 +109,7 @@ describe('Reservations pages', () => {
 
   it('lets a provider create availability and manage a pending reservation', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability)
       .mockResolvedValueOnce({ count: 0, next: null, previous: null, results: [] })
@@ -136,6 +139,7 @@ describe('Reservations pages', () => {
   })
   it('hides accept for a pending reservation after its appointment has started', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability).mockResolvedValue({
       count: 0,
@@ -166,6 +170,7 @@ describe('Reservations pages', () => {
 
   it('paginates provider availability and received reservations independently', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
     vi.mocked(reservationsApi.listProviderAvailability).mockImplementation(async (page = 1) => ({
       count: 21,
@@ -268,5 +273,42 @@ describe('Reservations pages', () => {
     expect(screen.queryByRole('button', { name: /إرسال التقييم|submit review/i })).toBeNull()
     expect(screen.queryByText(/تم تقييم هذا الموعد|already been reviewed/i)).toBeNull()
     expect(reviewsApi.createReview).not.toHaveBeenCalled()
+  })
+
+  describe('with online booking switched off (RESERVATIONS_ENABLED=false)', () => {
+    beforeEach(() => setBookingEnabled(false))
+
+    it('keeps the patient history readable and cancellable, without booking calls to action', async () => {
+      vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PATIENT' }))
+      vi.mocked(reservationsApi.listMyReservations).mockResolvedValue({ count: 1, next: null, previous: null, results: [patientReservation] })
+      vi.mocked(reservationsApi.cancelMyReservation).mockResolvedValue({ ...patientReservation, status: 'CANCELLED' })
+
+      renderApp('/reservations')
+
+      expect(await screen.findByText('Dr Booking')).toBeInTheDocument()
+      expect(await screen.findByTestId('booking-off-notice')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: /سجل الحجوزات|reservation history/i })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /ابحث عن مقدّم خدمة|find a provider/i })).toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: /إلغاء الحجز|cancel reservation/i }))
+      await waitFor(() => expect(reservationsApi.cancelMyReservation).toHaveBeenCalledWith(patientReservation.id))
+    })
+
+    it('shows the provider history without slot creation or accepting a pending booking', async () => {
+      vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+      vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
+      vi.mocked(providersApi.listMyServices).mockResolvedValue([service])
+      vi.mocked(reservationsApi.listProviderAvailability).mockResolvedValue({ count: 0, next: null, previous: null, results: [] })
+      vi.mocked(reservationsApi.listProviderReservations).mockResolvedValue({ count: 1, next: null, previous: null, results: [providerReservation] })
+      vi.mocked(reservationsApi.transitionProviderReservation).mockResolvedValue({ ...providerReservation, status: 'REJECTED' })
+
+      renderApp('/provider/reservations')
+
+      expect(await screen.findByText('Patient One')).toBeInTheDocument()
+      expect(await screen.findByTestId('booking-off-notice')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /إضافة موعد متاح|add available time/i })).toBeNull()
+      expect(screen.queryByRole('button', { name: /^قبول$|^accept$/i })).toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: /^رفض$|^reject$/i }))
+      await waitFor(() => expect(reservationsApi.transitionProviderReservation).toHaveBeenCalledWith(providerReservation.id, 'REJECTED'))
+    })
   })
 })

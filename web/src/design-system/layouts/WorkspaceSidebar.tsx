@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
+import { useFeatures } from '../../hooks/useFeatures'
 import { Icon, type IconName } from '../icons'
 import styles from './WorkspaceSidebar.module.css'
 
@@ -19,9 +20,17 @@ const WORKSPACE_PREFIXES = [
   '/company',
   '/employer',
   '/admin-console',
+  '/admin-finance',
   '/real-estate/owner',
+  '/real-estate/inquiries',
   '/jobs/profile',
   '/jobs/my-applications',
+  '/workspaces',
+  '/workspace/',
+  '/orders',
+  '/quotes',
+  '/merchant',
+  '/settings',
 ]
 
 export function isWorkspacePath(pathname: string): boolean {
@@ -32,26 +41,59 @@ export function isWorkspacePath(pathname: string): boolean {
 export function WorkspaceSidebar() {
   const { t } = useTranslation()
   const { account } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   if (!account) return null
   const role = account.role
-  const items: Item[] = [{ to: '/dashboard', icon: 'chart', label: t('nav.dashboard') }]
-  if (role === 'PATIENT') items.push({ to: '/reservations', icon: 'calendar', label: t('nav.myReservations') })
+  const items: Item[] = [
+    { to: '/dashboard', icon: 'chart', label: t('nav.dashboard') },
+    { to: '/workspaces', icon: 'building', label: t('nav.workspaces') },
+  ]
+  // Booking off: the same page is reachable as read-only history, never as a booking entry point.
+  const reservationsLabel = (onLabel: string) => (bookingOn ? onLabel : t('nav.reservationHistory'))
+  if (role === 'PATIENT') items.push({ to: '/reservations', icon: 'calendar', label: reservationsLabel(t('nav.myReservations')) })
+  if (role === 'PATIENT' || role === 'PROVIDER') items.push({ to: '/orders', icon: 'box', label: t('nav.myOrders') })
   if (role === 'PROVIDER') {
     items.push(
       { to: '/provider/profile', icon: 'briefcase', label: t('nav.providerProfile') },
-      { to: '/provider/reservations', icon: 'calendar', label: t('nav.providerReservations') },
+      { to: '/provider/reservations', icon: 'calendar', label: reservationsLabel(t('nav.providerReservations')) },
       { to: '/provider/offers', icon: 'tag', label: t('nav.providerOffers') },
       { to: '/marketplace', icon: 'cart', label: t('nav.marketplace') },
+      { to: '/quotes', icon: 'tag', label: t('nav.quotes') },
     )
   }
-  if (role === 'REAL_ESTATE_SELLER') items.push({ to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace') })
+  if (role === 'PROVIDER' && account.account_type === 'PHARMACY') {
+    // A pharmacy keeps its provider tools above and runs a linked store.
+    items.push(
+      { to: '/company', icon: 'pill', label: t('nav.pharmacyStore'), end: true },
+      { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
+      { to: '/merchant/center?tab=setup', icon: 'clipboard', label: t('nav.sellerCenter') },
+    )
+  }
+  if (role === 'REAL_ESTATE_SELLER') {
+    items.push(
+      { to: '/real-estate/owner', icon: 'home', label: t('nav.realEstateWorkspace'), end: true },
+      { to: '/real-estate/owner/inquiries', icon: 'mail', label: t('nav.propertyInquiries') },
+    )
+  }
+  // Anyone signed in can ask about a property; their own inquiries live here.
+  items.push({ to: '/real-estate/inquiries', icon: 'home', label: t('nav.myPropertyInquiries') })
   if (role === 'MEDICAL_COMPANY') {
-    items.push({ to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true }, { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') })
+    items.push(
+      { to: '/company', icon: 'cart', label: t('nav.companyWorkspace'), end: true },
+      { to: '/company/advertising', icon: 'tag', label: t('nav.advertising') },
+      { to: '/merchant/orders', icon: 'box', label: t('nav.merchantOrders') },
+      { to: '/merchant/center?tab=setup', icon: 'clipboard', label: t('nav.sellerCenter') },
+      { to: '/merchant/quotes', icon: 'mail', label: t('nav.merchantQuotes') },
+    )
   }
   items.push({ to: '/employer', icon: 'hospital', label: t('nav.employer') })
   items.push({ to: '/jobs/profile', icon: 'user', label: t('nav.seekerProfile') }, { to: '/jobs/my-applications', icon: 'briefcase', label: t('nav.myApplications') })
   items.push({ to: '/messages', icon: 'mail', label: t('nav.messages') }, { to: '/notifications', icon: 'bell', label: t('nav.notifications') })
-  if (account.is_staff) items.push({ to: '/admin-console', icon: 'shieldCheck', label: t('nav.adminConsole') })
+  if (account.is_staff) {
+    items.push({ to: '/admin-console', icon: 'shieldCheck', label: t('nav.adminConsole') })
+    items.push({ to: '/admin-finance', icon: 'calculator', label: t('nav.adminFinance') })
+  }
+  items.push({ to: '/settings/preferences', icon: 'bell', label: t('nav.preferences') })
   items.push({ to: '/profile', icon: 'user', label: t('nav.profile') })
 
   return (
@@ -62,7 +104,7 @@ export function WorkspaceSidebar() {
         </span>
         <div>
           <strong>{account.full_name}</strong>
-          <span>{t(`roles.${account.role}`)}</span>
+          <span>{account.account_type ? t(`accountTypes.${account.account_type}`) : t(`roles.${account.role}`)}</span>
         </div>
       </div>
       <nav className={styles.nav} aria-label={t('nav.account')}>

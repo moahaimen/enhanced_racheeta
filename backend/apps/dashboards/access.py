@@ -7,7 +7,7 @@ from __future__ import annotations
 from apps.accounts.roles import AccountRole
 from apps.jobs.models import EmployerMembership
 from apps.jobs.services import membership_for
-from apps.marketplace.models import MedicalCompany
+from apps.marketplace.models import MedicalCompany, seller_workspace_q
 from apps.providers.models import ProviderProfile
 from apps.real_estate.models import RealEstateSeller
 
@@ -44,9 +44,10 @@ def facility_profile_for(account) -> ProviderProfile | None:
 
 
 def company_for(account) -> MedicalCompany | None:
-    if not (account.is_authenticated and account.role == AccountRole.MEDICAL_COMPANY):
+    """The account's own store: a MEDICAL_COMPANY's business, or a pharmacy's linked store."""
+    if not account.is_authenticated:
         return None
-    return MedicalCompany.objects.filter(account=account).first()
+    return MedicalCompany.objects.filter(seller_workspace_q(), account=account).first()
 
 
 def seller_exists(account) -> bool:

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../../api/client'
 import * as authApi from '../../api/endpoints/auth'
+import * as providersApi from '../../api/endpoints/providers'
 import * as advertisingApi from '../../api/endpoints/advertising'
 import * as marketplaceApi from '../../api/endpoints/marketplace'
 import * as referenceApi from '../../api/endpoints/reference'
@@ -11,8 +12,10 @@ import { tokenStore } from '../../api/tokens'
 import type { CompanyDashboard, CompanyProduct, MarketplaceProduct, MedicalCompany, ProductCategory } from '../../api'
 import { baghdad } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
+import { makeOwner } from '../../test/providerFixtures'
 
 vi.mock('../../api/endpoints/auth')
+vi.mock('../../api/endpoints/providers')
 vi.mock('../../api/endpoints/advertising')
 vi.mock('../../api/endpoints/marketplace')
 vi.mock('../../api/endpoints/reference')
@@ -66,7 +69,7 @@ function company(overrides: Partial<MedicalCompany> = {}): MedicalCompany {
 const page2 = (results: CompanyProduct[]) => ({ count: results.length, next: null, previous: null, results })
 
 function ownProduct(id: string, title: string, is_active: boolean): CompanyProduct {
-  const { company: _c, ...rest } = product(id, title)
+  const { company: _c, variants: _v, ...rest } = product(id, title)
   return { ...rest, is_active }
 }
 
@@ -84,6 +87,7 @@ describe('Provider marketplace', () => {
     vi.resetAllMocks()
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental])
     vi.mocked(advertisingApi.listSponsored).mockResolvedValue({ count: 0, next: null, previous: null, results: [] }) // no ads: the organic tests are unaffected
   })
@@ -192,6 +196,30 @@ describe('Company workspace', () => {
     renderApp('/company')
     expect(await screen.findByTestId('company-verification-state')).toHaveTextContent(/قيد المراجعة|being reviewed/i)
     expect(screen.queryByRole('button', { name: /طلب التوثيق|request verification/i })).toBeNull()
+  })
+
+  it('sets stock and sale channel; a restricted item is forced to professionals only', async () => {
+    vi.mocked(marketplaceApi.getMyCompany).mockResolvedValue(company())
+    vi.mocked(marketplaceApi.createMyProduct).mockResolvedValue(ownProduct('n-2', 'Walker', false))
+    renderApp('/company')
+    const user = userEvent.setup()
+    const form = await screen.findByTestId('product-form')
+    await user.selectOptions(within(form).getByLabelText(/الفئة|category/i), 'cat-dental')
+    await user.type(within(form).getByLabelText(/اسم المنتج|product name/i), 'Walker')
+    await user.selectOptions(within(form).getByLabelText(/قناة البيع|sale channel/i), 'BOTH')
+    await user.type(within(form).getByLabelText(/^المخزون|^stock/i), 'x')
+    await user.click(within(form).getByRole('button', { name: /إنشاء المنتج|create product/i }))
+    expect(marketplaceApi.createMyProduct).not.toHaveBeenCalled() // non-numeric stock refused
+    await user.clear(within(form).getByLabelText(/^المخزون|^stock/i))
+    await user.type(within(form).getByLabelText(/^المخزون|^stock/i), '12')
+    await user.click(within(form).getByLabelText(/منتج مقيّد|restricted/i))
+    expect(within(form).getByLabelText(/قناة البيع|sale channel/i)).toHaveValue('B2B')
+    await user.click(within(form).getByRole('button', { name: /إنشاء المنتج|create product/i }))
+    await waitFor(() =>
+      expect(marketplaceApi.createMyProduct).toHaveBeenCalledWith(
+        expect.objectContaining({ sale_channel: 'B2B', is_restricted: true, stock_quantity: 12 }),
+      ),
+    )
   })
 
   it('creates, edits, publishes and unpublishes products', async () => {
@@ -412,6 +440,7 @@ describe('Company workspace', () => {
 
   it('keeps the workspace for medical company accounts only', async () => {
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     renderApp('/company')
     expect(await screen.findByTestId('role-denied')).toHaveTextContent(/الشركات الطبية|medical company accounts/i)
     expect(marketplaceApi.getMyCompany).not.toHaveBeenCalled()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 
-import { ApiError, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, PROFESSIONS, reference, SHIFT_TYPES, WORK_MODES } from '../../api'
+import { ApiError, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, reference, SHIFT_TYPES, WORK_MODES } from '../../api'
 import type { BillingSummary, City, Degree, EmployerOwner, EmploymentType, Governorate, JobEmployer, JobWrite, Profession, ShiftType, Specialty, WorkMode } from '../../api'
 import { Alert, ApiActionButton, AsyncPage, Checkbox, Container, FormActions, FormSection, Icon, JobStatusBadge, LinkButton, PageHeader, PageStack, SectionCard, Select, Spinner, Textarea, TextField, useFormErrors } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
@@ -10,6 +10,7 @@ import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError } from '../validation'
 import styles from './EmployerWorkspacePage.module.css'
 import { entitled } from './entitlements'
+import { ProfessionOptions } from '../jobs/ProfessionOptions'
 
 type Loaded = [JobEmployer | null, EmployerOwner, Governorate[], Specialty[], BillingSummary | null]
 
@@ -219,11 +220,7 @@ function Editor({ job, employer, governorates, specialties, billing, reload }: {
                 <TextField label={t('jobEditor.title')} name="title" value={f.title} onChange={(e) => set('title', e.target.value)} error={errors.fieldErrors.title} required />
                 <div className="grid-2">
                   <Select label={t('jobEditor.profession')} value={f.profession} onChange={(e) => set('profession', e.target.value as Profession)} error={errors.fieldErrors.profession}>
-                    {PROFESSIONS.map((p) => (
-                      <option key={p} value={p}>
-                        {t(`professions.${p}`)}
-                      </option>
-                    ))}
+                    <ProfessionOptions />
                   </Select>
                   <Select label={t('jobEditor.specialty')} optional value={f.general_specialty} onChange={(e) => set('general_specialty', e.target.value)} error={errors.fieldErrors.general_specialty}>
                     <option value="">—</option>

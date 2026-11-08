@@ -49,6 +49,18 @@ class ProviderUnavailable(ReservationError):
     code = "provider_unavailable"
 
 
+class BookingDisabled(ReservationError):
+    code = "service_disabled"
+
+
+def require_booking_enabled() -> None:
+    """New bookings and new slots are refused while RESERVATIONS_ENABLED is off."""
+    from apps.core.features import reservations_enabled
+
+    if not reservations_enabled():
+        raise BookingDisabled("Online booking is switched off on Racheeta.")
+
+
 def slot_matches_current_service(slot: AvailabilitySlot) -> bool:
     """A published slot must still match the service duration used to book it."""
     duration = slot.service.duration_minutes
@@ -95,7 +107,10 @@ def create_availability_slot(
     *,
     service_id,
     starts_at,
+    enforce_switch: bool = True,
 ) -> AvailabilitySlot:
+    if enforce_switch:  # only the demo seeder writes history with the switch off
+        require_booking_enabled()
     provider = ProviderProfile.objects.select_for_update(of=("self",)).get(pk=provider.pk)
     try:
         service = ServiceOffering.objects.select_for_update(of=("self",)).get(pk=service_id)
@@ -158,7 +173,10 @@ def create_reservation(
     patient,
     slot_id,
     patient_note: str = "",
+    enforce_switch: bool = True,
 ) -> Reservation:
+    if enforce_switch:  # only the demo seeder writes history with the switch off
+        require_booking_enabled()
     try:
         slot_ref = AvailabilitySlot.objects.only("provider_id", "service_id").get(pk=slot_id)
     except AvailabilitySlot.DoesNotExist as exc:
@@ -256,7 +274,12 @@ def transition_as_provider(
     actor,
     target_status: str,
     reason: str = "",
+    enforce_switch: bool = True,
 ) -> Reservation:
+    if enforce_switch and target_status == ReservationStatus.CONFIRMED:
+        # Accepting a pending booking is a new commitment: refused while booking is off.
+        # Rejecting, cancelling, completing and no-show stay available to wind bookings down.
+        require_booking_enabled()
     reservation = (
         Reservation.objects.select_for_update(of=("self",))
         .select_related("provider")

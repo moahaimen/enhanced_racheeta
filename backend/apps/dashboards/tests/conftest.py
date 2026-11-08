@@ -177,6 +177,8 @@ def company_factory(account_factory, baghdad):
             name=f"Company {counter['n']}",
             governorate=baghdad,
             verification_status=status,
+            # a fully licensed seller unless a test says otherwise (selling_q needs it)
+            documents_complete=fields.pop("documents_complete", True),
             **fields,
         )
 
@@ -192,7 +194,10 @@ def product_factory(db):
         counter["n"] += 1
         if "c" not in category:
             category["c"] = ProductCategory.objects.create(
-                slug="dash-cat", name_ar="فئة", name_en="Category"
+                slug="dash-cat",
+                name_ar="فئة",
+                name_en="Category",
+                compliance_class="B2B_VERIFIED_ONLY",
             )
         return Product.objects.create(
             company=company,

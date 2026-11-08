@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Icon } from '../../icons'
 import styles from './Form.module.css'
 import { FormField } from './FormField'
+import { PHONE_MAX_DIGITS, toPhoneDigits } from './phone'
 
 interface CommonFieldProps {
   label: ReactNode
@@ -31,6 +32,30 @@ export function TextField({ label, optional, hint, error, className, leading, tr
         </div>
       )}
     </FormField>
+  )
+}
+
+/**
+ * Phone input: digits only (max 11), LTR, numeric keyboard on mobile. The Iraqi format is checked by
+ * the form before submit and again by the server.
+ */
+export function PhoneField({ onChange, ...props }: Omit<TextFieldProps, 'type' | 'leading'>) {
+  return (
+    <TextField
+      {...props}
+      type="tel"
+      inputMode="numeric"
+      dir="ltr"
+      autoComplete={props.autoComplete ?? 'tel-national'}
+      maxLength={PHONE_MAX_DIGITS + 5}
+      placeholder={props.placeholder ?? '07XXXXXXXXX'}
+      leading={<Icon name="phone" size={18} />}
+      onChange={(event) => {
+        const clean = toPhoneDigits(event.target.value)
+        if (clean !== event.target.value) event.target.value = clean
+        onChange?.(event)
+      }}
+    />
   )
 }
 

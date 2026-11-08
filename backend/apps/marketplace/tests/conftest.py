@@ -43,6 +43,8 @@ def company_factory(account_factory, baghdad):
             name=fields.pop("name", f"Company {counter['n']}"),
             governorate=baghdad,
             verification_status=status,
+            # a fully licensed seller unless a test says otherwise (selling_q needs it)
+            documents_complete=fields.pop("documents_complete", True),
             **fields,
         )
 
@@ -81,6 +83,11 @@ def category_factory(db):
     def _make(rules=(), is_active=True, **fields):
         """`rules`: iterable of (provider_type or "", specialty or None)."""
         counter["n"] += 1
+        # Classified explicitly: an unclassified category is fail-closed (pending review).
+        fields.setdefault(
+            "compliance_class",
+            "B2C_ALLOWED" if fields.get("consumer_allowed") else "B2B_VERIFIED_ONLY",
+        )
         category = ProductCategory.objects.create(
             slug=fields.pop("slug", f"category-{counter['n']}"),
             name_ar=f"فئة {counter['n']}",

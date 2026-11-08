@@ -1,8 +1,21 @@
+import os
+
 from django.conf import settings
 from django.db import DatabaseError, connection, transaction
-from django.http import FileResponse, Http404, HttpRequest, JsonResponse
+from django.http import FileResponse, Http404, HttpRequest, HttpResponseRedirect, JsonResponse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .features import public_features
+
+
+class PlatformFeaturesSerializer(serializers.Serializer):
+    reservations_enabled = serializers.BooleanField()
 
 
 @require_GET
@@ -46,8 +59,29 @@ def spa_index(_request: HttpRequest, *_args, **_kwargs):
     """
     dist = settings.SPA_DIST_DIR
     if dist is None:
+        if settings.DEBUG and os.environ.get("RACHEETA_LOCAL_DEMO") == "1":
+            # Local demo only: the web app runs on its own dev server, so a page opened on the
+            # API port goes there instead of a 404 (never active in production: DEBUG is off).
+            return HttpResponseRedirect(
+                settings.RACHEETA["FRONTEND_URL"] + _request.get_full_path()
+            )
         raise Http404("Web application build is not configured.")
     index = dist / "index.html"
     if not index.is_file():
         raise Http404("Web application build is missing index.html.")
     return FileResponse(index.open("rb"), content_type="text/html; charset=utf-8")
+
+
+class PlatformFeaturesView(APIView):
+    """Public, read-only product switches (apps.core.features). Never per-user, never secret."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(
+        tags=["platform"],
+        summary="Product switches the web app follows (e.g. whether online booking is on)",
+        responses={200: PlatformFeaturesSerializer},
+    )
+    def get(self, request):
+        return Response(public_features())

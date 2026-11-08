@@ -1,7 +1,19 @@
 import type { Paginated } from './providers.types'
 
-export type NotificationCategory = 'RESERVATION'
-export type NotificationEventType = 'RESERVATION_CREATED' | 'RESERVATION_STATUS_CHANGED'
+export type NotificationCategory = 'RESERVATION' | 'ORDER' | 'QUOTE' | 'INQUIRY' | 'MARKETING'
+export type NotificationEventType =
+  | 'RESERVATION_CREATED'
+  | 'RESERVATION_STATUS_CHANGED'
+  | 'ORDER_PLACED'
+  | 'ORDER_STATUS_CHANGED'
+  | 'QUOTE_REQUESTED'
+  | 'QUOTE_UPDATED'
+  | 'SPONSORED_PRODUCT'
+  | 'PROPERTY_PROMOTION'
+  | 'STOCK_LOW'
+  | 'SETTLEMENT_PAID'
+  | 'INQUIRY_RECEIVED'
+  | 'INQUIRY_ANSWERED'
 
 /** One persistent notification. `title`/`body` are rendered by the backend in the request language. */
 export interface AppNotification {

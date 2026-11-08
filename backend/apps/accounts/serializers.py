@@ -3,12 +3,21 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import ErrorDetail
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.phone import IraqiPhoneField
+
 from .models import Account
-from .roles import CLIENT_FORBIDDEN_FIELDS, SELF_REGISTRATION_ROLE_CHOICES, AccountRole
+from .roles import (
+    ACCOUNT_TYPE_ROLE,
+    CLIENT_FORBIDDEN_FIELDS,
+    SELF_REGISTRATION_ROLE_CHOICES,
+    AccountRole,
+    AccountType,
+)
 
 
 class ForbidPrivilegeFieldsMixin:
@@ -16,16 +25,26 @@ class ForbidPrivilegeFieldsMixin:
 
     extra_forbidden: frozenset[str] = frozenset()
 
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
+    def _forbidden_errors(self) -> dict:
         sent = set(getattr(self, "initial_data", {}) or {})
         forbidden = sorted(sent & (CLIENT_FORBIDDEN_FIELDS | self.extra_forbidden))
+        return {
+            f: [ErrorDetail("This field cannot be set by a client.", code="field_not_allowed")]
+            for f in forbidden
+        }
+
+    def to_internal_value(self, data):
+        # A privilege field is always reported, even when other fields are invalid too.
+        forbidden = self._forbidden_errors()
+        try:
+            value = super().to_internal_value(data)
+        except serializers.ValidationError as exc:
+            if forbidden and isinstance(exc.detail, dict):
+                raise serializers.ValidationError({**exc.detail, **forbidden}) from exc
+            raise
         if forbidden:
-            raise serializers.ValidationError(
-                {f: ["This field cannot be set by a client."] for f in forbidden},
-                code="field_not_allowed",
-            )
-        return attrs
+            raise serializers.ValidationError(forbidden)
+        return value
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -45,6 +64,7 @@ class AccountSerializer(serializers.ModelSerializer):
             "full_name",
             "phone_number",
             "role",
+            "account_type",
             "preferred_language",
             "email_verified",
             "email_verified_at",
@@ -57,10 +77,20 @@ class AccountSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+def _clean_full_name(value: str) -> str:
+    """A person's name: 2-150 characters, containing letters (not only digits or symbols)."""
+    value = " ".join((value or "").split())
+    if len(value) < 2 or not any(ch.isalpha() for ch in value):
+        raise serializers.ValidationError("Enter your full name.", code="invalid_name")
+    return value
+
+
 class AccountUpdateSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer):
     """Fields the account owner may change on PATCH /me."""
 
-    extra_forbidden = frozenset({"role", "email", "password", "id"})
+    phone_number = IraqiPhoneField(allow_landline=False, required=False, allow_blank=True)
+
+    extra_forbidden = frozenset({"role", "account_type", "email", "password", "id"})
 
     class Meta:
         model = Account
@@ -71,6 +101,9 @@ class AccountUpdateSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSeria
             "preferred_language": {"required": False},
         }
 
+    def validate_full_name(self, value: str) -> str:
+        return _clean_full_name(value)
+
 
 class TokenPairSerializer(serializers.Serializer):
     access = serializers.CharField(read_only=True)
@@ -78,20 +111,36 @@ class TokenPairSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer):
+    phone_number = IraqiPhoneField(allow_landline=False, required=False, allow_blank=True)
+
     password = serializers.CharField(
         write_only=True, min_length=8, max_length=128, trim_whitespace=False
     )
     role = serializers.ChoiceField(
         choices=SELF_REGISTRATION_ROLE_CHOICES, default=AccountRole.PATIENT
     )
+    # The onboarding choice. When given, the server derives `role` from it (ACCOUNT_TYPE_ROLE); a
+    # contradicting `role` is rejected rather than silently overridden. ADMIN is never reachable.
+    account_type = serializers.ChoiceField(choices=AccountType.choices, required=False)
 
     class Meta:
         model = Account
-        fields = ("email", "password", "full_name", "phone_number", "role", "preferred_language")
+        fields = (
+            "email",
+            "password",
+            "full_name",
+            "phone_number",
+            "role",
+            "account_type",
+            "preferred_language",
+        )
         extra_kwargs = {
             "phone_number": {"required": False},
             "preferred_language": {"required": False},
         }
+
+    def validate_full_name(self, value: str) -> str:
+        return _clean_full_name(value)
 
     def validate_email(self, value: str) -> str:
         value = Account.objects.normalize_email(value)
@@ -103,6 +152,14 @@ class RegisterSerializer(ForbidPrivilegeFieldsMixin, serializers.ModelSerializer
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        account_type = attrs.get("account_type")
+        if account_type:
+            derived = ACCOUNT_TYPE_ROLE[account_type]
+            if "role" in self.initial_data and attrs.get("role") != derived:
+                raise serializers.ValidationError(
+                    {"role": "Does not match the chosen account type."}, code="role_mismatch"
+                )
+            attrs["role"] = derived
         candidate = Account(**{k: v for k, v in attrs.items() if k != "password"})
         try:
             validate_password(attrs["password"], user=candidate)

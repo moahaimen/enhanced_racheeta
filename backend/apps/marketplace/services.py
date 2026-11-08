@@ -11,9 +11,15 @@ from .models import MedicalCompany, Product, ProductCategory
 from .types import (
     ADMIN_VERIFICATION_TARGETS,
     COMPANY_IDENTITY_FIELDS,
+    COMPANY_SELECTABLE_TYPES,
+    CONSUMER_CHANNELS,
     IDENTITY_LOCKED_STATUSES,
+    PROFESSIONAL_CHANNELS,
+    RETAIL_BUSINESS_TYPES,
     VERIFICATION_REQUESTABLE_FROM,
     CompanyVerificationStatus,
+    SaleChannel,
+    StoreStatus,
 )
 
 
@@ -55,6 +61,7 @@ class ProductNotFound(MarketplaceError):
 
 COMPANY_FIELDS = (
     "name",
+    "business_type",
     "description",
     "phone",
     "public_email",
@@ -63,7 +70,20 @@ COMPANY_FIELDS = (
     "city",
     "address",
 )
-PRODUCT_FIELDS = ("category", "title", "description", "brand", "model_name", "price", "currency")
+PRODUCT_FIELDS = (
+    "category",
+    "title",
+    "description",
+    "brand",
+    "model_name",
+    "price",
+    "currency",
+    "sale_channel",
+    "is_restricted",
+    "stock_quantity",
+    "image_url",
+    "sku",
+)
 
 
 def _require_city_in_governorate(row) -> None:
@@ -79,9 +99,19 @@ def _require_city_in_governorate(row) -> None:
 
 
 @transaction.atomic
-def create_company(account, fields: dict) -> MedicalCompany:
+def create_company(account, fields: dict, *, facility=None) -> MedicalCompany:
+    """Onboarding. A new store starts INACTIVE: it sells only after Racheeta verifies it, its
+    required documents are approved and the owner activates it (sellers.activate_store).
+    `facility` is passed only by sellers.open_pharmacy_store (a pharmacy keeps its identity)."""
+    values = {k: v for k, v in fields.items() if k in COMPANY_FIELDS}
+    if facility is None and values.get("business_type") not in (None, *COMPANY_SELECTABLE_TYPES):
+        raise InvalidProduct("A pharmacy store is opened from the pharmacy's provider profile.")
     company = MedicalCompany(
-        account=account, **{k: v for k, v in fields.items() if k in COMPANY_FIELDS}
+        account=account,
+        facility=facility,
+        store_status=StoreStatus.INACTIVE,
+        store_status_changed_at=timezone.now(),
+        **values,
     )
     _require_city_in_governorate(company)
     try:
@@ -178,6 +208,13 @@ def set_verification(
     if status == CompanyVerificationStatus.VERIFIED:
         locked.verified_at = now
         update_fields.append("verified_at")
+        # A store sells only with every required document approved. A store that was ACTIVE
+        # before documents existed (or lost one) goes back to INACTIVE on (re)verification: the
+        # seller re-activates it once the documents are approved (sellers.set_store_status).
+        if locked.store_status == StoreStatus.ACTIVE and locked.missing_documents():
+            locked.store_status = StoreStatus.INACTIVE
+            locked.store_status_changed_at = now
+            update_fields += ["store_status", "store_status_changed_at"]
     locked.save(update_fields=update_fields)
     audit.record(
         actor=admin,
@@ -210,13 +247,50 @@ def _locked_publishable_category(category_id) -> ProductCategory:
 def _require_publishable(company: MedicalCompany, product: Product) -> None:
     """The activation gate, on locked state: verified company on an active
     MEDICAL_COMPANY account (read with the locked company, never from the
-    request's snapshot), publishable category."""
+    request's snapshot); a professional offer needs a category with an active audience, a store
+    offer needs a consumer-allowed category, a retail business and a stock figure."""
     if not company.can_publish:
         raise CompanyNotVerified(
-            "The company must be verified, on an active medical company account, "
-            "before publishing products."
+            "The company must be verified, on an active seller account, before publishing products."
         )
-    _locked_publishable_category(product.category_id)
+    _require_category_rules(company, product)
+    if product.sale_channel in PROFESSIONAL_CHANNELS:
+        _locked_publishable_category(product.category_id)
+    if product.sale_channel in CONSUMER_CHANNELS:
+        category = (
+            ProductCategory.objects.select_for_update(of=("self",))
+            .filter(pk=product.category_id, is_active=True, consumer_allowed=True)
+            .first()
+        )
+        if category is None:
+            raise CategoryUnavailable("This category cannot be offered in the public store.")
+        if company.business_type not in RETAIL_BUSINESS_TYPES:
+            raise InvalidProduct("Only retail businesses can offer products in the public store.")
+        if (
+            product.stock_quantity is None
+            and not product.variants.filter(is_active=True, stock_quantity__isnull=False).exists()
+        ):
+            raise InvalidProduct("Set the stock quantity for a store product.")
+
+
+def _require_category_rules(company: MedicalCompany, product: Product) -> None:
+    """Category-specific compliance rules (administrator data), checked at publication."""
+    category = ProductCategory.objects.get(pk=product.category_id)
+    if category.allowed_business_types and company.business_type not in (
+        category.allowed_business_types
+    ):
+        raise CategoryUnavailable("Your type of business cannot publish products in this category.")
+    if category.required_documents:
+        from .types import DocumentStatus
+
+        approved = set(
+            company.documents.filter(status=DocumentStatus.APPROVED).values_list("kind", flat=True)
+        )
+        missing = [k for k in category.required_documents if k not in approved]
+        if missing:
+            raise CategoryUnavailable(
+                "This category needs an approved document first: " + ", ".join(missing),
+            )
 
 
 def _validate_product(product: Product) -> None:
@@ -224,6 +298,38 @@ def _validate_product(product: Product) -> None:
         raise InvalidProduct("Price must be zero or more.")
     if not product.title.strip():
         raise InvalidProduct("Title is required.")
+    if product.is_restricted and product.sale_channel != SaleChannel.B2B:
+        raise InvalidProduct(
+            "Restricted products (prescription, regulated equipment) are B2B only."
+        )
+    if product.sale_channel in CONSUMER_CHANNELS and product.price is None:
+        raise InvalidProduct("A store product needs a price.")
+
+
+def _save_product(product: Product) -> None:
+    product.sku = (product.sku or "").strip()
+    if product.sku and _sku_taken(product.company_id, product.sku, product=product):
+        raise InvalidProduct(f"The SKU {product.sku} is already used in your store.")
+    try:
+        with transaction.atomic():
+            product.save()
+    except IntegrityError as exc:
+        if "marketplace_product_sku_unique" in str(exc):
+            raise InvalidProduct(f"The SKU {product.sku} is already used in your store.") from exc
+        raise
+
+
+def _sku_taken(company_id, sku: str, *, product=None, variant=None) -> bool:
+    """A SKU is unique across a business's products AND variants."""
+    from .models import ProductVariant
+
+    products = Product.objects.filter(company_id=company_id, sku__iexact=sku)
+    variants = ProductVariant.objects.filter(company_id=company_id, sku__iexact=sku)
+    if product is not None and product.pk:
+        products = products.exclude(pk=product.pk)
+    if variant is not None and variant.pk:
+        variants = variants.exclude(pk=variant.pk)
+    return products.exists() or variants.exists()
 
 
 @transaction.atomic
@@ -242,7 +348,7 @@ def create_product(company: MedicalCompany, fields: dict) -> Product:
     for f in ("title", "description", "brand", "model_name"):
         setattr(product, f, getattr(product, f).strip())
     _validate_product(product)
-    product.save()
+    _save_product(product)
     audit.record(
         actor=locked_company.account,
         action="marketplace.product.created",
@@ -281,7 +387,7 @@ def update_product(company: MedicalCompany, product_id, changes: dict, *, active
         and not ProductCategory.objects.filter(pk=product.category_id, is_active=True).exists()
     ):
         raise CategoryUnavailable("Choose an active category.")
-    product.save()
+    _save_product(product)
     audit.record(
         actor=locked_company.account,
         action="marketplace.product.updated",
@@ -300,10 +406,12 @@ def dashboard_summary(company: MedicalCompany) -> dict:
     rows = Product.objects.filter(company=company)
     total = rows.count()
     active = rows.filter(is_active=True).count()
-    exposable = rows.exposable().count() if company.can_publish else 0
+    exposable = rows.exposable().count() if company.can_sell else 0
     return {
         "verification_status": company.verification_status,
         "can_publish": company.can_publish,
+        "can_sell": company.can_sell,
+        "store_status": company.store_status,
         "products_total": total,
         "products_active": active,
         "products_inactive": total - active,

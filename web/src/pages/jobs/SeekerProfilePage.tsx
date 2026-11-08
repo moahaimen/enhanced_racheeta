@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { ApiError, AVAILABILITIES, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, PROFESSIONS, reference } from '../../api'
+import { ApiError, AVAILABILITIES, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, reference } from '../../api'
 import type { Availability, City, Degree, EmploymentType, Governorate, Profession, SeekerProfile, SeekerProfileWrite, Specialty } from '../../api'
 import { Alert, ApiActionButton, AsyncPage, Badge, Checkbox, CheckboxGroup, Container, FormActions, FormSection, Icon, PageHeader, PageStack, SectionCard, Select, Spinner, Textarea, TextField, useFormErrors } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { ClientValidationError } from '../validation'
 import styles from './SeekerProfilePage.module.css'
+import { ProfessionOptions } from './ProfessionOptions'
 
 type Loaded = [SeekerProfile | null, Governorate[], Specialty[]]
 
@@ -121,11 +122,7 @@ function ProfileForm({ profile, governorates, specialties, onSaved }: { profile:
         <TextField label={t('seekerProfile.professionalTitle')} name="professional_title" value={f.professional_title} onChange={(e) => set('professional_title', e.target.value)} error={errors.fieldErrors.professional_title} required />
         <div className="grid-2">
           <Select label={t('seekerProfile.profession')} value={f.profession} onChange={(e) => set('profession', e.target.value as Profession)} error={errors.fieldErrors.profession}>
-            {PROFESSIONS.map((p) => (
-              <option key={p} value={p}>
-                {t(`professions.${p}`)}
-              </option>
-            ))}
+            <ProfessionOptions />
           </Select>
           <Select label={t('seekerProfile.specialty')} optional value={f.general_specialty} onChange={(e) => set('general_specialty', e.target.value)} error={errors.fieldErrors.general_specialty}>
             <option value="">—</option>

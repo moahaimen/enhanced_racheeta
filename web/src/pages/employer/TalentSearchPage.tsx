@@ -2,11 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
-import { AVAILABILITIES, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, PROFESSIONS, reference } from '../../api'
+import { AVAILABILITIES, DEGREES, EMPLOYMENT_TYPES, jobs as jobsApi, reference } from '../../api'
 import type { Governorate, Specialty, TalentParams } from '../../api'
 import { AsyncPage, Button, Container, EmptyState, Icon, PageHeader, PageStack, Pagination, SearchField, Select, Spinner, TalentCard } from '../../design-system'
 import { useLocalizedName } from '../../i18n/localized'
 import styles from '../jobs/JobsPage.module.css'
+import { ProfessionOptions } from '../jobs/ProfessionOptions'
 
 const KEYS = ['q', 'profession', 'specialty', 'degree', 'min_experience', 'governorate', 'city', 'skill', 'language', 'availability', 'employment_type'] as const
 const PAGE_SIZE = 12
@@ -108,11 +109,7 @@ function TalentFilters({ filters, governorates, specialties, onChange, onClear }
       <div className={styles.filters}>
         <Select label={t('talent.filters.profession')} value={filters.profession ?? ''} onChange={(e) => onChange({ profession: e.target.value })}>
           <option value="">{t('common.all')}</option>
-          {PROFESSIONS.map((p) => (
-            <option key={p} value={p}>
-              {t(`professions.${p}`)}
-            </option>
-          ))}
+          <ProfessionOptions />
         </Select>
         <Select label={t('talent.filters.specialty')} value={filters.specialty ?? ''} onChange={(e) => onChange({ specialty: e.target.value })}>
           <option value="">{t('common.all')}</option>

@@ -99,11 +99,11 @@ def test_profile_update_changes_only_editable_fields(seller_factory):
     seller = seller_factory(display_name="Old")
     client = client_for(seller.account)
     resp = client.patch(
-        OWNER, {"display_name": "New", "about": "Bio", "phone": "0770"}, format="json"
+        OWNER, {"display_name": "New", "about": "Bio", "phone": "0770 123 4567"}, format="json"
     )
     assert resp.status_code == 200 and resp.json()["display_name"] == "New"
     seller.refresh_from_db()
-    assert (seller.display_name, seller.about, seller.phone) == ("New", "Bio", "0770")
+    assert (seller.display_name, seller.about, seller.phone) == ("New", "Bio", "07701234567")
     assert AuditEvent.objects.filter(action="real_estate.seller.updated").count() == 1
 
 
@@ -370,6 +370,10 @@ def test_dashboard_counts_are_backend_computed(
         "listings_expired": 1,
         "listings_sale": 2,
         "listings_rent": 2,
+        # Phase E: inquiry counts (backend-computed; covered in test_inquiries.py)
+        "inquiries_open": 0,
+        "inquiries_answered": 0,
+        "inquiries_total": 0,
     }
     assert (
         client_for(seller.account).get(f"{OWNER_LISTINGS}/{expired.pk}").json()["is_expired"]

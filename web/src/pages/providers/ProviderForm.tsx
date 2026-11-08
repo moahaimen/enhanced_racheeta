@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useAuth } from '../../auth/useAuth'
+import { ACCOUNT_TYPE_PROVIDER } from '../../auth/roles'
+
 import { PROVIDER_TYPES, reference } from '../../api'
 import type { City, Governorate, ProviderOwner, ProviderType, ProviderWrite, Specialty } from '../../api'
 import {
@@ -11,6 +14,8 @@ import {
   FormActions,
   FormSection,
   Icon,
+  LocationPicker,
+  PhoneField,
   Select,
   Spinner,
   Textarea,
@@ -19,7 +24,7 @@ import {
 } from '../../design-system'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
-import { ClientValidationError, isEmail, isPhone } from '../validation'
+import { ClientValidationError, isEmail, isIraqiPhone, normalizeIraqiPhone } from '../validation'
 
 const FIELDS = [
   'provider_type',
@@ -55,9 +60,9 @@ interface FormState {
   is_visible: boolean
 }
 
-function fromProfile(profile: ProviderOwner | null): FormState {
+function fromProfile(profile: ProviderOwner | null, preset?: { providerType: string; specialtyId: string | null }): FormState {
   return {
-    provider_type: profile?.provider_type ?? 'DOCTOR',
+    provider_type: profile?.provider_type ?? ((preset?.providerType as FormState['provider_type']) || 'DOCTOR'),
     display_name: profile?.display_name ?? '',
     about: profile?.about ?? '',
     phone: profile?.phone ?? '',
@@ -69,7 +74,7 @@ function fromProfile(profile: ProviderOwner | null): FormState {
     latitude: profile?.latitude ?? '',
     longitude: profile?.longitude ?? '',
     image_url: profile?.image_url ?? '',
-    specialty_ids: profile?.specialties.map((s) => s.id) ?? [],
+    specialty_ids: profile?.specialties.map((s) => s.id) ?? (preset?.specialtyId ? [preset.specialtyId] : []),
     is_visible: profile?.is_visible ?? true,
   }
 }
@@ -88,7 +93,13 @@ export interface ProviderFormProps {
 export function ProviderForm({ profile, governorates, specialties, submit, onSaved, submitLabel, pendingLabel }: ProviderFormProps) {
   const { t } = useTranslation()
   const name = useLocalizedName()
-  const [form, setForm] = useState<FormState>(() => fromProfile(profile))
+  const { account } = useAuth()
+  // A new profile starts from the onboarding choice (dentist -> doctor + dentistry, midwife ->
+  // nurse + midwifery); everything stays editable and the server re-validates it.
+  const [form, setForm] = useState<FormState>(() => {
+    const preset = !profile && account?.account_type ? ACCOUNT_TYPE_PROVIDER[account.account_type] : undefined
+    return fromProfile(profile, preset ? { providerType: preset.providerType, specialtyId: specialties.find((s) => s.slug === preset.specialty)?.id ?? null } : undefined)
+  })
   const [saved, setSaved] = useState(false)
   const errors = useFormErrors(FIELDS)
   const typeLocked = profile !== null && !profile.can_change_type
@@ -106,7 +117,7 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
     const next: Partial<Record<(typeof FIELDS)[number], string>> = {}
     if (!form.display_name.trim()) next.display_name = t('validation.required')
     if (!form.governorate) next.governorate = t('validation.required')
-    if (form.phone.trim() && !isPhone(form.phone)) next.phone = t('validation.phone')
+    if (form.phone.trim() && !isIraqiPhone(form.phone)) next.phone = t('validation.phone')
     if (form.public_email.trim() && !isEmail(form.public_email)) next.public_email = t('validation.email')
     if (form.website.trim() && !/^https?:\/\//.test(form.website.trim())) next.website = t('validation.url')
     if (form.image_url.trim() && !form.image_url.trim().startsWith('https://')) next.image_url = t('validation.url')
@@ -126,7 +137,7 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
     const payload: ProviderWrite = {
       display_name: form.display_name.trim(),
       about: form.about,
-      phone: form.phone.replace(/[\s-]/g, ''),
+      phone: normalizeIraqiPhone(form.phone) ?? form.phone,
       public_email: form.public_email.trim(),
       website: form.website.trim(),
       governorate: form.governorate,
@@ -185,12 +196,10 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
 
       <FormSection title={t('providerProfile.sectionContact')}>
         <div className="grid-2">
-          <TextField
+          <PhoneField
             label={t('fields.phone')}
-            type="tel"
+            hint={t('validation.phoneHint')}
             name="phone"
-            dir="ltr"
-            leading={<Icon name="phone" size={18} />}
             value={form.phone}
             onChange={(e) => set('phone', e.target.value)}
             error={errors.fieldErrors.phone}
@@ -254,26 +263,12 @@ export function ProviderForm({ profile, governorates, specialties, submit, onSav
           </Select>
         </div>
         <TextField label={t('providerProfile.address')} name="address" value={form.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} />
-        <div className="grid-2">
-          <TextField
-            label={t('providerProfile.latitude')}
-            name="latitude"
-            dir="ltr"
-            inputMode="decimal"
-            value={form.latitude}
-            onChange={(e) => set('latitude', e.target.value)}
-            error={errors.fieldErrors.latitude}
-          />
-          <TextField
-            label={t('providerProfile.longitude')}
-            name="longitude"
-            dir="ltr"
-            inputMode="decimal"
-            value={form.longitude}
-            onChange={(e) => set('longitude', e.target.value)}
-            error={errors.fieldErrors.longitude}
-          />
-        </div>
+        <LocationPicker
+          latitude={form.latitude}
+          longitude={form.longitude}
+          onChange={(latitude, longitude) => setForm((prev) => ({ ...prev, latitude, longitude }))}
+          error={errors.fieldErrors.latitude ?? errors.fieldErrors.longitude}
+        />
       </FormSection>
 
       <FormSection title={t('providerProfile.specialties')}>

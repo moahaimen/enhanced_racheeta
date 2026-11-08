@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     # public
     path("jobs", views.JobListView.as_view(), name="jobs-list"),
+    path("jobs/professions", views.ProfessionGroupsView.as_view(), name="jobs-professions"),
     path("employers/<uuid:pk>", views.EmployerPublicView.as_view(), name="employers-public"),
     # job seeker
     path("jobs/me/profile", views.MySeekerProfileView.as_view(), name="seeker-profile"),

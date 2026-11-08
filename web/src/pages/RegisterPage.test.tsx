@@ -28,12 +28,57 @@ describe('RegisterPage', () => {
     renderApp('/register')
     const select = screen.getByLabelText(/نوع الحساب|account type/i)
     const options = within(select).getAllByRole('option').map((o) => (o as HTMLOptionElement).value)
-    expect(options).toEqual(['PATIENT', 'PROVIDER', 'MEDICAL_COMPANY', 'REAL_ESTATE_SELLER'])
+    expect(options).not.toContain('ADMIN')
+    expect(options).toEqual([
+      'PATIENT',
+      'JOB_SEEKER',
+      'EMPLOYER',
+      'DOCTOR',
+      'DENTIST',
+      'NURSE',
+      'MIDWIFE',
+      'THERAPIST',
+      'HOSPITAL',
+      'MEDICAL_CENTER',
+      'PHARMACY',
+      'LABORATORY',
+      'BEAUTY_CENTER',
+      'PHARMACEUTICAL_COMPANY',
+      'SCIENTIFIC_OFFICE',
+      'MEDICAL_SUPPLIES_OFFICE',
+      'EQUIPMENT_SUPPLIER',
+      'ASSISTIVE_DEVICE_STORE',
+      'PHARMA_DISTRIBUTOR',
+      'PROPERTY_OWNER',
+      'PROPERTY_AGENT',
+    ])
   })
 
   it('shows the password rules', () => {
     renderApp('/register')
     expect(screen.getByText(/شروط كلمة المرور|password rules/i)).toBeInTheDocument()
+  })
+
+  it('phone accepts only digits and must be an Iraqi mobile number', async () => {
+    renderApp('/register')
+    await fillValid()
+    const phone = screen.getByLabelText(/الهاتف|phone/i)
+    await userEvent.type(phone, '07ab70-123')
+    expect(phone).toHaveValue('0770123') // letters and symbols are dropped while typing
+    await userEvent.click(submitButton())
+    expect(await screen.findByText(/رقم موبايل عراقي صحيحاً|valid Iraqi mobile/i)).toBeInTheDocument()
+    expect(authApi.register).not.toHaveBeenCalled()
+  })
+
+  it('rejects a name without letters', async () => {
+    renderApp('/register')
+    await fillValid()
+    const name = screen.getByLabelText(/الاسم الكامل|full name/i)
+    await userEvent.clear(name)
+    await userEvent.type(name, '12')
+    await userEvent.click(submitButton())
+    expect(await screen.findByText(/حرفان على الأقل|at least 2 letters/i)).toBeInTheDocument()
+    expect(authApi.register).not.toHaveBeenCalled()
   })
 
   it('rejects mismatched passwords on the client', async () => {
@@ -51,7 +96,7 @@ describe('RegisterPage', () => {
     vi.mocked(authApi.register).mockReturnValue(pending.promise)
     const { router } = renderApp('/register')
     await fillValid()
-    await userEvent.selectOptions(screen.getByLabelText(/نوع الحساب|account type/i), 'PROVIDER')
+    await userEvent.selectOptions(screen.getByLabelText(/نوع الحساب|account type/i), 'DOCTOR')
     const submit = submitButton()
     await userEvent.click(submit)
 
@@ -65,12 +110,13 @@ describe('RegisterPage', () => {
       email: 'new@example.com',
       password: 'Str0ng-Passw0rd!',
       role: 'PROVIDER',
+      account_type: 'DOCTOR',
       preferred_language: 'ar',
     })
     expect(Object.keys(payload)).not.toContain('is_staff')
 
     pending.resolve({ account: makeAccount({ role: 'PROVIDER' }), tokens: { access: 'a', refresh: 'r' } })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
   })
 
   it('shows the duplicate-email error from the backend on the email field', async () => {

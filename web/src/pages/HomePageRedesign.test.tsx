@@ -12,12 +12,13 @@ import * as marketplaceApi from '../api/endpoints/marketplace'
 import * as providersApi from '../api/endpoints/providers'
 import * as realEstateApi from '../api/endpoints/realEstate'
 import * as referenceApi from '../api/endpoints/reference'
+import * as workspacesApi from '../api/endpoints/workspaces'
 import { tokenStore } from '../api/tokens'
 import type { PropertyListing } from '../api'
 import { CountUp, NearViewport, Reveal } from '../design-system'
 import { changeLanguage } from '../i18n'
 import { makeBilling, makeEmployerOwner, makeJobCard, paginated } from '../test/jobFixtures'
-import { baghdad, cardiology, dentistry, makeCard } from '../test/providerFixtures'
+import { baghdad, cardiology, dentistry, makeCard, makeOwner } from '../test/providerFixtures'
 import { emptyPage, mockHomeData } from '../test/homeMocks'
 import { makeAccount, renderApp } from '../test/renderApp'
 
@@ -27,6 +28,7 @@ vi.mock('../api/endpoints/reference')
 vi.mock('../api/endpoints/jobs')
 vi.mock('../api/endpoints/realEstate')
 vi.mock('../api/endpoints/marketplace')
+vi.mock('../api/endpoints/workspaces')
 
 const listing = (overrides: Partial<PropertyListing> = {}): PropertyListing => ({
   id: 'l-1',
@@ -180,6 +182,42 @@ describe('premium homepage — sections come from the API (nothing hard-coded)',
   })
 })
 
+describe('premium homepage — latest in the store', () => {
+  const item = (id: string, title: string, image?: string) => ({
+    id, title, description: '', brand: '', model_name: '', price: '125000.00', currency: 'IQD', in_stock: true,
+    images: image ? [{ id: `img-${id}`, url: image, sort_order: 0 }] : [],
+    category: { id: 'sc-1', slug: 'mobility', name_ar: 'أدوات الحركة', name_en: 'Mobility aids' },
+    company: { id: 'co-9', name: 'إعادة تأهيل | Rehab Store' },
+  })
+
+  it('shows every visitor the newest store items, linked to the store, with photos', async () => {
+    vi.mocked(workspacesApi.listLatestStoreProducts).mockResolvedValue(
+      paginated([item('p-1', 'عكاز | Crutch', '/media/crutch.jpg'), item('p-2', 'كرسي متحرك | Wheelchair')]) as never,
+    )
+    renderApp('/')
+    const latest = await screen.findByTestId('home-latest-store')
+    expect(within(latest).getByRole('link', { name: 'عكاز' })).toHaveAttribute('href', '/store/p-1')
+    expect(within(latest).getByRole('link', { name: 'كرسي متحرك' })).toHaveAttribute('href', '/store/p-2')
+    expect(latest.querySelector('img[src="/media/crutch.jpg"]')).not.toBeNull()
+    expect(latest).toHaveTextContent('125,000')
+    expect(screen.getByRole('link', { name: /تصفّح المتجر/ })).toHaveAttribute('href', '/store')
+    expect(workspacesApi.listLatestStoreProducts).toHaveBeenCalled()
+  })
+
+  it('also shows it to a signed-in provider, next to their targeted products', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(workspacesApi.listLatestStoreProducts).mockResolvedValue(paginated([item('p-1', 'عكاز | Crutch')]) as never)
+    renderApp('/')
+    expect(await screen.findByTestId('home-latest-store')).toBeInTheDocument()
+  })
+
+  it('says so when the store is empty', async () => {
+    renderApp('/')
+    expect(await screen.findByText('لا توجد منتجات في المتجر بعد.')).toBeInTheDocument()
+  })
+})
+
 describe('premium homepage — suppliers, products and roles', () => {
   it('shows anonymous visitors the public product categories (real reference data), not products', async () => {
     vi.mocked(marketplaceApi.listCategories).mockResolvedValue([
@@ -217,6 +255,28 @@ describe('premium homepage — suppliers, products and roles', () => {
     expect(within(products).getByRole('link', { name: 'جهاز تخطيط القلب' })).toHaveAttribute('href', '/marketplace/products/prod-1')
     expect(products).toHaveTextContent('2,850,000')
     expect(screen.queryByTestId('product-categories')).toBeNull()
+  })
+
+  it('shows an unverified provider the next step, not a permission error, and never asks for the catalogue', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'PENDING' }))
+    renderApp('/')
+    const card = await screen.findByTestId('home-products-verification-required')
+    expect(within(card).getByRole('link', { name: 'فتح ملفي المهني' })).toHaveAttribute('href', '/provider/profile')
+    expect(card).not.toHaveTextContent('ليست لديك صلاحية')
+    expect(screen.queryByTestId('home-products')).toBeNull()
+    expect(marketplaceApi.listTargetedProducts).not.toHaveBeenCalled()
+  })
+
+  it('a provider without a profile is sent to create one', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockRejectedValue(new ApiError(404, 'not_found', 'Not found.'))
+    renderApp('/')
+    const card = await screen.findByTestId('home-products-verification-required')
+    expect(within(card).getByRole('link')).toHaveAttribute('href', '/provider/profile')
+    expect(marketplaceApi.listTargetedProducts).not.toHaveBeenCalled()
   })
 
   it('offers the supplier shortcut to anonymous visitors, providers and companies — never to a patient or seller', async () => {

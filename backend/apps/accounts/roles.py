@@ -34,6 +34,94 @@ SELF_REGISTRATION_ROLE_CHOICES = [
     )
 ]
 
+
+class AccountType(models.TextChoices):
+    """The understandable "who are you" choice of the onboarding screen (finer than `role`).
+
+    It maps to exactly one primary role (ACCOUNT_TYPE_ROLE) and preselects the profile the
+    person completes next (provider type, company business type, seller kind). Job seeker is not
+    a type: any account may add a job-seeker profile. ADMIN is never a type.
+    """
+
+    PATIENT = "PATIENT", "Patient"
+    # Individuals who come for work: an individual account (role PATIENT = personal account)
+    # whose next step is the job-seeker profile or the employer workspace (both verified/gated
+    # separately). Any account may also add these later without a second account.
+    JOB_SEEKER = "JOB_SEEKER", "Job seeker (any profession)"
+    EMPLOYER = "EMPLOYER", "Employer / recruiter"
+    DOCTOR = "DOCTOR", "Doctor"
+    DENTIST = "DENTIST", "Dentist"
+    NURSE = "NURSE", "Nurse"
+    MIDWIFE = "MIDWIFE", "Midwife"
+    THERAPIST = "THERAPIST", "Therapist"
+    HOSPITAL = "HOSPITAL", "Hospital"
+    MEDICAL_CENTER = "MEDICAL_CENTER", "Medical center / clinic"
+    PHARMACY = "PHARMACY", "Pharmacy"
+    LABORATORY = "LABORATORY", "Laboratory"
+    BEAUTY_CENTER = "BEAUTY_CENTER", "Beauty center"
+    PHARMACEUTICAL_COMPANY = "PHARMACEUTICAL_COMPANY", "Pharmaceutical company"
+    SCIENTIFIC_OFFICE = "SCIENTIFIC_OFFICE", "Scientific office"
+    MEDICAL_SUPPLIES_OFFICE = "MEDICAL_SUPPLIES_OFFICE", "Medical supplies office"
+    EQUIPMENT_SUPPLIER = "EQUIPMENT_SUPPLIER", "Medical equipment supplier"
+    ASSISTIVE_DEVICE_STORE = "ASSISTIVE_DEVICE_STORE", "Assistive devices store"
+    PHARMA_DISTRIBUTOR = "PHARMA_DISTRIBUTOR", "Pharmaceutical distributor"
+    PROPERTY_OWNER = "PROPERTY_OWNER", "Medical property owner"
+    PROPERTY_AGENT = "PROPERTY_AGENT", "Medical property agent / manager"
+
+
+PROVIDER_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.DOCTOR,
+        AccountType.DENTIST,
+        AccountType.NURSE,
+        AccountType.MIDWIFE,
+        AccountType.THERAPIST,
+        AccountType.HOSPITAL,
+        AccountType.MEDICAL_CENTER,
+        AccountType.PHARMACY,
+        AccountType.LABORATORY,
+        AccountType.BEAUTY_CENTER,
+    }
+)
+BUSINESS_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.PHARMACEUTICAL_COMPANY,
+        AccountType.SCIENTIFIC_OFFICE,
+        AccountType.MEDICAL_SUPPLIES_OFFICE,
+        AccountType.EQUIPMENT_SUPPLIER,
+        AccountType.ASSISTIVE_DEVICE_STORE,
+        AccountType.PHARMA_DISTRIBUTOR,
+    }
+)
+PROPERTY_ACCOUNT_TYPES = frozenset({AccountType.PROPERTY_OWNER, AccountType.PROPERTY_AGENT})
+INDIVIDUAL_ACCOUNT_TYPES = frozenset(
+    {AccountType.PATIENT, AccountType.JOB_SEEKER, AccountType.EMPLOYER}
+)
+# The provider profile an account type preselects (provider type, specialty slug or None). A
+# dentist is a DOCTOR with dentistry; a midwife is a NURSE with midwifery (verification is the
+# provider profile's own, unchanged).
+ACCOUNT_TYPE_PROVIDER = {
+    AccountType.DOCTOR: ("DOCTOR", None),
+    AccountType.DENTIST: ("DOCTOR", "dentistry"),
+    AccountType.NURSE: ("NURSE", None),
+    AccountType.MIDWIFE: ("NURSE", "midwifery"),
+    AccountType.THERAPIST: ("THERAPIST", None),
+    AccountType.HOSPITAL: ("HOSPITAL", None),
+    AccountType.MEDICAL_CENTER: ("MEDICAL_CENTER", None),
+    AccountType.PHARMACY: ("PHARMACY", None),
+    AccountType.LABORATORY: ("LABORATORY", None),
+    AccountType.BEAUTY_CENTER: ("BEAUTY_CENTER", None),
+}
+
+ACCOUNT_TYPE_ROLE: dict[str, str] = {
+    **{t: AccountRole.PATIENT for t in INDIVIDUAL_ACCOUNT_TYPES},
+    **{t: AccountRole.PROVIDER for t in PROVIDER_ACCOUNT_TYPES},
+    **{t: AccountRole.MEDICAL_COMPANY for t in BUSINESS_ACCOUNT_TYPES},
+    **{t: AccountRole.REAL_ESTATE_SELLER for t in PROPERTY_ACCOUNT_TYPES},
+}
+assert set(ACCOUNT_TYPE_ROLE) == set(AccountType.values)  # noqa: S101 - every type has a role
+
+
 # Capability codes per role. Format: "<module>.<action>".
 ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     AccountRole.PATIENT: frozenset(

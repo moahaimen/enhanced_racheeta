@@ -15,3 +15,16 @@ describe('Arabic plurals', () => {
     expect(i18n.t('providers.results', { count: 0 })).toBe('لا توجد نتائج')
   })
 })
+
+describe('Arabic plurals in the store', () => {
+  it('product and cart counts never fall back to the raw key', async () => {
+    initI18n()
+    await changeLanguage('ar')
+    for (const count of [0, 1, 2, 5, 11, 28, 100]) {
+      for (const key of ['store.count', 'store.inCartCount', 'store.cartCountLabel', 'store.cartSummary']) {
+        expect(i18n.t(key, { count }), `${key} ${count}`).not.toMatch(/store\.|products|items|cart/i)
+      }
+    }
+    expect(i18n.t('store.count', { count: 28 })).toBe('28 منتجاً')
+  })
+})

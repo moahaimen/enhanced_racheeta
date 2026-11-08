@@ -4,18 +4,20 @@ import { Link, useSearchParams } from 'react-router'
 import { marketplace as marketplaceApi } from '../../api'
 import type { MarketplaceProduct, ProductCategory } from '../../api'
 import {
-  Badge,
   Container,
   EmptyState,
   ErrorState,
   Icon,
+  LinkButton,
   LoadingState,
   PageHeader,
   PageStack,
   Pagination,
+  ProductImage,
   SectionCard,
   Select,
 } from '../../design-system'
+import storeStyles from '../store/store.module.css'
 import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
 import { SponsoredSection } from '../advertising/SponsoredSection'
@@ -81,23 +83,27 @@ export function MarketplacePage() {
           ) : (products.data?.results ?? []).length === 0 ? (
             <EmptyState icon="cart" title={t('marketplace.empty')} testId="marketplace-empty" />
           ) : (
-            <ul className="stack" data-testid="marketplace-results">
+            <ul className={storeStyles.grid} style={{ listStyle: 'none', padding: 0, margin: 0 }} data-testid="marketplace-results">
               {(products.data?.results ?? []).map((product) => (
-                <li key={product.id} className="card-block" data-testid="marketplace-product">
-                  <div className="cluster">
-                    <Link to={`/marketplace/products/${product.id}`}>
-                      <strong>{product.title}</strong>
-                    </Link>
-                    <Badge tone="brand">{name(product.category)}</Badge>
-                  </div>
-                  <div className="text-caption">
+                <li key={product.id} className={storeStyles.card} data-testid="marketplace-product">
+                  <Link to={`/marketplace/products/${product.id}`} className={storeStyles.imageLink} tabIndex={-1} aria-hidden="true">
+                    <ProductImage src={product.images?.[0]?.url || product.image_url} alt={product.title} />
+                  </Link>
+                  <span className={storeStyles.category}>{name(product.category)}</span>
+                  <h3 className={storeStyles.title}>
+                    <Link to={`/marketplace/products/${product.id}`}>{product.title}</Link>
+                  </h3>
+                  <div className={storeStyles.seller}>
                     {product.company.name}
                     {product.brand ? ` · ${product.brand}` : ''}
                     {product.model_name ? ` · ${product.model_name}` : ''}
                   </div>
-                  <div className="text-secondary" dir="auto">
+                  <div className={storeStyles.price} dir="auto">
                     {formatProductPrice(product, i18n.language, t('marketplace.priceOnRequest'))}
                   </div>
+                  <LinkButton to={`/marketplace/products/${product.id}`} size="sm" variant="secondary">
+                    {t('quotes.request')}
+                  </LinkButton>
                 </li>
               ))}
             </ul>

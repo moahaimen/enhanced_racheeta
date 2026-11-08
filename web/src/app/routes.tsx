@@ -1,8 +1,11 @@
 import type { RouteObject } from 'react-router'
 
 import { AppLayout } from './AppLayout'
-import { PublicOnly, RequireAuth, RequireRole, RequireStaff } from './guards'
+import { RequireProviderProfile } from './ProviderGate'
+import { PublicOnly, RequireAuth, RequireRole, RequireStaff, RequireStoreOwner } from './guards'
 import { AdminConsolePage } from '../pages/admin/AdminConsolePage'
+import { AdminFinancePage } from '../pages/market/AdminFinancePage'
+import { SellerCenterPage } from '../pages/market/SellerCenterPage'
 import { ApplicantsPage } from '../pages/employer/ApplicantsPage'
 import { EmployerWorkspacePage } from '../pages/employer/EmployerWorkspacePage'
 import { JobEditorPage } from '../pages/employer/JobEditorPage'
@@ -25,11 +28,14 @@ import { AdvertisingWorkspacePage } from '../pages/advertising/AdvertisingWorksp
 import { CompanyWorkspacePage } from '../pages/marketplace/CompanyWorkspacePage'
 import { MarketplacePage } from '../pages/marketplace/MarketplacePage'
 import { ProductDetailPage } from '../pages/marketplace/ProductDetailPage'
+import { MyInquiriesPage } from '../pages/realEstate/MyInquiriesPage'
+import { OwnerInquiriesPage } from '../pages/realEstate/OwnerInquiriesPage'
 import { OwnerWorkspacePage } from '../pages/realEstate/OwnerWorkspacePage'
 import { RealEstateDetailPage } from '../pages/realEstate/RealEstateDetailPage'
 import { RealEstatePage } from '../pages/realEstate/RealEstatePage'
 import { NotificationsPage } from '../pages/notifications/NotificationsPage'
 import { DashboardPage } from '../pages/dashboard/DashboardPage'
+import { WorkspaceDashboardPage } from '../pages/dashboard/WorkspaceDashboardPage'
 import { ConversationPage } from '../pages/messages/ConversationPage'
 import { MessagesPage } from '../pages/messages/MessagesPage'
 import { MyReservationsPage } from '../pages/reservations/MyReservationsPage'
@@ -38,6 +44,15 @@ import { ProvidersPage } from '../pages/providers/ProvidersPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { VerifyEmailPage } from '../pages/VerifyEmailPage'
+import { MerchantQuotesPage, MyQuotesPage } from '../pages/quotes/QuotesPages'
+import { PreferencesPage } from '../pages/settings/PreferencesPage'
+import { CartPage } from '../pages/store/CartPage'
+import { MerchantOrdersPage, MyOrdersPage } from '../pages/store/OrdersPages'
+import { MyOrderDocumentsPage, SellerOrderDocumentsPage } from '../pages/store/DocumentsPage'
+import { StorePage } from '../pages/store/StorePage'
+import { StoreProductPage } from '../pages/store/StoreProductPage'
+import { OrgWorkspacePage } from '../pages/workspace/OrgWorkspacePage'
+import { WorkspacesPage } from '../pages/workspace/WorkspacesPage'
 
 /**
  * Route table. Three groups:
@@ -59,6 +74,10 @@ export const routes: RouteObject[] = [
       // Medical real estate is publicly browsable; the backend decides what is visible.
       { path: 'real-estate', element: <RealEstatePage /> },
       { path: 'real-estate/:id', element: <RealEstateDetailPage /> },
+      // Public consumer store: the backend exposes only allowed, non-restricted products.
+      { path: 'store', element: <StorePage /> },
+      { path: 'store/:id', element: <StoreProductPage /> },
+      { path: 'cart', element: <CartPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
@@ -73,14 +92,29 @@ export const routes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           { path: 'profile', element: <ProfilePage /> },
-          { path: 'dashboard', element: <DashboardPage /> },
+          // Server-composed workspace dashboard; the previous tabbed statistics stay available.
+          { path: 'dashboard', element: <WorkspaceDashboardPage /> },
+          { path: 'dashboard/summary', element: <DashboardPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
           { path: 'messages', element: <MessagesPage /> },
           { path: 'messages/:id', element: <ConversationPage /> },
+          { path: 'workspaces', element: <WorkspacesPage /> },
+          // Organization workspaces: the server answers 404 unless the caller has a role there.
+          { path: 'workspace/:kind/:id', element: <OrgWorkspacePage /> },
+          { path: 'settings/preferences', element: <PreferencesPage /> },
+          { path: 'orders', element: <MyOrdersPage /> },
+          { path: 'orders/:orderId/documents', element: <MyOrderDocumentsPage /> },
+          // Merchant pages serve owners AND staff (?company=); the server checks the capability.
+          { path: 'merchant/orders', element: <MerchantOrdersPage /> },
+          { path: 'merchant/orders/:orderId/documents', element: <SellerOrderDocumentsPage /> },
+          { path: 'merchant/quotes', element: <MerchantQuotesPage /> },
+          { path: 'merchant/center', element: <SellerCenterPage /> },
           {
             element: <RequireRole roles={['PATIENT']} />,
             children: [{ path: 'reservations', element: <MyReservationsPage /> }],
           },
+          // Any signed-in account can ask a property owner; the list is scoped by the server.
+          { path: 'real-estate/inquiries', element: <MyInquiriesPage /> },
           { path: 'jobs/profile', element: <SeekerProfilePage /> },
           { path: 'jobs/my-applications', element: <MyApplicationsPage /> },
           { path: 'employer', element: <EmployerWorkspacePage /> },
@@ -91,21 +125,38 @@ export const routes: RouteObject[] = [
           { path: 'employer/talent/:id', element: <TalentDetailPage /> },
           {
             element: <RequireStaff />,
-            children: [{ path: 'admin-console', element: <AdminConsolePage /> }],
+            children: [
+              { path: 'admin-console', element: <AdminConsolePage /> },
+              // Marketplace finance: the server additionally requires the finance permission.
+              { path: 'admin-finance', element: <AdminFinancePage /> },
+            ],
           },
           {
             element: <RequireRole roles={['PROVIDER']} />,
             children: [
               { path: 'provider/profile', element: <ProviderProfilePage /> },
-              { path: 'provider/reservations', element: <ProviderReservationsPage /> },
-              { path: 'provider/offers', element: <ProviderOffersPage /> },
-              // B2B catalogue: the backend decides which products this provider may see.
-              { path: 'marketplace', element: <MarketplacePage /> },
-              { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
+              {
+                // Needs a provider profile: otherwise a "create your profile" prompt, not an error.
+                element: <RequireProviderProfile />,
+                children: [
+                  { path: 'provider/reservations', element: <ProviderReservationsPage /> },
+                  { path: 'provider/offers', element: <ProviderOffersPage /> },
+                ],
+              },
+              {
+                // B2B catalogue and quotes: verified providers only (the backend decides the products).
+                element: <RequireProviderProfile verified />,
+                children: [
+                  { path: 'marketplace', element: <MarketplacePage /> },
+                  { path: 'marketplace/products/:id', element: <ProductDetailPage /> },
+                  { path: 'quotes', element: <MyQuotesPage /> },
+                ],
+              },
             ],
           },
           {
-            element: <RequireRole roles={['MEDICAL_COMPANY']} deniedTitleKey="company.notCompany" />,
+            // Business accounts, and pharmacies (a PROVIDER with a pharmacy profile) for their store.
+            element: <RequireStoreOwner deniedTitleKey="company.notCompany" />,
             children: [
               { path: 'company', element: <CompanyWorkspacePage /> },
               { path: 'company/advertising', element: <AdvertisingWorkspacePage /> },
@@ -113,7 +164,10 @@ export const routes: RouteObject[] = [
           },
           {
             element: <RequireRole roles={['REAL_ESTATE_SELLER']} deniedTitleKey="realEstateOwner.notSeller" />,
-            children: [{ path: 'real-estate/owner', element: <OwnerWorkspacePage /> }],
+            children: [
+              { path: 'real-estate/owner', element: <OwnerWorkspacePage /> },
+              { path: 'real-estate/owner/inquiries', element: <OwnerInquiriesPage /> },
+            ],
           },
         ],
       },

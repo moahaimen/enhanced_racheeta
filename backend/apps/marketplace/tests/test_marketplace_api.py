@@ -300,8 +300,15 @@ def test_non_providers_cannot_browse(account_factory, catalog, role):
 
 
 def test_visibility_follows_current_server_state(
-    provider_factory, catalog, company_factory, product_factory
+    provider_factory, catalog, company_factory, product_factory, settings, tmp_path
 ):
+    from django.core.files.base import ContentFile
+
+    from apps.marketplace import sellers
+    from apps.marketplace.models import SellerDocument
+    from apps.marketplace.types import REQUIRED_DOCUMENTS
+
+    settings.PRIVATE_MEDIA_ROOT = tmp_path
     lab = provider_factory(provider_type=ProviderType.LABORATORY)
     company = catalog["lab"].company
     services.set_verification(company, CompanyVerificationStatus.SUSPENDED, admin=None)
@@ -311,6 +318,20 @@ def test_visibility_follows_current_server_state(
     services.request_verification(company)
     assert _visible(lab) == set()
     services.set_verification(company, CompanyVerificationStatus.VERIFIED, admin=None)
+    # Fail closed: re-verified without its required documents, the store is not active again.
+    assert _visible(lab) == set()
+    for kind in REQUIRED_DOCUMENTS[company.business_type]:
+        SellerDocument.objects.create(
+            company=company,
+            kind=kind,
+            file=ContentFile(b"%PDF-1.4\n%%EOF\n", name="doc.pdf"),
+            original_name="doc.pdf",
+            content_type="application/pdf",
+            size=14,
+            sha256="0" * 64,
+            status="APPROVED",
+        )
+    sellers.set_store_status(company.pk, actor=company.account, active=True)
     assert _visible(lab) == {str(catalog["lab"].pk)}
     category = catalog["lab"].category
     category.audiences.update(is_active=False)
@@ -357,6 +378,8 @@ def test_dashboard_counts(company_factory, product_factory, category_factory, de
     assert body == {
         "verification_status": "VERIFIED",
         "can_publish": True,
+        "can_sell": True,
+        "store_status": "ACTIVE",
         "products_total": 5,
         "products_active": 4,
         "products_inactive": 1,

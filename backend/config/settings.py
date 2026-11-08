@@ -109,6 +109,10 @@ INSTALLED_APPS = [
     "apps.chat.apps.ChatConfig",
     "apps.notifications.apps.NotificationsConfig",
     "apps.dashboards",
+    "apps.workspaces",
+    "apps.preferences",
+    "apps.commerce",
+    "apps.ledger",
     "apps.demo",
 ]
 
@@ -222,6 +226,7 @@ REST_FRAMEWORK = {
         "chat_messages": "120/hour",
         "push_devices": "60/hour",
         "user_writes": "600/hour",
+        "real_estate_inquiries": "20/hour",
     },
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -262,6 +267,23 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "ENUM_NAME_OVERRIDES": {
         "AccountRoleEnum": "apps.accounts.roles.AccountRole.choices",
+        "AccountTypeEnum": "apps.accounts.roles.AccountType.choices",
+        "BusinessTypeEnum": "apps.marketplace.types.BusinessType.choices",
+        "StoreStatusEnum": "apps.marketplace.types.StoreStatus.choices",
+        "TaxModeEnum": "apps.marketplace.types.TaxMode.choices",
+        "SellerDocumentKindEnum": "apps.marketplace.types.SellerDocumentKind.choices",
+        "SellerDocumentStatusEnum": "apps.marketplace.types.DocumentStatus.choices",
+        "OrderItemKindEnum": "apps.commerce.types.ItemKind.choices",
+        "TrackingStatusEnum": "apps.commerce.types.TrackingStatus.choices",
+        "InvoiceKindEnum": "apps.commerce.types.InvoiceKind.choices",
+        "SaleChannelEnum": "apps.marketplace.types.SaleChannel.choices",
+        "OrderStatusEnum": "apps.commerce.types.OrderStatus.choices",
+        "StorePaymentMethodEnum": "apps.commerce.types.PaymentMethod.choices",
+        "StorePaymentStatusEnum": "apps.commerce.types.PaymentStatus.choices",
+        "QuoteStatusEnum": "apps.commerce.types.QuoteStatus.choices",
+        "OrgRoleEnum": "apps.workspaces.types.OrgRole.choices",
+        "PromotionStatusEnum": "apps.real_estate.types.PromotionStatus.choices",
+        "InquiryStatusEnum": "apps.real_estate.types.InquiryStatus.choices",
         "NotificationCategoryEnum": "apps.notifications.types.NotificationCategory.choices",
         "PushPlatformEnum": "apps.notifications.types.PushPlatform.choices",
         "NotificationEventTypeEnum": "apps.notifications.types.NotificationEventType.choices",
@@ -276,6 +298,9 @@ SPECTACULAR_SETTINGS = {
         "PublicationStatusEnum": "apps.real_estate.types.PublicationStatus.choices",
         "SelfRegistrationRoleEnum": "apps.accounts.roles.SELF_REGISTRATION_ROLE_CHOICES",
         "ProviderMembershipStatusEnum": "apps.providers.types.MembershipStatus.choices",
+        # One shared name per choice set: providers, employers and companies use the same
+        # verification vocabulary (two names for one set made drf-spectacular fail validation
+        # and published provider/employer fields as "CompanyVerification…").
         "VerificationStatusEnum": "apps.jobs.types.VerificationStatus.choices",
         "VerificationDecisionEnum": "apps.jobs.serializers.VERIFICATION_DECISION_CHOICES",
         "JobStatusEnum": "apps.jobs.types.JobStatus.choices",
@@ -285,12 +310,21 @@ SPECTACULAR_SETTINGS = {
         "MemberStatusEnum": "apps.jobs.types.MemberStatus.choices",
         "RecruitmentStatusEnum": "apps.jobs.types.RecruitmentStatus.choices",
         "DegreeEnum": "apps.jobs.types.Degree.choices",
-        "CompanyVerificationStatusEnum": "apps.marketplace.types.CompanyVerificationStatus.choices",
-        "CompanyVerificationDecisionEnum": "apps.marketplace.types.VERIFICATION_DECISION_CHOICES",
         "EmploymentTypeEnum": "apps.jobs.types.EmploymentType.choices",
         "SubscriptionStatusEnum": "apps.billing.types.SubscriptionStatus.choices",
         "PaymentStatusEnum": "apps.billing.types.PaymentStatus.choices",
         "ReservationStatusEnum": "apps.reservations.types.ReservationStatus.choices",
+        "SalesChannelEnum": "apps.commerce.types.SalesChannel.choices",
+        "SettlementStateEnum": "apps.commerce.types.SettlementState.choices",
+        "DiscountKindEnum": "apps.commerce.types.DiscountKind.choices",
+        "CouponFundingEnum": "apps.commerce.types.CouponFunding.choices",
+        "StockMovementKindEnum": "apps.commerce.types.StockMovementKind.choices",
+        "ReturnStatusEnum": "apps.commerce.types.ReturnStatus.choices",
+        "DisputeStatusEnum": "apps.commerce.types.DisputeStatus.choices",
+        "LedgerAccountEnum": "apps.ledger.types.Account.choices",
+        "LedgerEntryKindEnum": "apps.ledger.types.EntryKind.choices",
+        "SettlementStatusEnum": "apps.ledger.types.SettlementStatus.choices",
+        "ComplianceClassEnum": "apps.marketplace.types.ComplianceClass.choices",
     },
 }
 
@@ -376,6 +410,9 @@ STORAGES = {
 # use S3-compatible object storage (see docs/ARCHITECTURE.md, Phase "media").
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Uploaded seller documents and product photos: never under MEDIA_ROOT (which DEBUG serves
+# publicly). Only permission-checked views stream these files.
+PRIVATE_MEDIA_ROOT = Path(env("PRIVATE_MEDIA_ROOT", default=str(BASE_DIR / "private_media")))
 
 # If the React build exists, WhiteNoise serves its assets from the URL root
 # and apps.core.views.spa_index serves index.html for non-API routes.
@@ -419,6 +456,10 @@ LOGGING = {
 # Racheeta application settings
 # ---------------------------------------------------------------------------
 RACHEETA = {
+    # Online booking is being removed from the product, reversibly (apps.core.features).
+    # OFF by default: no new bookings or slots, booking entry points hidden, history kept.
+    # Set RESERVATIONS_ENABLED=true to restore the previous behaviour.
+    "RESERVATIONS_ENABLED": env.bool("RESERVATIONS_ENABLED", default=False),
     # Roles a client is allowed to choose at registration. ADMIN is never
     # client-assignable (see apps.accounts.roles).
     "SELF_REGISTRATION_ROLES": ("PATIENT", "PROVIDER", "MEDICAL_COMPANY", "REAL_ESTATE_SELLER"),

@@ -119,3 +119,36 @@ Implementation complete on `feat/phase4-reservations`; acceptance review pending
 - **2026-10-23** — Phase 12B premium public homepage redesign on `feat/phase12b-premium-home-redesign` (from `main` `a463b4a`): self-hosted Cairo, new tokens and card primitives, API-driven sections, RTL/LTR + responsive + reduced-motion verified in a real browser; web only, no backend or deployment change (ADR-064, `docs/DESIGN_SYSTEM.md`). Review round 2 (same branch): safe talent CTA, Workspace-menu header, photographic hero closer to the approved direction, new real-browser evidence.
 - **2026-10-23** — Phase 12B demo dataset implemented on `feat/phase12b-demo-data` (from `main` `a463b4a`): `seed_demo_data` / `clear_demo_data`, registry-owned and fail-closed (ADR-063, `docs/DEMO_DATA.md`); one additive migration; tests cover seed, idempotency, cleanup preservation of real data, refusal cases and the seed→clear→seed lifecycle. PR open for independent review; not merged; staging not seeded.
 - **2026-10-27** — Final web readiness pass on `feat/phase12b-demo-data-final` (from `main` `83ac6dd`): PR #22 demo dataset ported (two cherry-picks, doc conflicts only), CSP tightened to self-only fonts/styles, staging verified from outside (health/ready/TLS/headers/docs gating/Arabic+English web at 1440 and 390), local backup/restore round trip (7 s), seed→clear→seed lifecycle run locally, every role's web pages audited locally against the seeded database; status docs corrected; `docs/FINAL_WEB_READINESS.md` and `docs/ACCOUNT_DELETION_REVIEW.md` added. Web + backend + staging scope only (mobile untouched).
+- **2026-10-30** — Local multi-workspace demo on `feat/local-racheeta-multiworkspace` (local
+  commits only, no push or deploy). Account types; organization staff workspaces; consumer store
+  and orders; B2B quotes; ad preferences and bounded outreach; property promotions; expanded
+  professions; guarded local demo seed. Live API matrix 198/198 PASS across every user type.
+  `docs/LOCAL_WORKSPACE_DEMO.md`.
+
+## Platform completion — local branch `feat/local-racheeta-multiworkspace` (2026-11-07)
+
+- **Scope:** phases A–G of the local platform-completion run, from baseline `0ecc7b1` to the
+  commits listed in `docs/PLATFORM_COMPLETION_MATRIX.md`.
+- **Tests:** backend 2,323 passed and 1 skipped (baseline 2,242); web 583 (baseline 563); tsc,
+  ruff and build clean; oxlint at the same 6 warnings; OpenAPI 0/0.
+- **Demo database:** seed → seed → clear → seed; reconciliation 11/11.
+- **Browser:** 362/362 checks with the real login form in Arabic and English at 390, 768 and
+  1440 px.
+- **Booking:** off by default and reversible with `RESERVATIONS_ENABLED`.
+- **Remote:** LOCAL ONLY. Nothing pushed or deployed.
+
+## Platform closure — same branch (2026-11-07)
+
+- **Scope:** from `719fbcb` to the closure commits in `docs/PLATFORM_COMPLETION_MATRIX.md`.
+- **Footer:** lists live services (store, provider offers, marketplace by role); no "coming soon".
+- **Demo clean-up:** billing accounts go with their demo owner. 34 unproven or real ones are kept
+  and reported; none was deleted.
+- **Lab campaign:** live and lab-only; opt-outs and suspensions suppress it.
+- **Dashboard audit:** 46 workspace shapes. 3 gaps fixed: B2B quote orders and statement, the
+  finance console action, and asker-side inquiries. 112 dashboard actions opened in the browser.
+- **Professions:** the taxonomy is guarded across server, OpenAPI and web; the procedure is
+  documented.
+- **Tests:** backend 2,368 passed and 1 skipped; web 591; OpenAPI 0/0; reconciliation 11/11 with
+  the 20% commission unchanged.
+- **Browser:** 539/539.
+- **Remote:** LOCAL ONLY. Nothing pushed or deployed.

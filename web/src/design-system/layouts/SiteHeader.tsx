@@ -4,7 +4,9 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../../auth/useAuth'
 import { useChat } from '../../chat/useChat'
+import { useFeatures } from '../../hooks/useFeatures'
 import { useNotifications } from '../../notifications/useNotifications'
+import { useCartCount } from '../../cart/cart'
 import { SUPPORTED_LANGUAGES, changeLanguage, isLanguage } from '../../i18n'
 import { Icon } from '../icons'
 import { ApiActionButton } from '../components/Button/ApiActionButton'
@@ -74,6 +76,23 @@ function NotificationsLink({ compact = false }: { compact?: boolean }) {
           data-testid="notifications-badge"
           aria-label={t('notifications.unreadLabel', { count })}
         >
+          {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
+        </span>
+      ) : null}
+    </NavLink>
+  )
+}
+
+/** "My cart" with the number of units chosen (browser-local cart; hidden count at 0). */
+function CartLink({ compact = false }: { compact?: boolean }) {
+  const { t } = useTranslation()
+  const count = useCartCount()
+  return (
+    <NavLink to="/cart" className={compact ? styles.iconLink : styles.link} data-testid="header-cart">
+      <Icon name="cart" size={compact ? 20 : 18} />
+      <span className={compact ? 'visually-hidden' : undefined}>{t('nav.myCart')}</span>
+      {count > 0 ? (
+        <span className={styles.badge} data-testid="cart-badge" aria-label={t('store.cartCountLabel', { count })}>
           {count > BADGE_CAP ? `${BADGE_CAP}+` : count}
         </span>
       ) : null}
@@ -168,6 +187,7 @@ function AccountMenu({ children, name, role }: { children: ReactNode; name: stri
 export function SiteHeader() {
   const { t } = useTranslation()
   const { status, account, logout } = useAuth()
+  const { reservationsEnabled: bookingOn } = useFeatures()
   const navigate = useNavigate()
   const location = useLocation()
   // The panel is "open for this path"; navigating closes it without an effect.
@@ -203,6 +223,10 @@ export function SiteHeader() {
         <Icon name="building" size={18} />
         {t('nav.realEstate')}
       </NavLink>
+      <NavLink to="/store" className={styles.link} data-testid="nav-store">
+        <Icon name="cart" size={18} />
+        {t('nav.storeShort')}
+      </NavLink>
     </>
   )
 
@@ -216,7 +240,7 @@ export function SiteHeader() {
       {account?.role === 'PATIENT' ? (
         <NavLink to="/reservations" className={styles.link}>
           <Icon name="calendar" size={18} />
-          {t('nav.myReservations')}
+          {bookingOn ? t('nav.myReservations') : t('nav.reservationHistory')}
         </NavLink>
       ) : null}
       {account?.role === 'PROVIDER' ? (
@@ -227,7 +251,7 @@ export function SiteHeader() {
           </NavLink>
           <NavLink to="/provider/reservations" className={styles.link}>
             <Icon name="calendar" size={18} />
-            {t('nav.providerReservations')}
+            {bookingOn ? t('nav.providerReservations') : t('nav.reservationHistory')}
           </NavLink>
           <NavLink to="/provider/offers" className={styles.link}>
             <Icon name="tag" size={18} />
@@ -257,15 +281,40 @@ export function SiteHeader() {
           </NavLink>
         </>
       ) : null}
+      {account?.role === 'PROVIDER' && account.account_type === 'PHARMACY' ? (
+        <NavLink to="/company" end className={styles.link}>
+          <Icon name="pill" size={18} />
+          {t('nav.pharmacyStore')}
+        </NavLink>
+      ) : null}
+      {account?.role === 'MEDICAL_COMPANY' || (account?.role === 'PROVIDER' && account.account_type === 'PHARMACY') ? (
+        <>
+          {/* On phones the workspace sidebar is hidden: the seller tools must be reachable here. */}
+          <NavLink to="/merchant/orders" className={styles.link}>
+            <Icon name="box" size={18} />
+            {t('nav.merchantOrders')}
+          </NavLink>
+          <NavLink to="/merchant/center?tab=setup" className={styles.link}>
+            <Icon name="clipboard" size={18} />
+            {t('nav.sellerCenter')}
+          </NavLink>
+        </>
+      ) : null}
       <NavLink to="/employer" className={styles.link}>
         <Icon name="hospital" size={18} />
         {t('nav.employer')}
       </NavLink>
       {account?.is_staff ? (
-        <NavLink to="/admin-console" className={styles.link}>
-          <Icon name="shieldCheck" size={18} />
-          {t('nav.adminConsole')}
-        </NavLink>
+        <>
+          <NavLink to="/admin-console" className={styles.link}>
+            <Icon name="shieldCheck" size={18} />
+            {t('nav.adminConsole')}
+          </NavLink>
+          <NavLink to="/admin-finance" className={styles.link}>
+            <Icon name="calculator" size={18} />
+            {t('nav.adminFinance')}
+          </NavLink>
+        </>
       ) : null}
       <NavLink to="/profile" className={styles.link}>
         <Icon name="user" size={18} />
@@ -306,11 +355,12 @@ export function SiteHeader() {
           </nav>
           <span className={styles.spacer} />
           <div className={styles.actions}>
+            <CartLink compact />
             {authenticated ? (
               <>
                 <MessagesLink compact />
                 <NotificationsLink compact />
-                <AccountMenu name={account?.full_name ?? ''} role={account ? t(`roles.${account.role}`) : ''}>
+                <AccountMenu name={account?.full_name ?? ''} role={account ? (account.account_type ? t(`accountTypes.${account.account_type}`) : t(`roles.${account.role}`)) : ''}>
                   <div className={styles.accountLinks}>{accountLinks}</div>
                   <div className={styles.accountFoot}>{logoutButton}</div>
                 </AccountMenu>
@@ -333,6 +383,7 @@ export function SiteHeader() {
           <nav id="mobile-nav" className={styles.mobilePanel} aria-label={t('nav.main')}>
             {publicLinks}
             {accountLinks}
+            <CartLink />
             {authenticated ? <MessagesLink /> : null}
             {authenticated ? <NotificationsLink /> : null}
             <div className={styles.mobileActions}>

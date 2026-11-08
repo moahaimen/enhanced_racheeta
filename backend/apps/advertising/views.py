@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from django.db.models import Prefetch
+from django.db.models import OuterRef, Prefetch, Subquery
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -11,13 +11,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAdminAccount
-from apps.marketplace.models import MedicalCompany, ProductCategory
+from apps.marketplace.models import MedicalCompany, ProductCategory, ProductImage
 from apps.marketplace.permissions import (
     BROWSE_DENIED,
     CanBrowseMarketplace,
     HasMedicalCompany,
     current_verified_provider,
 )
+from apps.preferences import services as preferences
 
 from . import services
 from .filters import AdminCampaignFilter, OwnerCampaignFilter
@@ -145,6 +146,7 @@ class CampaignListView(generics.GenericAPIView):
         return _own_campaigns(self.request).order_by("-created_at", "id")
 
     @extend_schema(
+        operation_id="advertising_company_campaigns_list",
         summary="My campaigns (paginated, newest first)",
         parameters=[
             OpenApiParameter("page", int, description="Page number (20 per page)."),
@@ -304,8 +306,18 @@ class SponsoredCampaignListView(generics.ListAPIView):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied(BROWSE_DENIED)
+        if not preferences.get(self.request.user)["show_sponsored_products"]:
+            # Display preference: the provider chose not to see sponsored content.
+            return AdvertisingCampaign.objects.none()
         return (
             AdvertisingCampaign.objects.visible_to(provider)
+            .annotate(
+                product_photo_id=Subquery(
+                    ProductImage.objects.filter(product_id=OuterRef("product_id"))
+                    .order_by("sort_order", "created_at", "id")
+                    .values("pk")[:1]
+                )
+            )
             .select_related(
                 "product",
                 "product__company",

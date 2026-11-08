@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { ProviderCard as ProviderCardData } from '../../../api'
+import { useFeatures } from '../../../hooks/useFeatures'
 import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon } from '../../icons'
 import { Avatar } from '../Avatar/Avatar'
@@ -24,6 +25,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
   const name = useLocalizedName()
   const text = useScriptText()
   const extra = provider.specialties.length - MAX_SPECIALTIES
+  const { reservationsEnabled: bookingOn } = useFeatures()
   return (
     <Card as="article" interactive className={styles.card} style={{ position: 'relative' }}>
       <div className={styles.top}>
@@ -72,7 +74,7 @@ export function ProviderCard({ provider }: { provider: ProviderCardData }) {
           </span>
         ) : null}
         <span className={styles.actions} aria-hidden="true">
-          {provider.kind === 'PRACTITIONER' ? (
+          {provider.kind === 'PRACTITIONER' && bookingOn ? (
             <span className={styles.ghost}>
               <Icon name="calendar" size={14} />
               {t('home.bookNow')}

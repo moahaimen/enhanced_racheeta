@@ -2,13 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 
-import type { AccountRole, PreferredLanguage } from '../api'
+import type { AccountType, PreferredLanguage } from '../api'
 import { DEFAULT_AUTHENTICATED_PATH } from '../app/guards'
-import { SELF_REGISTRATION_ROLES } from '../auth/roles'
+import { ACCOUNT_TYPE_GROUPS, roleForAccountType } from '../auth/roles'
 import { useAuth } from '../auth/useAuth'
-import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, Select, TextField, useFormErrors } from '../design-system'
+import { Alert, ApiActionButton, FormActions, FormSection, Icon, PasswordField, PhoneField, Select, TextField, useFormErrors } from '../design-system'
 import { AuthShell } from './auth/AuthShell'
-import { ClientValidationError, isEmail, isPhone, PASSWORD_MIN_LENGTH } from './validation'
+import { ClientValidationError, isEmail, isFullName, isIraqiPhone, normalizeIraqiPhone, PASSWORD_MIN_LENGTH } from './validation'
 
 const FIELDS = ['full_name', 'email', 'phone_number', 'password', 'confirm_password', 'role'] as const
 
@@ -21,15 +21,16 @@ export function RegisterPage() {
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [role, setRole] = useState<Exclude<AccountRole, 'ADMIN'>>('PATIENT')
+  const [accountType, setAccountType] = useState<AccountType>('PATIENT')
   const errors = useFormErrors(FIELDS)
 
   const validate = (): boolean => {
     const next: Partial<Record<(typeof FIELDS)[number], string>> = {}
     if (!fullName.trim()) next.full_name = t('validation.required')
+    else if (!isFullName(fullName)) next.full_name = t('validation.fullName')
     if (!email.trim()) next.email = t('validation.required')
     else if (!isEmail(email)) next.email = t('validation.email')
-    if (phone.trim() && !isPhone(phone)) next.phone_number = t('validation.phone')
+    if (phone.trim() && !isIraqiPhone(phone, { mobileOnly: true })) next.phone_number = t('validation.mobile')
     if (!password) next.password = t('validation.required')
     else if (password.length < PASSWORD_MIN_LENGTH) next.password = t('validation.passwordMin')
     if (confirm !== password) next.confirm_password = t('validation.passwordMismatch')
@@ -44,9 +45,10 @@ export function RegisterPage() {
       full_name: fullName.trim(),
       email: email.trim(),
       password,
-      role,
+      role: roleForAccountType(accountType),
+      account_type: accountType,
       preferred_language: i18n.language as PreferredLanguage,
-      ...(phone.trim() ? { phone_number: phone.replace(/[\s-]/g, '') } : {}),
+      ...(phone.trim() ? { phone_number: normalizeIraqiPhone(phone, { mobileOnly: true }) ?? phone } : {}),
     })
   }
 
@@ -91,31 +93,31 @@ export function RegisterPage() {
             error={errors.fieldErrors.email}
             required
           />
-          <TextField
+          <PhoneField
             label={t('fields.phone')}
             optional
-            type="tel"
+            hint={t('validation.mobileHint')}
             name="phone_number"
-            autoComplete="tel"
-            inputMode="tel"
-            dir="ltr"
-            leading={<Icon name="phone" size={18} />}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             error={errors.fieldErrors.phone_number}
           />
           <Select
             label={t('fields.role')}
-            name="role"
-            hint={t('register.roleHint')}
-            value={role}
-            onChange={(e) => setRole(e.target.value as Exclude<AccountRole, 'ADMIN'>)}
+            name="account_type"
+            hint={t('onboarding.typeHint')}
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value as AccountType)}
             error={errors.fieldErrors.role}
           >
-            {SELF_REGISTRATION_ROLES.map((code) => (
-              <option key={code} value={code}>
-                {t(`roles.${code}`)}
-              </option>
+            {ACCOUNT_TYPE_GROUPS.map(({ group, types }) => (
+              <optgroup key={group} label={t(`accountTypeGroups.${group}`)}>
+                {types.map((code) => (
+                  <option key={code} value={code}>
+                    {t(`accountTypes.${code}`)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </FormSection>

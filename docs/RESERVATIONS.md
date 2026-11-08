@@ -186,3 +186,33 @@ No facility-wide aggregation of its practitioners' reservations (the API has no 
 facility membership management endpoints exist but are not part of 11C; no profile or service
 editing on mobile; the transition `reason` (accepted by the API) is not collected; the availability
 list has no filter and no "reserved" flag per slot.
+
+## Booking sunset switch (reversible)
+
+Online booking is being removed from the product without deleting anything. One server setting
+controls it: `RACHEETA["RESERVATIONS_ENABLED"]`, read from the env variable `RESERVATIONS_ENABLED`
+in `config/settings.py`. **Default: `false` (off).** `config/test_settings.py` sets it to `true` so
+the original booking suite keeps proving the ON behaviour; `apps/reservations/tests/test_reservations_flag.py`
+switches it off explicitly.
+
+| Behaviour | OFF (default) | ON |
+|---|---|---|
+| `GET /api/v1/platform/features` (public) | `{"reservations_enabled": false}` | `{"reservations_enabled": true}` |
+| `POST /reservations` (new booking) | 403 `service_disabled` | as before |
+| `POST /reservations/provider/availability` (new slot) | 403 `service_disabled` | as before |
+| Provider / facility transition to `CONFIRMED` | 403 `service_disabled` | as before |
+| Reject, cancel, complete, no-show; patient cancel | allowed (wind-down) | as before |
+| `GET /providers/{id}/availability` | `[]` | open slots |
+| History reads (`/reservations/me…`, `/reservations/provider…`, facility list, chat) | unchanged | unchanged |
+| Workspace dashboards | no reservation modules or actions | as before |
+| Web | no booking section, "Book now" chip, booking tagline, footer link, slot form or Accept button; "My reservations" pages become "Reservation history" with a notice | previous UI |
+
+Tables, rows, audit history and notifications are untouched in both states. The demo seeder writes
+its booking history with `enforce_switch=False`, so the demo has history whatever the setting.
+
+**Mobile:** the Flutter app was not changed in this step. While OFF its booking calls receive
+`403 service_disabled` and show its generic error; hiding its booking screens is follow-up work.
+
+To switch booking back on: set `RESERVATIONS_ENABLED=true` in the environment and restart the API.
+No migration and no deploy-time data change is needed in either direction.
+

@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 
 import { ApiError, marketplace as marketplaceApi, reference } from '../../api'
-import type { CompanyProduct, Governorate, MedicalCompany, ProductCategory } from '../../api'
+import type { CompanyProduct, Governorate, MedicalCompany, ProductCategory, SaleChannel } from '../../api'
 import {
   Alert,
   ApiActionButton,
+  Checkbox,
+  PhoneField,
+  ProductImage,
   AsyncPage,
   Badge,
   Button,
@@ -29,7 +32,8 @@ import {
 } from '../../design-system'
 import { toErrorMessage, useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName } from '../../i18n/localized'
-import { ClientValidationError } from '../validation'
+import { useAuth } from '../../auth/useAuth'
+import { ClientValidationError, isEmail, isIraqiPhone, normalizeIraqiPhone } from '../validation'
 import { formatProductPrice } from './MarketplacePage'
 
 const PAGE_SIZE = 20
@@ -40,6 +44,7 @@ type Loaded = [MedicalCompany | null, Governorate[], ProductCategory[]]
 /** /company — medical company onboarding, verification, dashboard and products. */
 export function CompanyWorkspacePage() {
   const { t } = useTranslation()
+  const { account } = useAuth()
   const load = async (signal: AbortSignal): Promise<Loaded> => {
     const company = await marketplaceApi.getMyCompany(signal).catch((e: unknown) => {
       if (e instanceof ApiError && e.status === 404) return null
@@ -64,9 +69,13 @@ export function CompanyWorkspacePage() {
                 title={t('company.onboardingTitle')}
                 description={t('company.onboardingIntro')}
               />
-              <div className="card-block" data-testid="company-onboarding">
-                <CompanyForm company={null} governorates={governorates} onSaved={reload} />
-              </div>
+              {account?.role === 'PROVIDER' ? (
+                <PharmacyStoreStart onOpened={reload} />
+              ) : (
+                <div className="card-block" data-testid="company-onboarding">
+                  <CompanyForm company={null} governorates={governorates} onSaved={reload} />
+                </div>
+              )}
             </Container>
           )
         }
@@ -106,6 +115,7 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
         }
       />
       <PageStack>
+        <StoreSetupBanner company={company} />
         <SectionCard title={t('company.dashboard')} headingLevel={2}>
           {dashboard.loading ? (
             <LoadingState testId="company-dashboard-loading" />
@@ -153,6 +163,7 @@ function Workspace({ company, governorates, categories, reload }: { company: Med
               {(products.data?.results ?? []).map((product) => (
                 <li key={product.id} className="card-block" data-testid="company-product">
                   <div className="cluster">
+                    <ProductImage src={product.image_url} alt={product.title} size="sm" />
                     <strong>{product.title}</strong>
                     <Badge tone="outline">{name(product.category)}</Badge>
                     <Badge tone={product.is_active ? 'success' : 'neutral'}>{product.is_active ? t('company.active') : t('company.inactive')}</Badge>
@@ -238,11 +249,13 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
     const next: Record<string, string> = {}
     if (!f.name.trim()) next.name = t('validation.required')
     if (!f.governorate) next.governorate = t('validation.required')
+    if (f.phone.trim() && !isIraqiPhone(f.phone)) next.phone = t('validation.phone')
+    if (f.public_email.trim() && !isEmail(f.public_email)) next.public_email = t('validation.email')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
     }
-    const editable = { description: f.description.trim(), phone: f.phone, public_email: f.public_email }
+    const editable = { description: f.description.trim(), phone: normalizeIraqiPhone(f.phone) ?? f.phone, public_email: f.public_email }
     const payload = identityLocked
       ? editable
       : { ...editable, name: f.name.trim(), governorate: f.governorate, address: f.address.trim(), website: f.website }
@@ -266,7 +279,7 @@ function CompanyForm({ company, governorates, onSaved }: { company: MedicalCompa
         <TextField label={t('company.address')} optional value={f.address} onChange={(e) => set('address', e.target.value)} error={errors.fieldErrors.address} disabled={identityLocked} />
       </div>
       <div className="grid-2">
-        <TextField label={t('company.phone')} optional dir="ltr" value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
+        <PhoneField label={t('company.phone')} optional hint={t('validation.phoneHint')} value={f.phone} onChange={(e) => set('phone', e.target.value)} error={errors.fieldErrors.phone} />
         <TextField label={t('company.email')} optional dir="ltr" type="email" value={f.public_email} onChange={(e) => set('public_email', e.target.value)} error={errors.fieldErrors.public_email} />
       </div>
       <TextField label={t('company.website')} optional dir="ltr" value={f.website} onChange={(e) => set('website', e.target.value)} error={errors.fieldErrors.website} disabled={identityLocked} />
@@ -290,8 +303,14 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     model_name: product?.model_name ?? '',
     price: product?.price ?? '',
     currency: product?.currency ?? 'IQD',
+    sale_channel: (product?.sale_channel ?? 'B2B') as SaleChannel,
+    stock_quantity: product?.stock_quantity == null ? '' : String(product.stock_quantity),
+    image_url: product?.image_url ?? '',
   })
-  const errors = useFormErrors(['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency'] as const)
+  const [restricted, setRestricted] = useState(product?.is_restricted ?? false)
+  const errors = useFormErrors(
+    ['category', 'title', 'description', 'brand', 'model_name', 'price', 'currency', 'sale_channel', 'is_restricted', 'stock_quantity', 'image_url'] as const,
+  )
   const set = (key: keyof typeof f, value: string) => setF((prev) => ({ ...prev, [key]: value }))
   // The reference list holds active categories only. A product whose category an administrator has since
   // deactivated still references it, so that category is shown once as the current value — never as a
@@ -303,6 +322,9 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
     if (!f.category) next.category = t('validation.required')
     if (!f.title.trim()) next.title = t('validation.required')
     if (f.price !== '' && (Number.isNaN(Number(f.price)) || Number(f.price) < 0)) next.price = t('company.invalidPrice')
+    if (f.stock_quantity !== '' && !/^\d+$/.test(f.stock_quantity)) next.stock_quantity = t('company.invalidStock')
+    if (restricted && f.sale_channel !== 'B2B') next.sale_channel = t('company.restrictedB2bOnly')
+    if (f.image_url.trim() && !/^https?:\/\/[^\s]+$/i.test(f.image_url.trim())) next.image_url = t('company.invalidImageUrl')
     if (Object.keys(next).length) {
       errors.setFieldErrors(next)
       throw new ClientValidationError()
@@ -315,6 +337,10 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
       model_name: f.model_name.trim(),
       price: f.price === '' ? null : f.price,
       currency: f.currency,
+      sale_channel: f.sale_channel,
+      is_restricted: restricted,
+      stock_quantity: f.stock_quantity === '' ? null : Number(f.stock_quantity),
+      image_url: f.image_url.trim(),
     }
     return product ? marketplaceApi.updateMyProduct(product.id, payload) : marketplaceApi.createMyProduct(payload)
   }
@@ -359,6 +385,52 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
           <option value="USD">USD</option>
         </Select>
       </div>
+      <div className="grid-2">
+        <Select
+          label={t('company.saleChannel')}
+          hint={t('company.saleChannelHint')}
+          value={f.sale_channel}
+          onChange={(e) => set('sale_channel', e.target.value)}
+          error={errors.fieldErrors.sale_channel}
+        >
+          {(['B2B', 'B2C', 'BOTH'] as const).map((channel) => (
+            <option key={channel} value={channel} disabled={restricted && channel !== 'B2B'}>
+              {t(`company.saleChannels.${channel}`)}
+            </option>
+          ))}
+        </Select>
+        <TextField
+          label={t('company.stock')}
+          optional
+          hint={t('company.stockHint')}
+          dir="ltr"
+          inputMode="numeric"
+          value={f.stock_quantity}
+          onChange={(e) => set('stock_quantity', e.target.value)}
+          error={errors.fieldErrors.stock_quantity}
+        />
+      </div>
+      <div className="grid-2">
+        <TextField
+          label={t('company.imageUrl')}
+          optional
+          hint={t('company.imageUrlHint')}
+          dir="ltr"
+          inputMode="url"
+          value={f.image_url}
+          onChange={(e) => set('image_url', e.target.value)}
+          error={errors.fieldErrors.image_url}
+        />
+        <ProductImage src={f.image_url.trim() || null} alt={f.title || t('company.imageUrl')} />
+      </div>
+      <Checkbox
+        label={t('company.restricted')}
+        checked={restricted}
+        onChange={(e) => {
+          setRestricted(e.target.checked)
+          if (e.target.checked) set('sale_channel', 'B2B')
+        }}
+      />
       <FormActions>
         {onCancel ? (
           <Button variant="ghost" onClick={onCancel}>
@@ -370,5 +442,37 @@ function ProductForm({ product, categories, onSaved, onCancel }: { product: Comp
         </ApiActionButton>
       </FormActions>
     </form>
+  )
+}
+
+/** A pharmacy keeps its provider identity and opens a linked store (server-checked). */
+function PharmacyStoreStart({ onOpened }: { onOpened: () => void }) {
+  const { t } = useTranslation()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <div className="card-block stack-sm" data-testid="pharmacy-store-start">
+      <Alert kind="info">{t('sellerSetup.pharmacyIntro')}</Alert>
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      <ApiActionButton action={() => marketplaceApi.openPharmacyStore()} onSuccess={onOpened} onError={(e) => setError(toErrorMessage(e))} leading={<Icon name="building" size={16} />}>
+        {t('sellerSetup.openPharmacyStore')}
+      </ApiActionButton>
+    </div>
+  )
+}
+
+/** Where the store stands: verification, documents, activation (details in the seller center). */
+function StoreSetupBanner({ company }: { company: MedicalCompany }) {
+  const { t } = useTranslation()
+  const status = company.store_status ?? 'ACTIVE'
+  const missing = company.missing_documents ?? []
+  return (
+    <Alert kind={company.can_sell ? 'success' : 'warning'} data-testid="store-setup-banner">
+      <strong>{t(`sellerSetup.storeStatus.${status}`)}</strong>
+      {company.can_sell ? ` — ${t('sellerSetup.selling')}` : ` — ${t('sellerSetup.notSelling')}`}
+      {missing.length ? ` · ${t('sellerSetup.missingDocs', { count: missing.length })}` : ''}{' '}
+      <LinkButton to="/merchant/center?tab=setup" size="sm" variant="subtle">
+        {t('sellerSetup.open')}
+      </LinkButton>
+    </Alert>
   )
 }

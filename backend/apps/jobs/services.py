@@ -539,6 +539,7 @@ def edit_job(job: JobPost, fields: dict, *, actor) -> JobPost:
     for key, value in fields.items():
         setattr(job, key, value)
     _require_agency_invariant(employer, job)  # resulting state, fresh employer flag
+    _require_profession_scope(employer, job)
     _require_job_field_invariants(job)  # resulting state, never only the fields in this edit
     job.save(update_fields=[*fields, "updated_at"])
     return job
@@ -566,8 +567,23 @@ def create_job(employer: Employer, fields: dict, *, actor) -> JobPost:
     _require_member_role(employer, actor)
     job = JobPost(employer=employer, created_by=actor, **fields)
     _require_agency_invariant(employer, job)
+    _require_profession_scope(employer, job)
     job.save()
     return job
+
+
+def _require_profession_scope(employer: Employer, job: JobPost) -> None:
+    """A non-healthcare business (organization type BUSINESS) hires for non-clinical work only;
+    clinical roles need a verified healthcare employer. Re-checked on every edit and submit."""
+    from .types import CLINICAL_PROFESSIONS, NON_HEALTHCARE_EMPLOYER_TYPES
+
+    if (
+        employer.organization_type in NON_HEALTHCARE_EMPLOYER_TYPES
+        and job.profession in CLINICAL_PROFESSIONS
+    ):
+        raise FieldsInvalid(
+            {"profession": ["A non-healthcare employer cannot post clinical healthcare roles."]}
+        )
 
 
 def submit_job_for_review(job: JobPost, *, actor) -> JobPost:
@@ -595,6 +611,7 @@ def _submit_job(job: JobPost, *, actor) -> JobPost:
     _lock_job(job)
     if job.status not in (JobStatus.DRAFT, JobStatus.REJECTED):
         raise JobsError(f"A job in status {job.status} cannot be submitted.")
+    _require_profession_scope(employer, job)  # the employer's type may have changed
     # Re-scanned on the locked row: a concurrent edit may have added contact data.
     if contact_flags(job):
         raise ContactLeak("Direct contact information is not allowed in recruitment content.")
@@ -1178,8 +1195,19 @@ def visible_candidate_ids(locked_profiles, employer: Employer, *, allow_applican
     account that is currently discoverable, or (when the endpoint's policy
     allows it: talent detail, saved candidates, invitations) that applied to
     one of this organisation's jobs. Talent search allows discoverable only."""
+    from .types import CLINICAL_PROFESSIONS, NON_HEALTHCARE_EMPLOYER_TYPES
+
     profiles = list(locked_profiles)
-    visible = {p.pk for p in profiles if p.account.is_active and p.discoverable_by_employers}
+    business = employer.organization_type in NON_HEALTHCARE_EMPLOYER_TYPES
+    visible = {
+        p.pk
+        for p in profiles
+        if p.account.is_active
+        and p.discoverable_by_employers
+        # a non-healthcare business discovers non-clinical candidates only (its scope);
+        # a candidate who APPLIED to its job stays visible to it below.
+        and not (business and p.profession in CLINICAL_PROFESSIONS)
+    }
     if allow_applicants:
         hidden_active = [p.pk for p in profiles if p.account.is_active and p.pk not in visible]
         if hidden_active:

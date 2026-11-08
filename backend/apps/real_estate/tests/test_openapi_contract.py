@@ -127,6 +127,7 @@ def test_dashboard_is_backend_computed():
     assert props == {
         "listings_total", "listings_draft", "listings_published", "listings_visible",
         "listings_expired", "listings_sale", "listings_rent",
+        "inquiries_open", "inquiries_answered", "inquiries_total",
     }  # fmt: skip
 
 

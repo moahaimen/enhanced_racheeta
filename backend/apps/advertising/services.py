@@ -26,10 +26,10 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from apps.accounts.roles import AccountRole
 from apps.audit import services as audit
 from apps.geography.models import Governorate
-from apps.marketplace.models import MedicalCompany, Product
+from apps.marketplace.models import MedicalCompany, Product, seller_workspace_q
+from apps.marketplace.types import NOT_PURCHASABLE_CLASSES
 from apps.providers.types import ProviderType
 from apps.specialties.models import Specialty
 
@@ -143,17 +143,21 @@ def _lock_company(company_id) -> MedicalCompany:
 
 
 def _require_company_account(company: MedicalCompany) -> None:
-    """Drafts need an active MEDICAL_COMPANY account (not yet a verified company)."""
-    if not (company.account.is_active and company.account.role == AccountRole.MEDICAL_COMPANY):
-        raise CompanyNotEligible("Your account must be an active medical company account.")
+    """Drafts need an active seller account (not yet a verified company): a MEDICAL_COMPANY, or
+    a pharmacy whose store is linked to its own facility (seller_workspace_q)."""
+    if not (
+        company.account.is_active
+        and MedicalCompany.objects.filter(seller_workspace_q(), pk=company.pk).exists()
+    ):
+        raise CompanyNotEligible("Your account must be an active seller account.")
 
 
 def _require_company_eligible(company: MedicalCompany) -> None:
     """Submission and payment verification need the marketplace's own publisher
-    eligibility (VERIFIED, active account, role MEDICAL_COMPANY): one definition."""
-    if not company.can_publish:
+    eligibility (VERIFIED, active seller account, store ACTIVE): one definition."""
+    if not company.can_sell:
         raise CompanyNotEligible(
-            "The company must be verified, on an active medical company account."
+            "The store must be verified and active, on an active seller account."
         )
 
 
@@ -177,9 +181,27 @@ def _require_exposable_product(company: MedicalCompany, product_id) -> Product:
         .filter(pk=product_id, company=company)
         .first()
     )
-    if product is None or not Product.objects.exposable().filter(pk=product.pk).exists():
+    if product is None or not _advertisable().filter(pk=product.pk).exists():
         raise ProductUnavailable("The product is not currently available for advertising.")
     return product
+
+
+def _advertisable():
+    """Exposable AND not regulated: restricted items and categories whose compliance class is
+    not purchasable (pending review / prohibited) are never promoted, paid or not."""
+    return (
+        Product.objects.exposable()
+        .filter(is_restricted=False)
+        .exclude(category__compliance_class__in=NOT_PURCHASABLE_CLASSES)
+    )
+
+
+def _is_promotable(product) -> bool:
+    return not (
+        Product.objects.filter(pk=product.pk)
+        .filter(Q(is_restricted=True) | Q(category__compliance_class__in=NOT_PURCHASABLE_CLASSES))
+        .exists()
+    )
 
 
 def _target_ids(campaign: AdvertisingCampaign) -> dict[str, list]:
@@ -418,6 +440,8 @@ def create_campaign(
         ).exists()
     ):
         raise CampaignProblems({"product": "product_not_found"})
+    if not _is_promotable(product):
+        raise CampaignProblems({"product": "product_not_advertisable"})
     campaign = AdvertisingCampaign(
         company=locked_company,
         product=product,
@@ -465,6 +489,8 @@ def update_campaign(
             pk=getattr(product, "pk", None), company=locked_company
         ).exists():
             raise CampaignProblems({"product": "product_not_found"})
+        if not _is_promotable(product):
+            raise CampaignProblems({"product": "product_not_advertisable"})
         campaign.product = product
     for key in ("name", "starts_on", "ends_on"):
         if key in changes:
@@ -643,7 +669,17 @@ def verify_campaign_payment(
         target=campaign,
         summary=campaign.name,
     )
+    campaign_pk = campaign.pk
+    # Outreach is best-effort and runs only after the activation is durable; a failure
+    # there must never undo or fail the payment decision.
+    transaction.on_commit(lambda: _notify_audience(campaign_pk), robust=True)
     return campaign
+
+
+def _notify_audience(campaign_id) -> None:
+    from .outreach import notify_campaign_audience
+
+    notify_campaign_audience(campaign_id)
 
 
 @transaction.atomic

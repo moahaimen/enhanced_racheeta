@@ -21,10 +21,13 @@ from django.utils import timezone
 from apps.accounts.roles import AccountRole
 from apps.core.models import BaseModel
 from apps.geography.models import City, Governorate
+from apps.providers.types import ProviderType
 
 from .types import (
     SUITABLE_USE_ORDER,
     ContactMethod,
+    InquiryStatus,
+    PromotionStatus,
     PropertyType,
     PublicationStatus,
     SellerType,
@@ -242,3 +245,132 @@ class ListingSuitableUse(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.listing_id}:{self.use}"
+
+
+class ListingPromotionQuerySet(models.QuerySet):
+    def visible_to(self, provider, now=None):
+        """THE promotion visibility rule, from current state: an ACTIVE promotion
+        inside its window, on a listing that passes `publicly_visible`, shown only
+        to a verified, active provider whose type it targets (empty = every type)
+        AND who opted in to real-estate promotions (off by default)."""
+        from apps.preferences.models import MarketingPreference
+        from apps.providers.models import ProviderProfile
+        from apps.providers.types import VerificationStatus
+
+        now = now or timezone.now()
+        eligible = ProviderProfile.objects.filter(
+            pk=provider.pk,
+            verification_status=VerificationStatus.VERIFIED,
+            account__is_active=True,
+            account__role=AccountRole.PROVIDER,
+        ).exists()
+        opted_in = MarketingPreference.objects.filter(
+            account_id=provider.account_id, real_estate_promotions=True, channel_in_app=True
+        ).exists()
+        if not (eligible and opted_in):
+            return self.none()
+        return self.filter(
+            status=PromotionStatus.ACTIVE,
+            starts_at__lte=now,
+            ends_at__gt=now,
+            listing__in=PropertyListing.objects.publicly_visible(now),
+        ).filter(
+            Q(target_provider_types=[])
+            | Q(target_provider_types__contains=[provider.provider_type])
+        )
+
+
+class ListingPromotion(BaseModel):
+    """A seller's request to promote one listing to relevant providers. An
+    administrator approves it (ACTIVE for `days`) or rejects it. No payment is
+    taken here; the promotion only widens who is SHOWN a public listing."""
+
+    listing = models.ForeignKey(
+        PropertyListing, on_delete=models.CASCADE, related_name="promotions"
+    )
+    target_provider_types = models.JSONField(default=list, blank=True)
+    days = models.PositiveSmallIntegerField(default=14)
+    status = models.CharField(
+        max_length=10, choices=PromotionStatus.choices, default=PromotionStatus.REQUESTED
+    )
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    reject_reason = models.CharField(max_length=300, blank=True, default="")
+
+    objects = ListingPromotionQuerySet.as_manager()
+
+    class Meta:
+        db_table = "real_estate_listing_promotion"
+        ordering = ["-created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["listing"],
+                condition=Q(status__in=["REQUESTED", "ACTIVE"]),
+                name="real_estate_one_open_promotion_per_listing",
+            ),
+            models.CheckConstraint(
+                condition=Q(days__gte=1) & Q(days__lte=60),
+                name="real_estate_promotion_days_range",
+            ),
+            models.CheckConstraint(
+                condition=~Q(status="ACTIVE")
+                | (Q(starts_at__isnull=False) & Q(ends_at__isnull=False)),
+                name="real_estate_promotion_active_has_window",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"promotion:{self.listing_id}:{self.status}"
+
+
+PROVIDER_TYPE_VALUES = frozenset(ProviderType.values)
+
+
+class ListingInquiry(BaseModel):
+    """A signed-in seeker's question about one listing, answered inside Racheeta.
+
+    Scope: the seeker sees only their own inquiries; the owner sees only inquiries on their own
+    listings (resolved from `request.user`, never from client ids). One live inquiry per seeker and
+    listing. The listing title is snapshotted so history survives unpublishing or expiry; the
+    listing itself is never re-exposed through an inquiry once it stops being public."""
+
+    listing = models.ForeignKey(PropertyListing, on_delete=models.CASCADE, related_name="inquiries")
+    inquirer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="property_inquiries"
+    )
+    listing_title_snapshot = models.CharField(max_length=200)
+    message = models.TextField(max_length=1000)
+    # Off by default: the owner sees the seeker's phone/e-mail only when the seeker opts in.
+    share_contact = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=10, choices=InquiryStatus.choices, default=InquiryStatus.OPEN
+    )
+    owner_response = models.TextField(max_length=1000, blank=True, default="")
+    responded_at = models.DateTimeField(null=True, blank=True)
+    status_changed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "real_estate_inquiry"
+        ordering = ["-created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["listing", "inquirer"],
+                condition=Q(status__in=["OPEN", "ANSWERED"]),
+                name="real_estate_inquiry_one_live_per_seeker",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["listing", "status"]),
+            models.Index(fields=["inquirer", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.listing_title_snapshot} · {self.status}"

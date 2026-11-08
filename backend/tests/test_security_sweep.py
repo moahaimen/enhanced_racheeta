@@ -34,6 +34,7 @@ PUBLIC_OPERATIONS = {
     ("POST", "api/v1/auth/password-reset/confirm"),
     ("POST", "api/v1/auth/email-verification/confirm"),
     # public reference data and catalogues (read-only)
+    ("GET", "api/v1/platform/features"),  # product switches only (apps.core.features)
     ("GET", "api/v1/geo/countries"),
     ("GET", "api/v1/geo/governorates"),
     ("GET", "api/v1/geo/cities"),
@@ -45,11 +46,21 @@ PUBLIC_OPERATIONS = {
     ("GET", "api/v1/providers/<uuid:provider_id>/reviews"),
     ("GET", "api/v1/providers/<uuid:provider_id>/offers"),
     ("GET", "api/v1/marketplace/categories"),
+    # Product photos: public only for a product on sale; otherwise 404 unless the caller is the
+    # business's own team or Racheeta staff (apps.marketplace.sellers.image_visible_to).
+    ("GET", "api/v1/marketplace/images/<uuid:pk>"),
     ("GET", "api/v1/real-estate/listings"),
     ("GET", "api/v1/real-estate/listings/<uuid:pk>"),
     ("GET", "api/v1/jobs"),
     ("GET", "api/v1/jobs/<uuid:pk>"),
     ("GET", "api/v1/employers/<uuid:pk>"),
+    # reviewed: the profession vocabulary (no data) and the consumer store, which exposes only
+    # allowed, non-restricted products of verified retail businesses (no stock figures, no
+    # professional catalogue)
+    ("GET", "api/v1/jobs/professions"),
+    ("GET", "api/v1/store/products"),
+    ("GET", "api/v1/store/products/<uuid:pk>"),
+    ("GET", "api/v1/store/categories"),
 }
 
 

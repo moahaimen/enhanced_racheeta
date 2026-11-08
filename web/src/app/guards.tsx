@@ -1,14 +1,17 @@
 /**
  * Route guards. All authentication checks live here, never in pages.
  */
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, Outlet, useLocation } from 'react-router'
 
+import { providers as providersApi } from '../api'
 import type { AccountRole } from '../api'
 import { useAuth } from '../auth/useAuth'
 import { ErrorState, LoadingState } from '../design-system'
 
-export const DEFAULT_AUTHENTICATED_PATH = '/profile'
+/** Where a signed-in account lands: its role-aware dashboard (never a bare profile form). */
+export const DEFAULT_AUTHENTICATED_PATH = '/dashboard'
 
 export function SessionRestoring() {
   const { t } = useTranslation()
@@ -64,4 +67,34 @@ export function RequireStaff() {
     )
   }
   return <Outlet />
+}
+
+/**
+ * Store workspace pages (/company…): business accounts, and pharmacies — a PROVIDER whose own
+ * provider profile is a PHARMACY keeps its provider role and runs a linked store. Any other
+ * provider is refused here exactly like RequireRole does. The server re-checks everything.
+ */
+export function RequireStoreOwner({ deniedTitleKey = 'company.notCompany' }: { deniedTitleKey?: string }) {
+  const { account } = useAuth()
+  const { t } = useTranslation()
+  const [pharmacy, setPharmacy] = useState<boolean | null>(null)
+  const isProvider = account?.role === 'PROVIDER'
+  useEffect(() => {
+    if (!isProvider) return
+    let alive = true
+    Promise.resolve()
+      .then(() => providersApi.getMyProvider())
+      .then((profile) => alive && setPharmacy(profile?.provider_type === 'PHARMACY'))
+      .catch(() => alive && setPharmacy(false))
+    return () => {
+      alive = false
+    }
+  }, [isProvider])
+  if (account?.role === 'MEDICAL_COMPANY' || (isProvider && pharmacy === true)) return <Outlet />
+  if (isProvider && pharmacy === null) return <LoadingState testId="store-owner-check" />
+  return (
+    <div role="alert" data-testid="role-denied">
+      <ErrorState title={t(deniedTitleKey)} error={null} />
+    </div>
+  )
 }

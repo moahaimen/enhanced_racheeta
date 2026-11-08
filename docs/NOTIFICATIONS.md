@@ -127,3 +127,13 @@ Django admin lists notifications for inspection only (no add, change or delete).
 ## Mobile (Phase 11E)
 
 The Flutter app (`mobile/lib/features/notifications/`) consumes the existing API only. *Notifications* (Home → Explore) lists the account's persistent notifications (backend order, newest first, paginated) with read/unread styling and a device-local time; the unread count is `GET /notifications/unread-count/`. Tapping an unread row sends one `POST /notifications/{id}/read/` and then reloads the list and the count; *Mark all as read* is one `POST /notifications/read-all/`. Known events (`RESERVATION_CREATED`, `RESERVATION_STATUS_CHANGED` on resource `RESERVATION` with a UUID id) open the reservation (provider side for accounts with `reservations.manage_received`, patient side for `reservations.create_own`); anything else is shown and marked but not navigable. Unknown categories, events or resource types never break the list. Titles/bodies are the server's localized text (the client schema has no raw payload).
+
+## Marketing preferences and bounded outreach (local branch)
+
+New categories are ORDER, QUOTE and MARKETING. The new events are ORDER_PLACED,
+ORDER_STATUS_CHANGED, QUOTE_REQUESTED, QUOTE_UPDATED, SPONSORED_PRODUCT and PROPERTY_PROMOTION.
+Marketing notifications are created only by `apps/preferences/outreach.deliver`. It checks consent
+at delivery time, caps each account at 3 per day and each send at 200 recipients, and dedupes per
+campaign or promotion and account. Display preferences never authorize a notification, and
+transactional notifications ignore preferences. Sponsored titles are rendered as «إعلان ممول» /
+"Sponsored". Details are in `docs/LOCAL_WORKSPACE_DEMO.md` §5.

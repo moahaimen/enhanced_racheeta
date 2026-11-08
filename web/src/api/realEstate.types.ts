@@ -165,6 +165,9 @@ export interface OwnerDashboard {
   listings_expired: number
   listings_sale: number
   listings_rent: number
+  inquiries_open: number
+  inquiries_answered: number
+  inquiries_total: number
 }
 
 /** Public catalogue filters, sent to the backend as query parameters (never applied client-side). */
@@ -185,3 +188,30 @@ export interface ListingFilters {
 
 export type PaginatedListings = Paginated<PropertyListing>
 export type PaginatedOwnerListings = Paginated<OwnerListing>
+
+/** Property inquiries (backend apps.real_estate.inquiries). */
+export const INQUIRY_STATUSES = ['OPEN', 'ANSWERED', 'CLOSED', 'WITHDRAWN'] as const
+export type InquiryStatus = (typeof INQUIRY_STATUSES)[number]
+
+/** The seeker's own inquiry. The listing is linked only while `listing_is_public`. */
+export interface ListingInquiry {
+  id: string
+  listing_id: string
+  listing_title_snapshot: string
+  listing_is_public: boolean
+  message: string
+  share_contact: boolean
+  status: InquiryStatus
+  owner_response: string
+  responded_at: string | null
+  status_changed_at: string
+  created_at: string
+}
+
+/** The owner's view: the seeker's contact details are empty unless they chose to share them. */
+export interface OwnerInquiry extends ListingInquiry {
+  inquirer: { full_name: string; email: string; phone_number: string }
+}
+
+export type PaginatedInquiries = Paginated<ListingInquiry>
+export type PaginatedOwnerInquiries = Paginated<OwnerInquiry>

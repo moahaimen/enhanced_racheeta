@@ -21,8 +21,7 @@ from django.utils import timezone
 from apps.accounts.roles import AccountRole
 from apps.core.models import BaseModel
 from apps.geography.models import Governorate
-from apps.marketplace.models import MedicalCompany, Product
-from apps.marketplace.types import CompanyVerificationStatus
+from apps.marketplace.models import MedicalCompany, Product, selling_q
 from apps.providers.models import ProviderProfile
 from apps.providers.types import ProviderType, VerificationStatus
 from apps.specialties.models import Specialty
@@ -128,8 +127,8 @@ class AdvertisingCampaignQuerySet(models.QuerySet):
 
         1. the campaign is ACTIVE, its payment VERIFIED and today is inside
            [starts_on, ends_on];
-        2. its company is VERIFIED, on an active MEDICAL_COMPANY account, and
-           owns the product;
+        2. its company is selling (selling_q: VERIFIED, active seller account,
+           store ACTIVE) and owns the product;
         3. the product is targeted at this provider by the Phase 6 rule
            (`ProductQuerySet.targeted_for`) — the campaign can only NARROW that
            set, never make an otherwise invisible product visible;
@@ -162,10 +161,8 @@ class AdvertisingCampaignQuerySet(models.QuerySet):
                 payment__status=PaymentStatus.VERIFIED,
                 starts_on__lte=today,
                 ends_on__gte=today,
-                company__verification_status=CompanyVerificationStatus.VERIFIED,
-                company__account__is_active=True,
-                company__account__role=AccountRole.MEDICAL_COMPANY,
             )
+            .filter(selling_q("company__"))
             .filter(Exists(product_reaches_provider))
             .filter(Exists(verified))
             .filter(

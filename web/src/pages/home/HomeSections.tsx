@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
-import { jobs as jobsApi, marketplace, providers as providersApi, realEstate, reference } from '../../api'
+import { jobs as jobsApi, marketplace, providers as providersApi, realEstate, reference, workspaces as workspacesApi } from '../../api'
 import type { ProviderCard as ProviderCardData, Specialty } from '../../api'
 import {
   AsyncPage,
@@ -24,6 +24,7 @@ import {
   StatChip,
   type IconName,
 } from '../../design-system'
+import { useAsyncData } from '../../hooks/useAsync'
 import { useLocalizedName, useScriptText } from '../../i18n/localized'
 import { formatArea, formatListingPrice } from '../realEstate/realEstateFormat'
 import styles from './Home.module.css'
@@ -357,15 +358,51 @@ export function LatestProperties() {
   )
 }
 
-/** Providers only: the targeted catalogue the BACKEND returns for the caller's profile. */
+/**
+ * Providers only: the targeted catalogue the BACKEND returns for the caller's profile. The catalogue
+ * is for VERIFIED providers (the server refuses everyone else), so an unverified provider or one
+ * without a profile is shown the next step instead of the server's refusal. This never grants
+ * anything: the backend still decides.
+ */
 export function ProductsForProviders() {
-  const { t, i18n } = useTranslation()
-  const name = useLocalizedName()
+  const { t } = useTranslation()
+  const profile = useAsyncData((signal) => providersApi.getMyProvider(signal), [])
+  const verified = profile.data?.verification_status === 'VERIFIED'
   return (
     <section className={styles.block} aria-labelledby="products-title">
       <Reveal>
-        <SectionHeader title={<span id="products-title">{t('home.productsTitle')}</span>} description={t('home.productsBody')} actions={<ViewAll to="/marketplace" label={t('home.productsAll')} />} />
+        <SectionHeader
+          title={<span id="products-title">{t('home.productsTitle')}</span>}
+          description={t('home.productsBody')}
+          actions={verified ? <ViewAll to="/marketplace" label={t('home.productsAll')} /> : undefined}
+        />
       </Reveal>
+      {profile.loading ? (
+        <div className={styles.fourUp}>{Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} />)}</div>
+      ) : verified ? (
+        <TargetedProducts />
+      ) : (
+        <div className="card-block" data-testid="home-products-verification-required">
+          <EmptyState
+            icon="shieldCheck"
+            title={t('gate.notVerifiedTitle')}
+            action={<LinkButton to="/provider/profile">{profile.data ? t('gate.openProfile') : t('gate.createProfile')}</LinkButton>}
+          >
+            {profile.data
+              ? t('gate.notVerifiedHint', { status: t(`verification.${profile.data.verification_status}`) })
+              : t('gate.noProfileHint')}
+          </EmptyState>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function TargetedProducts() {
+  const { t, i18n } = useTranslation()
+  const name = useLocalizedName()
+  return (
+    <>
       <NearViewport minHeight="12rem">
         <AsyncPage load={(signal) => marketplace.listTargetedProducts(1, '', signal)} skeleton={<div className={styles.fourUp}>{Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} />)}</div>}>
           {(page) =>
@@ -381,6 +418,47 @@ export function ProductsForProviders() {
                       company={product.company.name}
                       category={name(product.category)}
                       price={product.price === null ? t('home.priceOnRequest') : `${Number(product.price).toLocaleString(i18n.language)} ${product.currency}`}
+                    />
+                  </Reveal>
+                ))}
+              </div>
+            )
+          }
+        </AsyncPage>
+      </NearViewport>
+    </>
+  )
+}
+
+/** Everyone: the newest items in the public store (no account needed; same rules as /store). */
+export function LatestStoreItems() {
+  const { t, i18n } = useTranslation()
+  const name = useLocalizedName()
+  return (
+    <section className={styles.block} aria-labelledby="latest-store-title">
+      <Reveal>
+        <SectionHeader
+          title={<span id="latest-store-title">{t('home.latestStoreTitle')}</span>}
+          description={t('home.latestStoreBody')}
+          actions={<ViewAll to="/store" label={t('home.latestStoreAll')} />}
+        />
+      </Reveal>
+      <NearViewport minHeight="12rem">
+        <AsyncPage load={(signal) => workspacesApi.listLatestStoreProducts(signal)} skeleton={<div className={styles.fourUp}>{Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} />)}</div>}>
+          {(page) =>
+            page.results.length === 0 ? (
+              <EmptyState icon="cart" title={t('home.latestStoreEmpty')} />
+            ) : (
+              <div className={styles.fourUp} data-testid="home-latest-store">
+                {page.results.slice(0, 4).map((product, index) => (
+                  <Reveal key={product.id} index={index}>
+                    <ProductTile
+                      to={`/store/${product.id}`}
+                      title={product.title}
+                      company={product.company.name}
+                      category={name(product.category)}
+                      price={`${Number(product.price).toLocaleString(i18n.language)} ${product.currency}`}
+                      image={{ src: product.images?.[0]?.url || product.image_url }}
                     />
                   </Reveal>
                 ))}

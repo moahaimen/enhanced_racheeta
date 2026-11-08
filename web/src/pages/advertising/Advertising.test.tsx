@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/client'
 import * as advertisingApi from '../../api/endpoints/advertising'
 import * as authApi from '../../api/endpoints/auth'
+import * as providersApi from '../../api/endpoints/providers'
 import * as marketplaceApi from '../../api/endpoints/marketplace'
 import * as referenceApi from '../../api/endpoints/reference'
 import { tokenStore } from '../../api/tokens'
@@ -12,6 +13,7 @@ import type { AdminCampaign, Campaign, CampaignDashboard, CompanyProduct, Market
 import i18n from '../../i18n'
 import { baghdad, basra } from '../../test/providerFixtures'
 import { deferred, makeAccount, renderApp } from '../../test/renderApp'
+import { makeOwner } from '../../test/providerFixtures'
 import { formatMoney } from './advertisingFormat'
 
 // These pages chain several backend loads; be generous so a slow or busy machine does not flake (per test file).
@@ -19,6 +21,7 @@ configure({ asyncUtilTimeout: 5000 })
 
 vi.mock('../../api/endpoints/advertising')
 vi.mock('../../api/endpoints/auth')
+vi.mock('../../api/endpoints/providers')
 vi.mock('../../api/endpoints/marketplace')
 vi.mock('../../api/endpoints/reference')
 
@@ -711,6 +714,7 @@ describe('Sponsored marketplace section', () => {
     vi.resetAllMocks()
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'VERIFIED' }))
     vi.mocked(marketplaceApi.listCategories).mockResolvedValue([dental])
     vi.mocked(marketplaceApi.listTargetedProducts).mockResolvedValue(page([product('o-1', 'Organic scaler')]))
   })

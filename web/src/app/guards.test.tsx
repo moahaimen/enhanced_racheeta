@@ -46,7 +46,7 @@ describe('route guards', () => {
     tokenStore.set({ access: 'a', refresh: 'r' })
     vi.mocked(authApi.getMe).mockResolvedValue(makeAccount())
     const { router } = renderApp('/login')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/profile'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
   })
 
   it('renders the not-found page for unknown routes', async () => {

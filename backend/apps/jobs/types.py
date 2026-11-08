@@ -13,6 +13,9 @@ class OrganizationType(models.TextChoices):
     UNIVERSITY = "UNIVERSITY", "University / college"
     RECRUITMENT_AGENCY = "RECRUITMENT_AGENCY", "Recruitment agency"
     OTHER = "OTHER", "Other approved healthcare organisation"
+    # A non-healthcare business (software house, bank, school…), verified by an administrator
+    # like every employer. It may hire for non-clinical professions only (NON_CLINICAL_SCOPE).
+    BUSINESS = "BUSINESS", "Non-healthcare business"
 
 
 class VerificationStatus(models.TextChoices):
@@ -54,6 +57,83 @@ class Profession(models.TextChoices):
     MEDICAL_ASSISTANT = "MEDICAL_ASSISTANT", "Medical assistant"
     ADMINISTRATIVE = "ADMINISTRATIVE", "Administrative / reception"
     OTHER = "OTHER", "Other healthcare profession"
+    # Healthcare-adjacent roles (additive; healthcare stays first in every list).
+    PHARMACY_TECHNICIAN = "PHARMACY_TECHNICIAN", "Pharmacy technician"
+    OPTOMETRIST = "OPTOMETRIST", "Optometrist"
+    SPEECH_THERAPIST = "SPEECH_THERAPIST", "Speech therapist"
+    BIOMEDICAL_ENGINEER = "BIOMEDICAL_ENGINEER", "Biomedical engineer"
+    MEDICAL_REPRESENTATIVE = "MEDICAL_REPRESENTATIVE", "Medical representative"
+    HEALTH_ADMINISTRATOR = "HEALTH_ADMINISTRATOR", "Healthcare administrator"
+    # Technology roles at hospitals, clinics and suppliers.
+    SOFTWARE_DEVELOPER = "SOFTWARE_DEVELOPER", "Software developer"
+    IT_SUPPORT = "IT_SUPPORT", "IT support"
+    NETWORK_ENGINEER = "NETWORK_ENGINEER", "Network engineer"
+    CYBERSECURITY = "CYBERSECURITY", "Cybersecurity specialist"
+    DATA_ANALYST = "DATA_ANALYST", "Data analyst"
+    # Business and operations roles.
+    ACCOUNTANT = "ACCOUNTANT", "Accountant / finance"
+    MARKETING = "MARKETING", "Marketing"
+    SALES = "SALES", "Sales"
+    HUMAN_RESOURCES = "HUMAN_RESOURCES", "Human resources"
+    ENGINEER = "ENGINEER", "Engineer (facilities / maintenance)"
+    CUSTOMER_SERVICE = "CUSTOMER_SERVICE", "Customer service"
+    MANAGER = "MANAGER", "Management / project manager"
+    OPERATIONS = "OPERATIONS", "Operations / logistics"
+    TEACHER = "TEACHER", "Teacher / trainer"
+    OTHER_PROFESSION = "OTHER_PROFESSION", "Other profession"
+
+
+# Display groups, healthcare first. Every profession belongs to exactly one group.
+PROFESSION_GROUPS: dict[str, tuple[str, ...]] = {
+    "HEALTHCARE": (
+        Profession.DOCTOR,
+        Profession.DENTIST,
+        Profession.PHARMACIST,
+        Profession.NURSE,
+        Profession.MIDWIFE,
+        Profession.LAB_TECHNICIAN,
+        Profession.RADIOLOGY_TECHNICIAN,
+        Profession.ANESTHESIA_TECHNICIAN,
+        Profession.PHYSIOTHERAPIST,
+        Profession.NUTRITIONIST,
+        Profession.PSYCHOLOGIST,
+        Profession.MEDICAL_ASSISTANT,
+        Profession.PHARMACY_TECHNICIAN,
+        Profession.OPTOMETRIST,
+        Profession.SPEECH_THERAPIST,
+        Profession.OTHER,
+    ),
+    "HEALTH_BUSINESS": (
+        Profession.BIOMEDICAL_ENGINEER,
+        Profession.MEDICAL_REPRESENTATIVE,
+        Profession.HEALTH_ADMINISTRATOR,
+        Profession.ADMINISTRATIVE,
+    ),
+    "TECHNOLOGY": (
+        Profession.SOFTWARE_DEVELOPER,
+        Profession.IT_SUPPORT,
+        Profession.NETWORK_ENGINEER,
+        Profession.CYBERSECURITY,
+        Profession.DATA_ANALYST,
+    ),
+    "BUSINESS": (
+        Profession.ACCOUNTANT,
+        Profession.MARKETING,
+        Profession.SALES,
+        Profession.HUMAN_RESOURCES,
+        Profession.ENGINEER,
+        Profession.CUSTOMER_SERVICE,
+        Profession.MANAGER,
+        Profession.OPERATIONS,
+    ),
+    "EDUCATION": (Profession.TEACHER,),
+    "OTHER_FIELDS": (Profession.OTHER_PROFESSION,),
+}
+_grouped = [p for group in PROFESSION_GROUPS.values() for p in group]
+assert sorted(_grouped) == sorted(Profession.values), "every profession needs exactly one group"
+# Clinical professions: only healthcare employers may hire for (or search) them.
+CLINICAL_PROFESSIONS = frozenset(PROFESSION_GROUPS["HEALTHCARE"])
+NON_HEALTHCARE_EMPLOYER_TYPES = frozenset({"BUSINESS"})
 
 
 class Degree(models.TextChoices):

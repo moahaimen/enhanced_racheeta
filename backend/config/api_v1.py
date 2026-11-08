@@ -3,10 +3,12 @@
 from django.urls import include, path, re_path
 
 from apps.accounts.views import ApiNotFoundView
+from apps.core.views import PlatformFeaturesView
 
 app_name = "v1"
 
 urlpatterns = [
+    path("platform/features", PlatformFeaturesView.as_view(), name="platform-features"),
     path("", include("apps.accounts.urls")),
     path("", include("apps.geography.urls")),
     path("", include("apps.specialties.urls")),
@@ -23,6 +25,10 @@ urlpatterns = [
     path("", include("apps.chat.urls")),
     path("", include("apps.notifications.urls")),
     path("", include("apps.dashboards.urls")),
+    path("", include("apps.preferences.urls")),
+    path("", include("apps.commerce.urls")),
+    path("", include("apps.ledger.urls")),
+    path("", include("apps.workspaces.urls")),
     # Must stay last: JSON 404 for anything unmatched under /api/v1/.
     re_path(r"^.*$", ApiNotFoundView.as_view(), name="api-not-found"),
 ]
