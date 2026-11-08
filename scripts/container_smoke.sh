@@ -63,4 +63,38 @@ if docker logs "$NAME" 2>&1 | grep -qF "$SECRET_KEY"; then
 else
   echo "  ok    SECRET_KEY not present in container logs"
 fi
+
+# Volume mode (Railway with a volume: RAILWAY_RUN_UID=0, root-owned mount). start.sh must hand the
+# private-media folder to `app` and drop root BEFORE check/migrate/gunicorn.
+docker rm -f "$NAME" >/dev/null
+docker run -d --name "$NAME" --network host --user 0 \
+  --tmpfs /data:uid=0,gid=0,mode=0755 \
+  -e PRIVATE_MEDIA_ROOT=/data/private_media \
+  -e SECRET_KEY="$SECRET_KEY" -e DEBUG=false -e PORT="$PORT" \
+  -e DATABASE_URL="$DATABASE_URL" \
+  -e ALLOWED_HOSTS=localhost,127.0.0.1 \
+  -e FRONTEND_URL=https://smoke.example.invalid \
+  -e CSRF_TRUSTED_ORIGINS=https://smoke.example.invalid \
+  -e CORS_ALLOWED_ORIGINS=https://smoke.example.invalid \
+  -e EMAIL_URL=smtp://localhost:25 \
+  -e SECURE_PROXY_SSL=true -e TRUSTED_PROXY_COUNT=1 \
+  "$IMAGE" >/dev/null
+echo "volume mode: waiting for the container to become healthy..."
+for i in $(seq 1 60); do
+  if [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/ready/")" = "200" ]; then break; fi
+  if [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" != "true" ]; then
+    echo "container exited early (volume mode)"; exit 1
+  fi
+  sleep 2
+  [ "$i" -lt 60 ] || { echo "container never became ready (volume mode)"; exit 1; }
+done
+server_uid="$(docker exec "$NAME" stat -c %u /proc/1)"
+[ "$server_uid" = "1000" ] && echo "  ok    volume mode: the server runs as uid 1000, not root" \
+  || { echo "  FAIL  volume mode: the server runs as uid $server_uid"; exit 1; }
+owner="$(docker exec "$NAME" stat -c %u /data/private_media)"
+[ "$owner" = "1000" ] && echo "  ok    volume mode: private media folder belongs to app" \
+  || { echo "  FAIL  volume mode: private media folder owned by uid $owner"; exit 1; }
+docker logs "$NAME" 2>&1 | grep -q "dropping root privileges to user app" \
+  && echo "  ok    volume mode: start.sh dropped root before check/migrate" \
+  || { echo "  FAIL  volume mode: no privilege drop logged"; exit 1; }
 echo "CONTAINER SMOKE PASSED"
