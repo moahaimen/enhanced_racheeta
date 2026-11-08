@@ -82,15 +82,21 @@ administrators (manual activation), the backend never invents them.
   command (or a one-off job) and remove it from `start.sh`; two containers must never migrate
   concurrently.
 
-## 5. Media and uploads (deferral)
+## 5. Media and uploads
 
-No feature stores uploaded files today (no avatars, résumés, listing photos, product images,
-chat attachments), so there is nothing to back up or serve and no upload attack surface. The first
-feature that needs files must, in the same pull request: choose S3-compatible storage, add
-`django-storages` with a private bucket and signed URLs, enforce size and content-type limits and
-virus scanning policy, strip image metadata, add the bucket to `docs/BACKUP_RESTORE.md`, and extend
-the CSP `img-src`/`connect-src` for the bucket origin (`CSP_CONNECT_SRC` exists for the latter).
-The container filesystem is ephemeral and must never be used for user files.
+**Seller licence documents and product photos are stored files** (`apps/marketplace`). They are
+written to `PRIVATE_MEDIA_ROOT` on the local filesystem and streamed only by permission-checked
+views. Size and type limits apply in the upload services. The container filesystem is ephemeral,
+so these rules apply:
+
+- **Staging:** a Railway volume at `/data` (`docs/RAILWAY.md` §6). This was added 2026-11-08,
+  after staging was found losing uploads on every redeploy.
+- **Production (blocker):** use S3-compatible storage, not a volume. A volume rules out replicas
+  and causes downtime on each deploy. Add `django-storages` with a private bucket and signed URLs;
+  keep the size and type limits; agree a virus-scanning policy; strip image metadata; add the
+  bucket to `docs/BACKUP_RESTORE.md`; and extend the CSP `img-src`/`connect-src` for the bucket
+  origin (`CSP_CONNECT_SRC` exists for the latter).
+- The container disk must never hold user files.
 
 ## 6. Post-deploy verification (every release)
 

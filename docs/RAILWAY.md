@@ -101,10 +101,20 @@ Counters are per gunicorn worker (2 by default), so use enough requests to exhau
 
 ## 6. Statelessness and media
 
-The container writes nothing that must persist (the code directory is read-only to the runtime
-user). There are **no user uploads** today; `MEDIA_ROOT` is a placeholder. Uploads, when a feature
-adds them, must use S3-compatible object storage, never the container disk (it is wiped on every
-deploy); see `docs/PRODUCTION_DEPLOYMENT.md` "Media".
+The code directory is read-only to the runtime user. Two kinds of user files now exist: **seller
+licence documents and product photos**. They are written under `PRIVATE_MEDIA_ROOT` and served only
+by permission-checked views. The container disk is wiped on every deploy, so on Railway that folder
+must be a **volume**:
+
+| Setting (service `racheeta-app`) | Value |
+|---|---|
+| Volume mount path | `/data` |
+| `PRIVATE_MEDIA_ROOT` | `/data/private_media` |
+| `RAILWAY_RUN_UID` | `0`. The volume is mounted root-owned, so the container starts as root. `scripts/start.sh` only hands `PRIVATE_MEDIA_ROOT` to `app` and drops to uid 1000 (`setpriv`) **before** `check`, `migrate` and gunicorn. `scripts/container_smoke.sh` proves this in CI ("volume mode"). |
+
+Volume limits: one volume per service, **no replicas**, and a short downtime on each redeploy.
+This is acceptable for staging. Production still needs S3-compatible object storage
+(`docs/PRODUCTION_DEPLOYMENT.md` §5). `MEDIA_ROOT` (public media) is still unused.
 
 ## 7. Logs and monitoring on Railway
 
