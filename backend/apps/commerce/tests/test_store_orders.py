@@ -62,6 +62,34 @@ def test_store_lists_only_allowed_consumer_products(
         assert api_client.get(f"{STORE}/{hidden.pk}").status_code == 404
 
 
+def test_store_can_list_the_newest_items_first_with_the_same_visibility(
+    api_client, store, store_category, product_factory
+):
+    """The home page's "latest in the store" uses sort=newest; it never widens what is shown."""
+    from datetime import timedelta
+
+    from apps.marketplace.models import Product
+
+    def make(title, days_ago, **fields):
+        product = product_factory(
+            store, store_category, title=title, price=Decimal("1"),
+            sale_channel=fields.pop("sale_channel", SaleChannel.B2C), stock_quantity=3, **fields,
+        )  # fmt: skip
+        Product.objects.filter(pk=product.pk).update(
+            created_at=timezone.now() - timedelta(days=days_ago)
+        )
+        return product
+
+    oldest, middle, newest = make("A old", 9), make("B middle", 5), make("C new", 1)
+    hidden = make("Z newest but B2B only", 0, sale_channel=SaleChannel.B2B)
+    rows = api_client.get(STORE, {"sort": "newest"}).json()["results"]
+    assert [r["id"] for r in rows] == [str(newest.pk), str(middle.pk), str(oldest.pk)]
+    assert str(hidden.pk) not in {r["id"] for r in rows}
+    default = [r["id"] for r in api_client.get(STORE).json()["results"]]
+    assert default == [str(oldest.pk), str(middle.pk), str(newest.pk)]  # still A→Z
+    assert api_client.get(STORE, {"sort": "anything-else"}).status_code == 200
+
+
 def test_restricted_product_cannot_be_consumer_channel(store, store_category, product_factory):
     from django.db import IntegrityError, transaction
 

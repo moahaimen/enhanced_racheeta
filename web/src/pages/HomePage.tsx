@@ -13,6 +13,7 @@ import {
   FeaturedDoctorsRow,
   LatestJobs,
   LatestProperties,
+  LatestStoreItems,
   PlatformStats,
   PopularServices,
   ProductCategoriesBand,
@@ -174,6 +175,10 @@ export function HomePage() {
           <LatestProperties />
         </Container>
       </div>
+
+      <Container width="xl" className={styles.blockWrap}>
+        <LatestStoreItems />
+      </Container>
 
       <Container width="xl" className={styles.blockWrap}>
         {isProvider ? <ProductsForProviders /> : <ProductCategoriesBand />}

@@ -223,6 +223,10 @@ export function SiteHeader() {
         <Icon name="building" size={18} />
         {t('nav.realEstate')}
       </NavLink>
+      <NavLink to="/store" className={styles.link} data-testid="nav-store">
+        <Icon name="cart" size={18} />
+        {t('nav.storeShort')}
+      </NavLink>
     </>
   )
 
@@ -351,11 +355,6 @@ export function SiteHeader() {
           </nav>
           <span className={styles.spacer} />
           <div className={styles.actions}>
-            {/* Desktop keeps five public links; the store sits with the cart in the actions. */}
-            <NavLink to="/store" className={styles.iconLink} data-testid="header-store">
-              <Icon name="tag" size={20} />
-              <span className="visually-hidden">{t('nav.store')}</span>
-            </NavLink>
             <CartLink compact />
             {authenticated ? (
               <>
@@ -384,11 +383,6 @@ export function SiteHeader() {
           <nav id="mobile-nav" className={styles.mobilePanel} aria-label={t('nav.main')}>
             {publicLinks}
             {accountLinks}
-            {/* The public bar stays at five links on desktop; on phones the store is listed here. */}
-            <NavLink to="/store" className={styles.link} data-testid="mobile-nav-store">
-              <Icon name="cart" size={18} />
-              {t('nav.store')}
-            </NavLink>
             <CartLink />
             {authenticated ? <MessagesLink /> : null}
             {authenticated ? <NotificationsLink /> : null}

@@ -150,7 +150,16 @@ FINANCE = [IsAuthenticated, IsAdminAccount, IsFinance]
 
 
 @extend_schema(
-    tags=["store"], summary="Public store: allowed consumer products (no restricted items)"
+    tags=["store"],
+    summary="Public store: allowed consumer products (no restricted items)",
+    parameters=[
+        OpenApiParameter(
+            "sort",
+            str,
+            enum=["name", "newest"],
+            description="name (default, A→Z) or newest (latest listed first)",
+        )
+    ],
 )
 class StoreProductListView(generics.ListAPIView):
     permission_classes = [AllowAny]
@@ -170,6 +179,8 @@ class StoreProductListView(generics.ListAPIView):
             qs = qs.filter(
                 Q(title__icontains=q) | Q(brand__icontains=q) | Q(description__icontains=q)
             )
+        if self.request.query_params.get("sort") == "newest":  # the home page's latest items
+            return qs.order_by("-created_at", "-id")
         return qs.order_by("title", "id")
 
 

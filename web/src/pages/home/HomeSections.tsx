@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
-import { jobs as jobsApi, marketplace, providers as providersApi, realEstate, reference } from '../../api'
+import { jobs as jobsApi, marketplace, providers as providersApi, realEstate, reference, workspaces as workspacesApi } from '../../api'
 import type { ProviderCard as ProviderCardData, Specialty } from '../../api'
 import {
   AsyncPage,
@@ -427,6 +427,47 @@ function TargetedProducts() {
         </AsyncPage>
       </NearViewport>
     </>
+  )
+}
+
+/** Everyone: the newest items in the public store (no account needed; same rules as /store). */
+export function LatestStoreItems() {
+  const { t, i18n } = useTranslation()
+  const name = useLocalizedName()
+  return (
+    <section className={styles.block} aria-labelledby="latest-store-title">
+      <Reveal>
+        <SectionHeader
+          title={<span id="latest-store-title">{t('home.latestStoreTitle')}</span>}
+          description={t('home.latestStoreBody')}
+          actions={<ViewAll to="/store" label={t('home.latestStoreAll')} />}
+        />
+      </Reveal>
+      <NearViewport minHeight="12rem">
+        <AsyncPage load={(signal) => workspacesApi.listLatestStoreProducts(signal)} skeleton={<div className={styles.fourUp}>{Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} />)}</div>}>
+          {(page) =>
+            page.results.length === 0 ? (
+              <EmptyState icon="cart" title={t('home.latestStoreEmpty')} />
+            ) : (
+              <div className={styles.fourUp} data-testid="home-latest-store">
+                {page.results.slice(0, 4).map((product, index) => (
+                  <Reveal key={product.id} index={index}>
+                    <ProductTile
+                      to={`/store/${product.id}`}
+                      title={product.title}
+                      company={product.company.name}
+                      category={name(product.category)}
+                      price={`${Number(product.price).toLocaleString(i18n.language)} ${product.currency}`}
+                      image={{ src: product.images?.[0]?.url || product.image_url }}
+                    />
+                  </Reveal>
+                ))}
+              </div>
+            )
+          }
+        </AsyncPage>
+      </NearViewport>
+    </section>
   )
 }
 

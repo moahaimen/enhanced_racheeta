@@ -71,6 +71,11 @@ export function listStoreProducts(page = 1, category = '', signal?: AbortSignal,
   return apiRequest<PaginatedStoreProducts>(`/api/v1/store/products?${q.toString()}`, { auth: false, signal })
 }
 
+/** The newest items in the public store (same visibility rules as the store page). */
+export function listLatestStoreProducts(signal?: AbortSignal): Promise<PaginatedStoreProducts> {
+  return apiRequest<PaginatedStoreProducts>('/api/v1/store/products?page=1&sort=newest', { auth: false, signal })
+}
+
 export function getStoreProduct(id: string, signal?: AbortSignal): Promise<StoreProduct> {
   return apiRequest<StoreProduct>(`/api/v1/store/products/${enc(id)}`, { auth: false, signal })
 }

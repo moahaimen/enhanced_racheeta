@@ -43,10 +43,10 @@ describe('SiteHeader on desktop', () => {
     tokenStore.clear()
   })
 
-  it('keeps the public navigation to five links and lists no account destinations in the bar', async () => {
+  it('keeps the public navigation to six links (store included) and lists no account destinations in the bar', async () => {
     await signIn('PROVIDER')
     const nav = screen.getAllByRole('navigation', { name: /main/i })[0]!
-    expect(hrefs(nav)).toEqual(['/', '/providers', '/providers?kind=FACILITY', '/jobs', '/real-estate'])
+    expect(hrefs(nav)).toEqual(['/', '/providers', '/providers?kind=FACILITY', '/jobs', '/real-estate', '/store'])
   })
 
   it('groups every account destination of a provider in the account menu, once', async () => {

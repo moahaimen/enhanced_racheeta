@@ -5,6 +5,7 @@ import * as marketplaceApi from '../api/endpoints/marketplace'
 import * as providersApi from '../api/endpoints/providers'
 import * as realEstateApi from '../api/endpoints/realEstate'
 import * as referenceApi from '../api/endpoints/reference'
+import * as workspacesApi from '../api/endpoints/workspaces'
 import { makeOwner } from './providerFixtures'
 
 export const emptyPage = { count: 0, next: null, previous: null, results: [] }
@@ -25,6 +26,7 @@ export function mockHomeData(): void {
   set(realEstateApi.listListings, emptyPage)
   set(marketplaceApi.listCategories, [])
   set(marketplaceApi.listTargetedProducts, emptyPage)
+  set(workspacesApi.listLatestStoreProducts, emptyPage)
   // A signed-in provider's own profile (the targeted catalogue is for verified providers).
   set(providersApi.getMyProvider, makeOwner({ verification_status: 'VERIFIED' }))
 }

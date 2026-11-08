@@ -8226,6 +8226,14 @@ paths:
         description: مصطلح البحث.
         schema:
           type: string
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - name
+          - newest
+        description: name (default, A→Z) or newest (latest listed first)
       tags:
       - store
       security:

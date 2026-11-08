@@ -8,6 +8,7 @@ import { useLocalizedName, useScriptText } from '../../../i18n/localized'
 import { Icon, type IconName } from '../../icons'
 import { Avatar } from '../Avatar/Avatar'
 import { PersonPlaceholder } from '../Avatar/PersonPlaceholder'
+import { ProductImage } from '../ProductImage/ProductImage'
 import { PROVIDER_TYPE_ICON } from '../ProviderCard/providerTypeIcon'
 import type { Accent } from '../Tiles/Tiles'
 import styles from './Cards.module.css'
@@ -118,6 +119,7 @@ export function ProductTile({
   category,
   price,
   icon = 'cart',
+  image,
 }: {
   to: string
   title: string
@@ -125,13 +127,21 @@ export function ProductTile({
   category: string
   price: string
   icon?: IconName
+  /** A product photo (store items); without it the tile shows the icon. */
+  image?: { src?: string | null }
 }) {
   const text = useScriptText()
   return (
     <article className={styles.product} data-accent="blue">
-      <div className={styles.productArt} aria-hidden="true">
-        <Icon name={icon} size={36} />
-      </div>
+      {image ? (
+        <div aria-hidden="true">
+          <ProductImage src={image.src} alt="" />
+        </div>
+      ) : (
+        <div className={styles.productArt} aria-hidden="true">
+          <Icon name={icon} size={36} />
+        </div>
+      )}
       <p className={styles.productCategory}>{category}</p>
       <h3 className={styles.productTitle}>
         <Link to={to} className={styles.stretch}>
