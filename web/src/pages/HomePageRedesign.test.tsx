@@ -17,7 +17,7 @@ import type { PropertyListing } from '../api'
 import { CountUp, NearViewport, Reveal } from '../design-system'
 import { changeLanguage } from '../i18n'
 import { makeBilling, makeEmployerOwner, makeJobCard, paginated } from '../test/jobFixtures'
-import { baghdad, cardiology, dentistry, makeCard } from '../test/providerFixtures'
+import { baghdad, cardiology, dentistry, makeCard, makeOwner } from '../test/providerFixtures'
 import { emptyPage, mockHomeData } from '../test/homeMocks'
 import { makeAccount, renderApp } from '../test/renderApp'
 
@@ -217,6 +217,28 @@ describe('premium homepage — suppliers, products and roles', () => {
     expect(within(products).getByRole('link', { name: 'جهاز تخطيط القلب' })).toHaveAttribute('href', '/marketplace/products/prod-1')
     expect(products).toHaveTextContent('2,850,000')
     expect(screen.queryByTestId('product-categories')).toBeNull()
+  })
+
+  it('shows an unverified provider the next step, not a permission error, and never asks for the catalogue', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockResolvedValue(makeOwner({ verification_status: 'PENDING' }))
+    renderApp('/')
+    const card = await screen.findByTestId('home-products-verification-required')
+    expect(within(card).getByRole('link', { name: 'فتح ملفي المهني' })).toHaveAttribute('href', '/provider/profile')
+    expect(card).not.toHaveTextContent('ليست لديك صلاحية')
+    expect(screen.queryByTestId('home-products')).toBeNull()
+    expect(marketplaceApi.listTargetedProducts).not.toHaveBeenCalled()
+  })
+
+  it('a provider without a profile is sent to create one', async () => {
+    tokenStore.set({ access: 'a', refresh: 'r' })
+    vi.mocked(authApi.getMe).mockResolvedValue(makeAccount({ role: 'PROVIDER' }))
+    vi.mocked(providersApi.getMyProvider).mockRejectedValue(new ApiError(404, 'not_found', 'Not found.'))
+    renderApp('/')
+    const card = await screen.findByTestId('home-products-verification-required')
+    expect(within(card).getByRole('link')).toHaveAttribute('href', '/provider/profile')
+    expect(marketplaceApi.listTargetedProducts).not.toHaveBeenCalled()
   })
 
   it('offers the supplier shortcut to anonymous visitors, providers and companies — never to a patient or seller', async () => {
